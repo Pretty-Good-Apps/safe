@@ -12,7 +12,51 @@ Safe is not a new grammar. It is Ada with things removed and a few structural re
 
 ---
 
-## Design Decisions and Rationale
+## Compatibility Note
+
+Earlier design drafts included a C99 emission backend and OpenBSD as a primary deployment target. Those requirements are removed. Safe has exactly one backend: Ada 2022 / SPARK 2022 emission (D4, D25). Safe imposes no OS-specific targeting requirements; portability is delegated to GNAT (D5). C foreign function interface is excluded from the safe language and reserved for a future system sublanguage.
+
+---
+
+## Toolchain Baseline
+
+All compiler and proof requirements in this specification are defined relative to the following baseline:
+
+- **GNAT:** GNAT Pro or GNAT Community, version 14.x or later (Ada 2022 capable)
+- **GNATprove:** Same release series as GNAT
+- **Proof level:** `gnatprove --mode=prove --level=2` (or higher if needed to discharge all checks)
+- **Runtime profile for concurrency:** `pragma Profile (Jorvik)` on hosted GNAT targets
+
+If Jorvik is not available for a particular target runtime, the implementation shall document: (a) the chosen alternative profile (e.g., Ravenscar), (b) any restricted channel or select features, and (c) any impact on proof obligations.
+
+### Proof acceptance policy
+
+For the purposes of this specification, "passes Bronze" and "passes Silver" mean:
+
+- **Bronze:** `gnatprove --mode=flow` reports zero errors and zero high-severity warnings on the emitted Ada.
+- **Silver:** `gnatprove --mode=prove` reports: no unproved runtime checks, no unproved assertions, and no tool errors. Proof timeouts are treated as failures unless explicitly documented with a mitigation plan.
+
+These are the acceptance criteria for D26's guarantees. Every conforming Safe program, when compiled and emitted as Ada/SPARK, shall meet both criteria without any developer-supplied SPARK annotations in the emitted code.
+
+---
+
+## Reserved Words
+
+Safe retains all Ada 2022 reserved words that are not associated with excluded features. Safe adds the following context-sensitive keywords that are reserved in Safe source but not Ada reserved words:
+
+- `public` — visibility modifier (D8)
+- `channel` — channel declaration (D28)
+- `send` — channel send statement (D28)
+- `receive` — channel receive statement (D28)
+- `try_send` — non-blocking channel send (D28)
+- `try_receive` — non-blocking channel receive (D28)
+- `capacity` — channel capacity specifier (D28)
+
+These identifiers shall not be used as user-defined names in Safe programs. A conforming implementation shall reject any program that uses a reserved word as an identifier.
+
+The emitted Ada maps these to Ada-legal identifiers (e.g., `channel Readings` emits as a protected object named `Readings`). The identifier mapping shall be deterministic and documented.
+
+---
 
 This section records every design decision made during the language design process, with rationale. These decisions are final. Do not revisit or propose alternatives.
 
@@ -31,6 +75,8 @@ This section records every design decision made during the language design proce
 ### D3. Single-Pass Recursive Descent Compiler
 
 **Decision:** The language must be compilable in a single pass by a recursive descent parser, similar to Wirth's Oberon compiler.
+
+**Operational definition of "single pass":** The compiler reads the token stream once, left to right. During this pass it builds an in-memory AST, resolves names, checks types, enforces legality rules, and accumulates analysis data (Global/Depends sets, ownership state, task-variable ownership). After the token stream is consumed, the compiler walks the completed AST to emit Ada/SPARK output. This post-parse AST walk is not a "second pass" — it does not re-read source tokens. What is prohibited is any design that requires re-parsing source text, multi-pass name resolution, or whole-program analysis across compilation units. Each compilation unit is compiled independently using only its source and the symbol files of its dependencies.
 
 **Rationale:** Single-pass compilation constrains the language to be simple. If a feature cannot be compiled in one pass, it is too complex. Wirth's Oberon-07 compiler is approximately 4,000 lines and compiles a useful language. Safe's compiler targets roughly 10,000–14,000 lines of Silver-level SPARK (including ownership checking for access types, interval arithmetic for D27 rules, task/channel compilation for D28, and the Ada/SPARK emitter) — small enough for a single person to understand, audit, and formally verify. This also means fast compilation, which matters for developer experience.
 
@@ -56,7 +102,13 @@ This section records every design decision made during the language design proce
 
 **Decision:** A package is a flat sequence of declarations. There is no `package body` wrapper, no `begin...end` initialization block, and no package-level executable statements. Variable initialization uses expressions or function calls at the point of declaration.
 
-**Rationale:** If packages are purely declarative, elaboration ordering ceases to exist as a concept. Ada's elaboration model is a notorious source of complexity — `Elaborate`, `Elaborate_All`, `Elaborate_Body` pragmas and the elaboration order determination algorithm. By requiring that all initialization be expressible as declaration-time expressions or function calls, we eliminate this entire category of bugs and compiler complexity. The package becomes what it should always have been: a namespace containing declarations. Executable code lives only inside subprogram bodies.
+**Initialization order:**
+
+- *Within a package:* Package-level variable initializers are evaluated in declaration order (top to bottom), as in Ada. An initializer may reference previously declared variables and call previously declared functions within the same package. Referencing a not-yet-declared entity in an initializer is a legality error (declaration-before-use).
+- *Across packages:* If package A `with`s package B, then B's initializers complete before A's initializers begin. This matches Ada's elaboration semantics but is trivially satisfiable because Safe packages have no circular `with` dependencies (enforced by the single-pass compilation model — you cannot `with` a package whose symbol file does not yet exist). The emitted Ada uses `pragma Preelaborate` or `pragma Pure` where possible, falling back to GNAT's static elaboration model for packages with non-static initializers.
+- *Tasks vs. initialization:* All package-level initialization across all compilation units completes before any task begins executing (D28). This is a sequencing guarantee enforced by the emitted Ada's elaboration model.
+
+**Rationale:** If packages are purely declarative, the elaboration ordering problem is vastly simplified. Ada's elaboration model is a notorious source of complexity — `Elaborate`, `Elaborate_All`, `Elaborate_Body` pragmas and the elaboration order determination algorithm. By requiring that all initialization be expressible as declaration-time expressions or function calls, and by prohibiting circular dependencies, we reduce elaboration to a simple topological sort of the `with` graph. The package becomes what it should always have been: a namespace containing declarations. Executable code lives only inside subprogram bodies.
 
 ### D8. Default-Private Visibility with `public` Annotation
 
@@ -84,7 +136,16 @@ This section records every design decision made during the language design proce
 
 ### D12. No Overloading
 
-**Decision:** Subprogram name overloading is excluded. Each subprogram identifier denotes exactly one subprogram within a given declarative region. Predefined operators for language-defined types are retained.
+**Decision:** Subprogram name overloading is excluded. Each subprogram identifier denotes exactly one subprogram within a given declarative region. Predefined operators for language-defined types are retained. User-defined operator overloading (defining `"+"` for a record type, etc.) is excluded.
+
+**Scope of the restriction:**
+
+- **Excluded:** Two subprograms with the same name in the same declarative region, regardless of parameter profiles. A conforming implementation shall reject any declarative region containing two subprogram declarations with the same identifier.
+- **Excluded:** User-defined operator symbols (`function "+" (A, B : Widget) return Widget`). A conforming implementation shall reject any operator function definition.
+- **Retained:** Predefined operators for numeric types, boolean, and other language-defined types. These are not user-declared and do not participate in overload resolution — they are intrinsic to the type.
+- **Retained:** The same subprogram name may appear in different packages (qualified by the package name: `Sensors.Initialize` vs `Motors.Initialize`). This is not overloading; it is distinct declarations in distinct namespaces.
+
+**Name resolution rule (dot notation):** When `X.Name` appears in source, resolution is unambiguous because: (a) if `X` is a record object, `Name` is a field; (b) if `X` is a type or subtype mark, `Name` is an attribute (in dot notation per D20); (c) if `X` is a package name, `Name` is a declaration in that package. The compiler determines which case applies from the type/kind of `X`, which is always known in a single-pass compiler at the point of use. No overload resolution is needed.
 
 **Rationale:** Overloading is the single biggest obstacle to single-pass compilation in Ada. Resolving which overloaded subprogram a call refers to requires examining return types, parameter types, and context — sometimes across compilation units. Oberon has zero overloading. Dropping it dramatically simplifies name resolution (every name resolves to exactly one entity) and makes the language easier to read (every call site is unambiguous without consulting type information).
 
@@ -117,6 +178,25 @@ This section records every design decision made during the language design proce
 **Decision:** Access types are retained with SPARK 2022's ownership and borrowing rules. Access-to-object types are permitted. Access-to-subprogram types are excluded. The full SPARK ownership model applies: move semantics on assignment, borrowing for temporary mutable access, observing for temporary read-only access. Explicit `Unchecked_Deallocation` is excluded — deallocation occurs automatically when the owning object goes out of scope.
 
 Additionally, dereference of an access value requires the access subtype to be `not null` (see D27 Rule 4).
+
+**Ownership mapping from Safe to SPARK/Ada:**
+
+| Safe construct                     | Ada access kind in emitted code   | Ownership semantics                                                  |
+| ---------------------------------- | --------------------------------- | -------------------------------------------------------------------- |
+| `type T_Ptr is access T;`          | Named access-to-variable type     | Owner — can be moved, borrowed, or observed                          |
+| `subtype T_Ref is not null T_Ptr;` | `not null` subtype of above       | Non-null owner — legal for dereference                               |
+| `X := new T'(...)`                 | Allocator                         | Creates a new owned value; X becomes the owner                       |
+| `Y := X` (access assignment)       | Assignment                        | **Move**: X becomes null, Y becomes owner                            |
+| `procedure P (A : in T_Ptr)`       | `in` mode access parameter        | **Observe**: read-only borrow; caller's ownership frozen during call |
+| `procedure P (A : in out T_Ptr)`   | `in out` mode access parameter    | **Borrow**: mutable borrow; caller's ownership frozen during call    |
+| Scope exit of owning variable      | (compiler-generated deallocation) | Automatic deallocation when owner goes out of scope                  |
+
+**Restrictions vs. full SPARK ownership:**
+
+- Anonymous access types are excluded (Safe requires named access types for all uses).
+- Access-to-constant types (`access constant T`) are excluded for simplicity; use `in`-mode observe parameters instead.
+- `Unchecked_Access` and `Unchecked_Deallocation` are excluded.
+- All ownership checking is local to the compilation unit — no whole-program analysis. This is compatible with SPARK's ownership model, which is also local.
 
 **Rationale:** Dynamic data structures (linked lists, trees, buffer pools, process tables) are essential for OS construction and systems programming. SPARK 2022 solved the safety problem for access types by adopting Rust-style ownership semantics — each access value has exactly one owner, ownership transfers are explicit via move semantics on assignment, and borrowing/observing provide temporary access without ownership transfer. These rules are enforced at compile time by local analysis (no whole-program reasoning), which is compatible with single-pass compilation. Excluding access-to-subprogram types eliminates indirect calls, preserving the property that every call resolves statically.
 
@@ -185,16 +265,15 @@ Note: `Static_Predicate` and `Dynamic_Predicate` as subtype features (not contra
 - All Ada 2022 features in the SPARK 2022 subset not otherwise excluded
 - `pragma Assert`
 - `pragma Inline`
-- `pragma Convention`, `pragma Import`, `pragma Export`
 - `pragma Pack`
 
-**Rationale:** These features form the core of a useful systems programming language — rich numeric types for hardware modeling, records and arrays for data structures, access types with ownership for dynamic data structures (linked lists, trees, buffer pools), static tasks and channels for safe concurrency, expression functions for concise pure computations, and the C interface pragmas for FFI. String handling is limited to fixed-length arrays, which is acceptable for systems programming and avoids unbounded heap allocation. Goto is retained because SPARK allows it and it is trivially single-pass compilable.
+**Rationale:** These features form the core of a useful systems programming language — rich numeric types for hardware modeling, records and arrays for data structures, access types with ownership for dynamic data structures (linked lists, trees, buffer pools), static tasks and channels for safe concurrency, and expression functions for concise pure computations. String handling is limited to fixed-length arrays, which is acceptable for systems programming and avoids unbounded heap allocation. Goto is retained because SPARK allows it and it is trivially single-pass compilable. C FFI (`pragma Convention`, `pragma Import`, `pragma Export`) is deliberately excluded because an imported C function is an unverifiable hole in the Silver guarantee. All foreign language interface is excluded from this specification (see D24).
 
-### D24. System Sublanguage — Deferred
+### D24. System Sublanguage — Not Specified
 
-**Decision:** The system sublanguage (raw memory access, inline assembly, volatile MMIO, unchecked conversions, capability model with `system` blocks) is deferred to a future specification addendum.
+**Decision:** C foreign function interface (`pragma Convention`, `pragma Import`, `pragma Export`), raw memory access, inline assembly, volatile MMIO, unchecked conversions, and other unsafe capabilities are excluded from the Safe language. They are not specified in this document.
 
-**Rationale:** The safe language must be fully specified and internally consistent before adding escape hatches. The system sublanguage design (capability-based, lexically scoped, grep-auditable) is sketched but not ready for formal specification. Specifying the safe language first ensures that the "floor" of safety is solid, and that the system sublanguage is defined as explicit, controlled deviations from that floor.
+**Rationale:** The safe language must be hermetically safe — no construct in the safe language can introduce unverifiable behavior. A single `pragma Import` of a C function creates an unverifiable hole in the Silver guarantee, since GNATprove cannot analyze foreign code. A future system sublanguage specification may provide controlled, auditable access to unsafe capabilities through explicitly scoped regions, similar to Go's `unsafe` package or Rust's `unsafe` blocks. That specification is a separate document with its own design process. This specification defines only the safe floor.
 
 ### D25. Ada/SPARK Emission Backend
 
@@ -248,9 +327,11 @@ All integer arithmetic expressions are evaluated in a mathematical integer type 
 - Passed as a parameter
 - Returned from a function
 
-The compiler emits Ada code that evaluates intermediate expressions in a sufficiently wide type. Range checks are emitted as explicit type conversions at narrowing points.
+**Emitted Ada idiom:** The compiler emits intermediate arithmetic using a 64-bit type: `type Wide_Integer is range -(2**63) .. (2**63 - 1);`. All subexpressions are lifted to `Wide_Integer` before evaluation. At narrowing points (assignment, return, parameter), the compiler emits an explicit type conversion to the target type, which generates a range check that GNATprove discharges via interval analysis.
 
-This means `A + B` where `A, B : Reading` (0..4095) computes in wide integers — the intermediate result 8190 does not overflow. A range check fires only if the result is stored back into a `Reading`. GNATprove discharges intermediate arithmetic trivially because mathematical integers cannot overflow, and discharges narrowing checks via interval analysis on the wide result.
+If the static range of any declared type in the program exceeds 64-bit signed range, the compiler shall reject the program. This is a legality rule, not a silent truncation. In practice, all Safe integer types will fit within 64 bits.
+
+This means `A + B` where `A, B : Reading` (0..4095) computes in `Wide_Integer` — the intermediate result 8190 does not overflow. A range check fires only if the result is stored back into a `Reading`. GNATprove discharges intermediate arithmetic trivially because `Wide_Integer` cannot overflow for any operation on narrower types, and discharges narrowing checks via interval analysis on the wide result.
 
 Example:
 
@@ -456,7 +537,11 @@ select
 end select;
 ```
 
-Each arm is either a channel receive or a delay timeout. The select blocks until one arm is ready, then executes that arm's statements. If multiple arms are ready simultaneously, the first listed arm wins (deterministic, unlike Go's random selection).
+Each arm is either a channel receive or a delay timeout. The select blocks until one arm is ready, then executes that arm's statements.
+
+**Arm selection semantics:** When the select statement is evaluated, the implementation tests each arm in declaration order (top to bottom). The first arm whose channel has data available is selected. If no channel arm is ready and a delay arm is present, the implementation waits until either a channel arm becomes ready or the delay expires, whichever occurs first. If the delay expires, the delay arm is selected. If multiple channels become ready simultaneously (e.g., data arrives on two channels between scheduling quanta), the first listed channel arm wins. This is deterministic — arm ordering in source code determines priority. There is no random selection as in Go's `select`.
+
+**Starvation:** A channel whose arm is listed later in a select may be starved if earlier arms are always ready. This is by design — it gives the programmer explicit priority control via declaration order. If fairness is needed, the programmer can use separate tasks or rotate through channels in application logic.
 
 **Restrictions on select:** Only receive operations appear in select arms, not send. This is a deliberate restriction — select-on-send creates priority inversion scenarios and makes deadlock analysis substantially harder. Go allows select-on-send but it is a common source of subtle bugs.
 
@@ -623,8 +708,7 @@ spec/
   05-spark-assurance.md
   06-conformance.md
   07-annex-a-retained-library.md
-  07-annex-b-c-interface.md
-  07-annex-c-impl-advice.md
+  07-annex-b-impl-advice.md
   08-syntax-summary.md
 ```
 
@@ -792,7 +876,7 @@ Full specification of the SPARK assurance guarantees. This is the language's def
   - Task-variable ownership emitted as `Global` aspects on task bodies
   - `select` on channels emitted as conditional entry call patterns
   - Access type ownership tracked; deallocation calls emitted at owner scope exit
-  - Wide intermediate arithmetic emitted using a sufficiently wide Ada integer type
+  - Wide intermediate arithmetic emitted using `Wide_Integer` (64-bit signed) per D27 Rule 1
   - Array index checks and null dereference checks guaranteed to be provably safe by D27 Rules 2–4
 - Runtime: GNAT's Jorvik-profile runtime; no custom runtime required
 - What constitutes a conforming implementation
@@ -801,15 +885,17 @@ Full specification of the SPARK assurance guarantees. This is the language's def
 
 ### 07-annex-a-retained-library.md
 
-Walk through 8652:2023 Annex A and for each library unit state: retained, excluded, or modified. Provide rationale for each exclusion.
+Walk through 8652:2023 Annex A and for each library unit state: retained, excluded, or modified. Provide rationale for each exclusion. Note that Annex B (Interface to Other Languages) is excluded in its entirety — C FFI is outside the scope of this specification (D24).
 
-### 07-annex-b-c-interface.md
+### 07-annex-b-impl-advice.md
 
-C interface via `pragma Import`, `pragma Export`, `pragma Convention`. Reference 8652:2023 Annex B. State what is retained, what is excluded.
+Implementation advice covering:
 
-### 07-annex-c-impl-advice.md
-
-Implementation advice: symbol file format, emitted Ada quality and style conventions, incremental recompilation, diagnostic messages.
+- **Emitted Ada conventions:** The emitted `.ads`/`.adb` files shall be deterministic — the same Safe source, compiled with the same compiler version, shall always produce byte-identical Ada output. Specify naming conventions for generated entities (e.g., channel-backing protected objects, task types, wide integer intermediates). Specify formatting conventions (indentation, line width, declaration ordering) to ensure stable golden tests.
+- **Symbol file format:** The per-package symbol file used for incremental compilation. For the initial implementation, the format should be text-based (UTF-8, line-oriented, versioned header) for debuggability and diffability. Specify: exported names, types (including size/alignment for opaque types), subprogram signatures, and dependency fingerprints. Deterministic ordering for stable diffs.
+- **Diagnostic messages:** Format, severity levels, and source location conventions. Error messages shall include the Safe source file, line, and column. Compiler diagnostics should be stable (same input produces same diagnostics) to support automated testing.
+- **Incremental recompilation:** Rules for when a symbol file change triggers recompilation of dependent units. Specify the fingerprinting strategy.
+- **Emitted Ada quality:** The emitted Ada should be human-readable and suitable for manual inspection, Gold/Platinum annotation, and DO-178C certification review.
 
 ### 08-syntax-summary.md
 
@@ -904,8 +990,8 @@ Execute in this order:
 6. Draft `04-tasks-and-channels.md` — task declarations, channel declarations, send/receive, select, task-variable ownership.
 7. Draft `05-spark-assurance.md` — Bronze and Silver guarantee specification, concurrency assurance, examples of emitted Ada with annotations.
 8. Draft `06-conformance.md` — implementation requirements.
-9. Draft `07-annex-a-retained-library.md` — walk Annex A.
-10. Draft `07-annex-b-c-interface.md` and `07-annex-c-impl-advice.md`.
+9. Draft `07-annex-a-retained-library.md` — walk Annex A. Note Annex B (C interface) excluded entirely.
+10. Draft `07-annex-b-impl-advice.md` — implementation advice.
 11. Draft `01-base-definition.md` and `00-front-matter.md` last.
 
 Commit each file as it is completed.
