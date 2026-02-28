@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>5. Overview of SPARK Language &mdash; SPARK User&#39;s Guide 27.0w</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/table-wrap.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+    <link rel="shortcut icon" href="../_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="5.1. Language Restrictions" href="source/language_restrictions.html" />
+    <link rel="prev" title="4. Identifying SPARK Code" href="spark_mode.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #12284c" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            SPARK User's Guide
+              <img src="../_static/adacore-logo-white.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                27.0w
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+    
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">1. Getting Started with SPARK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">2. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">3. Installation of GNATprove</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_mode.html">4. Identifying SPARK Code</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">5. Overview of SPARK Language</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="source/language_restrictions.html">5.1. Language Restrictions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/subprogram_contracts.html">5.2. Subprogram Contracts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/package_contracts.html">5.3. Package Contracts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/type_contracts.html">5.4. Type Contracts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/specification_features.html">5.5. Specification Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/assertion_pragmas.html">5.6. Assertion Pragmas</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/overflow_modes.html">5.7. Overflow Modes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/object_oriented_programming.html">5.8. Object Oriented Programming and Liskov Substitution Principle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/access.html">5.9. Pointer Support, Ownership, and Dynamic Memory Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/concurrency.html">5.10. Concurrency and Ravenscar Profile</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/spark_libraries.html">5.11. SPARK Libraries</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">6. SPARK Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gnatprove.html">7. Formal Verification with GNATprove</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage_scenarios.html">8. Applying SPARK in Practice</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="appendix/command_line_invocation.html">A. Command Line Invocation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="appendix/alternative_provers.html">B. Alternative Provers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="appendix/project_attributes.html">C. Project Attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="appendix/implementation_defined_pragmas.html">D. Implementation Defined Pragmas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="appendix/additional_annotate_pragmas.html">E. Additional Annotate Pragmas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="appendix/env_vars.html">F. Environment Variable</a></li>
+<li class="toctree-l1"><a class="reference internal" href="appendix/gnatprove_limitations.html">G. GNATprove Limitations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="appendix/portability_issues.html">H. Portability Issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="appendix/semantics_of_floating_point_operations.html">I. Semantics of Floating Point Operations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="appendix/quality_assurance.html">J. SPARK Architecture, Quality Assurance and Maturity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../gfdl.html">K. GNU Free Documentation License</a></li>
+</ul>
+
+        <li class="toctree-l1"><a href= "../genindex.html">Index</a></li>
+  
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #12284c" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">SPARK User's Guide</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active"><span class="section-number">5. </span>Overview of SPARK Language</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/en/spark_2014.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="overview-of-spark-language">
+<span id="id1"></span><span id="overview-of-spark-language-l5"></span><h1 id="overview-of-spark-language-l5"><span class="section-number">5. </span>Overview of SPARK Language<a class="headerlink" href="#overview-of-spark-language" title="Permalink to this heading"></a></h1>
+<p>This chapter provides an overview of the SPARK language, detailing for each
+feature its consequences in terms of execution and formal verification. This is
+not a reference manual for the SPARK language, which can be found in:</p>
+<ul class="simple">
+<li><p>the Ada Reference Manual (for Ada features), and</p></li>
+<li><p>the SPARK Reference Manual (for SPARK-specific features)</p></li>
+</ul>
+<p>More details on how GNAT compiles SPARK code can be found in the GNAT Reference Manual.</p>
+<p>SPARK can be seen as a large subset of Ada with additional
+aspects/pragmas/attributes. It includes in particular:</p>
+<ul class="simple">
+<li><p>rich types (subtypes with bounds not known statically, discriminant records,
+subtype predicates, access types)</p></li>
+<li><p>flexible features to structure programs (function and operator
+overloading, early returns and exits, raise statements)</p></li>
+<li><p>code sharing features (generics, expression functions)</p></li>
+<li><p>object oriented features (tagged types, dispatching)</p></li>
+<li><p>concurrency features (tasks, protected objects)</p></li>
+</ul>
+<p>In the rest of this chapter, the marker <em>Supported in Ada 2005</em> (resp.
+<em>Supported in Ada 2012</em> or <em>Supported in Ada 2022</em>) is used to denote that a
+feature defined in Ada 2005 (resp. Ada 2012 or Ada 2022) is supported in
+SPARK, and the marker <em>Requires Ravenscar/Jorvik profile</em> is used to
+denote that a concurrency feature from Ada which belongs to the Ravenscar or
+Jorvik profiles is supported in SPARK.  The marker <em>Specific to SPARK</em> is used
+to denote that a feature is specific to SPARK. Both the GNAT compiler
+and GNATprove analyzer support all features listed here.</p>
+<p>Some code snippets presented in this section are available in the example
+called <code class="docutils literal notranslate"><span class="pre">gnatprove_by_example</span></code> distributed with the SPARK toolset. It can be
+found in the <code class="docutils literal notranslate"><span class="pre">share/examples/spark</span></code> directory below the directory where the
+toolset is installed, and can be accessed from the IDE (either GNAT Studio or
+GNATBench) via the <span class="menuselection">Help ‣ SPARK ‣ Examples</span> menu item.</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="source/language_restrictions.html">5.1. Language Restrictions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="source/language_restrictions.html#excluded-ada-features">5.1.1. Excluded Ada Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/language_restrictions.html#sizes-of-objects">5.1.2. Sizes of Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/language_restrictions.html#data-validity">5.1.3. Data Validity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/language_restrictions.html#data-initialization-policy">5.1.4. Data Initialization Policy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/language_restrictions.html#memory-ownership-policy">5.1.5. Memory Ownership Policy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/language_restrictions.html#absence-of-interferences">5.1.6. Absence of Interferences</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/language_restrictions.html#analysis-of-generics">5.1.7. Analysis of Generics</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="source/subprogram_contracts.html">5.2. Subprogram Contracts</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="source/subprogram_contracts.html#preconditions">5.2.1. Preconditions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/subprogram_contracts.html#postconditions">5.2.2. Postconditions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/subprogram_contracts.html#contract-cases">5.2.3. Contract Cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/subprogram_contracts.html#data-dependencies">5.2.4. Data Dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/subprogram_contracts.html#flow-dependencies">5.2.5. Flow Dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/subprogram_contracts.html#abstraction-and-contracts">5.2.6. Abstraction and Contracts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/subprogram_contracts.html#exceptional-contracts">5.2.7. Exceptional Contracts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/subprogram_contracts.html#contract-for-abrupt-program-termination">5.2.8. Contract for Abrupt Program Termination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/subprogram_contracts.html#exit-cases">5.2.9. Exit Cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/subprogram_contracts.html#contracts-for-termination">5.2.10. Contracts for Termination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/subprogram_contracts.html#subprogram-variant">5.2.11. Subprogram Variant</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="source/package_contracts.html">5.3. Package Contracts</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="source/package_contracts.html#state-abstraction">5.3.1. State Abstraction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/package_contracts.html#package-initialization">5.3.2. Package Initialization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/package_contracts.html#package-initial-condition">5.3.3. Package Initial Condition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/package_contracts.html#interfaces-to-the-physical-world">5.3.4. Interfaces to the Physical World</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="source/type_contracts.html">5.4. Type Contracts</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="source/type_contracts.html#scalar-ranges">5.4.1. Scalar Ranges</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/type_contracts.html#record-discriminants">5.4.2. Record Discriminants</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/type_contracts.html#predicates">5.4.3. Predicates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/type_contracts.html#type-invariants">5.4.4. Type Invariants</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/type_contracts.html#default-initial-condition">5.4.5. Default Initial Condition</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="source/specification_features.html">5.5. Specification Features</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="source/specification_features.html#aspect-constant-after-elaboration">5.5.1. Aspect <code class="docutils literal notranslate"><span class="pre">Constant_After_Elaboration</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/specification_features.html#aspect-no-caching">5.5.2. Aspect <code class="docutils literal notranslate"><span class="pre">No_Caching</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/specification_features.html#aspect-relaxed-initialization-and-ghost-attribute-initialized">5.5.3. Aspect <code class="docutils literal notranslate"><span class="pre">Relaxed_Initialization</span></code> and Ghost Attribute <code class="docutils literal notranslate"><span class="pre">Initialized</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/specification_features.html#aspect-side-effects">5.5.4. Aspect <code class="docutils literal notranslate"><span class="pre">Side_Effects</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/specification_features.html#aspect-potentially-invalid">5.5.5. Aspect <code class="docutils literal notranslate"><span class="pre">Potentially_Invalid</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/specification_features.html#attribute-loop-entry">5.5.6. Attribute <code class="docutils literal notranslate"><span class="pre">Loop_Entry</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/specification_features.html#attribute-old">5.5.7. Attribute <code class="docutils literal notranslate"><span class="pre">Old</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/specification_features.html#attribute-result">5.5.8. Attribute <code class="docutils literal notranslate"><span class="pre">Result</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/specification_features.html#aggregates">5.5.9. Aggregates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/specification_features.html#conditional-expressions">5.5.10. Conditional Expressions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/specification_features.html#declare-expressions">5.5.11. Declare Expressions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/specification_features.html#expression-functions">5.5.12. Expression Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/specification_features.html#ghost-code">5.5.13. Ghost Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/specification_features.html#quantified-expressions">5.5.14. Quantified Expressions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="source/assertion_pragmas.html">5.6. Assertion Pragmas</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="source/assertion_pragmas.html#pragma-assert">5.6.1. Pragma <code class="docutils literal notranslate"><span class="pre">Assert</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/assertion_pragmas.html#pragma-assertion-policy">5.6.2. Pragma <code class="docutils literal notranslate"><span class="pre">Assertion_Policy</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/assertion_pragmas.html#loop-invariants">5.6.3. Loop Invariants</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/assertion_pragmas.html#loop-variants">5.6.4. Loop Variants</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/assertion_pragmas.html#pragma-assume">5.6.5. Pragma <code class="docutils literal notranslate"><span class="pre">Assume</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/assertion_pragmas.html#pragma-assert-and-cut">5.6.6. Pragma <code class="docutils literal notranslate"><span class="pre">Assert_And_Cut</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="source/overflow_modes.html">5.7. Overflow Modes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="source/object_oriented_programming.html">5.8. Object Oriented Programming and Liskov Substitution Principle</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="source/object_oriented_programming.html#class-wide-subprogram-contracts">5.8.1. Class-Wide Subprogram Contracts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/object_oriented_programming.html#mixing-class-wide-and-specific-subprogram-contracts">5.8.2. Mixing Class-Wide and Specific Subprogram Contracts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/object_oriented_programming.html#dispatching-calls-and-controlling-operands">5.8.3. Dispatching Calls and Controlling Operands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/object_oriented_programming.html#dynamic-types-and-invisible-components">5.8.4. Dynamic Types and Invisible Components</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="source/access.html">5.9. Pointer Support, Ownership, and Dynamic Memory Management</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="source/access.html#ownership-operations-on-access-to-object-types">5.9.1. Ownership Operations on Access-to-Object Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/access.html#traversal-functions">5.9.2. Traversal Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/access.html#attribute-access-examples">5.9.3. Attribute <code class="docutils literal notranslate"><span class="pre">Access</span></code> Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/access.html#subprogram-pointers">5.9.4. Subprogram Pointers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/access.html#pointer-value-and-predefined-equality">5.9.5. Pointer Value and Predefined Equality</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="source/concurrency.html">5.10. Concurrency and Ravenscar Profile</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="source/concurrency.html#tasks-and-data-races">5.10.1. Tasks and Data Races</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/concurrency.html#task-contracts">5.10.2. Task Contracts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/concurrency.html#protected-objects-and-deadlocks">5.10.3. Protected Objects and Deadlocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/concurrency.html#suspension-objects">5.10.4. Suspension Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/concurrency.html#state-abstraction-and-concurrency">5.10.5. State Abstraction and Concurrency</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/concurrency.html#project-wide-tasking-analysis">5.10.6. Project-wide Tasking Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/concurrency.html#interrupt-handlers">5.10.7. Interrupt Handlers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="source/spark_libraries.html">5.11. SPARK Libraries</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="source/spark_libraries.html#spark-library">5.11.1. SPARK Library</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/spark_libraries.html#big-numbers-library">5.11.2. Big Numbers Library</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/spark_libraries.html#functional-containers-library">5.11.3. Functional Containers Library</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/spark_libraries.html#formal-containers-library">5.11.4. Formal Containers Library</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/spark_libraries.html#assertion-levels-in-the-spark-library">5.11.5. Assertion Levels in the SPARK Library</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/spark_libraries.html#spark-lemma-library">5.11.6. SPARK Lemma Library</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/spark_libraries.html#higher-order-function-library">5.11.7. Higher Order Function Library</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/spark_libraries.html#input-output-libraries">5.11.8. Input-Output Libraries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/spark_libraries.html#strings-libraries">5.11.9. Strings Libraries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/spark_libraries.html#c-strings-interface">5.11.10. C Strings Interface</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/spark_libraries.html#addresses-to-access-conversions">5.11.11. Addresses to Access Conversions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/spark_libraries.html#cut-operations">5.11.12. Cut Operations</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="spark_mode.html" class="btn btn-neutral float-left" title="4. Identifying SPARK Code" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="source/language_restrictions.html" class="btn btn-neutral float-right" title="5.1. Language Restrictions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2011-2026, AdaCore and Capgemini Engineering.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

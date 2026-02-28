@@ -1,0 +1,1063 @@
+
+
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+	<meta charset="UTF-8" />
+	<title>Ada 2022 Documents - Ada Resource Association</title>
+	<link rel="profile" href="http://gmpg.org/xfn/11" />
+	<link rel="stylesheet" href="/resources/css/reset.css" type="text/css" media="all" />
+	<link rel="stylesheet" type="text/css" media="all" href="/resources/css/base_styles.css" />
+		<link rel="pingback" href="https://www.adaic.org/xmlrpc.php" />
+	<script src="/resources/js/jquery-1.4.2.min.js"></script>
+
+	<!-- jQuery Tools http://flowplayer.org/tools/index.html -->
+	<script src="/resources/js/jquery.tools.min.js"></script>
+
+	<script src="/resources/js/jquery.popups.min.js"></script>
+	<script src="/resources/js/jquery.text-overflow.min.js"></script>
+
+	<script type="text/javascript">//<![CDATA[
+	$(function() {
+        	$('.feed_body .titles h3').textOverflow();
+	});
+	//]]></script>
+	<meta name='robots' content='max-image-preview:large' />
+<link rel="alternate" type="application/rss+xml" title="Ada Resource Association &raquo; Feed" href="https://www.adaic.org/feed/" />
+<link rel="alternate" type="application/rss+xml" title="Ada Resource Association &raquo; Comments Feed" href="https://www.adaic.org/comments/feed/" />
+<link rel="alternate" title="oEmbed (JSON)" type="application/json+oembed" href="https://www.adaic.org/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fwww.adaic.org%2Fada-resources%2Fstandards%2Fada22%2F" />
+<link rel="alternate" title="oEmbed (XML)" type="text/xml+oembed" href="https://www.adaic.org/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fwww.adaic.org%2Fada-resources%2Fstandards%2Fada22%2F&#038;format=xml" />
+<style id='wp-img-auto-sizes-contain-inline-css' type='text/css'>
+img:is([sizes=auto i],[sizes^="auto," i]){contain-intrinsic-size:3000px 1500px}
+/*# sourceURL=wp-img-auto-sizes-contain-inline-css */
+</style>
+<style id='wp-emoji-styles-inline-css' type='text/css'>
+
+	img.wp-smiley, img.emoji {
+		display: inline !important;
+		border: none !important;
+		box-shadow: none !important;
+		height: 1em !important;
+		width: 1em !important;
+		margin: 0 0.07em !important;
+		vertical-align: -0.1em !important;
+		background: none !important;
+		padding: 0 !important;
+	}
+/*# sourceURL=wp-emoji-styles-inline-css */
+</style>
+<style id='wp-block-library-inline-css' type='text/css'>
+:root{
+  --wp-block-synced-color:#7a00df;
+  --wp-block-synced-color--rgb:122, 0, 223;
+  --wp-bound-block-color:var(--wp-block-synced-color);
+  --wp-editor-canvas-background:#ddd;
+  --wp-admin-theme-color:#007cba;
+  --wp-admin-theme-color--rgb:0, 124, 186;
+  --wp-admin-theme-color-darker-10:#006ba1;
+  --wp-admin-theme-color-darker-10--rgb:0, 107, 160.5;
+  --wp-admin-theme-color-darker-20:#005a87;
+  --wp-admin-theme-color-darker-20--rgb:0, 90, 135;
+  --wp-admin-border-width-focus:2px;
+}
+@media (min-resolution:192dpi){
+  :root{
+    --wp-admin-border-width-focus:1.5px;
+  }
+}
+.wp-element-button{
+  cursor:pointer;
+}
+
+:root .has-very-light-gray-background-color{
+  background-color:#eee;
+}
+:root .has-very-dark-gray-background-color{
+  background-color:#313131;
+}
+:root .has-very-light-gray-color{
+  color:#eee;
+}
+:root .has-very-dark-gray-color{
+  color:#313131;
+}
+:root .has-vivid-green-cyan-to-vivid-cyan-blue-gradient-background{
+  background:linear-gradient(135deg, #00d084, #0693e3);
+}
+:root .has-purple-crush-gradient-background{
+  background:linear-gradient(135deg, #34e2e4, #4721fb 50%, #ab1dfe);
+}
+:root .has-hazy-dawn-gradient-background{
+  background:linear-gradient(135deg, #faaca8, #dad0ec);
+}
+:root .has-subdued-olive-gradient-background{
+  background:linear-gradient(135deg, #fafae1, #67a671);
+}
+:root .has-atomic-cream-gradient-background{
+  background:linear-gradient(135deg, #fdd79a, #004a59);
+}
+:root .has-nightshade-gradient-background{
+  background:linear-gradient(135deg, #330968, #31cdcf);
+}
+:root .has-midnight-gradient-background{
+  background:linear-gradient(135deg, #020381, #2874fc);
+}
+:root{
+  --wp--preset--font-size--normal:16px;
+  --wp--preset--font-size--huge:42px;
+}
+
+.has-regular-font-size{
+  font-size:1em;
+}
+
+.has-larger-font-size{
+  font-size:2.625em;
+}
+
+.has-normal-font-size{
+  font-size:var(--wp--preset--font-size--normal);
+}
+
+.has-huge-font-size{
+  font-size:var(--wp--preset--font-size--huge);
+}
+
+.has-text-align-center{
+  text-align:center;
+}
+
+.has-text-align-left{
+  text-align:left;
+}
+
+.has-text-align-right{
+  text-align:right;
+}
+
+.has-fit-text{
+  white-space:nowrap !important;
+}
+
+#end-resizable-editor-section{
+  display:none;
+}
+
+.aligncenter{
+  clear:both;
+}
+
+.items-justified-left{
+  justify-content:flex-start;
+}
+
+.items-justified-center{
+  justify-content:center;
+}
+
+.items-justified-right{
+  justify-content:flex-end;
+}
+
+.items-justified-space-between{
+  justify-content:space-between;
+}
+
+.screen-reader-text{
+  border:0;
+  clip-path:inset(50%);
+  height:1px;
+  margin:-1px;
+  overflow:hidden;
+  padding:0;
+  position:absolute;
+  width:1px;
+  word-wrap:normal !important;
+}
+
+.screen-reader-text:focus{
+  background-color:#ddd;
+  clip-path:none;
+  color:#444;
+  display:block;
+  font-size:1em;
+  height:auto;
+  left:5px;
+  line-height:normal;
+  padding:15px 23px 14px;
+  text-decoration:none;
+  top:5px;
+  width:auto;
+  z-index:100000;
+}
+html :where(.has-border-color){
+  border-style:solid;
+}
+
+html :where([style*=border-top-color]){
+  border-top-style:solid;
+}
+
+html :where([style*=border-right-color]){
+  border-right-style:solid;
+}
+
+html :where([style*=border-bottom-color]){
+  border-bottom-style:solid;
+}
+
+html :where([style*=border-left-color]){
+  border-left-style:solid;
+}
+
+html :where([style*=border-width]){
+  border-style:solid;
+}
+
+html :where([style*=border-top-width]){
+  border-top-style:solid;
+}
+
+html :where([style*=border-right-width]){
+  border-right-style:solid;
+}
+
+html :where([style*=border-bottom-width]){
+  border-bottom-style:solid;
+}
+
+html :where([style*=border-left-width]){
+  border-left-style:solid;
+}
+html :where(img[class*=wp-image-]){
+  height:auto;
+  max-width:100%;
+}
+:where(figure){
+  margin:0 0 1em;
+}
+
+html :where(.is-position-sticky){
+  --wp-admin--admin-bar--position-offset:var(--wp-admin--admin-bar--height, 0px);
+}
+
+@media screen and (max-width:600px){
+  html :where(.is-position-sticky){
+    --wp-admin--admin-bar--position-offset:0px;
+  }
+}
+
+/*# sourceURL=wp-block-library-inline-css */
+</style>
+<style id='classic-theme-styles-inline-css' type='text/css'>
+/**
+ * These rules are needed for backwards compatibility.
+ * They should match the button element rules in the base theme.json file.
+ */
+.wp-block-button__link {
+	color: #ffffff;
+	background-color: #32373c;
+	border-radius: 9999px; /* 100% causes an oval, but any explicit but really high value retains the pill shape. */
+
+	/* This needs a low specificity so it won't override the rules from the button element if defined in theme.json. */
+	box-shadow: none;
+	text-decoration: none;
+
+	/* The extra 2px are added to size solids the same as the outline versions.*/
+	padding: calc(0.667em + 2px) calc(1.333em + 2px);
+
+	font-size: 1.125em;
+}
+
+.wp-block-file__button {
+	background: #32373c;
+	color: #ffffff;
+	text-decoration: none;
+}
+
+/*# sourceURL=/wp-includes/css/classic-themes.css */
+</style>
+<style id='global-styles-inline-css' type='text/css'>
+:root{--wp--preset--aspect-ratio--square: 1;--wp--preset--aspect-ratio--4-3: 4/3;--wp--preset--aspect-ratio--3-4: 3/4;--wp--preset--aspect-ratio--3-2: 3/2;--wp--preset--aspect-ratio--2-3: 2/3;--wp--preset--aspect-ratio--16-9: 16/9;--wp--preset--aspect-ratio--9-16: 9/16;--wp--preset--color--black: #000000;--wp--preset--color--cyan-bluish-gray: #abb8c3;--wp--preset--color--white: #ffffff;--wp--preset--color--pale-pink: #f78da7;--wp--preset--color--vivid-red: #cf2e2e;--wp--preset--color--luminous-vivid-orange: #ff6900;--wp--preset--color--luminous-vivid-amber: #fcb900;--wp--preset--color--light-green-cyan: #7bdcb5;--wp--preset--color--vivid-green-cyan: #00d084;--wp--preset--color--pale-cyan-blue: #8ed1fc;--wp--preset--color--vivid-cyan-blue: #0693e3;--wp--preset--color--vivid-purple: #9b51e0;--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple: linear-gradient(135deg,rgb(6,147,227) 0%,rgb(155,81,224) 100%);--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan: linear-gradient(135deg,rgb(122,220,180) 0%,rgb(0,208,130) 100%);--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange: linear-gradient(135deg,rgb(252,185,0) 0%,rgb(255,105,0) 100%);--wp--preset--gradient--luminous-vivid-orange-to-vivid-red: linear-gradient(135deg,rgb(255,105,0) 0%,rgb(207,46,46) 100%);--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray: linear-gradient(135deg,rgb(238,238,238) 0%,rgb(169,184,195) 100%);--wp--preset--gradient--cool-to-warm-spectrum: linear-gradient(135deg,rgb(74,234,220) 0%,rgb(151,120,209) 20%,rgb(207,42,186) 40%,rgb(238,44,130) 60%,rgb(251,105,98) 80%,rgb(254,248,76) 100%);--wp--preset--gradient--blush-light-purple: linear-gradient(135deg,rgb(255,206,236) 0%,rgb(152,150,240) 100%);--wp--preset--gradient--blush-bordeaux: linear-gradient(135deg,rgb(254,205,165) 0%,rgb(254,45,45) 50%,rgb(107,0,62) 100%);--wp--preset--gradient--luminous-dusk: linear-gradient(135deg,rgb(255,203,112) 0%,rgb(199,81,192) 50%,rgb(65,88,208) 100%);--wp--preset--gradient--pale-ocean: linear-gradient(135deg,rgb(255,245,203) 0%,rgb(182,227,212) 50%,rgb(51,167,181) 100%);--wp--preset--gradient--electric-grass: linear-gradient(135deg,rgb(202,248,128) 0%,rgb(113,206,126) 100%);--wp--preset--gradient--midnight: linear-gradient(135deg,rgb(2,3,129) 0%,rgb(40,116,252) 100%);--wp--preset--font-size--small: 13px;--wp--preset--font-size--medium: 20px;--wp--preset--font-size--large: 36px;--wp--preset--font-size--x-large: 42px;--wp--preset--spacing--20: 0.44rem;--wp--preset--spacing--30: 0.67rem;--wp--preset--spacing--40: 1rem;--wp--preset--spacing--50: 1.5rem;--wp--preset--spacing--60: 2.25rem;--wp--preset--spacing--70: 3.38rem;--wp--preset--spacing--80: 5.06rem;--wp--preset--shadow--natural: 6px 6px 9px rgba(0, 0, 0, 0.2);--wp--preset--shadow--deep: 12px 12px 50px rgba(0, 0, 0, 0.4);--wp--preset--shadow--sharp: 6px 6px 0px rgba(0, 0, 0, 0.2);--wp--preset--shadow--outlined: 6px 6px 0px -3px rgb(255, 255, 255), 6px 6px rgb(0, 0, 0);--wp--preset--shadow--crisp: 6px 6px 0px rgb(0, 0, 0);}:where(.is-layout-flex){gap: 0.5em;}:where(.is-layout-grid){gap: 0.5em;}body .is-layout-flex{display: flex;}.is-layout-flex{flex-wrap: wrap;align-items: center;}.is-layout-flex > :is(*, div){margin: 0;}body .is-layout-grid{display: grid;}.is-layout-grid > :is(*, div){margin: 0;}:where(.wp-block-columns.is-layout-flex){gap: 2em;}:where(.wp-block-columns.is-layout-grid){gap: 2em;}:where(.wp-block-post-template.is-layout-flex){gap: 1.25em;}:where(.wp-block-post-template.is-layout-grid){gap: 1.25em;}.has-black-color{color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-color{color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-color{color: var(--wp--preset--color--white) !important;}.has-pale-pink-color{color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-color{color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-color{color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-color{color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-color{color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-color{color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-color{color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-color{color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-color{color: var(--wp--preset--color--vivid-purple) !important;}.has-black-background-color{background-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-background-color{background-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-background-color{background-color: var(--wp--preset--color--white) !important;}.has-pale-pink-background-color{background-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-background-color{background-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-background-color{background-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-background-color{background-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-background-color{background-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-background-color{background-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-background-color{background-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-background-color{background-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-background-color{background-color: var(--wp--preset--color--vivid-purple) !important;}.has-black-border-color{border-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-border-color{border-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-border-color{border-color: var(--wp--preset--color--white) !important;}.has-pale-pink-border-color{border-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-border-color{border-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-border-color{border-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-border-color{border-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-border-color{border-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-border-color{border-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-border-color{border-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-border-color{border-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-border-color{border-color: var(--wp--preset--color--vivid-purple) !important;}.has-vivid-cyan-blue-to-vivid-purple-gradient-background{background: var(--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple) !important;}.has-light-green-cyan-to-vivid-green-cyan-gradient-background{background: var(--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan) !important;}.has-luminous-vivid-amber-to-luminous-vivid-orange-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange) !important;}.has-luminous-vivid-orange-to-vivid-red-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-orange-to-vivid-red) !important;}.has-very-light-gray-to-cyan-bluish-gray-gradient-background{background: var(--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray) !important;}.has-cool-to-warm-spectrum-gradient-background{background: var(--wp--preset--gradient--cool-to-warm-spectrum) !important;}.has-blush-light-purple-gradient-background{background: var(--wp--preset--gradient--blush-light-purple) !important;}.has-blush-bordeaux-gradient-background{background: var(--wp--preset--gradient--blush-bordeaux) !important;}.has-luminous-dusk-gradient-background{background: var(--wp--preset--gradient--luminous-dusk) !important;}.has-pale-ocean-gradient-background{background: var(--wp--preset--gradient--pale-ocean) !important;}.has-electric-grass-gradient-background{background: var(--wp--preset--gradient--electric-grass) !important;}.has-midnight-gradient-background{background: var(--wp--preset--gradient--midnight) !important;}.has-small-font-size{font-size: var(--wp--preset--font-size--small) !important;}.has-medium-font-size{font-size: var(--wp--preset--font-size--medium) !important;}.has-large-font-size{font-size: var(--wp--preset--font-size--large) !important;}.has-x-large-font-size{font-size: var(--wp--preset--font-size--x-large) !important;}
+/*# sourceURL=global-styles-inline-css */
+</style>
+
+<link rel='stylesheet' id='sociable-front-css-css' href='https://www.adaic.org/wp-content/plugins/sociable/sociable.css?ver=6.9.1' type='text/css' media='all' />
+<link rel="https://api.w.org/" href="https://www.adaic.org/wp-json/" /><link rel="alternate" title="JSON" type="application/json" href="https://www.adaic.org/wp-json/wp/v2/pages/2745" /><link rel="EditURI" type="application/rsd+xml" title="RSD" href="https://www.adaic.org/xmlrpc.php?rsd" />
+<link rel="canonical" href="https://www.adaic.org/ada-resources/standards/ada22/" />
+<link rel='shortlink' href='https://www.adaic.org/?p=2745' />
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JGDQ9LX92R"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-JGDQ9LX92R');
+  dataLayer.push({'event': 'pageview'});
+</script>
+
+<!-- BEGIN Google Analytics -->
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-117428-5']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+<!-- END Google Analytics -->
+	
+<!-- BEGIN Google Analytics -->
+<!-- Google tag (gtag.js) -->
+<script async
+src=https://www.googletagmanager.com/gtag/js?id=G-L50K0XLQ02></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-L50K0XLQ02');
+  dataLayer.push({'event': 'pageview'});
+</script>
+<!-- END Google Analytics -->
+
+<style id='core-block-supports-inline-css' type='text/css'>
+/**
+ * Core styles: block-supports
+ */
+
+/*# sourceURL=core-block-supports-inline-css */
+</style>
+
+</head>
+
+<body class="wp-singular page-template-default page page-id-2745 page-child parent-pageid-233 wp-theme-ara-1-7-2022-0310">
+  <div id="header_wrap">
+    <div id="header" role="banner">
+    	<div id="main_nav">
+        <div class="menu"><ul><li ><a href="https://www.adaic.org/">Home</a></li><li class="page_item page-item-37"><a href="https://www.adaic.org/advantages/">Ada Advantages</a></li><li class="page_item page-item-64"><a href="https://www.adaic.org/learn/">Learn Ada</a></li><li class="page_item page-item-66 current_page_ancestor"><a href="https://www.adaic.org/ada-resources/">Resources</a></li><li class="page_item page-item-62"><a href="https://www.adaic.org/community/">ARA Community</a></li></ul></div>
+  			<div id="search">
+  			  
+<form role="search" method="get" id="searchform" action="/">
+  <input type="search" id="search_field" name="s" />
+  <input id="search_btn" type="image" src="/resources/css/images/icon_search.png">
+</form>  			</div>
+  		</div>
+
+  		<div id="sub_nav">
+  		                	  
+    	      	      	    <a href="https://www.adaic.org/site-map/">Site Map</a>
+    	    |     	      	    <a href="https://www.adaic.org/contact/">Contact Us</a>
+    	        	    		</div>
+
+  		<h1 id="branding"><a href="https://www.adaic.org">Ada Resource Association</a></h1>
+  		<h2 id="tagline">News and resource for the Ada programming language</h2>
+    </div>
+  </div>
+
+<div class="page_wrapper">
+	<div class="section_left" role="main">
+
+    
+  	<div class="page_content">
+  					<h2>Ada Standards</h2>
+			<h3>Ada 2022 Documents</h3>
+			
+			
+<p>The documents on this page describe the 2022 revision to the Ada Standard, usually known as Ada 2022. The revisions were produced by the ISO/IEC JTC 1/SC 22/WG 9 Ada Rapporteur Group (ARG), and have been published as the International Standard ISO/IEC 8652:2023(E). The document used as the source material for the Standard is known as the Ada Reference Manual. 
+Related documents are also found on this page.</p>
+
+<p>Earlier versions of the Ada Standard, including the (now replaced) Ada 2012 consolidated standard, can be found <a href="/ada-resources/standards/">here</a>.</a></p>
+
+<p>For an introduction to the differences between earlier versions of Ada and Ada 2022, see the <A HREF="#Over">Ada 2022 Overview</A>. This is an unofficial document that provides an overview of new Ada 2022 features, examples of their use, compatibility with Ada 95, 2005, and 2012, and more. It was written by Jeff Cousins. </p>
+
+<h3><A name="Original-RM" HREF="/resources/add_content/standards/22rm/html/RM-TTL.html">Ada 2022 Reference Manual</A></h3>
+<p>The 2022 Edition of the Ada Reference Manual, corresponding to the International Standard (ISO/IEC 8652:2023(E)). (Differences from the International Standard are outlined in the Introduction.) The <A HREF="/resources/add_content/standards/22rm/html/RM-TTL.html">Ada 2022 RM</a> can be browsed <A HREF="/resources/add_content/standards/22rm/html/RM-TTL.html">online</a>.</p>
+
+<p><em>Also available for download as:</em></p>
+<ul>
+<li><A HREF="/resources/add_content/standards/22rm/rm.pdf">Adobe Acrobat (.pdf) with changes highlighted</A> [4561K]</li>
+
+<li><A HREF="/resources/add_content/standards/22rm/rm-bar.pdf">Adobe Acrobat (.pdf) with change bars only</A> [4079K]</li>
+
+<li><A HREF="/resources/add_content/standards/22rm/rm-final.pdf">Adobe Acrobat (.pdf) without change bars</A> [3920K]</li>
+
+<li><A HREF="/resources/add_content/standards/22rm/RM-22-Html.zip">Zip of HTML files</A> [1917K]</li>
+
+<li><A HREF="/resources/add_content/standards/22rm/RM-22-Txt.zip">Zip of text files</A> [735K]</li>
+</ul>
+
+<!--<p>Print copies of the Ada 2022 Reference Manual have been published by Springer. See the article 
+<a href="/ada-resources/standards/ada-95-documents/lrm/">Accessing the Ada Language Reference Manuals</a> for details.</p>-->
+
+<!--<p>The Ada 2022 Reference Manual has been converted to EMACS Info format by Stephen Leake. That version can be downloaded from <a href="http://www.stephe-leake.org/ada/arm.html">his site</a>.-->
+
+<h3><A HREF="http://www.ada-auth.org/standards/overview22.html">Ada 2022 Overview</A></h3>
+<p>
+<A name="Over"></a>This document provides an overview of Ada 2022 features, examples of their use, compilatibility with Ada 95, 2005, and 2012, and more. It was written by Jeff Cousins. It is 
+available in HTML and PDF formats at
+<A HREF="http://www.ada-auth.org/standards/overview22.html">www.ada-auth.org</A>. 
+</p>
+
+<h3><A HREF="/resources/add_content/standards/22aarm/html/AA-TTL.html">Annotated Ada 2022 Language Reference Manual (AARM)</A></h3>
+<p>Intended primarily for compiler writers, conformance test writers, and others who wish to study the fine details,
+the AARM contains all of the text and various annotations in the Ada 2022 LRM. This 2022 edition includes the all of the changes in the 4th Edition of the Ada Reference Manual as well as new and revised annotations. The <A HREF="/resources/add_content/standards/22aarm/html/AA-TTL.html">Ada 2022 AARM</a> can be browsed <A HREF="/resources/add_content/standards/22aarm/html/AA-TTL.html">online</a>.</p>
+
+<p><em>Also available for download as:</em></p>
+<ul>
+<li><A HREF="/resources/add_content/standards/22aarm/aa.pdf"">Adobe Acrobat (.pdf) with changes highlighted</A> [7023K]</li>
+
+<li><A HREF="/resources/add_content/standards/22aarm/aa-final.pdf">Adobe Acrobat (.pdf) without change markings</A> [6159K]</li>
+
+<li><A HREF="/resources/add_content/standards/22aarm/AA-22-Html.zip">Zip of HTML files</A> [3048K]</li>
+
+<li><A HREF="/resources/add_content/standards/22aarm/AA-22-Txt.zip">Zip of text files</A> [1369K]</li>
+</ul>
+
+<h3><A HREF="http://www.ada-auth.org/arm.html">Additional Documents</A></h3>
+<p>Additional documents and tools are available at <A HREF="http://www.ada-auth.org/arm.html">www.ada-auth.org</a>, including the tools used to create the Standards.</p>
+
+
+<div class="sociable">
+<div class="sociable_tagline">
+<strong>Share and Enjoy:</strong>
+</div>
+<ul>
+	<li class="sociablefirst"><a rel="nofollow"  target="_blank" href="mailto:?subject=Ada%202022%20Documents&amp;body=https%3A%2F%2Fwww.adaic.org%2Fada-resources%2Fstandards%2Fada22%2F" title="email"><img decoding="async" src="https://www.adaic.org/wp-content/plugins/sociable/images/services-sprite.gif" title="email" alt="email" style="width: 16px; height: 16px; background: transparent url(https://www.adaic.org/wp-content/plugins/sociable/images/services-sprite.png) no-repeat; background-position:-325px -1px" class="sociable-hovers" /></a></li>
+	<li><a rel="nofollow"  target="_blank" href="http://www.linkedin.com/shareArticle?mini=true&amp;url=https%3A%2F%2Fwww.adaic.org%2Fada-resources%2Fstandards%2Fada22%2F&amp;title=Ada%202022%20Documents&amp;source=Ada+Resource+Association+News+and+resource+for+the+Ada+programming+language&amp;summary=%09%09%09Ada%20Standards%0D%0A%09%09%09Ada%202022%20Documents%0D%0A%09%09%09%0D%0A%09%09%09%0D%0AThe%20documents%20on%20this%20page%20describe%20the%202022%20revision%20to%20the%20Ada%20Standard%2C%20usually%20known%20as%20Ada%202022.%20The%20revisions%20were%20produced%20by%20the%20ISO%2FIEC%20JTC%201%2FSC%2022%2FWG%209%20Ada%20Rapporteur%20Group%20%28ARG%29%2C%20and%20have%20" title="LinkedIn"><img decoding="async" src="https://www.adaic.org/wp-content/plugins/sociable/images/services-sprite.gif" title="LinkedIn" alt="LinkedIn" style="width: 16px; height: 16px; background: transparent url(https://www.adaic.org/wp-content/plugins/sociable/images/services-sprite.png) no-repeat; background-position:-1px -37px" class="sociable-hovers" /></a></li>
+	<li><a rel="nofollow"  target="_blank" href="http://twitter.com/home?status=Ada%202022%20Documents%20-%20https%3A%2F%2Fwww.adaic.org%2Fada-resources%2Fstandards%2Fada22%2F" title="Twitter"><img decoding="async" src="https://www.adaic.org/wp-content/plugins/sociable/images/services-sprite.gif" title="Twitter" alt="Twitter" style="width: 16px; height: 16px; background: transparent url(https://www.adaic.org/wp-content/plugins/sociable/images/services-sprite.png) no-repeat; background-position:-343px -55px" class="sociable-hovers" /></a></li>
+	<li><a rel="nofollow"  target="_blank" href="http://www.facebook.com/share.php?u=https%3A%2F%2Fwww.adaic.org%2Fada-resources%2Fstandards%2Fada22%2F&amp;t=Ada%202022%20Documents" title="Facebook"><img decoding="async" src="https://www.adaic.org/wp-content/plugins/sociable/images/services-sprite.gif" title="Facebook" alt="Facebook" style="width: 16px; height: 16px; background: transparent url(https://www.adaic.org/wp-content/plugins/sociable/images/services-sprite.png) no-repeat; background-position:-343px -1px" class="sociable-hovers" /></a></li>
+	<li><a rel="nofollow"  target="_blank" href="http://digg.com/submit?phase=2&amp;url=https%3A%2F%2Fwww.adaic.org%2Fada-resources%2Fstandards%2Fada22%2F&amp;title=Ada%202022%20Documents&amp;bodytext=%09%09%09Ada%20Standards%0D%0A%09%09%09Ada%202022%20Documents%0D%0A%09%09%09%0D%0A%09%09%09%0D%0AThe%20documents%20on%20this%20page%20describe%20the%202022%20revision%20to%20the%20Ada%20Standard%2C%20usually%20known%20as%20Ada%202022.%20The%20revisions%20were%20produced%20by%20the%20ISO%2FIEC%20JTC%201%2FSC%2022%2FWG%209%20Ada%20Rapporteur%20Group%20%28ARG%29%2C%20and%20have%20" title="Digg"><img decoding="async" src="https://www.adaic.org/wp-content/plugins/sociable/images/services-sprite.gif" title="Digg" alt="Digg" style="width: 16px; height: 16px; background: transparent url(https://www.adaic.org/wp-content/plugins/sociable/images/services-sprite.png) no-repeat; background-position:-235px -1px" class="sociable-hovers" /></a></li>
+	<li class="sociablelast"><a rel="nofollow"  target="_blank" href="https://www.adaic.org/feed/" title="RSS"><img decoding="async" src="https://www.adaic.org/wp-content/plugins/sociable/images/services-sprite.gif" title="RSS" alt="RSS" style="width: 16px; height: 16px; background: transparent url(https://www.adaic.org/wp-content/plugins/sociable/images/services-sprite.png) no-repeat; background-position:-73px -55px" class="sociable-hovers" /></a></li>
+</ul>
+</div>
+  		  	</div><!-- .page_content -->
+
+  </div> <!-- .section_left -->
+		
+  
+<div class="aside">
+                  <ul id="section_nav">
+                              <li id="section_nav_press-2" >
+          <a href="https://www.adaic.org/press-2/">Press</a>
+        </li>
+                              <li id="section_nav_articles-2" >
+          <a href="https://www.adaic.org/articles-2/">Articles</a>
+        </li>
+                              <li id="section_nav_events-2" >
+          <a href="https://www.adaic.org/events-2/">Events</a>
+        </li>
+          </ul>
+    
+          <div class="module_wrap">
+      <div class="module">
+        <div class="module_bg">
+          <h3 class="section_header">
+            <a href="https://www.adaic.org/ada-resources/">
+              Resources            </a>
+          </h3>
+                      <ul class="section_list">
+              <li class="page_item page-item-233 page_item_has_children current_page_ancestor current_page_parent"><a href="https://www.adaic.org/ada-resources/standards/">Ada Standards</a></li>
+<li class="page_item page-item-433"><a href="https://www.adaic.org/ada-resources/tools-libraries/">Free Tools &#038; Libraries</a></li>
+<li class="page_item page-item-435"><a href="https://www.adaic.org/ada-resources/pro-tools-services/">Professional Tools and Services</a></li>
+<li class="page_item page-item-428"><a href="https://www.adaic.org/ada-resources/associations/">Associations</a></li>
+<li class="page_item page-item-866"><a href="https://www.adaic.org/ada-resources/ada-on-the-web/">Ada on the Web</a></li>
+            </ul>
+                  </div>
+      </div>
+      <div class="bottom"></div>
+    </div>
+  
+      
+        
+        
+  
+    
+
+      <div class="module_wrap">
+      <div class="module">
+        <div class="module_bg">
+  
+          <div class="module_content">
+            <h5>ARA Sponsor Spotlight</h5>
+  
+            <img width="208" height="116" src="https://www.adaic.org/wp-content/uploads/2010/11/adacore_medium.png" class="attachment-sponsor-large size-sponsor-large wp-post-image" alt="AdaCore" decoding="async" srcset="https://www.adaic.org/wp-content/uploads/2010/11/adacore_medium.png 208w, https://www.adaic.org/wp-content/uploads/2010/11/adacore_medium-144x80.png 144w, https://www.adaic.org/wp-content/uploads/2010/11/adacore_medium-134x75.png 134w" sizes="(max-width: 208px) 100vw, 208px" />  
+            <a href="https://www.adaic.org/sponsors/" class="right gray">View All Sponsors</a>
+            <div class="hr"><hr /></div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom"></div>
+    </div>
+  
+  
+  
+      
+  </div>
+
+<div class="hr"><hr /></div>
+    
+</div><!-- .page_wrapper -->
+
+
+<div class="footer_wrap">
+	<div class="footer">
+	  	  	  		<div class="module_wrap">
+			<div class="module">
+				<div class="sponsor_list">
+				              <a href="https://www.adaic.org/sponsors/" >
+              <img width="144" height="80" src="https://www.adaic.org/wp-content/uploads/2010/11/adacore_medium-144x80.png" class="attachment-sponsor-small size-sponsor-small wp-post-image" alt="AdaCore" decoding="async" srcset="https://www.adaic.org/wp-content/uploads/2010/11/adacore_medium-144x80.png 144w, https://www.adaic.org/wp-content/uploads/2010/11/adacore_medium-134x75.png 134w, https://www.adaic.org/wp-content/uploads/2010/11/adacore_medium.png 208w" sizes="(max-width: 144px) 100vw, 144px" />            </a>
+                      <a href="https://www.adaic.org/sponsors/" >
+              <img width="144" height="72" src="https://www.adaic.org/wp-content/uploads/2016/06/ptc-2016-144x72.png" class="attachment-sponsor-small size-sponsor-small wp-post-image" alt="PTC Logo" decoding="async" srcset="https://www.adaic.org/wp-content/uploads/2016/06/ptc-2016-144x72.png 144w, https://www.adaic.org/wp-content/uploads/2016/06/ptc-2016-300x150.png 300w, https://www.adaic.org/wp-content/uploads/2016/06/ptc-2016-208x104.png 208w, https://www.adaic.org/wp-content/uploads/2016/06/ptc-2016-150x75.png 150w, https://www.adaic.org/wp-content/uploads/2016/06/ptc-2016.png 500w" sizes="(max-width: 144px) 100vw, 144px" />            </a>
+          				</div>
+				<div class="hr"><hr /></div>
+			</div>
+			<div class="bottom"></div>
+		</div>
+				
+		<div class="division">
+		  		      <h4>
+      <a href="https://www.adaic.org/advantages/">
+        Ada Advantages      </a>
+    </h4>
+    
+    <ul>
+      <li class="page_item page-item-2680"><a href="https://www.adaic.org/advantages/ada-2022/">Ada 2022</a></li>
+<li class="page_item page-item-55"><a href="https://www.adaic.org/advantages/ada-overview/">Ada Overview</a></li>
+<li class="page_item page-item-2690 page_item_has_children"><a href="https://www.adaic.org/advantages/topics-of-interest/">More Topics of Interest</a></li>
+<li class="page_item page-item-46"><a href="https://www.adaic.org/advantages/features-benefits/">Features &#038; Benefits</a></li>
+<li class="page_item page-item-50"><a href="https://www.adaic.org/advantages/ada-comp-chart/">Ada Comparison Chart</a></li>
+<li class="page_item page-item-44"><a href="https://www.adaic.org/advantages/ada-2012/">Ada 2012</a></li>
+<li class="page_item page-item-40 page_item_has_children"><a href="https://www.adaic.org/advantages/ada-2005/">Ada 2005</a></li>
+<li class="page_item page-item-447"><a href="https://www.adaic.org/advantages/spark-ada/">SPARK Ada</a></li>
+<li class="page_item page-item-883"><a href="https://www.adaic.org/advantages/ada-and-multicore/">Ada and Multicore</a></li>
+<li class="page_item page-item-563"><a href="https://www.adaic.org/advantages/case-studies/">Case Studies</a></li>
+<li class="page_item page-item-346"><a href="https://www.adaic.org/advantages/projects/">Ada Projects</a></li>
+    </ul>
+  		</div>
+		
+		<div class="division">
+		  		      <h4>
+      <a href="https://www.adaic.org/advantages/projects/">
+        Ada Projects      </a>
+    </h4>
+    
+    <ul>
+          </ul>
+  			
+		  		      <h4>
+      <a href="https://www.adaic.org/learn/">
+        Learn Ada      </a>
+    </h4>
+    
+    <ul>
+      <li class="page_item page-item-214 page_item_has_children"><a href="https://www.adaic.org/learn/materials/">Learning Materials</a></li>
+<li class="page_item page-item-217"><a href="https://www.adaic.org/learn/training/">Professional Training</a></li>
+<li class="page_item page-item-220 page_item_has_children"><a href="https://www.adaic.org/learn/academia/">Ada in Academia</a></li>
+    </ul>
+  		</div>
+		
+		<div class="division">
+		  		      <h4>
+      <a href="https://www.adaic.org/ada-resources/">
+        Resources      </a>
+    </h4>
+    
+    <ul>
+      <li class="page_item page-item-233 page_item_has_children current_page_ancestor current_page_parent"><a href="https://www.adaic.org/ada-resources/standards/">Ada Standards</a></li>
+<li class="page_item page-item-433"><a href="https://www.adaic.org/ada-resources/tools-libraries/">Free Tools &#038; Libraries</a></li>
+<li class="page_item page-item-435"><a href="https://www.adaic.org/ada-resources/pro-tools-services/">Professional Tools and Services</a></li>
+<li class="page_item page-item-428"><a href="https://www.adaic.org/ada-resources/associations/">Associations</a></li>
+<li class="page_item page-item-866"><a href="https://www.adaic.org/ada-resources/ada-on-the-web/">Ada on the Web</a></li>
+    </ul>
+  		</div>
+
+		<div class="division">
+		  		      <h4>
+      <a href="https://www.adaic.org/community/">
+        ARA Community      </a>
+    </h4>
+    
+    <ul>
+      <li class="page_item page-item-639"><a href="https://www.adaic.org/community/compilers-conformity/">Compilers and Conformity</a></li>
+<li class="page_item page-item-648"><a href="https://www.adaic.org/community/join-ara/">Join the ARA</a></li>
+<li class="page_item page-item-1417 page_item_has_children"><a href="https://www.adaic.org/community/ara-press-releases/">ARA Press Releases</a></li>
+    </ul>
+  		</div>
+
+		<div class="hr"><hr /></div>
+	
+		
+		<div class="site_info">
+			<p>
+			  Copyright &copy; 2009-2026 Ada Resource Association
+			  
+			      	          
+                <span class="right">
+      	        	    <a href="https://www.adaic.org/site-map/">Site Map</a>
+      	    |       	        	    <a href="https://www.adaic.org/contact/">Contact Us</a>
+      	          	        	  
+    	  </span>
+			</p>
+		</div>
+		
+	</div>
+</div>
+
+<script type="speculationrules">
+{"prefetch":[{"source":"document","where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":["/wp-*.php","/wp-admin/*","/wp-content/uploads/*","/wp-content/*","/wp-content/plugins/*","/wp-content/themes/ara-1-7-2022-0310/*","/*\\?(.+)"]}},{"not":{"selector_matches":"a[rel~=\"nofollow\"]"}},{"not":{"selector_matches":".no-prefetch, .no-prefetch a"}}]},"eagerness":"conservative"}]}
+</script>
+<script type="text/javascript" src="https://www.adaic.org/wp-includes/js/comment-reply.js?ver=6.9.1" id="comment-reply-js" async="async" data-wp-strategy="async" fetchpriority="low"></script>
+<script id="wp-emoji-settings" type="application/json">
+{"baseUrl":"https://s.w.org/images/core/emoji/17.0.2/72x72/","ext":".png","svgUrl":"https://s.w.org/images/core/emoji/17.0.2/svg/","svgExt":".svg","source":{"wpemoji":"https://www.adaic.org/wp-includes/js/wp-emoji.js?ver=6.9.1","twemoji":"https://www.adaic.org/wp-includes/js/twemoji.js?ver=6.9.1"}}
+</script>
+<script type="module">
+/* <![CDATA[ */
+/**
+ * @output wp-includes/js/wp-emoji-loader.js
+ */
+
+/* eslint-env es6 */
+
+// Note: This is loaded as a script module, so there is no need for an IIFE to prevent pollution of the global scope.
+
+/**
+ * Emoji Settings as exported in PHP via _print_emoji_detection_script().
+ * @typedef WPEmojiSettings
+ * @type {object}
+ * @property {?object} source
+ * @property {?string} source.concatemoji
+ * @property {?string} source.twemoji
+ * @property {?string} source.wpemoji
+ */
+
+const settings = /** @type {WPEmojiSettings} */ (
+	JSON.parse( document.getElementById( 'wp-emoji-settings' ).textContent )
+);
+
+// For compatibility with other scripts that read from this global, in particular wp-includes/js/wp-emoji.js (source file: js/_enqueues/wp/emoji.js).
+window._wpemojiSettings = settings;
+
+/**
+ * Support tests.
+ * @typedef SupportTests
+ * @type {object}
+ * @property {?boolean} flag
+ * @property {?boolean} emoji
+ */
+
+const sessionStorageKey = 'wpEmojiSettingsSupports';
+const tests = [ 'flag', 'emoji' ];
+
+/**
+ * Checks whether the browser supports offloading to a Worker.
+ *
+ * @since 6.3.0
+ *
+ * @private
+ *
+ * @returns {boolean}
+ */
+function supportsWorkerOffloading() {
+	return (
+		typeof Worker !== 'undefined' &&
+		typeof OffscreenCanvas !== 'undefined' &&
+		typeof URL !== 'undefined' &&
+		URL.createObjectURL &&
+		typeof Blob !== 'undefined'
+	);
+}
+
+/**
+ * @typedef SessionSupportTests
+ * @type {object}
+ * @property {number} timestamp
+ * @property {SupportTests} supportTests
+ */
+
+/**
+ * Get support tests from session.
+ *
+ * @since 6.3.0
+ *
+ * @private
+ *
+ * @returns {?SupportTests} Support tests, or null if not set or older than 1 week.
+ */
+function getSessionSupportTests() {
+	try {
+		/** @type {SessionSupportTests} */
+		const item = JSON.parse(
+			sessionStorage.getItem( sessionStorageKey )
+		);
+		if (
+			typeof item === 'object' &&
+			typeof item.timestamp === 'number' &&
+			new Date().valueOf() < item.timestamp + 604800 && // Note: Number is a week in seconds.
+			typeof item.supportTests === 'object'
+		) {
+			return item.supportTests;
+		}
+	} catch ( e ) {}
+	return null;
+}
+
+/**
+ * Persist the supports in session storage.
+ *
+ * @since 6.3.0
+ *
+ * @private
+ *
+ * @param {SupportTests} supportTests Support tests.
+ */
+function setSessionSupportTests( supportTests ) {
+	try {
+		/** @type {SessionSupportTests} */
+		const item = {
+			supportTests: supportTests,
+			timestamp: new Date().valueOf()
+		};
+
+		sessionStorage.setItem(
+			sessionStorageKey,
+			JSON.stringify( item )
+		);
+	} catch ( e ) {}
+}
+
+/**
+ * Checks if two sets of Emoji characters render the same visually.
+ *
+ * This is used to determine if the browser is rendering an emoji with multiple data points
+ * correctly. set1 is the emoji in the correct form, using a zero-width joiner. set2 is the emoji
+ * in the incorrect form, using a zero-width space. If the two sets render the same, then the browser
+ * does not support the emoji correctly.
+ *
+ * This function may be serialized to run in a Worker. Therefore, it cannot refer to variables from the containing
+ * scope. Everything must be passed by parameters.
+ *
+ * @since 4.9.0
+ *
+ * @private
+ *
+ * @param {CanvasRenderingContext2D} context 2D Context.
+ * @param {string} set1 Set of Emoji to test.
+ * @param {string} set2 Set of Emoji to test.
+ *
+ * @return {boolean} True if the two sets render the same.
+ */
+function emojiSetsRenderIdentically( context, set1, set2 ) {
+	// Cleanup from previous test.
+	context.clearRect( 0, 0, context.canvas.width, context.canvas.height );
+	context.fillText( set1, 0, 0 );
+	const rendered1 = new Uint32Array(
+		context.getImageData(
+			0,
+			0,
+			context.canvas.width,
+			context.canvas.height
+		).data
+	);
+
+	// Cleanup from previous test.
+	context.clearRect( 0, 0, context.canvas.width, context.canvas.height );
+	context.fillText( set2, 0, 0 );
+	const rendered2 = new Uint32Array(
+		context.getImageData(
+			0,
+			0,
+			context.canvas.width,
+			context.canvas.height
+		).data
+	);
+
+	return rendered1.every( ( rendered2Data, index ) => {
+		return rendered2Data === rendered2[ index ];
+	} );
+}
+
+/**
+ * Checks if the center point of a single emoji is empty.
+ *
+ * This is used to determine if the browser is rendering an emoji with a single data point
+ * correctly. The center point of an incorrectly rendered emoji will be empty. A correctly
+ * rendered emoji will have a non-zero value at the center point.
+ *
+ * This function may be serialized to run in a Worker. Therefore, it cannot refer to variables from the containing
+ * scope. Everything must be passed by parameters.
+ *
+ * @since 6.8.2
+ *
+ * @private
+ *
+ * @param {CanvasRenderingContext2D} context 2D Context.
+ * @param {string} emoji Emoji to test.
+ *
+ * @return {boolean} True if the center point is empty.
+ */
+function emojiRendersEmptyCenterPoint( context, emoji ) {
+	// Cleanup from previous test.
+	context.clearRect( 0, 0, context.canvas.width, context.canvas.height );
+	context.fillText( emoji, 0, 0 );
+
+	// Test if the center point (16, 16) is empty (0,0,0,0).
+	const centerPoint = context.getImageData(16, 16, 1, 1);
+	for ( let i = 0; i < centerPoint.data.length; i++ ) {
+		if ( centerPoint.data[ i ] !== 0 ) {
+			// Stop checking the moment it's known not to be empty.
+			return false;
+		}
+	}
+
+	return true;
+}
+
+/**
+ * Determines if the browser properly renders Emoji that Twemoji can supplement.
+ *
+ * This function may be serialized to run in a Worker. Therefore, it cannot refer to variables from the containing
+ * scope. Everything must be passed by parameters.
+ *
+ * @since 4.2.0
+ *
+ * @private
+ *
+ * @param {CanvasRenderingContext2D} context 2D Context.
+ * @param {string} type Whether to test for support of "flag" or "emoji".
+ * @param {Function} emojiSetsRenderIdentically Reference to emojiSetsRenderIdentically function, needed due to minification.
+ * @param {Function} emojiRendersEmptyCenterPoint Reference to emojiRendersEmptyCenterPoint function, needed due to minification.
+ *
+ * @return {boolean} True if the browser can render emoji, false if it cannot.
+ */
+function browserSupportsEmoji( context, type, emojiSetsRenderIdentically, emojiRendersEmptyCenterPoint ) {
+	let isIdentical;
+
+	switch ( type ) {
+		case 'flag':
+			/*
+			 * Test for Transgender flag compatibility. Added in Unicode 13.
+			 *
+			 * To test for support, we try to render it, and compare the rendering to how it would look if
+			 * the browser doesn't render it correctly (white flag emoji + transgender symbol).
+			 */
+			isIdentical = emojiSetsRenderIdentically(
+				context,
+				'\uD83C\uDFF3\uFE0F\u200D\u26A7\uFE0F', // as a zero-width joiner sequence
+				'\uD83C\uDFF3\uFE0F\u200B\u26A7\uFE0F' // separated by a zero-width space
+			);
+
+			if ( isIdentical ) {
+				return false;
+			}
+
+			/*
+			 * Test for Sark flag compatibility. This is the least supported of the letter locale flags,
+			 * so gives us an easy test for full support.
+			 *
+			 * To test for support, we try to render it, and compare the rendering to how it would look if
+			 * the browser doesn't render it correctly ([C] + [Q]).
+			 */
+			isIdentical = emojiSetsRenderIdentically(
+				context,
+				'\uD83C\uDDE8\uD83C\uDDF6', // as the sequence of two code points
+				'\uD83C\uDDE8\u200B\uD83C\uDDF6' // as the two code points separated by a zero-width space
+			);
+
+			if ( isIdentical ) {
+				return false;
+			}
+
+			/*
+			 * Test for English flag compatibility. England is a country in the United Kingdom, it
+			 * does not have a two letter locale code but rather a five letter sub-division code.
+			 *
+			 * To test for support, we try to render it, and compare the rendering to how it would look if
+			 * the browser doesn't render it correctly (black flag emoji + [G] + [B] + [E] + [N] + [G]).
+			 */
+			isIdentical = emojiSetsRenderIdentically(
+				context,
+				// as the flag sequence
+				'\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F',
+				// with each code point separated by a zero-width space
+				'\uD83C\uDFF4\u200B\uDB40\uDC67\u200B\uDB40\uDC62\u200B\uDB40\uDC65\u200B\uDB40\uDC6E\u200B\uDB40\uDC67\u200B\uDB40\uDC7F'
+			);
+
+			return ! isIdentical;
+		case 'emoji':
+			/*
+			 * Is there a large, hairy, humanoid mythical creature living in the browser?
+			 *
+			 * To test for Emoji 17.0 support, try to render a new emoji: Hairy Creature.
+			 *
+			 * The hairy creature emoji is a single code point emoji. Testing for browser
+			 * support required testing the center point of the emoji to see if it is empty.
+			 *
+			 * 0xD83E 0x1FAC8 (\uD83E\u1FAC8) == 🫈 Hairy creature.
+			 *
+			 * When updating this test, please ensure that the emoji is either a single code point
+			 * or switch to using the emojiSetsRenderIdentically function and testing with a zero-width
+			 * joiner vs a zero-width space.
+			 */
+			const notSupported = emojiRendersEmptyCenterPoint( context, '\uD83E\u1FAC8' );
+			return ! notSupported;
+	}
+
+	return false;
+}
+
+/**
+ * Checks emoji support tests.
+ *
+ * This function may be serialized to run in a Worker. Therefore, it cannot refer to variables from the containing
+ * scope. Everything must be passed by parameters.
+ *
+ * @since 6.3.0
+ *
+ * @private
+ *
+ * @param {string[]} tests Tests.
+ * @param {Function} browserSupportsEmoji Reference to browserSupportsEmoji function, needed due to minification.
+ * @param {Function} emojiSetsRenderIdentically Reference to emojiSetsRenderIdentically function, needed due to minification.
+ * @param {Function} emojiRendersEmptyCenterPoint Reference to emojiRendersEmptyCenterPoint function, needed due to minification.
+ *
+ * @return {SupportTests} Support tests.
+ */
+function testEmojiSupports( tests, browserSupportsEmoji, emojiSetsRenderIdentically, emojiRendersEmptyCenterPoint ) {
+	let canvas;
+	if (
+		typeof WorkerGlobalScope !== 'undefined' &&
+		self instanceof WorkerGlobalScope
+	) {
+		canvas = new OffscreenCanvas( 300, 150 ); // Dimensions are default for HTMLCanvasElement.
+	} else {
+		canvas = document.createElement( 'canvas' );
+	}
+
+	const context = canvas.getContext( '2d', { willReadFrequently: true } );
+
+	/*
+	 * Chrome on OS X added native emoji rendering in M41. Unfortunately,
+	 * it doesn't work when the font is bolder than 500 weight. So, we
+	 * check for bold rendering support to avoid invisible emoji in Chrome.
+	 */
+	context.textBaseline = 'top';
+	context.font = '600 32px Arial';
+
+	const supports = {};
+	tests.forEach( ( test ) => {
+		supports[ test ] = browserSupportsEmoji( context, test, emojiSetsRenderIdentically, emojiRendersEmptyCenterPoint );
+	} );
+	return supports;
+}
+
+/**
+ * Adds a script to the head of the document.
+ *
+ * @ignore
+ *
+ * @since 4.2.0
+ *
+ * @param {string} src The url where the script is located.
+ *
+ * @return {void}
+ */
+function addScript( src ) {
+	const script = document.createElement( 'script' );
+	script.src = src;
+	script.defer = true;
+	document.head.appendChild( script );
+}
+
+settings.supports = {
+	everything: true,
+	everythingExceptFlag: true
+};
+
+// Obtain the emoji support from the browser, asynchronously when possible.
+new Promise( ( resolve ) => {
+	let supportTests = getSessionSupportTests();
+	if ( supportTests ) {
+		resolve( supportTests );
+		return;
+	}
+
+	if ( supportsWorkerOffloading() ) {
+		try {
+			// Note that the functions are being passed as arguments due to minification.
+			const workerScript =
+				'postMessage(' +
+				testEmojiSupports.toString() +
+				'(' +
+				[
+					JSON.stringify( tests ),
+					browserSupportsEmoji.toString(),
+					emojiSetsRenderIdentically.toString(),
+					emojiRendersEmptyCenterPoint.toString()
+				].join( ',' ) +
+				'));';
+			const blob = new Blob( [ workerScript ], {
+				type: 'text/javascript'
+			} );
+			const worker = new Worker( URL.createObjectURL( blob ), { name: 'wpTestEmojiSupports' } );
+			worker.onmessage = ( event ) => {
+				supportTests = event.data;
+				setSessionSupportTests( supportTests );
+				worker.terminate();
+				resolve( supportTests );
+			};
+			return;
+		} catch ( e ) {}
+	}
+
+	supportTests = testEmojiSupports( tests, browserSupportsEmoji, emojiSetsRenderIdentically, emojiRendersEmptyCenterPoint );
+	setSessionSupportTests( supportTests );
+	resolve( supportTests );
+} )
+	// Once the browser emoji support has been obtained from the session, finalize the settings.
+	.then( ( supportTests ) => {
+		/*
+		 * Tests the browser support for flag emojis and other emojis, and adjusts the
+		 * support settings accordingly.
+		 */
+		for ( const test in supportTests ) {
+			settings.supports[ test ] = supportTests[ test ];
+
+			settings.supports.everything =
+				settings.supports.everything && settings.supports[ test ];
+
+			if ( 'flag' !== test ) {
+				settings.supports.everythingExceptFlag =
+					settings.supports.everythingExceptFlag &&
+					settings.supports[ test ];
+			}
+		}
+
+		settings.supports.everythingExceptFlag =
+			settings.supports.everythingExceptFlag &&
+			! settings.supports.flag;
+
+		// When the browser can not render everything we need to load a polyfill.
+		if ( ! settings.supports.everything ) {
+			const src = settings.source || {};
+
+			if ( src.concatemoji ) {
+				addScript( src.concatemoji );
+			} else if ( src.wpemoji && src.twemoji ) {
+				addScript( src.twemoji );
+				addScript( src.wpemoji );
+			}
+		}
+	} );
+//# sourceURL=https://www.adaic.org/wp-includes/js/wp-emoji-loader.js
+/* ]]> */
+</script>
+
+</body>
+</html>
