@@ -18,6 +18,12 @@ Earlier design drafts included a C99 emission backend and OpenBSD as a primary d
 
 ---
 
+## Conformance Note
+
+Language conformance in this specification is defined in terms of language properties and legality rules, not specific tools or compilers. References to GNAT, GNATprove, and other tools throughout this document are informative — they describe the reference toolchain and provide implementation guidance, but do not define conformance. Toolchain profiles (e.g., GNAT/GNATprove guidance) are informative and belong in informative annexes or companion documents. The normative conformance requirements appear in §06 and are expressed solely in terms of what a conforming implementation must accept, reject, and guarantee about program behavior.
+
+---
+
 ## Toolchain Baseline
 
 All compiler and proof requirements in this specification are defined relative to the following baseline:
@@ -94,7 +100,7 @@ This section records every design decision made during the language design proce
 
 ### D6. No Separate Specification and Body Files
 
-**Decision:** A Safe package is a single source file. There are no separate `.ads` (specification) and `.adb` (body) files. The compiler extracts the public interface into a binary symbol file for incremental compilation, and emits `.ads`/`.adb` pairs as its output.
+**Decision:** A Safe package is a single source file. There are no separate `.ads` (specification) and `.adb` (body) files. The compiler extracts the public interface into a symbol file for incremental compilation, and emits `.ads`/`.adb` pairs as its output. The symbol file format is implementation-defined.
 
 **Rationale:** The `.ads`/`.adb` split dates from the 1980s and creates maintenance burden — two files that must stay in sync, doubled file counts, and a confusing `private` section in the spec that is visible to the compiler but not logically to clients. Every modern language (Go, Rust, Zig, Odin, Swift) uses single-file modules with compiler-extracted interfaces. Oberon did this in 1987. The compiler already knows what's public; asking the programmer to state it twice is redundant. The compiler reconstructs the `.ads`/`.adb` split mechanically from the single Safe source file, giving full Ada ecosystem compatibility (GNAT compilation, GNATprove verification, DO-178C certification).
 
@@ -193,10 +199,13 @@ Additionally, dereference of an access value requires the access subtype to be `
 
 **Restrictions vs. full SPARK ownership:**
 
+- General access types (`access all T`) are excluded. A conforming implementation shall reject access type definitions that include the reserved word `all`. Rationale: general access types interact with aliased objects and `'Access` / `'Unchecked_Access` attributes, both of which Safe excludes; pool-specific access types are sufficient for Safe's ownership model.
 - Anonymous access types are excluded (Safe requires named access types for all uses).
 - Access-to-constant types (`access constant T`) are excluded for simplicity; use `in`-mode observe parameters instead.
-- `Unchecked_Access` and `Unchecked_Deallocation` are excluded.
+- `Unchecked_Access` and `Unchecked_Deallocation` are excluded from Safe source.
 - All ownership checking is local to the compilation unit — no whole-program analysis. This is compatible with SPARK's ownership model, which is also local.
+
+**Implementation note (deallocation emission):** The emitted Ada uses `Ada.Unchecked_Deallocation` generic instantiations to implement automatic deallocation when the owning object goes out of scope. The exclusion of generics (D16) applies to Safe source, not emitted Ada. Deallocation calls must be emitted at every scope exit point, including early `return` statements and loop `exit` statements, not just the textual end of the scope. GNATprove's leak checking on the emitted Ada provides independent verification that the compiler's deallocation logic is complete.
 
 **Rationale:** Dynamic data structures (linked lists, trees, buffer pools, process tables) are essential for OS construction and systems programming. SPARK 2022 solved the safety problem for access types by adopting Rust-style ownership semantics — each access value has exactly one owner, ownership transfers are explicit via move semantics on assignment, and borrowing/observing provide temporary access without ownership transfer. These rules are enforced at compile time by local analysis (no whole-program reasoning), which is compatible with single-pass compilation. Excluding access-to-subprogram types eliminates indirect calls, preserving the property that every call resolves statically.
 
@@ -299,7 +308,7 @@ Note: `Static_Predicate` and `Dynamic_Predicate` as subtype features (not contra
 
 Estimated compiler cost: 500–800 lines (300–500 for analysis during the existing single pass, 200–300 in the emitter for formatting).
 
-**Silver (guaranteed, by language design):** Silver requires GNATprove to prove Absence of Runtime Errors — every range check, overflow check, index check, division-by-zero check, and null dereference check must be dischargeable. Safe guarantees Silver through four language rules specified in D27:
+**Silver (guaranteed, by language design — hard rejection rule):** Silver requires proof of Absence of Runtime Errors — every range check, overflow check, index check, division-by-zero check, and null dereference check must be dischargeable from the program's type information. Safe guarantees Silver through four language rules specified in D27:
 
 1. Wide intermediate arithmetic — integer overflow is impossible in expressions.
 2. Strict index typing — array index types must match or be subtypes of the array's index type.
@@ -307,6 +316,8 @@ Estimated compiler cost: 500–800 lines (300–500 for analysis during the exis
 4. Not-null dereference — dereference of an access value requires the access subtype to be `not null`.
 
 These rules ensure that every runtime check in a conforming Safe program is provably safe from type information alone. No developer annotations are needed.
+
+**Hard rejection rule:** If a conforming implementation cannot establish, from the specification's type rules and D27 legality rules, that a required runtime check will not fail, the program is nonconforming and the implementation shall reject it with a diagnostic. There is no "developer must restructure" advisory — failure to satisfy any Silver-level proof obligation is a compilation error, not a warning.
 
 **Concurrency safety (guaranteed, by language design):** The channel-based tasking model (D28) provides additional safety guarantees verifiable by GNATprove on the emitted Jorvik-profile SPARK:
 
@@ -317,7 +328,7 @@ These rules ensure that every runtime check in a conforming Safe program is prov
 
 ### D27. Silver-by-Construction: Arithmetic, Indexing, and Division Rules
 
-**Decision:** The following three legality and semantic rules guarantee that every conforming Safe program is Silver-provable (Absence of Runtime Errors) when emitted as Ada:
+**Decision:** The following four legality and semantic rules guarantee that every conforming Safe program is Silver-provable (Absence of Runtime Errors) when emitted as Ada:
 
 **Rule 1: Wide Intermediate Arithmetic**
 
@@ -331,7 +342,9 @@ All integer arithmetic expressions are evaluated in a mathematical integer type 
 
 If the static range of any declared type in the program exceeds 64-bit signed range, the compiler shall reject the program. This is a legality rule, not a silent truncation. In practice, all Safe integer types will fit within 64 bits.
 
-This means `A + B` where `A, B : Reading` (0..4095) computes in `Wide_Integer` — the intermediate result 8190 does not overflow. A range check fires only if the result is stored back into a `Reading`. GNATprove discharges intermediate arithmetic trivially because `Wide_Integer` cannot overflow for any operation on narrower types, and discharges narrowing checks via interval analysis on the wide result.
+**Intermediate overflow legality rule:** If the implementation's interval analysis determines that any intermediate `Wide_Integer` subexpression in an expression could overflow 64-bit signed range (e.g., chained multiplications of types with ranges approaching 32 bits), the expression shall be rejected with a diagnostic. This ensures the "no intermediate overflow" guarantee holds universally, not just for small-range types.
+
+This means `A + B` where `A, B : Reading` (0..4095) computes in `Wide_Integer` — the intermediate result 8190 does not overflow. A range check fires only if the result is stored back into a `Reading`. For types whose range fits within 32 bits, intermediate `Wide_Integer` arithmetic cannot overflow for single operations. For chained operations or types with larger ranges (e.g., products of two values near the 32-bit boundary), intermediate `Wide_Integer` subexpressions may approach the 64-bit bounds. If the implementation's analysis determines that any intermediate `Wide_Integer` subexpression could overflow, the expression shall be rejected with a diagnostic. Narrowing checks at assignment, return, and parameter points are discharged via interval analysis on the wide result.
 
 Example:
 
@@ -494,9 +507,9 @@ begin
 end Sensor_Reader;
 ```
 
-Tasks begin executing when the program starts, after all package-level initialization is complete. Each task declaration creates exactly one task — no dynamic spawning, no task types, no task arrays. Tasks may terminate via `return`; a terminated task cannot be restarted.
+Tasks begin executing when the program starts, after all package-level initialization is complete. Each task declaration creates exactly one task — no dynamic spawning, no task types, no task arrays. Tasks shall not terminate — every task body must contain a non-terminating control structure (e.g., an unconditional `loop`). A conforming implementation shall reject any task body that is not syntactically non-terminating. This is required by the Jorvik profile, which retains the `No_Task_Termination` restriction from Ravenscar.
 
-**Rationale (static tasks):** Dynamic task creation (Go's `go f()`) prevents static analysis of the task set — you cannot count tasks, assign ceiling priorities, prove resource bounds, or verify deadlock freedom if the number of tasks is unknown at compile time. Ravenscar and Jorvik both require static tasks for exactly this reason. Every task in a Safe program is visible by reading the source — you can enumerate the entire concurrent architecture from the package declarations. This is the right tradeoff for systems programming, where the set of concurrent activities (interrupt handlers, device drivers, protocol stacks, schedulers) is known at design time.
+**Rationale (static, non-terminating tasks):** Dynamic task creation (Go's `go f()`) prevents static analysis of the task set — you cannot count tasks, assign ceiling priorities, prove resource bounds, or verify deadlock freedom if the number of tasks is unknown at compile time. Ravenscar and Jorvik both require static tasks for exactly this reason. Both profiles also retain `No_Task_Termination` — tasks run forever once started, which simplifies resource analysis and prevents dangling references to task-owned state. Every task in a Safe program is visible by reading the source — you can enumerate the entire concurrent architecture from the package declarations. This is the right tradeoff for systems programming, where the set of concurrent activities (interrupt handlers, device drivers, protocol stacks, schedulers) is known at design time.
 
 **Channel declarations:**
 
@@ -574,18 +587,19 @@ Variables not accessed by any task remain accessible to non-task subprograms. A 
 
 **Rationale (no shared state):** Data races are the primary source of concurrency bugs. Go's motto is "share memory by communicating, don't communicate by sharing memory." Safe enforces this at compile time. The ownership check is straightforward in a single-pass compiler — the `Global` analysis already tracks which variables each subprogram accesses. Extending this to task boundaries adds approximately 200–300 lines of compiler code. The result is that every inter-task data flow is visible as a channel operation — auditable, analyzable, and provable.
 
-**Task termination:**
+**Non-termination requirement:**
 
-Tasks may terminate via `return`. This goes beyond Ravenscar (which requires tasks to run forever) but stays within Jorvik's capabilities. A terminated task's owned package variables become inaccessible. Channel endpoints remain valid — a send to a channel whose only receiver has terminated will block indefinitely (detectable by static analysis as a potential deadlock).
+Tasks shall not terminate. The Jorvik profile retains the `No_Task_Termination` restriction from Ravenscar — both profiles require tasks to run forever once started. Every task body must contain a non-terminating control structure (typically an unconditional `loop`). A conforming implementation shall reject any task body whose outermost statement sequence is not syntactically non-terminating. `return` statements are not permitted in task bodies. This simplifies resource analysis: task-owned package variables remain accessible for the lifetime of the program, and channel endpoints are always active.
 
 **SPARK emission:**
 
 The compiler generates Jorvik-profile SPARK in the emitted Ada:
 
+- `pragma Partition_Elaboration_Policy(Sequential)` is emitted in the configuration file, ensuring all package-level declarations and initializations complete before any task begins execution. This is required by SPARK for programs using tasks or protected objects.
 - Each `task` becomes an Ada task type with a single instance and a `Priority` aspect.
 - Each `channel` becomes a protected object with ceiling priority, `Send` and `Receive` entries, and an internal bounded buffer.
 - `send`/`receive` become entry calls on the generated protected object.
-- `select` on channels becomes a conditional entry call pattern.
+- `select` on channels becomes a conditional entry call pattern. **Latency note:** The polling-with-sleep emission pattern for `select` is pragmatically correct but not zero-overhead — it introduces latency equal to the sleep interval. Implementations may use more efficient patterns (e.g., POSIX `select`-style multiplexing) where the target runtime supports them. The implementation may use alternative emission patterns provided the observable semantics (arm selection order, deterministic priority) are preserved.
 - Task-variable ownership becomes `Global` aspects on task bodies, referencing only owned variables and channel operations.
 
 GNATprove can then verify: data race freedom (no unprotected shared state), deadlock freedom (ceiling priority protocol), and all Silver-level AoRTE checks within task bodies.
@@ -648,11 +662,11 @@ delay_arm ::=
         sequence_of_statements
 ```
 
-### D29. Compiler Written in Silver-Level SPARK
+### D29. Reference Implementation in Silver-Level SPARK (Project Requirement)
 
-**Decision:** The Safe compiler shall be written in Ada 2022 / SPARK 2022, with all compiler source code at SPARK Silver level (Absence of Runtime Errors proven by GNATprove). The compiler is compiled by GNAT and verified by GNATprove as part of its build process.
+**Decision:** The reference implementation of the Safe compiler shall be written in Ada 2022 / SPARK 2022, with all compiler source code at SPARK Silver level (Absence of Runtime Errors proven by GNATprove). This is a project requirement for the reference implementation, not a language conformance requirement — a conforming implementation may be written in any language, provided it satisfies the conformance requirements of §06.
 
-**Rationale:** A safety-oriented language should have a verifiable compiler. If the compiler itself can crash due to a buffer overrun, null dereference, or integer overflow when processing adversarial input, the safety guarantees it provides to user programs are undermined. Writing the compiler in Silver-level SPARK means:
+**Rationale:** A safety-oriented language should have a verifiable reference implementation. If the compiler itself can crash due to a buffer overrun, null dereference, or integer overflow when processing adversarial input, the safety guarantees it provides to user programs are undermined. Writing the reference compiler in Silver-level SPARK means:
 
 1. **No runtime errors in the compiler.** Every array access, integer operation, pointer dereference, and type conversion in the compiler is proven safe by GNATprove. A malformed Safe source file may produce a compilation error, but it cannot crash the compiler.
 
@@ -720,6 +734,15 @@ spec/
 - Terms and definitions (reference 8652:2023 §1.3, state only additions/modifications)
 - Method of description (reference 8652:2023 §1.1.4 — use their BNF notation)
 - Summary of design decisions (reference this document's D1–D29)
+- **TBD Register** — the following items are acknowledged as unresolved and reserved for future specification revisions:
+  - Target platform constraints beyond "Ada compiler exists"
+  - Performance targets (compile time, proof time, code size)
+  - Memory model constraints (stack bounds, heap bounds, allocation failure handling)
+  - Floating-point semantics beyond inheriting Ada's
+  - Diagnostic catalog and localization
+  - `Constant_After_Elaboration` aspect — verify whether GNATprove requires it for concurrency analysis of emitted Ada; generate if needed
+  - Abort handler behavior (language-defined or implementation-defined)
+  - AST/IR interchange format (if any)
 
 ### 01-base-definition.md
 
@@ -776,8 +799,11 @@ Do this for every exclusion. Be exhaustive. Cross-reference related exclusions.
 
 **Access types and ownership:** Specify the retained SPARK 2022 ownership model:
 
-- Access-to-object types are retained with SPARK ownership rules
+- Pool-specific access-to-object types (`access T`) are retained with SPARK ownership rules
+- General access types (`access all T`) are excluded — a conforming implementation shall reject access type definitions that include the reserved word `all`
 - Access-to-subprogram types are excluded
+- Anonymous access types are excluded
+- Access-to-constant types (`access constant T`) are excluded
 - Assignment of an access value is a **move**: the source becomes null, the target receives ownership
 - A parameter of mode `in` with an access type **observes** (temporary read-only, owner frozen)
 - A parameter of mode `in out` with an access type **borrows** (temporary mutable, owner frozen)
@@ -824,8 +850,8 @@ Full specification of Safe's concurrency model. This defines the channel-based p
 - **Channel operations** — `send`, `receive`, `try_send`, `try_receive` semantics, blocking behavior, interaction with task priorities
 - **Select statement** — syntax, receive-only restriction, deterministic arm selection (first-ready wins), delay timeout semantics
 - **Task-variable ownership** — the no-shared-mutable-state rule, compile-time checking algorithm (extension of `Global` analysis across task boundaries), transitivity through the call graph
-- **Task termination** — `return` semantics, owned variable inaccessibility after termination, channel endpoint behavior when a task terminates
-- **Task startup** — ordering relative to package initialization, all package-level initialization completes before any task begins executing
+- **Non-termination requirement** — every task body must contain a non-terminating control structure; `return` is not permitted in task bodies; conforming implementations shall reject task bodies that are not syntactically non-terminating; rationale: Jorvik retains `No_Task_Termination` from Ravenscar
+- **Task startup** — ordering relative to package initialization: all package-level declarations and initializations complete before any task begins execution. The order of package initialization is implementation-defined but deterministic for a given program. The emitted Ada shall include `pragma Partition_Elaboration_Policy(Sequential)` to enforce this guarantee.
 - **Examples** — producer/consumer, router/worker, command/response patterns
 
 ### 05-spark-assurance.md
@@ -838,7 +864,7 @@ Full specification of the SPARK assurance guarantees. This is the language's def
   - `Depends` aspects on every subprogram: specify the algorithm (track data flow through assignments and expressions)
   - `Initializes` aspect on every package: specify the rule (all package-level variables with initializers)
   - `SPARK_Mode` on every unit
-  - State that every conforming Safe program, when emitted and submitted to GNATprove, shall pass flow analysis with no errors and no user-supplied annotations
+  - State the normative guarantee as a language property: every conforming Safe program has complete and correct flow information (Global, Depends, Initializes) without user-supplied annotations. As informative validation: when the emitted Ada is submitted to GNATprove, it shall pass flow analysis with no errors
 - **Concurrency Assurance** — specify how the tasking model enables additional SPARK verification:
   - Data race freedom: no shared mutable state between tasks (all inter-task communication via channels/protected objects)
   - Deadlock freedom: ceiling priority protocol on channel-backing protected objects, statically assigned priorities
@@ -851,7 +877,9 @@ Full specification of the SPARK assurance guarantees. This is the language's def
   - Not-null dereference: explain how the `not null` access subtype rule guarantees all null dereference checks are dischargeable
   - Range checks at narrowing points: explain how interval arithmetic on wide intermediates makes these provable
   - Provide a complete enumeration of all runtime check categories and how each is discharged
+  - State the hard rejection rule: if a conforming implementation cannot establish absence of a required runtime check failure from the specification's type rules and D27 legality rules, the program is nonconforming and the implementation shall reject it with a diagnostic
   - State that every conforming Safe program, when emitted and submitted to GNATprove, shall pass AoRTE proof with no errors and no user-supplied annotations
+- **`Depends` over-approximation note:** The compiler-generated `Depends` contracts may be conservatively over-approximate (listing more dependencies than actually exist). This is acceptable for Bronze — GNATprove accepts `Depends` contracts that are supersets of actual dependencies. An implementation may refine precision over time without affecting conformance.
 - **Gold and Platinum** — state these are out of scope; the developer works with emitted Ada directly
 - **Examples** — show a Safe source file, the emitted Ada with generated annotations, and the expected GNATprove output at Bronze and Silver levels. Include examples of:
   - Arithmetic that is Silver-provable via wide intermediates
@@ -864,13 +892,29 @@ Full specification of the SPARK assurance guarantees. This is the language's def
 
 ### 06-conformance.md
 
-- Compilation model (single-pass, Ada/SPARK emission, symbol files)
-- Emitted Ada requirements:
+**Normative conformance requirements** (defined in terms of language properties, not specific tools):
+
+- Compilation model (single-pass, Ada/SPARK emission, symbol files). A conforming implementation shall provide a mechanism for separate compilation; symbol files are one permitted mechanism and their format is implementation-defined.
+- What constitutes a conforming implementation:
+  - A conforming implementation shall accept all conforming programs and reject all non-conforming programs with a diagnostic
+  - A conforming implementation shall implement the dynamic semantics correctly for all conforming programs
+  - A conforming implementation shall enforce all legality rules defined in this specification, including D27 Rules 1–4
+  - No mention of specific compilers or provers in the normative conformance definition
+- What constitutes a conforming program — a program is conforming if and only if the implementation can establish, from the specification's type rules and D27 legality rules, that all required runtime checks are dischargeable. A program for which any runtime check cannot be so established is nonconforming and shall be rejected with a diagnostic.
+- Language-level assurance guarantees (expressed as language properties, not tool invocations):
+  - **Stone:** Every conforming Safe program is expressible as valid Ada 2022 / SPARK 2022 source
+  - **Bronze:** Every conforming Safe program has sufficient flow analysis information (Global, Depends, Initializes) to pass flow analysis without user-supplied annotations
+  - **Silver:** Every conforming Safe program is free of runtime errors — all runtime checks (overflow, range, index, division-by-zero, null dereference, discriminant) are dischargeable from type information and D27 legality rules alone
+- **Conformance levels:** To preserve the safety story through standards refactoring, define two conformance levels:
+  - **Safe/Core:** Language rules and legality checking only — a conforming implementation accepts all conforming programs and rejects all non-conforming programs
+  - **Safe/Assured:** Language rules plus verification that every conforming program is free of runtime errors (the Silver guarantee expressed as a language property, validatable by any suitable method — not tied to a specific prover)
+
+**Informative implementation guidance** (relocated to §07-annex-b for toolchain-specific details):
+
+- Emitted Ada requirements (informative — describes the reference implementation's emission strategy):
   - Produces valid 8652:2023 `.ads`/`.adb` pairs
-  - Emitted code compiles with `SPARK_Mode` (Stone guarantee)
-  - Compiler generates `Global`, `Depends`, and `Initializes` aspects automatically (Bronze guarantee)
-  - Every conforming Safe program, when emitted and submitted to GNATprove, shall pass flow analysis at Bronze level with no user-supplied annotations
-  - Every conforming Safe program, when emitted and submitted to GNATprove, shall pass AoRTE proof at Silver level with no user-supplied annotations (guaranteed by D27 language rules)
+  - Emitted code compiles with `SPARK_Mode`
+  - Compiler generates `Global`, `Depends`, and `Initializes` aspects automatically
   - Tasks emitted as Jorvik-profile Ada task types with single instances and `Priority` aspects
   - Channels emitted as protected objects with ceiling priority, `Send`/`Receive` entries, and bounded internal buffers
   - Task-variable ownership emitted as `Global` aspects on task bodies
@@ -878,10 +922,8 @@ Full specification of the SPARK assurance guarantees. This is the language's def
   - Access type ownership tracked; deallocation calls emitted at owner scope exit
   - Wide intermediate arithmetic emitted using `Wide_Integer` (64-bit signed) per D27 Rule 1
   - Array index checks and null dereference checks guaranteed to be provably safe by D27 Rules 2–4
-- Runtime: GNAT's Jorvik-profile runtime; no custom runtime required
-- What constitutes a conforming implementation
-- What constitutes a conforming program
-- **Compiler verification requirement (D29):** A conforming implementation shall be written in Ada 2022 / SPARK 2022 and shall pass GNATprove at Silver level (AoRTE) with no unproven checks. Document the build process: GNAT compilation, GNATprove verification.
+- Runtime: for the reference implementation, GNAT's Jorvik-profile runtime; no custom runtime required
+- **Reference implementation profile (D29, project requirement — not a language conformance requirement):** The reference implementation is written in Ada 2022 / SPARK 2022 at Silver level. This is a project goal for the reference compiler; other conforming implementations may be written in any language.
 
 ### 07-annex-a-retained-library.md
 
@@ -891,11 +933,17 @@ Walk through 8652:2023 Annex A and for each library unit state: retained, exclud
 
 Implementation advice covering:
 
-- **Emitted Ada conventions:** The emitted `.ads`/`.adb` files shall be deterministic — the same Safe source, compiled with the same compiler version, shall always produce byte-identical Ada output. Specify naming conventions for generated entities (e.g., channel-backing protected objects, task types, wide integer intermediates). Specify formatting conventions (indentation, line width, declaration ordering) to ensure stable golden tests.
-- **Symbol file format:** The per-package symbol file used for incremental compilation. For the initial implementation, the format should be text-based (UTF-8, line-oriented, versioned header) for debuggability and diffability. Specify: exported names, types (including size/alignment for opaque types), subprogram signatures, and dependency fingerprints. Deterministic ordering for stable diffs.
+- **Emitted Ada conventions:** The emitted `.ads`/`.adb` files shall be deterministic — the same Safe source, compiled with the same compiler version, shall always produce byte-identical Ada output. Specify naming conventions for generated entities (e.g., channel-backing protected objects, task types, wide integer intermediates). Specify formatting conventions (indentation, line width, declaration ordering) to ensure stable golden tests. The emitted channel-backing protected objects shall use **procedures** (not functions) for non-blocking operations, since SPARK does not permit functions with `out` parameters:
+  ```ada
+  procedure Try_Send (Item : in Element_Type; Success : out Boolean);
+  procedure Try_Receive (Item : out Element_Type; Success : out Boolean);
+  ```
+- **Symbol file format (recommended practice):** The symbol file format is implementation-defined (see §06). As a recommended practice for the reference implementation, the per-package symbol file should be text-based (UTF-8, line-oriented, versioned header) for debuggability and diffability. Specify: exported names, types (including size/alignment for opaque types), subprogram signatures, and dependency fingerprints. Deterministic ordering for stable diffs. This is the single normative home for symbol file format guidance; §06 states only that the format is implementation-defined.
 - **Diagnostic messages:** Format, severity levels, and source location conventions. Error messages shall include the Safe source file, line, and column. Compiler diagnostics should be stable (same input produces same diagnostics) to support automated testing.
 - **Incremental recompilation:** Rules for when a symbol file change triggers recompilation of dependent units. Specify the fingerprinting strategy.
 - **Emitted Ada quality:** The emitted Ada should be human-readable and suitable for manual inspection, Gold/Platinum annotation, and DO-178C certification review.
+- **Elaboration and tasking configuration:** The emitted Ada shall include `pragma Partition_Elaboration_Policy(Sequential)` in the configuration file. This defers library-level task activation until all library units are elaborated, preventing elaboration-time data races. SPARK requires this pragma for programs using tasks or protected objects under Ravenscar/Jorvik profiles.
+- **Deallocation emission:** The emitted Ada uses `Ada.Unchecked_Deallocation` generic instantiations for automatic deallocation of owned access objects at scope exit. The exclusion of generics (D16) applies to Safe source only, not emitted Ada. The compiler must emit deallocation at every scope exit point: normal scope end, early `return`, and loop `exit`. GNATprove's leak checking on the emitted Ada independently verifies completeness of the compiler's deallocation logic.
 
 ### 08-syntax-summary.md
 
@@ -911,8 +959,8 @@ Complete consolidated BNF grammar for Safe. Target: approximately 140–160 prod
 - Channel declarations with capacity
 - `send`, `receive`, `try_send`, `try_receive` statements
 - `select` statement with channel receive arms and delay arm
-- Access type declarations, `not null` subtypes, allocators
-- All exclusions from 02-restrictions.md
+- Access type declarations (pool-specific only — `access all` excluded), `not null` subtypes, allocators
+- All exclusions from 02-restrictions.md (including `access all`, anonymous access, access-to-constant, access-to-subprogram)
 
 ---
 
