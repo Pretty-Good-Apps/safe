@@ -586,3 +586,97 @@ Changes across §00–§08:
 12. **Partition_Elaboration_Policy pragma:** Zero occurrences. Moved to deferred content. ✓
 13. **Protected object / ceiling priority:** Remaining references are in language-level context (D15 rationale, D26 concurrency guarantees, D28 channel rationale, §04 drafting instructions). ✓
 14. **§05 filename:** All references use `05-assurance.md`, not `05-spark-assurance.md`. ✓
+
+---
+
+## Round 5
+
+Technical-correctness and standards-readiness fixes identified by two independent ECMA-track readiness reviews of the post-R4 document.
+
+### P0-R5-1. Deadlock Freedom Overclaim
+
+**Problem:** SPEC-PROMPT.md claimed "deadlock freedom by construction" in D2, D15, D26, and D28. The ceiling priority protocol prevents priority inversion but does NOT prevent application-level deadlock from circular blocking channel operations (e.g., two tasks each blocking on `send` to a full channel, waiting for the other to `receive`).
+
+**Changes (7 edits):**
+- D2 rationale: "provable deadlock freedom" → "determinism and analysability"
+- D15 rationale: "data-race freedom and deadlock freedom by construction" → "data-race freedom by construction" with explicit note that deadlock freedom is not guaranteed
+- D26 concurrency safety: "Deadlock freedom" bullet → "Priority inversion avoidance" with explicit statement that application-level deadlock freedom is NOT guaranteed and depends on communication topology
+- D28 channel rationale: "data-race freedom and deadlock freedom by construction" → "data-race freedom by construction" with deadlock qualification
+- §05 concurrency assurance: "Deadlock freedom" → "Priority inversion avoidance" plus explicit note about circular-wait risk
+- §05 examples: deadlock freedom example → data-race freedom example plus informative deadlock topology note
+- TBD register: added deadlock freedom future work item
+
+### P1-R5-1. §04 Task Startup — Informative Mapping Note
+
+**Change:** Added informative note about `pragma Partition_Elaboration_Policy(Sequential)` as the standard Ada/SPARK mechanism for the task-startup guarantee. Explicitly marked as informative.
+
+### P1-R5-2. Editorial Convention 6 — Diagnostic Wording
+
+**Before:** "accompanied by the expected diagnostic message."
+
+**After:** "accompanied by identification of the violated rule and the source location of the violation. Do not mandate specific diagnostic wording in normative text."
+
+### P1-R5-3. §03 Static Semantics — Symbol-File Language
+
+**Before:** "Symbol files shall include effect summaries..."
+
+**After:** Structured list of interface information requirements (visibility, types, signatures, effect summaries) with mechanism explicitly implementation-defined.
+
+### P1-R5-4. §05 Rejected-Program Example — Diagnostic Wording
+
+**Before:** "with the expected diagnostic message"
+
+**After:** "with identification of the violated D27 rule for each rejection"
+
+### P2-R5-1. D23 Unresolved Conditionals
+
+**Change:** D23 entries for declare expressions and delta aggregates now reference TBD register. TBD register includes confirmation item.
+
+### P2-R5-2. D6 Mechanism Neutrality
+
+**Before:** "A conforming implementation extracts the public interface into a symbol file for separate compilation."
+
+**After:** "A conforming implementation shall make the public interface available to dependent compilation units for separate compilation. The mechanism (e.g., symbol files, compiler databases) is implementation-defined."
+
+### P2-R5-3. §03 Implementation Requirements
+
+**Before:** "symbol file emission, incremental recompilation rules"
+
+**After:** "interface information emission (mechanism is implementation-defined), incremental recompilation expectations"
+
+### P2-R5-4. §04 Task-Variable Ownership
+
+**Before:** Referenced "dependency symbol files" and "compile-time checking algorithm."
+
+**After:** References "dependency interface information" and states the rule as a "legality rule."
+
+### P2-R5-5. §06 Stone/Representability
+
+**Before:** "Every conforming Safe program is expressible as valid Ada 2022 / SPARK 2022 source"
+
+**After:** "Every conforming Safe program uses only constructs defined by ISO/IEC 8652:2023 as restricted and modified by this specification." With informative note about Ada mapping.
+
+**Additional consistency fixes:**
+- §06 compilation model: removed "symbol files" from opening clause, replaced with mechanism-neutral language
+- D7 across-packages: "symbol file does not yet exist" → "circular `with` dependencies are prohibited"
+- D9 rationale: "exports the type name to the symbol file" → "exports the type name to dependent units"
+- D10 rationale: "extracts the signature for the symbol file" → "extracts the signature for separate compilation"
+
+---
+
+## Round 5 Consistency Pass
+
+1. **"Deadlock freedom" as language guarantee:** Zero unqualified claims. All occurrences explicitly state deadlock freedom is NOT a language guarantee, or appear in TBD register/§05 instructions discussing it as a non-guarantee. ✓
+2. **"Data-race freedom" preserved:** All locations that previously said "data-race freedom and deadlock freedom" now say "data-race freedom" without the deadlock claim. Data-race freedom remains guaranteed. ✓
+3. **Priority inversion avoidance:** D26 concurrency safety says "Priority inversion avoidance" not "Deadlock freedom." ✓
+4. **§04 informative mapping note:** Task startup instructions include informative note about `Partition_Elaboration_Policy(Sequential)`. ✓
+5. **Editorial Convention 6:** Says "identification of the violated rule" not "expected diagnostic message." ✓
+6. **§03 Static Semantics:** Specifies information requirements with "mechanism is implementation-defined." No "symbol files shall include." ✓
+7. **§05 rejected-program example:** Says "identification of the violated D27 rule" not "expected diagnostic message." ✓
+8. **TBD register:** Contains deadlock freedom future work item and declare expressions/delta aggregates confirmation item. ✓
+9. **§06 Representability:** Guarantee is about Safe's own rules, not Ada expressibility. Informative note preserved. ✓
+10. **D23 conditional entries:** Both reference TBD register. ✓
+11. **D6 mechanism neutrality:** Says "make the public interface available" with mechanism implementation-defined. No "extracts into a symbol file." ✓
+12. **§03 Implementation Requirements:** Says "interface information emission" not "symbol file emission." ✓
+13. **§04 task-variable ownership:** Says "dependency interface information" not "dependency symbol files." Says "legality rule" not "checking algorithm." ✓
+14. **"Symbol file" as requirement:** Three remaining occurrences — all are "e.g., symbol files" (example of mechanism) or annex-b stub (informative). Zero normative mandates. ✓

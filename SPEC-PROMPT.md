@@ -72,11 +72,11 @@ This section records every design decision made during the language design proce
 
 **Decision:** The starting feature set is the SPARK 2022 subset of Ada 2022, including SPARK's ownership and borrowing model for access types. We then apply additional restrictions on top of SPARK's (D12–D16, D18–D22). For concurrency, the baseline is a static tasking model surfaced through a channel-based programming model (D28).
 
-**Rationale:** SPARK already removes the features most hostile to compilation simplicity and verification: exceptions, dynamic dispatch, and most of full Ada tasking. Starting from SPARK rather than full Ada means the excluded feature list is shorter and the retained feature set is already coherent. SPARK is a proven, deployed restriction profile used in safety-critical avionics and rail systems. SPARK 2022 reintroduced access types with Rust-style ownership semantics, enabling dynamic data structures while preserving provability — Safe retains this capability. For tasking, Safe provides static tasks and channels with provable deadlock freedom through a higher-level channel abstraction.
+**Rationale:** SPARK already removes the features most hostile to compilation simplicity and verification: exceptions, dynamic dispatch, and most of full Ada tasking. Starting from SPARK rather than full Ada means the excluded feature list is shorter and the retained feature set is already coherent. SPARK is a proven, deployed restriction profile used in safety-critical avionics and rail systems. SPARK 2022 reintroduced access types with Rust-style ownership semantics, enabling dynamic data structures while preserving provability — Safe retains this capability. For tasking, Safe provides static tasks and channels through a higher-level channel abstraction designed for determinism and analysability.
 
 ### D6. No Separate Specification and Body Files
 
-**Decision:** A Safe package is a single source file. There are no separate specification and body files. A conforming implementation extracts the public interface into a symbol file for separate compilation. The symbol file format is implementation-defined.
+**Decision:** A Safe package is a single source file. There are no separate specification and body files. A conforming implementation shall make the public interface available to dependent compilation units for separate compilation. The mechanism (e.g., symbol files, compiler databases) is implementation-defined.
 
 **Rationale:** The specification/body split creates maintenance burden — two files that must stay in sync, doubled file counts, and a confusing `private` section in the spec that is visible to the compiler but not logically to clients. Every modern language (Go, Rust, Zig, Odin, Swift) uses single-file modules with compiler-extracted interfaces. Oberon did this in 1987. The compiler already knows what is public; asking the programmer to state it twice is redundant.
 
@@ -87,7 +87,7 @@ This section records every design decision made during the language design proce
 **Initialization order:**
 
 - *Within a package:* Package-level variable initializers are evaluated in declaration order (top to bottom), as in Ada. An initializer may reference previously declared variables and call previously declared functions within the same package. Referencing a not-yet-declared entity in an initializer is a legality error (declaration-before-use).
-- *Across packages:* If package A `with`s package B, then B's initializers complete before A's initializers begin. This matches Ada's elaboration semantics but is trivially satisfiable because Safe packages have no circular `with` dependencies (enforced by the declaration-before-use rule — you cannot `with` a package whose symbol file does not yet exist).
+- *Across packages:* If package A `with`s package B, then B's initializers complete before A's initializers begin. This matches Ada's elaboration semantics but is trivially satisfiable because Safe packages have no circular `with` dependencies (enforced as a legality rule — circular `with` dependencies are prohibited).
 - *Tasks vs. initialization:* All package-level initialization across all compilation units completes before any task begins executing (D28). This is a language-level sequencing guarantee.
 
 **Rationale:** If packages are purely declarative, the elaboration ordering problem is vastly simplified. Ada's elaboration model is a notorious source of complexity — `Elaborate`, `Elaborate_All`, `Elaborate_Body` pragmas and the elaboration order determination algorithm. By requiring that all initialization be expressible as declaration-time expressions or function calls, and by prohibiting circular dependencies, we reduce elaboration to a simple topological sort of the `with` graph. The package becomes what it should always have been: a namespace containing declarations. Executable code lives only inside subprogram bodies.
@@ -102,13 +102,13 @@ This section records every design decision made during the language design proce
 
 **Decision:** A type can be public in name but private in structure using `public type T is private record ... end record;`. Clients can declare variables of the type (the compiler exports the size) but cannot access fields.
 
-**Rationale:** This preserves Ada's information-hiding capability without requiring a separate specification file. The `public` keyword exports the type name to the symbol file. The `private record` modifier tells the compiler to export size and alignment but not field layout. The compiler has full knowledge of the type (it's declared right there) and can generate correct code. The combination reads naturally: "this is a public type with a private structure."
+**Rationale:** This preserves Ada's information-hiding capability without requiring a separate specification file. The `public` keyword exports the type name to dependent units. The `private record` modifier tells the implementation to export size and alignment but not field layout. The implementation has full knowledge of the type (it's declared right there) and can generate correct code. The combination reads naturally: "this is a public type with a private structure."
 
 ### D10. Subprogram Bodies at Point of Declaration
 
 **Decision:** Subprogram bodies appear at the point of declaration. A subprogram is declared and defined in one place. The only exception is forward declarations for mutual recursion.
 
-**Rationale:** This is the Oberon model and eliminates the signature duplication that is Ada's most visible redundancy. In Ada, every subprogram declared in a spec must have its full signature repeated in the body — same parameters, same types, same modes, same contracts. In Safe, you write it once. The implementation extracts the signature for the symbol file. Forward declarations for mutual recursion are the one unavoidable case of signature repetition, and they are intrinsic to declaration-before-use compilation of mutually recursive functions (Pascal, C, and Oberon all require the same).
+**Rationale:** This is the Oberon model and eliminates the signature duplication that is Ada's most visible redundancy. In Ada, every subprogram declared in a spec must have its full signature repeated in the body — same parameters, same types, same modes, same contracts. In Safe, you write it once. The implementation extracts the signature for separate compilation. Forward declarations for mutual recursion are the one unavoidable case of signature repetition, and they are intrinsic to declaration-before-use compilation of mutually recursive functions (Pascal, C, and Oberon all require the same).
 
 ### D11. Interleaved Declarations and Statements in Subprogram Bodies
 
@@ -147,7 +147,7 @@ This section records every design decision made during the language design proce
 
 **Decision:** Full Ada tasking (Section 9 of 8652:2023) is excluded. In its place, Safe provides a restricted concurrency model based on static tasks and typed channels (D28). The following Section 9 features are excluded: task types, dynamic task creation, task entries, rendezvous (`accept` statements), all forms of `select` on entries, `abort` statements, `requeue`, protected types as user-declared constructs, and the real-time annexes (D.1–D.14) except for task priorities.
 
-**Rationale:** Ada's full tasking model (tasks, protected objects, rendezvous, select statements, real-time annexes) is one of the most complex parts of Ada. Safe replaces it with a channel-based model (D28) — static tasks, typed bounded channels, and the ceiling priority protocol for deadlock freedom. The programmer sees tasks and channels; the language guarantees data-race freedom and deadlock freedom by construction.
+**Rationale:** Ada's full tasking model (tasks, protected objects, rendezvous, select statements, real-time annexes) is one of the most complex parts of Ada. Safe replaces it with a channel-based model (D28) providing static tasks, bounded channels, and the ceiling priority protocol for priority inversion avoidance. The programmer sees tasks and channels; the language guarantees data-race freedom by construction (no shared mutable state). Application-level deadlock freedom is not guaranteed by the language rules alone — it depends on the program's communication topology. See D26 for the precise concurrency guarantees.
 
 ### D16. No Generics
 
@@ -243,8 +243,8 @@ Note: `Static_Predicate` and `Dynamic_Predicate` as subtype features (not contra
 - `goto` statements
 - Child and hierarchical packages
 - `use type` clauses
-- Declare expressions (Ada 2022) — if part of SPARK 2022
-- Delta aggregates (Ada 2022) — if part of SPARK 2022
+- Declare expressions (Ada 2022) — retained if confirmed as part of SPARK 2022 (see TBD register)
+- Delta aggregates (Ada 2022) — retained if confirmed as part of SPARK 2022 (see TBD register)
 - All Ada 2022 features in the SPARK 2022 subset not otherwise excluded
 - `pragma Assert`
 - `pragma Inline`
@@ -280,7 +280,7 @@ These rules ensure that every runtime check in a conforming Safe program is prov
 **Concurrency safety:** The channel-based tasking model (D28) provides additional safety guarantees as language properties:
 
 - **Data race freedom:** No shared mutable state between tasks. All inter-task communication is through channels. The implementation verifies this via effect analysis on task bodies.
-- **Deadlock freedom:** The ceiling priority protocol is enforced by the tasking model. The implementation assigns ceiling priorities to channel-backing mechanisms based on the static priorities of tasks that access them.
+- **Priority inversion avoidance:** When mapping channels to underlying synchronisation mechanisms, the implementation should use ceiling priority rules (or equivalent) to prevent priority inversion. This does not, by itself, guarantee application-level deadlock freedom for arbitrary blocking channel programs. Deadlock freedom depends on the program's communication topology — specifically, on the absence of circular blocking dependencies between tasks and channels. The language does not currently specify restrictions sufficient to guarantee deadlock freedom statically. This is noted as a potential area for future specification work (see TBD register).
 
 **Gold and Platinum (out of scope):** Functional correctness and full formal verification require developer-authored specifications (postconditions stating functional intent, ghost code, lemmas). These are inherently non-automatable and are out of scope for the language specification.
 
@@ -519,7 +519,7 @@ try_receive Ch, Variable, Success;  -- non-blocking: Success is Boolean
 
 `send` and `receive` are statements, not expressions. They block the current task (not the whole program) until the operation can complete. `try_send` and `try_receive` never block — they set a `Boolean` indicating success.
 
-**Rationale (channels):** Channels replace protected objects as the user-visible communication mechanism. A protected object is a monitor with entries, barriers, and the ceiling priority protocol — powerful but complex. A channel is a bounded buffer with send and receive — simple, composable, and familiar to anyone who has used Go, Erlang, or Unix pipes. The programmer sees channels; the language guarantees data-race freedom and deadlock freedom by construction.
+**Rationale (channels):** Channels replace protected objects as the user-visible communication mechanism. A protected object is a monitor with entries, barriers, and the ceiling priority protocol — powerful but complex. A channel is a bounded buffer with send and receive — simple, composable, and familiar to anyone who has used Go, Erlang, or Unix pipes. The programmer sees channels; the language guarantees data-race freedom by construction. Deadlock freedom depends on the program's communication topology and is not guaranteed by the language rules alone.
 
 **Select statement:**
 
@@ -663,6 +663,8 @@ spec/
   - `Constant_After_Elaboration` aspect — determine whether required for concurrency analysis
   - Abort handler behavior (language-defined or implementation-defined)
   - AST/IR interchange format (if any)
+  - Deadlock freedom: determine whether additional language restrictions (e.g., static communication topology analysis, channel-dependency ordering, prohibition of blocking send) can provide a language-level deadlock-freedom guarantee. Currently, only data-race freedom is guaranteed by construction.
+  - Declare expressions and delta aggregates: confirm whether these Ada 2022 features are part of the SPARK 2022 subset and therefore retained in Safe, or excluded
 - **Normative/informative status**: State this file's status (normative). State that §07-annex-b is informative. State that all code examples are non-normative unless explicitly labeled otherwise.
 
 ### 01-base-definition.md
@@ -752,9 +754,15 @@ Full specification of the single-file package model. Use Ada RM section conventi
   - Opaque types (`public type T is private record`)
   - Dot notation for attributes (full specification of how `X.Name` resolves: record field vs. attribute, checked at compile time by type)
   - Type annotation syntax (`Expr : T`) — precedence, where parentheses are required
-- **Static Semantics** — symbol file contents, what clients see, how opaque types export size but not structure. Symbol files shall include effect summaries (read-set and write-set) for all exported subprograms. This enables callers in other packages to compute their own effect information and to check task-variable ownership transitively, without requiring access to the callee's source or whole-program analysis. If a called subprogram's effect summary is not available (e.g., the dependency's symbol file is missing or incompatible), the program shall be rejected.
+- **Static Semantics** — define what interface information a conforming implementation must make available for separate compilation and cross-unit legality checking:
+      - Visibility: which declarations are `public`
+      - Types: size and alignment for opaque types (clients can declare objects but not access fields)
+      - Subprogram signatures: parameter profiles for all exported subprograms
+      - Effect summaries: for each exported subprogram, the set of package-level variables read and written (needed for callers to compute their own flow information and for task-variable ownership checking across packages)
+      - If required dependency interface information is unavailable, the program shall be rejected
+      - The mechanism for conveying this information (e.g., symbol files, compiler databases) is implementation-defined
 - **Dynamic Semantics** — variable initializers evaluated at load time in declaration order; no elaboration-time code
-- **Implementation Requirements** — symbol file emission, incremental recompilation rules
+- **Implementation Requirements** — interface information emission (mechanism is implementation-defined), incremental recompilation expectations
 - **Examples** — at least four complete packages:
   - A simple package with public types and functions
   - A package with opaque types
@@ -769,9 +777,9 @@ Full specification of Safe's concurrency model.
 - **Channel declarations** — syntax, element type constraints (must be definite), capacity as static expression, static allocation of channel buffers
 - **Channel operations** — `send`, `receive`, `try_send`, `try_receive` semantics, blocking behavior, interaction with task priorities
 - **Select statement** — syntax, receive-only restriction, deterministic arm selection (first-ready wins), delay timeout semantics
-- **Task-variable ownership** — the no-shared-mutable-state rule, compile-time checking algorithm (extension of effect analysis across task boundaries), transitivity through the call graph. Specify that cross-package transitivity uses effect summaries from dependency symbol files (see §03 Static Semantics). The ownership check shall be completable from the compilation unit's source plus its direct and transitive dependency symbol files, without access to dependency source code.
+- **Task-variable ownership** — the no-shared-mutable-state rule as a legality rule: each package-level variable shall be accessed by at most one task (transitively through the call graph). Specify that cross-package transitivity uses effect summaries from dependency interface information (see §03 Static Semantics). The ownership check shall be completable from the compilation unit's source plus its direct and transitive dependency interface information, without access to dependency source code.
 - **Non-termination legality rule** — the outermost statement of a task body shall be an unconditional `loop ... end loop;`; declarations may precede the loop; `return` shall not appear anywhere in a task body; no `exit` shall target the outermost loop; inner loops may contain `exit` targeting those inner loops; this is a syntactic restriction checkable without control-flow analysis
-- **Task startup** — ordering relative to package initialization: all package-level declarations and initializations complete before any task begins execution. The order of package initialization is implementation-defined but deterministic for a given program.
+- **Task startup** — ordering relative to package initialization: all package-level declarations and initializations complete before any task begins execution. The order of package initialization is implementation-defined but deterministic for a given program. Include an informative note (or cross-reference to Annex B) explaining that when targeting Ada/SPARK tasking under Ravenscar or Jorvik profile restrictions, `pragma Partition_Elaboration_Policy(Sequential)` is the standard mechanism for ensuring library-level task activation is deferred until all library units are elaborated. This note is informative — the normative requirement is the language-level guarantee stated above.
 - **Examples** — producer/consumer, router/worker, command/response patterns
 
 ### 05-assurance.md
@@ -782,7 +790,8 @@ Full specification of the language-level assurance guarantees. This is the langu
 - **Bronze Guarantee** — state the normative guarantee as a language property: every conforming Safe program has complete and correct flow information (`Global`, `Depends`, `Initializes`) derivable without user-supplied annotations
 - **Concurrency Assurance** — specify how the tasking model provides:
   - Data race freedom: no shared mutable state between tasks (all inter-task communication via channels)
-  - Deadlock freedom: ceiling priority protocol, statically assigned priorities
+  - Priority inversion avoidance: ceiling priority rules on channel-backing synchronisation mechanisms (informative mapping consideration)
+      - Note explicitly that application-level deadlock freedom is NOT guaranteed by the language rules for arbitrary blocking channel programs. Explain the circular-wait risk with blocking sends/receives on bounded channels. State that deadlock freedom is a program-level property dependent on communication topology, not a language-level guarantee.
   - Task-variable ownership: effect summaries on task bodies reference only owned variables and channel operations
 - **Silver Guarantee** — specify how D27's four language rules guarantee Absence of Runtime Errors (AoRTE):
   - Wide intermediate arithmetic: explain the mathematical integer evaluation model
@@ -800,14 +809,15 @@ Full specification of the language-level assurance guarantees. This is the langu
   - Division that is Silver-provable via nonzero divisor types
   - Access type dereference that is Silver-provable via not-null subtypes
   - Ownership: move, borrow, observe patterns with access types
-  - A rejected program (index type too wide, divisor type includes zero, nullable dereference) with the expected diagnostic message
-  - A concurrent program with tasks and channels demonstrating data-race freedom and deadlock freedom
+  - A rejected program (index type too wide, divisor type includes zero, nullable dereference) with identification of the violated D27 rule for each rejection
+  - A concurrent program with tasks and channels demonstrating data-race freedom and task-variable ownership
+      - An informative note showing a communication topology that WOULD deadlock (circular blocking sends on full channels) to illustrate why deadlock freedom is a program-level, not language-level, property
 
 ### 06-conformance.md
 
 **Normative conformance requirements** (defined in terms of language properties, not specific tools):
 
-- Compilation model (separate compilation, symbol files). A conforming implementation shall provide a mechanism for separate compilation; symbol files are one permitted mechanism and their format is implementation-defined.
+- A conforming implementation shall provide a mechanism for separate compilation of units and combination of separately compiled units into a program. The mechanism is implementation-defined.
 - What constitutes a conforming implementation:
   - A conforming implementation shall accept all conforming programs and reject all non-conforming programs with a diagnostic
   - A conforming implementation shall implement the dynamic semantics correctly for all conforming programs
@@ -815,7 +825,7 @@ Full specification of the language-level assurance guarantees. This is the langu
   - No mention of specific compilers or provers in the normative conformance definition
 - What constitutes a conforming program — a program is conforming if and only if the implementation can establish, from the specification's type rules and D27 legality rules, that all required runtime checks are dischargeable. A program for which any runtime check cannot be so established is nonconforming and shall be rejected with a diagnostic.
 - Language-level assurance guarantees (expressed as language properties, not tool invocations):
-  - **Stone:** Every conforming Safe program is expressible as valid Ada 2022 / SPARK 2022 source
+  - **Representability:** Every conforming Safe program uses only constructs defined by ISO/IEC 8652:2023 as restricted and modified by this specification. (Informative note: this means every conforming Safe program has a natural mapping to valid Ada 2022 / SPARK 2022 source, but the mapping is an implementation concern, not a conformance requirement.)
   - **Bronze:** Every conforming Safe program has sufficient flow analysis information (Global, Depends, Initializes) to pass flow analysis without user-supplied annotations
   - **Silver:** Every conforming Safe program is free of runtime errors — all runtime checks (overflow, range, index, division-by-zero, null dereference, discriminant) are dischargeable from type information and D27 legality rules alone
 - **Conformance levels:** To preserve the safety story through standards refactoring, define two conformance levels:
@@ -873,7 +883,7 @@ Complete consolidated BNF grammar for Safe. Target: approximately 140–160 prod
 
 5. **Normative voice**: "shall" for requirements, "may" for permissions, "should" for recommendations.
 
-6. **Example conformance**: All code examples in the specification shall be conforming programs under the stated legality rules (including D27 Rules 1–4). If an example is intentionally nonconforming (e.g., to illustrate a required diagnostic), it shall be explicitly labeled "Nonconforming Example" and accompanied by the expected diagnostic message.
+6. **Example conformance**: All code examples in the specification shall be conforming programs under the stated legality rules (including D27 Rules 1–4). If an example is intentionally nonconforming (e.g., to illustrate a required diagnostic), it shall be explicitly labeled "Nonconforming Example" and accompanied by identification of the violated rule and the source location of the violation. Do not mandate specific diagnostic wording in normative text.
 
 7. **Tool independence**: No normative paragraph shall mandate invocation of a specific tool, compiler, or prover by name. Tool-specific guidance belongs exclusively in §07-annex-b (informative implementation advice). Normative requirements shall be expressed in terms of language properties, legality rules, and semantic guarantees.
 
