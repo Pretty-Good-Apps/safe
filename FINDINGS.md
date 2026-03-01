@@ -34,13 +34,13 @@
 
 ---
 
-## F4. D17 Ownership Table Column for Emitted Ada
+## F4. D17 Ownership Table Column for Emitted Ada — RESOLVED (no spec change)
 
 **Location:** D17 Ownership model summary table
 
-**Issue:** The D17 table in SPEC-PROMPT.md has two columns: "Safe construct" and "Ownership semantics." Previous revisions (per CHANGELOG.md) removed the "Emitted Ada" column as part of the tool-independence refactoring. However, the table entry for `X := new ((...) : T)` uses the type annotation syntax form, but the entry for `procedure P (A : in T_Ptr)` says "Read-only access: caller's ownership frozen" — this is described as "observing" in §2.3 but the table says "Read-only access." The terminology is inconsistent between the table summary and the detailed ownership rules.
+**Issue:** The D17 table in SPEC-PROMPT.md has two columns: "Safe construct" and "Ownership semantics." Previous revisions (per CHANGELOG.md) removed the "Emitted Ada" column as part of the tool-independence refactoring. However, the table entry for `procedure P (A : in T_Ptr)` says "Read-only access: caller's ownership frozen" — this is described as "observing" in §2.3 but the table says "Read-only access." The terminology is inconsistent between the table summary and the detailed ownership rules.
 
-**Recommendation:** Align the D17 table terminology with the ownership model definitions: use "Observe" instead of "Read-only access" and "Borrow" instead of "Temporary mutable access" for consistency with §2.3 and with the SPARK precedent terminology.
+**Resolution:** The generated spec's §02 §2.3 ownership table (paragraph 95) and detailed rules (§2.3.2–§2.3.4) use consistent terminology throughout: "Owner," "Local borrower," "Local observer," "borrow," "observe," "move." The terminology inconsistency exists only in SPEC-PROMPT.md's D17 summary table, not in the generated spec. SPEC-PROMPT.md should align its D17 table with the formal terms for clarity, but no spec changes are required.
 
 ---
 

@@ -628,7 +628,6 @@ annotated_expression ::= '(' expression ':' subtype_mark ')'
 | `Assert` | §11.4.2 | Sole assertion mechanism; always enabled |
 | `Atomic` | §C.6 | Retained for hardware register modelling |
 | `Atomic_Components` | §C.6 | Retained for array components |
-| `Convention` | | Excluded — see paragraph 84 |
 | `Discard_Names` | §C.5 | Retained |
 | `Independent` | §C.6 | Retained for memory-mapped registers |
 | `Independent_Components` | §C.6 | Retained for array components |
