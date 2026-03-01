@@ -851,39 +851,3 @@ ECMA-track fitness fixes: self-containment of normative references and implement
 8. **No new GNAT/GNATprove references.** ✓
 9. **Reference Documents section still lists SPARK RM and UG (correctly, as drafter resources).** ✓
 10. **New TBD items present:** modular arithmetic wrapping semantics (with "High priority" annotation), limited/private type views, partial initialisation facility. ✓
-
----
-
-## Round 8
-
-Fixes two high-severity draft-breaking inconsistencies identified by an independent ECMA-track fitness review. No design decisions changed.
-
-### R8-1. D17 Ownership Table: Safe Syntax and SPARK Ownership-by-Kind Alignment
-
-**Problem (syntax):** The D17 ownership model table used Ada tick notation (`X'Access`, `Obj'Access`, `new T'(...)`) that Safe's own D20 and D21 remove. This would seed invalid/contradictory syntax into the generated LRM.
-
-**Problem (semantics):** The observe/borrow rows used named access type parameter modes (`procedure P (A : in T_Ptr)` for observe, `procedure P (A : in out T_Ptr)` for borrow). SPARK's ownership model maps borrow/observe to anonymous access parameter kinds: anonymous access-to-variable for borrowing, anonymous access-to-constant for observing. The table conflated Ada parameter modes with SPARK ownership operations.
-
-**Changes (6 edits in D17 table + 4 propagation edits):**
-
-D17 ownership table:
-- Heading: added "(aligned with SPARK ownership-by-kind; Safe dot-notation for attributes, type annotation for allocators)"
-- Allocator row: `new T'(...)` → `new ((...) : T)` (type annotation syntax per D21)
-- Observe row: `procedure P (A : in T_Ptr)` → `procedure P (A : access constant T)` with "temporary read-only access (anonymous access-to-constant parameter)"
-- Borrow row: `procedure P (A : in out T_Ptr)` → `procedure P (A : access T)` with "temporary mutable access (anonymous access-to-variable parameter)"
-- Local observe row: `X'Access` → `X.Access` (dot notation per D20)
-- General access move row: `Obj'Access` → `Obj.Access` (dot notation per D20)
-
-Propagation:
-- D17 restrictions: `'Access` → `.Access` with dot-attribute spelling note; `Unchecked_Access` → `.Unchecked_Access`
-- D23 retained features: `'Access` → `.Access` (2 entries)
-- §02 restrictions drafting instructions: `'Access` → `.Access`
-
-### R8 Consistency Verification
-
-1. **Zero `'Access` (tick notation) in spec.** ✓
-2. **Zero `new T'(...)` (Ada allocator syntax) in spec.** ✓
-3. **Zero named-access-type observe/borrow rows in D17 table.** Observe/borrow now use anonymous access parameter kinds, matching SPARK ownership-by-kind. ✓
-4. **`.Access` used consistently** in D17 table, D17 restrictions, D23, and §02. ✓
-5. **D17 table heading** includes alignment note. ✓
-6. **Allocator uses type annotation syntax** per D21. ✓

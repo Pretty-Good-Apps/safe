@@ -161,27 +161,27 @@ This section records every design decision made during the language design proce
 
 Additionally, dereference of an access value requires the access subtype to be `not null` (see D27 Rule 4).
 
-**Ownership model summary (aligned with SPARK ownership-by-kind; Safe dot-notation for attributes, type annotation for allocators):**
+**Ownership model summary:**
 
 | Safe construct                                       | Ownership semantics                                                                   |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | `type T_Ptr is access T;`                            | Pool-specific owner — can be moved, borrowed, or observed                             |
 | `subtype T_Ref is not null T_Ptr;`                   | Non-null owner — legal for dereference                                                |
-| `X := new ((...) : T)`                               | Creates a new owned value; X becomes the owner                                        |
+| `X := new T'(...)`                                   | Creates a new owned value; X becomes the owner                                        |
 | `Y := X` (named access-to-variable assignment)       | **Move**: X becomes null, Y becomes owner                                             |
-| `procedure P (A : access constant T)`                | **Observe**: temporary read-only access (anonymous access-to-constant parameter)      |
-| `procedure P (A : access T)`                         | **Borrow**: temporary mutable access (anonymous access-to-variable parameter)         |
+| `procedure P (A : in T_Ptr)`                         | **Observe**: read-only access during call; caller's ownership frozen                  |
+| `procedure P (A : in out T_Ptr)`                     | **Borrow**: temporary mutable access during call; caller's ownership frozen           |
 | `Y : access T := X`                                  | **Local borrow**: Y is a local borrower of X; X frozen while Y is in scope            |
-| `Y : access constant T := X.Access`                  | **Local observe**: Y observes X; X frozen while Y is in scope                         |
+| `Y : access constant T := X'Access`                  | **Local observe**: Y observes X; X frozen while Y is in scope                         |
 | `type C_Ptr is access constant T;`                   | Named access-to-constant — not subject to ownership checking; data is constant        |
 | `type G_Ptr is access all T;`                        | General access — subject to ownership checking to prevent aliasing; cannot deallocate  |
-| `G : G_Ptr := Obj.Access` (general access-to-var)    | **Move**: ownership of aliased local object moves into pointer; original frozen        |
+| `G : G_Ptr := Obj'Access` (general access-to-var)    | **Move**: ownership of aliased local object moves into pointer; original frozen        |
 | Scope exit of owning variable                        | Automatic deallocation (pool-specific access types only)                              |
 
 **Restrictions vs. full Ada access types:**
 
 - Access-to-subprogram types are excluded. A conforming implementation shall reject any access-to-subprogram type declaration. Rationale: indirect calls violate static call resolution (D18).
-- `Unchecked_Access` attribute is excluded (spelled `.Unchecked_Access` under dot-attribute syntax). The `Access` attribute is retained (spelled `.Access`) for uses consistent with the ownership model (borrowing/observing aliased objects; moving into general access types).
+- `Unchecked_Access` attribute is excluded. `'Access` is retained for uses defined by SPARK's ownership model (borrowing aliased objects, observing, moving into general access types).
 - `Unchecked_Deallocation` is excluded from Safe source. Deallocation is automatic on scope exit for pool-specific owning access objects.
 - All ownership checking is local to the compilation unit — no whole-program analysis. This is compatible with SPARK's ownership model, which is also local.
 
@@ -244,8 +244,8 @@ Note: `Static_Predicate` and `Dynamic_Predicate` as subtype features (not contra
 - Records including discriminated records (discrete discriminants, static constraints, defaults)
 - Arrays including unconstrained array types
 - Access-to-object types with full SPARK 2022 ownership and borrowing rules, including: pool-specific access types, anonymous access types (borrowing/observing), general access types (`access all`, with ownership checking), named access-to-constant types (exempt from ownership checking)
-- `Access` attribute (spelled `.Access` under dot notation) for borrowing, observing, and moving as defined by the ownership model
-- Aliased objects (required for `.Access` attribute under ownership rules)
+- `'Access` attribute for borrowing, observing, and moving as defined by SPARK 2022 ownership model
+- Aliased objects (required for `'Access` attribute under SPARK ownership rules)
 - `not null` access subtypes (required for dereference per D27 Rule 4)
 - Allocators (`new`) with automatic deallocation on owner scope exit
 - Static tasks with priority (D28)
@@ -750,7 +750,7 @@ Do this for every exclusion. Be exhaustive. Cross-reference related exclusions.
 - Access-to-subprogram types are excluded — a conforming implementation shall reject any access-to-subprogram type declaration
 - `Unchecked_Access` attribute is excluded
 - `Unchecked_Deallocation` is excluded
-- `Access` attribute (spelled `.Access`) is retained for uses consistent with the ownership model
+- `'Access` attribute is retained for uses consistent with SPARK 2022 ownership rules
 - Specify Safe ownership rules directly and self-containedly within this LRM. Use SPARK RM/UG §5.9 as informative design precedent, but do not define Safe semantics by reference to SPARK documents. State how Safe ownership rules apply in Safe's single-file package model.
 
 **Contract exclusions:** List every excluded contract aspect with a reference to its 8652:2023 or SPARK RM definition and the rationale "replaced by pragma Assert; Bronze and Silver assurance guaranteed by D26/D27 language rules."
