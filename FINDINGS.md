@@ -24,13 +24,13 @@
 
 ---
 
-## F3. Quantified Expressions Exclusion vs. SPARK Subset
+## F3. Quantified Expressions Exclusion vs. SPARK Subset — RESOLVED (no spec change)
 
 **Location:** D23 (Retained Ada Features), implied by "All Ada 2022 features in the SPARK 2022 subset not otherwise excluded"
 
 **Issue:** Quantified expressions (`for all`, `for some`) are part of the SPARK 2022 subset. D23 states "All Ada 2022 features in the SPARK 2022 subset not otherwise excluded" are retained. However, quantified expressions are primarily useful in contracts, which are excluded (D19). The generated spec excludes them (§02 paragraph 22), but SPEC-PROMPT.md does not explicitly list them as excluded.
 
-**Recommendation:** Add `quantified expressions` to D19 or create a new decision explicitly excluding them, with rationale: "useful only in contracts; excluding contracts makes quantified expressions superfluous."
+**Resolution:** The generated spec correctly excludes quantified expressions in §02 paragraph 22 with appropriate rationale, and §08 contains no `quantified_expression` production. The spec is internally consistent. The gap is in SPEC-PROMPT.md only (quantified expressions should be added to D19's exclusion list for clarity). No spec changes required. While `for all`/`for some` can technically appear in ordinary boolean expressions, their primary utility is in contracts, type predicates, and loop invariants — all excluded. Their marginal value in ordinary `if` conditions does not justify the compiler complexity of implicit iteration in expression position.
 
 ---
 
