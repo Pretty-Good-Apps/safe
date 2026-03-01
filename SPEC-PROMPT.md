@@ -26,23 +26,23 @@ Language conformance in this specification is defined in terms of language prope
 
 ## Toolchain Baseline
 
-All compiler and proof requirements in this specification are defined relative to the following baseline:
+This section defines the reference toolchain profile used by the project to validate the language guarantees. It is informative and does not define language conformance. Language conformance is defined solely in §06.
 
 - **GNAT:** GNAT Pro or GNAT Community, version 14.x or later (Ada 2022 capable)
 - **GNATprove:** Same release series as GNAT
 - **Proof level:** `gnatprove --mode=prove --level=2` (or higher if needed to discharge all checks)
 - **Runtime profile for concurrency:** `pragma Profile (Jorvik)` on hosted GNAT targets
 
-If Jorvik is not available for a particular target runtime, the implementation shall document: (a) the chosen alternative profile (e.g., Ravenscar), (b) any restricted channel or select features, and (c) any impact on proof obligations.
+If Jorvik is not available for a particular target runtime, the reference implementation should document: (a) the chosen alternative profile (e.g., Ravenscar), (b) any restricted channel or select features, and (c) any impact on proof obligations.
 
 ### Proof acceptance policy
 
-For the purposes of this specification, "passes Bronze" and "passes Silver" mean:
+For the purposes of the reference toolchain profile, "passes Bronze" and "passes Silver" mean:
 
 - **Bronze:** `gnatprove --mode=flow` reports zero errors and zero high-severity warnings on the emitted Ada.
 - **Silver:** `gnatprove --mode=prove` reports: no unproved runtime checks, no unproved assertions, and no tool errors. Proof timeouts are treated as failures unless explicitly documented with a mitigation plan.
 
-These are the acceptance criteria for D26's guarantees. Every conforming Safe program, when compiled and emitted as Ada/SPARK, shall meet both criteria without any developer-supplied SPARK annotations in the emitted code.
+These are the acceptance criteria used to validate D26's guarantees for the reference implementation. The language conformance rules in §06 are stated without mandating any specific tool invocation. A conforming Safe program is one that satisfies the language's legality rules (including D27 Rules 1–4); the reference toolchain profile provides one method of validating that the language guarantees hold.
 
 ---
 
@@ -64,7 +64,7 @@ The emitted Ada maps these to Ada-legal identifiers (e.g., `channel Readings` em
 
 ---
 
-## Design Decisions and Rationale
+## Design Decisions
 
 This section records every design decision made during the language design process, with rationale. These decisions are final. Do not revisit or propose alternatives.
 
@@ -207,7 +207,7 @@ Additionally, dereference of an access value requires the access subtype to be `
 - `Unchecked_Access` and `Unchecked_Deallocation` are excluded from Safe source.
 - All ownership checking is local to the compilation unit — no whole-program analysis. This is compatible with SPARK's ownership model, which is also local.
 
-**Implementation note (deallocation emission):** The emitted Ada uses `Ada.Unchecked_Deallocation` generic instantiations to implement automatic deallocation when the owning object goes out of scope. The exclusion of generics (D16) applies to Safe source, not emitted Ada. Deallocation calls must be emitted at every scope exit point, including early `return` statements, loop `exit` statements, and `goto` statements that leave the scope, not just the textual end of the scope. GNATprove's leak checking on the emitted Ada provides independent verification that the compiler's deallocation logic is complete.
+**Implementation note (deallocation emission):** The emitted Ada uses `Ada.Unchecked_Deallocation` generic instantiations to implement automatic deallocation when the owning object goes out of scope. The exclusion of generics (D16) applies to Safe source, not emitted Ada. Deallocation calls must be emitted at every scope exit point, including early `return` statements, loop `exit` statements, and `goto` statements that transfer control out of the owning scope, not just the textual end of the scope. GNATprove's leak checking on the emitted Ada provides independent verification that the compiler's deallocation logic is complete.
 
 **Rationale:** Dynamic data structures (linked lists, trees, buffer pools, process tables) are essential for OS construction and systems programming. SPARK 2022 solved the safety problem for access types by adopting Rust-style ownership semantics — each access value has exactly one owner, ownership transfers are explicit via move semantics on assignment, and borrowing/observing provide temporary access without ownership transfer. These rules are enforced at compile time by local analysis (no whole-program reasoning), which is compatible with single-pass compilation. Excluding access-to-subprogram types eliminates indirect calls, preserving the property that every call resolves statically.
 
@@ -346,7 +346,7 @@ If the static range of any declared type in the program exceeds 64-bit signed ra
 
 **Intermediate overflow legality rule:** For types whose range fits within 32 bits, intermediate `Wide_Integer` arithmetic cannot overflow for single operations. For chained operations or types with larger ranges (e.g., products of two values near the 32-bit boundary), intermediate `Wide_Integer` subexpressions may approach the 64-bit bounds. If the implementation's interval analysis determines that any intermediate `Wide_Integer` subexpression in an expression could overflow 64-bit signed range, the expression shall be rejected with a diagnostic. This ensures the "no intermediate overflow" guarantee holds universally, not just for small-range types. Narrowing checks at assignment, return, and parameter points are discharged via interval analysis on the wide result.
 
-This means `A + B` where `A, B : Reading` (0..4095) computes in `Wide_Integer` — the intermediate result 8190 does not overflow. A range check fires only if the result is stored back into a `Reading`.
+For example, `A + B` where `A, B : Reading` (0..4095) computes in `Wide_Integer` — the intermediate result 8190 does not overflow, and a range check fires only when the result is narrowed to `Reading` at an assignment, return, or parameter point. GNATprove discharges narrowing checks via interval analysis on the wide result.
 
 Example:
 
@@ -509,7 +509,9 @@ begin
 end Sensor_Reader;
 ```
 
-Tasks begin executing when the program starts, after all package-level initialization is complete. Each task declaration creates exactly one task — no dynamic spawning, no task types, no task arrays. Tasks shall not terminate — every task body must contain a non-terminating control structure (e.g., an unconditional `loop`). A conforming implementation shall reject any task body that is not syntactically non-terminating. This is required by the Jorvik profile, which retains the `No_Task_Termination` restriction from Ravenscar.
+Tasks begin executing when the program starts, after all package-level initialization is complete. Each task declaration creates exactly one task — no dynamic spawning, no task types, no task arrays. Tasks shall not terminate. This is required by the Jorvik profile, which retains the `No_Task_Termination` restriction from Ravenscar.
+
+**Non-termination legality rule:** The outermost statement of a task body's `handled_sequence_of_statements` shall be an unconditional `loop` statement (`loop ... end loop;`). Declarations may precede the loop. A `return` statement shall not appear anywhere within a task body. No `exit` statement within the task body shall name or otherwise target the outermost loop. A conforming implementation shall reject any task body that violates these constraints. This is a syntactic restriction checkable without control-flow or whole-program analysis.
 
 **Rationale (static, non-terminating tasks):** Dynamic task creation (Go's `go f()`) prevents static analysis of the task set — you cannot count tasks, assign ceiling priorities, prove resource bounds, or verify deadlock freedom if the number of tasks is unknown at compile time. Ravenscar and Jorvik both require static tasks for exactly this reason. Both profiles also retain `No_Task_Termination` — tasks run forever once started, which simplifies resource analysis and prevents dangling references to task-owned state. Every task in a Safe program is visible by reading the source — you can enumerate the entire concurrent architecture from the package declarations. This is the right tradeoff for systems programming, where the set of concurrent activities (interrupt handlers, device drivers, protocol stacks, schedulers) is known at design time.
 
@@ -591,7 +593,13 @@ Variables not accessed by any task remain accessible to non-task subprograms. A 
 
 **Non-termination requirement:**
 
-Tasks shall not terminate. The Jorvik profile retains the `No_Task_Termination` restriction from Ravenscar — both profiles require tasks to run forever once started. Every task body must contain a non-terminating control structure (typically an unconditional `loop`). A conforming implementation shall reject any task body whose outermost statement sequence is not syntactically non-terminating. `return` statements are not permitted in task bodies. This simplifies resource analysis: task-owned package variables remain accessible for the lifetime of the program, and channel endpoints are always active.
+Tasks shall not terminate. The Jorvik profile retains the `No_Task_Termination` restriction from Ravenscar — both profiles require tasks to run forever once started.
+
+The non-termination legality rule (stated in the task declarations section above) requires that: (a) the outermost statement of the task body is an unconditional `loop ... end loop;`, (b) no `return` statement appears anywhere in the task body, and (c) no `exit` statement names or targets the outermost loop. Declarations may precede the outermost loop. Inner loops within the task body may contain `exit` statements targeting those inner loops.
+
+This is a conservative syntactic restriction. Some theoretically non-terminating forms (e.g., `while True loop ... end loop;`) are excluded because "non-terminating" is not decidable in general; the unconditional `loop` form is trivially checkable by any implementation. The restriction may be relaxed in future revisions if experience shows it is too limiting.
+
+This simplifies resource analysis: task-owned package variables remain accessible for the lifetime of the program, and channel endpoints are always active.
 
 **SPARK emission:**
 
@@ -834,7 +842,7 @@ Full specification of the single-file package model. Use Ada RM section conventi
   - Opaque types (`public type T is private record`)
   - Dot notation for attributes (full specification of how `X.Name` resolves: record field vs. attribute, checked at compile time by type)
   - Type annotation syntax (`Expr : T`) — precedence, where parentheses are required
-- **Static Semantics** — symbol file contents, what clients see, how opaque types export size but not structure
+- **Static Semantics** — symbol file contents, what clients see, how opaque types export size but not structure. Symbol files shall include `Global` effect summaries (read-set and write-set) for all exported subprograms. This enables callers in other packages to compute their own `Global`/`Depends` and to check task-variable ownership transitively, without requiring access to the callee's source or whole-program analysis. If a called subprogram's effect summary is not available (e.g., the dependency's symbol file is missing or incompatible), the program shall be rejected.
 - **Dynamic Semantics** — variable initializers evaluated at load time in declaration order; no elaboration-time code
 - **Implementation Requirements** — emitted Ada structure (`.ads`/`.adb` split), symbol file emission, incremental recompilation rules
 - **Examples** — at least four complete packages:
@@ -851,8 +859,8 @@ Full specification of Safe's concurrency model. This defines the channel-based p
 - **Channel declarations** — syntax, element type constraints (must be definite), capacity as static expression, static allocation of channel buffers
 - **Channel operations** — `send`, `receive`, `try_send`, `try_receive` semantics, blocking behavior, interaction with task priorities
 - **Select statement** — syntax, receive-only restriction, deterministic arm selection (first-ready wins), delay timeout semantics
-- **Task-variable ownership** — the no-shared-mutable-state rule, compile-time checking algorithm (extension of `Global` analysis across task boundaries), transitivity through the call graph
-- **Non-termination requirement** — every task body must contain a non-terminating control structure; `return` is not permitted in task bodies; conforming implementations shall reject task bodies that are not syntactically non-terminating; rationale: Jorvik retains `No_Task_Termination` from Ravenscar
+- **Task-variable ownership** — the no-shared-mutable-state rule, compile-time checking algorithm (extension of `Global` analysis across task boundaries), transitivity through the call graph. Specify that cross-package transitivity uses `Global` effect summaries from dependency symbol files (see §03 Static Semantics). The ownership check shall be completable from the compilation unit's source plus its direct and transitive dependency symbol files, without access to dependency source code.
+- **Non-termination legality rule** — the outermost statement of a task body shall be an unconditional `loop ... end loop;`; declarations may precede the loop; `return` shall not appear anywhere in a task body; no `exit` shall target the outermost loop; inner loops may contain `exit` targeting those inner loops; this is a syntactic restriction checkable without control-flow analysis; rationale: Jorvik retains `No_Task_Termination` from Ravenscar
 - **Task startup** — ordering relative to package initialization: all package-level declarations and initializations complete before any task begins execution. The order of package initialization is implementation-defined but deterministic for a given program. The emitted Ada shall include `pragma Partition_Elaboration_Policy(Sequential)` to enforce this guarantee.
 - **Examples** — producer/consumer, router/worker, command/response patterns
 
@@ -945,7 +953,7 @@ Implementation advice covering:
 - **Incremental recompilation:** Rules for when a symbol file change triggers recompilation of dependent units. Specify the fingerprinting strategy.
 - **Emitted Ada quality:** The emitted Ada should be human-readable and suitable for manual inspection, Gold/Platinum annotation, and DO-178C certification review.
 - **Elaboration and tasking configuration:** The emitted Ada shall include `pragma Partition_Elaboration_Policy(Sequential)` in the configuration file. This defers library-level task activation until all library units are elaborated, preventing elaboration-time data races. SPARK requires this pragma for programs using tasks or protected objects under Ravenscar/Jorvik profiles.
-- **Deallocation emission:** The emitted Ada uses `Ada.Unchecked_Deallocation` generic instantiations for automatic deallocation of owned access objects at scope exit. The exclusion of generics (D16) applies to Safe source only, not emitted Ada. The compiler must emit deallocation at every scope exit point: normal scope end, early `return`, loop `exit`, and `goto` that leaves the scope. GNATprove's leak checking on the emitted Ada independently verifies completeness of the compiler's deallocation logic.
+- **Deallocation emission:** The emitted Ada uses `Ada.Unchecked_Deallocation` generic instantiations for automatic deallocation of owned access objects at scope exit. The exclusion of generics (D16) applies to Safe source only, not emitted Ada. The compiler must emit deallocation at every scope exit point: normal scope end, early `return`, loop `exit`, and `goto` that transfers control out of the owning scope. GNATprove's leak checking on the emitted Ada independently verifies completeness of the compiler's deallocation logic.
 
 ### 08-syntax-summary.md
 
@@ -989,6 +997,10 @@ Complete consolidated BNF grammar for Safe. Target: approximately 140–160 prod
    7. Examples
 
 5. **Normative voice**: "shall" for requirements, "may" for permissions, "should" for recommendations.
+
+6. **Example conformance**: All code examples in the specification shall be conforming programs under the stated legality rules (including D27 Rules 1–4). If an example is intentionally nonconforming (e.g., to illustrate a required diagnostic), it shall be explicitly labeled "Nonconforming Example" and accompanied by the expected diagnostic message.
+
+7. **Tool independence**: No normative paragraph shall mandate invocation of a specific tool, compiler, or prover by name. Tool-specific guidance (GNAT, GNATprove, or any other product) belongs exclusively in §07-annex-b (informative implementation advice). Normative requirements shall be expressed in terms of language properties, legality rules, and semantic guarantees.
 
 ---
 
@@ -1064,12 +1076,12 @@ package Sensors is
     public subtype Channel_Count is Integer range 1 .. 8;  -- excludes zero: valid divisor
 
     type Calibration is private record
-        Offset : Reading := 0;
         Scale  : Float := 1.0;
+        Bias   : Integer := 0;
     end record;
 
     Cal_Table : array (Channel_Id) of Calibration :=
-        (others => (Offset => 0, Scale => 1.0));
+        (others => (Scale => 1.0, Bias => 0));
 
     Initialized : Boolean := False;
 
@@ -1078,7 +1090,7 @@ package Sensors is
 
     public procedure Initialize is
     begin
-        Default_Cal : constant Calibration := (Offset => 0, Scale => 1.0);
+        Default_Cal : constant Calibration := (Scale => 1.0, Bias => 0);
         for I in Channel_Id.Range loop
             Cal_Table (I) := Default_Cal;
         end loop;
@@ -1089,12 +1101,7 @@ package Sensors is
     begin
         pragma Assert (Initialized);
         Raw : Reading := Read_ADC (Channel);
-        -- wide intermediate: Raw + Offset computed in mathematical integer
-        -- max 4095 + 4095 = 8190, narrowed to Reading on assignment
-        -- compiler verifies (4095 + 4095) fits Reading? No — but /1 does.
-        -- in practice, Offset should be constrained. Example kept simple.
-        Adjusted : Reading := Raw + Cal_Table (Channel).Offset;
-        return Adjusted;
+        return Raw;  -- D27: no narrowing needed, already Reading type
     end Get_Reading;
 
     public function Average_Reading (Count : Channel_Count) return Reading is
@@ -1124,7 +1131,7 @@ Note the following Safe features visible in this example:
 - `pragma Assert` for runtime checks
 - No contracts, no tick, no qualified expressions
 - Variable initialization at declaration with expressions
-- **D27 in action:** `Channel_Count` excludes zero, making it a legal divisor type; `Channel_Id` used directly as array index (strict index typing); arithmetic on `Reading` values uses wide intermediates
+- **D27 in action:** `Channel_Count` excludes zero, making it a legal divisor type; `Channel_Id` used directly as array index (strict index typing); `Average_Reading` uses wide intermediate arithmetic (`Total / Count` computed in `Wide_Integer`, narrowed to `Reading` at `return`)
 
 ### What the Compiler Emits (Bronze + Silver Annotated)
 
@@ -1146,8 +1153,8 @@ is
         with Global => (In_Out => (Cal_Table, Initialized));
 
     function Get_Reading (Channel : Channel_Id) return Reading
-        with Global => (Input => (Initialized, Cal_Table)),
-             Depends => (Get_Reading'Result => (Channel, Initialized, Cal_Table));
+        with Global => (Input => Initialized),
+             Depends => (Get_Reading'Result => (Channel, Initialized));
 
     function Average_Reading (Count : Channel_Count) return Reading
         with Global => (Input => (Initialized, Cal_Table)),
@@ -1155,8 +1162,8 @@ is
 
 private
     type Calibration is record
-        Offset : Reading := 0;
         Scale  : Float := 1.0;
+        Bias   : Integer := 0;
     end record;
 end Sensors;
 ```

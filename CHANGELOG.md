@@ -171,3 +171,137 @@ After all patches, the following consistency checks were performed:
 5. **D28 examples:** Both task examples (Sensor_Reader, Sampler, Evaluator) use unconditional `loop` — no task termination shown.
 6. **D17 ownership table:** Consistent with `access all` exclusion — only pool-specific access types shown.
 7. **D26/D27 Silver guarantee:** Hard rejection rule added. `Wide_Integer` overflow claim qualified. "Three legality rules" corrected to "four" (Rule 4: not-null dereference was already present but not counted in the heading).
+
+---
+
+## Round 2
+
+Changes applied based on an independent ECMA-track readiness review and deferred items from the Round 1 consistency pass.
+
+### P0-R2-1. Toolchain Baseline Contradicts Conformance Note
+
+**Problem:** Toolchain Baseline used normative "shall" voice binding conformance to GNATprove invocation, contradicting the Conformance Note and ECMA policy.
+
+**Before (section introduction):**
+> All compiler and proof requirements in this specification are defined relative to the following baseline:
+
+**After:**
+> This section defines the reference toolchain profile used by the project to validate the language guarantees. It is informative and does not define language conformance. Language conformance is defined solely in §06.
+
+**Before (proof acceptance policy introduction):**
+> For the purposes of this specification, "passes Bronze" and "passes Silver" mean:
+
+**After:**
+> For the purposes of the reference toolchain profile, "passes Bronze" and "passes Silver" mean:
+
+**Before (proof acceptance policy closing):**
+> These are the acceptance criteria for D26's guarantees. Every conforming Safe program, when compiled and emitted as Ada/SPARK, shall meet both criteria without any developer-supplied SPARK annotations in the emitted code.
+
+**After:**
+> These are the acceptance criteria used to validate D26's guarantees for the reference implementation. The language conformance rules in §06 are stated without mandating any specific tool invocation. A conforming Safe program is one that satisfies the language's legality rules (including D27 Rules 1–4); the reference toolchain profile provides one method of validating that the language guarantees hold.
+
+**Additional fix:** "the implementation shall document" softened to "the reference implementation should document" in the Jorvik-unavailable paragraph.
+
+### P0-R2-2. "Syntactically Non-Terminating" Is Ambiguous
+
+**Problem:** D28 required implementations to "reject any task body that is not syntactically non-terminating" without defining what syntactic forms qualify.
+
+**Before (D28 task declarations):**
+> Tasks shall not terminate — every task body must contain a non-terminating control structure (e.g., an unconditional `loop`). A conforming implementation shall reject any task body that is not syntactically non-terminating.
+
+**After:**
+> Tasks shall not terminate. [...]
+>
+> **Non-termination legality rule:** The outermost statement of a task body's `handled_sequence_of_statements` shall be an unconditional `loop` statement (`loop ... end loop;`). Declarations may precede the loop. A `return` statement shall not appear anywhere within a task body. No `exit` statement within the task body shall name or otherwise target the outermost loop. A conforming implementation shall reject any task body that violates these constraints. This is a syntactic restriction checkable without control-flow or whole-program analysis.
+
+**Before (D28 non-termination requirement subsection):**
+> Tasks shall not terminate. [...] A conforming implementation shall reject any task body whose outermost statement sequence is not syntactically non-terminating. `return` statements are not permitted in task bodies.
+
+**After:**
+> The non-termination legality rule (stated in the task declarations section above) requires that: (a) the outermost statement of the task body is an unconditional `loop ... end loop;`, (b) no `return` statement appears anywhere in the task body, and (c) no `exit` statement names or targets the outermost loop. [...] This is a conservative syntactic restriction. Some theoretically non-terminating forms (e.g., `while True loop ... end loop;`) are excluded because "non-terminating" is not decidable in general; the unconditional `loop` form is trivially checkable by any implementation.
+
+**§04 drafting instructions:** "Non-termination requirement" bullet replaced with "Non-termination legality rule" bullet specifying the precise syntactic constraints.
+
+### P0-R2-3. Quick Reference Example Nonconforming Under D27
+
+**Problem:** `Get_Reading` assigned `Raw + Cal_Table(Channel).Offset` to `Adjusted : Reading` where the intermediate could reach 8190 (exceeds `Reading`'s 0..4095 range), making the program nonconforming under D27 Rule 1.
+
+**Before:**
+```ada
+public function Get_Reading (Channel : Channel_Id) return Reading is
+begin
+    pragma Assert (Initialized);
+    Raw : Reading := Read_ADC (Channel);
+    Adjusted : Reading := Raw + Cal_Table (Channel).Offset;
+    return Adjusted;
+end Get_Reading;
+```
+
+**After:**
+```ada
+public function Get_Reading (Channel : Channel_Id) return Reading is
+begin
+    pragma Assert (Initialized);
+    Raw : Reading := Read_ADC (Channel);
+    return Raw;  -- D27: no narrowing needed, already Reading type
+end Get_Reading;
+```
+
+**Additional changes:**
+- `Calibration` record simplified: `Offset : Reading` removed, replaced with `Bias : Integer`
+- `Cal_Table` aggregate updated to match
+- `Initialize` default updated to match
+- Emitted Ada `Get_Reading` signature updated (no longer depends on `Cal_Table`)
+- D27 note updated to focus on `Average_Reading`'s wide intermediate division
+- Editorial Convention item 6 added: all examples must be conforming; nonconforming examples must be labeled
+
+### P1-R2-1. Cross-Unit Effect Analysis Requires Symbol-File Specification
+
+**Problem:** D3 prohibits whole-program analysis, but task-variable ownership (D28) and Bronze assurance (D26) require cross-package effect analysis. The spec did not specify what symbol files must carry to enable this.
+
+**Changes:**
+- §03 Static Semantics bullet — added: symbol files shall include `Global` effect summaries (read-set/write-set) for all exported subprograms; rejection if effect summary unavailable
+- §04 Task-variable ownership bullet — added: cross-package transitivity uses `Global` effect summaries from dependency symbol files; ownership check completable without dependency source code
+
+### P1-R2-2. D27 Rule 1 Redundant Paragraphs
+
+**Problem:** The example paragraph after the "Intermediate overflow legality rule" still contained residual overlap from Round 1.
+
+**Before:**
+> This means `A + B` where `A, B : Reading` (0..4095) computes in `Wide_Integer` — the intermediate result 8190 does not overflow. A range check fires only if the result is stored back into a `Reading`.
+
+**After:**
+> For example, `A + B` where `A, B : Reading` (0..4095) computes in `Wide_Integer` — the intermediate result 8190 does not overflow, and a range check fires only when the result is narrowed to `Reading` at an assignment, return, or parameter point. GNATprove discharges narrowing checks via interval analysis on the wide result.
+
+### P1-R2-3. D17 Deallocation Scope Exits Wording
+
+**Problem:** Improved `goto` wording to specify "transfer control out of the owning scope" instead of "leave the scope" for precision.
+
+**Before (D17):**
+> `goto` statements that leave the scope
+
+**After (D17):**
+> `goto` statements that transfer control out of the owning scope
+
+**Same change applied in §07-annex-b deallocation emission bullet.**
+
+### P2-R2-1. ECMA Editorial Constraint
+
+**Change:** Added Editorial Conventions item 7: "No normative paragraph shall mandate invocation of a specific tool, compiler, or prover by name."
+
+### P2-R2-2. Design Decisions Heading
+
+**Change:** Section heading changed from `## Design Decisions and Rationale` to `## Design Decisions` to match ECMA-style section naming conventions.
+
+---
+
+## Round 2 Consistency Pass
+
+1. **Toolchain Baseline voice:** No "shall" in the Toolchain Baseline section binds conformance to tool invocation. The remaining "shall" instances in §06 and elsewhere are normative language-property requirements. ✓
+2. **Task non-termination:** Zero occurrences of "syntactically non-terminating". All references use the precise legality rule (outermost unconditional `loop`, no `return`, no `exit` targeting outermost loop). ✓
+3. **Quick Reference examples:** `Get_Reading` no longer performs arithmetic that would be rejected under D27. All examples conforming. ✓
+4. **Scope exit completeness:** Both D17 and §07-annex-b include `goto` alongside `return` and `exit` with "transfer control out of the owning scope" wording. ✓
+5. **D27 Rule 1:** Example paragraph is short and focused, no duplication of legality rule text. ✓
+6. **Editorial Conventions:** Items 6 (example conformance) and 7 (tool independence) present. ✓
+7. **Design Decisions heading:** `## Design Decisions` heading present before D1. ✓
+8. **§03 and §04 drafting instructions:** Symbol-file `Global` effect summaries and cross-package ownership checking requirements present. ✓
