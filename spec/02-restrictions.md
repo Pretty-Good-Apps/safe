@@ -222,7 +222,7 @@ This section enumerates every feature of ISO/IEC 8652:2023 (Ada 2022) that Safe 
 
 59. **Intertask communication (§9.5).** Excluded. Entry declarations (§9.5.2), accept statements (§9.5.2), entry calls (§9.5.3), and requeue statements (§9.5.4) are excluded. A conforming implementation shall reject any entry_declaration, accept_statement, entry_call_statement, or requeue_statement. Safe provides channels for inter-task communication (Section 4).
 
-60. **Delay statements (§9.6).** Retained. Both `delay Duration_Expression;` and `delay until Time_Expression;` are retained. `delay` is used in task bodies and in `select` statement delay arms. The type `Duration` from package `Standard` is retained.
+60. **Delay statements (§9.6).** The relative delay statement `delay Duration_Expression;` is retained. `delay` is used in task bodies and in `select` statement delay arms. The type `Duration` from package `Standard` is retained. The absolute delay statement `delay until Time_Expression;` is excluded. A conforming implementation shall reject any `delay until` statement. Rationale: both `Ada.Calendar` and `Ada.Real_Time` are excluded (Annex A), leaving no language-defined time type for the absolute delay expression; relative delays via `Duration` cover periodic task loops and select timeouts.
 
 61. **Select statements (§9.7).** The Ada select statement (selective accept §9.7.1, timed entry calls §9.7.2, conditional entry calls §9.7.3, asynchronous transfer of control §9.7.4) is excluded. Safe provides its own `select` statement for multiplexing channel receive operations (Section 4). A conforming implementation shall reject any selective_accept, timed_entry_call, conditional_entry_call, or asynchronous_select.
 
@@ -290,9 +290,7 @@ This section enumerates every feature of ISO/IEC 8652:2023 (Ada 2022) that Safe 
 
 #### Annex D — Real-Time Systems
 
-86. **Real-time systems (Annex D).** Excluded except for task priorities. Safe retains the `Priority` aspect on task declarations (Section 4). All other Annex D features (D.1–D.14) including `Ada.Real_Time`, monotonic time, timing events, execution-time clocks, and group budgets are excluded.
-
-**Note:** The `delay until` statement (§9.6) is retained; the implementation shall support a time type suitable for use with `delay until`. The choice of time representation is implementation-defined.
+86. **Real-time systems (Annex D).** Excluded except for task priorities. Safe retains the `Priority` aspect on task declarations (Section 4). All other Annex D features (D.1–D.14) including `Ada.Real_Time`, monotonic time, timing events, execution-time clocks, and group budgets are excluded. The `delay until` statement is excluded (see paragraph 60).
 
 #### Annex E — Distributed Systems
 

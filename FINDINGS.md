@@ -14,13 +14,13 @@
 
 ---
 
-## F2. `delay until` Time Type Unspecified
+## F2. `delay until` Time Type Unspecified — RESOLVED
 
 **Location:** D23 (Retained Ada Features), D28 (section on delay in select arms)
 
 **Issue:** `delay until` is retained and appears in the grammar and in §04 select statement delay arms. However, `delay until` in 8652:2023 requires a time value (typically `Ada.Calendar.Clock` or `Ada.Real_Time.Clock`). Both `Ada.Calendar` and `Ada.Real_Time` are excluded (Annex A). SPEC-PROMPT.md retains `delay Duration_Expression` but does not explicitly address the time type for `delay until`.
 
-**Recommendation:** Either (a) exclude `delay until` and retain only `delay Duration;`, or (b) add a TBD item specifying what time type is available for `delay until`, or (c) state that the time type for `delay until` is implementation-defined. The generated spec took approach (c) in §02 paragraph 86 and Annex A §58–60.
+**Resolution:** Excluded `delay until` entirely. Only the relative delay `delay Duration_Expression;` is retained. Changes applied: §08 grammar (removed `'delay' 'until' expression ';'` alternative), §02 paragraph 60 (exclusion with legality rule and rationale), §02 paragraph 86 (removed implementation-defined time type note), Annex A paragraph 59 (removed shall-provide-time-type requirement), §06 (removed time type from implementation-defined items list and narrowed runtime requirement to relative `delay` only). Rationale: with both `Ada.Calendar` and `Ada.Real_Time` excluded, no language-defined time type exists for absolute delays; relative delays via `Duration` cover the primary use cases (periodic task loops, select timeouts). A future revision may reintroduce `delay until` alongside a minimal monotonic time package if absolute timing proves necessary.
 
 ---
 

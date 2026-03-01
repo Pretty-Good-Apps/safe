@@ -226,7 +226,7 @@ This annex walks through 8652:2023 Annex A (Predefined Language Environment) and
 
 58. **Status: EXCLUDED.**
 
-59. Rationale: `Ada.Calendar` raises `Time_Error` on invalid time values; requires exceptions. The implementation shall provide a time type suitable for `delay until` through implementation-defined means.
+59. Rationale: `Ada.Calendar` raises `Time_Error` on invalid time values; requires exceptions. The `delay until` statement is also excluded (Section 2, paragraph 60), so no language-defined time type is required.
 
 ### Ada.Real_Time (Annex D)
 

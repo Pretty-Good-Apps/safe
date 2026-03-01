@@ -486,7 +486,6 @@ goto_statement ::=
 
 delay_statement ::=
     'delay' expression ';'
-  | 'delay' 'until' expression ';'
 
 compound_statement ::=
     if_statement

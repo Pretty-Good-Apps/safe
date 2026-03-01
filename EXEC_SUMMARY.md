@@ -57,9 +57,9 @@ The grammar in §08 originally retained `[ 'abstract' ] 'limited'` in `record_ty
 
 The non-termination legality rule (§04, §4.6) requires an unconditional `loop` as the outermost statement. `while True loop` is not accepted, even though it is theoretically non-terminating, because non-termination is undecidable in general. The unconditional form was chosen as trivially verifiable.
 
-### 7. Delay Until
+### 7. Delay Until — Revised
 
-`delay until` is retained in the grammar and in §04 but the availability of `Ada.Calendar` and `Ada.Real_Time` are noted as excluded in Annex A. The time type for `delay until` is implementation-defined (flagged in TBD register as TBD-10 related).
+`delay until` has been excluded. Both `Ada.Calendar` and `Ada.Real_Time` are excluded, leaving no language-defined time type for absolute delay expressions. Only the relative delay statement (`delay Duration_Expression;`) is retained, which covers periodic task loops and select timeouts. The grammar, §02, §06, and Annex A have been updated accordingly. A future revision may reintroduce `delay until` alongside a minimal monotonic time package if absolute timing proves necessary.
 
 ### 8. TBD Register Population
 

@@ -154,9 +154,7 @@ This section defines what constitutes a conforming implementation and a conformi
 
    (e) The allocation strategy for channels (Section 4, §4.2).
 
-   (f) The representation of time types used with `delay until`.
-
-   (g) The initialisation order among packages with no direct or transitive dependency relationship (Section 3, §3.4.2).
+   (f) The initialisation order among packages with no direct or transitive dependency relationship (Section 3, §3.4.2).
 
    (h) The runtime abort handler behaviour on `pragma Assert` failure.
 
@@ -172,7 +170,7 @@ This section defines what constitutes a conforming implementation and a conformi
 
    (b) Channel operations with blocking semantics.
 
-   (c) The `delay` and `delay until` statements.
+   (c) The relative `delay` statement.
 
    (d) Automatic deallocation of owned access objects at scope exit.
 
