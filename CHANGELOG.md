@@ -416,3 +416,173 @@ end Scale;
 7. **§07-annex-b voice:** No "shall" in annex-b content (only in the drafting note explaining the convention). ✓
 8. **ECMA shaping section:** Present between Conformance Note and Toolchain Baseline with all 5 constraints. ✓
 9. **§00 front matter:** Includes normative/informative status bullet. ✓
+
+---
+
+## Round 4
+
+Structural revision to separate the language specification drafter prompt from implementation-profile content. `SPEC-PROMPT.md` now contains only language-level definitions and drafting instructions. All implementation-profile content (GNAT, GNATprove, emitted Ada, single-pass compiler internals, SPARK emission patterns, runtime details, compiler cost estimates) has been moved to `DEFERRED-IMPL-CONTENT.md` for use in companion documents and informative annexes.
+
+### Patch 1. Compatibility Note — remove emission backend and GNAT references
+
+**Before:** Referenced "Ada 2022 / SPARK 2022 emission (D4, D25)" and "portability is delegated to GNAT (D5)."
+
+**After:** States only that earlier C99 backend and OpenBSD requirements are removed and C FFI is excluded.
+
+### Patch 2. Conformance Note — remove GNAT/GNATprove/toolchain-profile references
+
+**Before:** Referenced "GNAT, GNATprove, and other tools" and "Toolchain profiles (e.g., GNAT/GNATprove guidance)."
+
+**After:** States conformance is defined by language properties and legality rules, full stop.
+
+### Patch 3. ECMA Shaping Constraints item 3 — remove emitted Ada / GNATprove from code examples note
+
+**Before:** "All code examples (Safe source, emitted Ada, GNATprove output)."
+
+**After:** "All code examples."
+
+### Patch 4. Toolchain Baseline — remove entire section
+
+Moved to `DEFERRED-IMPL-CONTENT.md`. This included GNAT/GNATprove version requirements, proof level, runtime profile, and proof acceptance policy.
+
+### Patch 5. Reserved Words — remove emission mapping paragraph
+
+**Before:** Included paragraph about emitted Ada mapping channel names to protected objects.
+
+**After:** Paragraph removed; content preserved in deferred file.
+
+### Patch 6. D3 (Single-Pass Recursive Descent Compiler) — remove entire decision
+
+Moved to `DEFERRED-IMPL-CONTENT.md`. This was a compiler-architecture decision, not a language definition.
+
+### Patch 7. D4 (Ada/SPARK as Sole Code Generation Target) — remove entire decision
+
+Moved to `DEFERRED-IMPL-CONTENT.md`. Backend choice is an implementation decision.
+
+### Patch 8. D5 (Platform-Independent via GNAT) — remove entire decision
+
+Moved to `DEFERRED-IMPL-CONTENT.md`. Platform targeting via GNAT is an implementation detail.
+
+### Patch 9. D6 — rewrite to remove emission details
+
+**Before:** Referenced `.ads`/`.adb` emission, GNAT compilation, GNATprove verification, DO-178C certification.
+
+**After:** States language-level single-file package model with implementation-defined symbol files.
+
+### Patch 10. D7 — remove emitted Ada elaboration details
+
+**Before:** Referenced `pragma Preelaborate`, `pragma Pure`, GNAT's static elaboration model, and "enforced by the emitted Ada's elaboration model."
+
+**After:** States language-level sequencing guarantees without specifying emission mechanism.
+
+### Patch 11. D11 — remove single-pass compiler reference
+
+**Before:** "the compiler processes declarations when it encounters them, which is exactly what single-pass compilation does."
+
+**After:** "declarations are visible from their point of declaration to the end of the enclosing scope."
+
+### Patch 12. D12 — remove single-pass compiler references
+
+**Before:** "always known in a single-pass compiler at the point of use" and "single biggest obstacle to single-pass compilation in Ada."
+
+**After:** "always known at the point of use due to declaration-before-use" and "single biggest source of name-resolution complexity in Ada."
+
+### Patch 13. D15 — remove emitted Ada and GNAT runtime details
+
+**Before:** Referenced "compiles to Jorvik-profile SPARK," "compiler-generated protected objects," "GNAT's Jorvik-profile runtime."
+
+**After:** States language-level guarantees only.
+
+### Patch 14. D17 — remove emitted Ada ownership table and deallocation emission note
+
+**Before:** Table had "Ada access kind in emitted code" column. Included implementation note about `Ada.Unchecked_Deallocation` generic instantiations and GNATprove leak checking.
+
+**After:** Table shows only "Safe construct" and "Ownership semantics." Deallocation emission note removed.
+
+### Patch 15. D19 — remove emitted Ada annotation generation detail
+
+**Before:** Referenced "500–800 lines of compiler code for contract lowering" and "compiler automatically generates Global, Depends, and Initializes in the emitted Ada."
+
+**After:** States language rules guarantee Bronze and Silver assurance without developer-authored contracts.
+
+### Patch 16. D22 — remove emitted Ada annotation generation detail
+
+**Before:** Referenced "compiler automatically generates Global, Depends, and Initializes in the emitted Ada from the compiler's name resolution and data flow analysis."
+
+**After:** States language guarantees assurance through type system and legality rules.
+
+### Patch 17. D23 — remove single-pass compilable and C FFI Silver guarantee references
+
+**Before:** "trivially single-pass compilable" and "imported C function is an unverifiable hole in the Silver guarantee."
+
+**After:** "trivially compilable" and references removed.
+
+### Patch 18. D24 — remove GNATprove reference
+
+**Before:** "since GNATprove cannot analyze foreign code."
+
+**After:** "since foreign code cannot be analysed by the language's verification rules."
+
+### Patch 19. D25 (Ada/SPARK Emission Backend) — remove entire decision
+
+Moved to `DEFERRED-IMPL-CONTENT.md`. Backend specification is an implementation decision.
+
+### Patch 20. D26 — rewrite as pure language-property guarantees
+
+**Before:** Detailed compiler mechanism (single-pass analysis, emitter formatting, GNATprove validation, compiler cost estimates).
+
+**After:** States Stone/Bronze/Silver/Concurrency guarantees as language properties. Removes all implementation-mechanism detail.
+
+### Patch 21. D27 Rule 1 — remove emitted Ada idiom
+
+**Before:** Included "Emitted Ada idiom" paragraph about `Wide_Integer` type, GNATprove interval analysis discharge.
+
+**After:** States language-level wide intermediate arithmetic semantics without specifying emission mechanism.
+
+### Patch 22. D28 — remove SPARK emission, runtime, and compiler cost subsections
+
+**Before:** Included SPARK emission subsection (Jorvik-profile SPARK generation, protected objects, entry calls), runtime subsection (GNAT's Jorvik runtime), and compiler cost table (1,350–2,000 LOC).
+
+**After:** Retains only language-level semantics (task declarations, channels, select, ownership, non-termination rule, grammar).
+
+### Patch 23. D29 (Reference Implementation in Silver-Level SPARK) — remove entire decision
+
+Moved to `DEFERRED-IMPL-CONTENT.md`. Reference implementation requirements are a project decision, not a language definition.
+
+### Patch 24. Specification Document Structure — remove implementation-profile content from all section drafting instructions
+
+Changes across §00–§08:
+- §00: D1–D29 → D1–D28; GNATprove TBD item generalised
+- §02: Removed Jorvik-profile SPARK note; generalised contract exclusion rationale
+- §03: Removed emitted Ada implementation requirements; generalised effect summaries
+- §04: Removed Jorvik/Ravenscar references; removed emitted Ada pragma; generalised effect analysis
+- §05: Renamed from `05-spark-assurance.md` to `05-assurance.md`; rewrote all bullets as language properties
+- §06: Removed "single-pass" from compilation model; removed entire informative implementation guidance block
+- §07-annex-b: Replaced detailed content with stub referencing `DEFERRED-IMPL-CONTENT.md`
+- Workflow: Updated §05 reference
+- Quick Reference: Removed emitted Ada example block; generalised "compiler enforces" to "implementation enforces"
+- Editorial Convention 7: Removed GNAT/GNATprove product names
+
+**Additional consistency fixes during patch application:**
+- D10 rationale: "single-pass compilation" → "declaration-before-use compilation"; "compiler extracts" → "implementation extracts"
+- D17 rationale: "compatible with single-pass compilation" → "compatible with separate compilation"
+- D2: Removed Jorvik/Ravenscar profile names from decision and rationale
+
+---
+
+## Round 4 Consistency Pass
+
+1. **GNAT/GNATprove references:** Zero occurrences in SPEC-PROMPT.md. ✓
+2. **"emitted Ada" / "emitted code":** Zero occurrences. ✓
+3. **"single-pass" / "single pass":** Zero occurrences. ✓
+4. **Jorvik/Ravenscar references:** Zero occurrences. ✓
+5. **Wide_Integer references:** Zero occurrences. ✓
+6. **.ads/.adb file references:** Zero occurrences. ✓
+7. **SPARK_Mode:** One occurrence in D22 (excluded aspect list) — correct, this is a language-level exclusion. ✓
+8. **Unchecked_Deallocation:** Three occurrences in D17/§02 exclusion lists — correct, language-level exclusions. ✓
+9. **References to removed decisions (D3, D4, D5, D25, D29):** Zero occurrences. D1–D28 range used. ✓
+10. **"the compiler" wording:** Remaining occurrences are generic (any conforming implementation), not tool-specific. ✓
+11. **Toolchain Baseline section:** Zero references. Section fully removed. ✓
+12. **Partition_Elaboration_Policy pragma:** Zero occurrences. Moved to deferred content. ✓
+13. **Protected object / ceiling priority:** Remaining references are in language-level context (D15 rationale, D26 concurrency guarantees, D28 channel rationale, §04 drafting instructions). ✓
+14. **§05 filename:** All references use `05-assurance.md`, not `05-spark-assurance.md`. ✓
