@@ -1,0 +1,1617 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Safe Language AST Schema",
+  "description": "JSON schema mapping BNF productions from spec/08-syntax-summary.md to AST node types. FINAL -- all draft notes resolved.",
+  "version": "1.0.0",
+  "frozen_commit": "4aecf219ffa5473bfc42b026a66c8bdea2ce5872",
+  "meta": {
+    "note": "Each node definition maps a BNF production to a PascalCase AST node type. Fields specify name, type, and whether the field is optional. source_section references the spec section defining the production. clause_ids (where present) reference normative clauses from clauses/clauses.yaml that the node directly implements.",
+    "type_conventions": {
+      "Identifier": "String -- a Safe identifier (letter followed by letters, digits, underscores)",
+      "NodeRef<T>": "Non-null reference to an AST node of type T",
+      "Option<T>": "Nullable reference -- field may be absent",
+      "List<T>": "Ordered sequence of zero or more AST nodes of type T",
+      "NonEmptyList<T>": "Ordered sequence of one or more AST nodes of type T",
+      "Token": "Lexical token preserved for source fidelity",
+      "Literal": "A literal value (numeric, string, or character)",
+      "Span": "Source location span (file, start_line, start_col, end_line, end_col)"
+    },
+    "production_coverage_note": "The BNF grammar in spec/08-syntax-summary.md defines approximately 148 named productions. Many are abstract alternation productions (e.g., type_definition, constraint, simple_statement, compound_statement), alias productions (e.g., subtype_mark ::= name, condition ::= expression, choice_expression ::= simple_expression), or lexical-level productions (e.g., identifier, digit, letter). These do not require distinct AST node types. Instead, they are represented by discriminant enumerations (e.g., TypeDefinitionKind, ConstraintKind, StatementKind) or are structurally identical to their referent. The concrete AST nodes below cover all syntactically distinct constructs.",
+    "semantic_annotations_note": "Certain semantic properties -- ownership state, wide-arithmetic lifting, resolved types, resolved SelectedComponent kinds -- are computed during semantic analysis and are not set by the parser. Rather than adding separate annotation layers, these are represented as optional fields on the relevant AST nodes (marked 'populated during semantic analysis'). This keeps the schema self-contained."
+  },
+  "nodes": [
+    {
+      "node_type": "CompilationUnit",
+      "production": "compilation_unit",
+      "source_section": "8.1",
+      "clause_ids": ["SAFE@4aecf21:spec/03-single-file-packages.md#3.1.p1"],
+      "fields": [
+        { "name": "context_clause", "type": "NodeRef<ContextClause>", "optional": false },
+        { "name": "package_unit", "type": "NodeRef<PackageUnit>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ContextClause",
+      "production": "context_clause",
+      "source_section": "8.1",
+      "fields": [
+        { "name": "with_clauses", "type": "List<WithClause>", "optional": false }
+      ]
+    },
+    {
+      "node_type": "WithClause",
+      "production": "with_clause",
+      "source_section": "8.1",
+      "fields": [
+        { "name": "package_names", "type": "NonEmptyList<PackageName>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "PackageName",
+      "production": "package_name",
+      "source_section": "8.1",
+      "fields": [
+        { "name": "identifiers", "type": "NonEmptyList<Identifier>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "PackageUnit",
+      "production": "package_unit",
+      "source_section": "8.1",
+      "clause_ids": [
+        "SAFE@4aecf21:spec/03-single-file-packages.md#3.1.p1",
+        "SAFE@4aecf21:spec/03-single-file-packages.md#3.2.1.p8"
+      ],
+      "fields": [
+        { "name": "name", "type": "Identifier", "optional": false },
+        { "name": "items", "type": "List<PackageItem>", "optional": false },
+        { "name": "end_name", "type": "Identifier", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "PackageItem",
+      "production": "package_item",
+      "source_section": "8.2",
+      "clause_ids": ["SAFE@4aecf21:spec/03-single-file-packages.md#3.1.2.p2"],
+      "fields": [
+        { "name": "kind", "type": "PackageItemKind", "optional": false, "note": "Discriminant: one of BasicDeclaration, TaskDeclaration, ChannelDeclaration, UseTypeClause, RepresentationItem, Pragma" },
+        { "name": "item", "type": "NodeRef<BasicDeclaration | TaskDeclaration | ChannelDeclaration | UseTypeClause | RepresentationItem | Pragma>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "TypeDeclaration",
+      "production": "type_declaration",
+      "source_section": "8.3",
+      "fields": [
+        { "name": "is_public", "type": "Boolean", "optional": false },
+        { "name": "name", "type": "Identifier", "optional": false },
+        { "name": "discriminant_part", "type": "Option<KnownDiscriminantPart>", "optional": true },
+        { "name": "type_definition", "type": "NodeRef<TypeDefinition>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "IncompleteTypeDeclaration",
+      "production": "incomplete_type_declaration",
+      "source_section": "8.3",
+      "fields": [
+        { "name": "is_public", "type": "Boolean", "optional": false },
+        { "name": "name", "type": "Identifier", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "SubtypeDeclaration",
+      "production": "subtype_declaration",
+      "source_section": "8.3",
+      "fields": [
+        { "name": "is_public", "type": "Boolean", "optional": false },
+        { "name": "name", "type": "Identifier", "optional": false },
+        { "name": "subtype_indication", "type": "NodeRef<SubtypeIndication>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ObjectDeclaration",
+      "production": "object_declaration",
+      "source_section": "8.3",
+      "fields": [
+        { "name": "is_public", "type": "Boolean", "optional": false },
+        { "name": "names", "type": "NonEmptyList<Identifier>", "optional": false },
+        { "name": "is_aliased", "type": "Boolean", "optional": false },
+        { "name": "is_constant", "type": "Boolean", "optional": false },
+        { "name": "object_type", "type": "NodeRef<SubtypeIndication | ArrayTypeDefinition | AccessDefinition>", "optional": false },
+        { "name": "initializer", "type": "Option<Expression>", "optional": true },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "NumberDeclaration",
+      "production": "number_declaration",
+      "source_section": "8.3",
+      "fields": [
+        { "name": "is_public", "type": "Boolean", "optional": false },
+        { "name": "names", "type": "NonEmptyList<Identifier>", "optional": false },
+        { "name": "value", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "SubunitStub",
+      "production": "subunit_stub",
+      "source_section": "8.3",
+      "fields": [
+        { "name": "subprogram_spec", "type": "NodeRef<SubprogramSpecification>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ObjectRenamingDeclaration",
+      "production": "object_renaming_declaration",
+      "source_section": "8.3",
+      "fields": [
+        { "name": "is_public", "type": "Boolean", "optional": false },
+        { "name": "name", "type": "Identifier", "optional": false },
+        { "name": "subtype_mark", "type": "NodeRef<Name>", "optional": false },
+        { "name": "renamed_name", "type": "NodeRef<Name>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "PackageRenamingDeclaration",
+      "production": "package_renaming_declaration",
+      "source_section": "8.3",
+      "fields": [
+        { "name": "is_public", "type": "Boolean", "optional": false },
+        { "name": "name", "type": "Identifier", "optional": false },
+        { "name": "renamed_package", "type": "NodeRef<PackageName>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "SubprogramRenamingDeclaration",
+      "production": "subprogram_renaming_declaration",
+      "source_section": "8.3",
+      "fields": [
+        { "name": "is_public", "type": "Boolean", "optional": false },
+        { "name": "subprogram_spec", "type": "NodeRef<SubprogramSpecification>", "optional": false },
+        { "name": "renamed_name", "type": "NodeRef<Name>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "EnumerationTypeDefinition",
+      "production": "enumeration_type_definition",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "literals", "type": "NonEmptyList<EnumerationLiteral>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "EnumerationLiteral",
+      "production": "enumeration_literal",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "kind", "type": "EnumLiteralKind", "optional": false, "note": "Identifier or CharacterLiteral" },
+        { "name": "value", "type": "Identifier | Token", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "SignedIntegerTypeDefinition",
+      "production": "signed_integer_type_definition",
+      "source_section": "8.4",
+      "clause_ids": ["SAFE@4aecf21:spec/02-restrictions.md#2.8.1.p128"],
+      "fields": [
+        { "name": "low_bound", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "high_bound", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ModularTypeDefinition",
+      "production": "modular_type_definition",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "modulus", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "FloatingPointDefinition",
+      "production": "floating_point_definition",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "digits_expr", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "range_constraint", "type": "Option<RealRangeConstraint>", "optional": true },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "OrdinaryFixedPointDefinition",
+      "production": "ordinary_fixed_point_definition",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "delta_expr", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "range_constraint", "type": "NodeRef<RealRangeConstraint>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "DecimalFixedPointDefinition",
+      "production": "decimal_fixed_point_definition",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "delta_expr", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "digits_expr", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "range_constraint", "type": "Option<RealRangeConstraint>", "optional": true },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "RealRangeConstraint",
+      "production": "real_range_constraint",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "low_bound", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "high_bound", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "UnconstrainedArrayDefinition",
+      "production": "unconstrained_array_definition",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "index_subtypes", "type": "NonEmptyList<IndexSubtypeDefinition>", "optional": false },
+        { "name": "component_definition", "type": "NodeRef<ComponentDefinition>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ConstrainedArrayDefinition",
+      "production": "constrained_array_definition",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "index_ranges", "type": "NonEmptyList<DiscreteSubtypeDefinition>", "optional": false },
+        { "name": "component_definition", "type": "NodeRef<ComponentDefinition>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "IndexSubtypeDefinition",
+      "production": "index_subtype_definition",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "subtype_mark", "type": "NodeRef<Name>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "DiscreteSubtypeDefinition",
+      "production": "discrete_subtype_definition",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "kind", "type": "DiscreteSubtypeDefKind", "optional": false, "note": "SubtypeIndication or Range" },
+        { "name": "value", "type": "NodeRef<SubtypeIndication | Range>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ComponentDefinition",
+      "production": "component_definition",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "is_aliased", "type": "Boolean", "optional": false },
+        { "name": "type_spec", "type": "NodeRef<SubtypeIndication | AccessDefinition>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "RecordTypeDefinition",
+      "production": "record_type_definition",
+      "source_section": "8.4",
+      "clause_ids": ["SAFE@4aecf21:spec/03-single-file-packages.md#3.2.6.p21"],
+      "fields": [
+        { "name": "is_limited", "type": "Boolean", "optional": false },
+        { "name": "is_private", "type": "Boolean", "optional": false, "note": "True for 'private record' (opaque type)" },
+        { "name": "record_definition", "type": "NodeRef<RecordDefinition>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "RecordDefinition",
+      "production": "record_definition",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "is_null_record", "type": "Boolean", "optional": false },
+        { "name": "component_list", "type": "Option<ComponentList>", "optional": true, "note": "Absent for null record" },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ComponentList",
+      "production": "component_list",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "components", "type": "List<ComponentItem>", "optional": false },
+        { "name": "variant_part", "type": "Option<VariantPart>", "optional": true },
+        { "name": "is_null", "type": "Boolean", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ComponentItem",
+      "production": "component_item",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "kind", "type": "ComponentItemKind", "optional": false, "note": "ComponentDeclaration or RepresentationItem" },
+        { "name": "item", "type": "NodeRef<ComponentDeclaration | RepresentationItem>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ComponentDeclaration",
+      "production": "component_declaration",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "names", "type": "NonEmptyList<Identifier>", "optional": false },
+        { "name": "component_definition", "type": "NodeRef<ComponentDefinition>", "optional": false },
+        { "name": "default_expression", "type": "Option<Expression>", "optional": true },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "KnownDiscriminantPart",
+      "production": "known_discriminant_part",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "discriminants", "type": "NonEmptyList<DiscriminantSpecification>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "DiscriminantSpecification",
+      "production": "discriminant_specification",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "names", "type": "NonEmptyList<Identifier>", "optional": false },
+        { "name": "subtype_mark", "type": "NodeRef<Name>", "optional": false },
+        { "name": "default_expression", "type": "Option<Expression>", "optional": true },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "VariantPart",
+      "production": "variant_part",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "discriminant_name", "type": "Identifier", "optional": false },
+        { "name": "variants", "type": "NonEmptyList<Variant>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "Variant",
+      "production": "variant",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "choices", "type": "NodeRef<DiscreteChoiceList>", "optional": false },
+        { "name": "component_list", "type": "NodeRef<ComponentList>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "DiscreteChoiceList",
+      "production": "discrete_choice_list",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "choices", "type": "NonEmptyList<DiscreteChoice>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "DiscreteChoice",
+      "production": "discrete_choice",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "kind", "type": "DiscreteChoiceKind", "optional": false, "note": "ChoiceExpression, SubtypeIndication, Range, or Others" },
+        { "name": "value", "type": "Option<NodeRef<Expression | SubtypeIndication | Range>>", "optional": true, "note": "Absent when kind is Others" },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "AccessToObjectDefinition",
+      "production": "access_to_object_definition",
+      "source_section": "8.4",
+      "clause_ids": ["SAFE@4aecf21:spec/02-restrictions.md#2.3.1.p95"],
+      "fields": [
+        { "name": "is_not_null", "type": "Boolean", "optional": false },
+        { "name": "is_all", "type": "Boolean", "optional": false },
+        { "name": "is_constant", "type": "Boolean", "optional": false },
+        { "name": "subtype_indication", "type": "NodeRef<SubtypeIndication>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "AccessDefinition",
+      "production": "access_definition",
+      "source_section": "8.4",
+      "clause_ids": ["SAFE@4aecf21:spec/02-restrictions.md#2.3.1.p95"],
+      "fields": [
+        { "name": "is_not_null", "type": "Boolean", "optional": false },
+        { "name": "is_all", "type": "Boolean", "optional": false },
+        { "name": "is_constant", "type": "Boolean", "optional": false },
+        { "name": "subtype_mark", "type": "NodeRef<Name>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "DerivedTypeDefinition",
+      "production": "derived_type_definition",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "is_limited", "type": "Boolean", "optional": false },
+        { "name": "subtype_indication", "type": "NodeRef<SubtypeIndication>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "Allocator",
+      "production": "allocator",
+      "source_section": "8.4",
+      "clause_ids": [
+        "SAFE@4aecf21:spec/02-restrictions.md#2.4.2.p116",
+        "SAFE@4aecf21:spec/02-restrictions.md#2.3.5.p103"
+      ],
+      "fields": [
+        { "name": "kind", "type": "AllocatorKind", "optional": false, "note": "SubtypeOnly (new T) or Annotated (new (Expr : T))" },
+        { "name": "subtype_indication", "type": "Option<SubtypeIndication>", "optional": true, "note": "For 'new T' form" },
+        { "name": "expression", "type": "Option<Expression>", "optional": true, "note": "For 'new (Expr : T)' form" },
+        { "name": "subtype_mark", "type": "Option<Name>", "optional": true, "note": "For 'new (Expr : T)' form" },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "SubtypeIndication",
+      "production": "subtype_indication",
+      "source_section": "8.5",
+      "fields": [
+        { "name": "is_not_null", "type": "Boolean", "optional": false },
+        { "name": "subtype_mark", "type": "NodeRef<Name>", "optional": false },
+        { "name": "constraint", "type": "Option<Constraint>", "optional": true },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "RangeConstraint",
+      "production": "range_constraint",
+      "source_section": "8.5",
+      "fields": [
+        { "name": "range", "type": "NodeRef<Range>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "Range",
+      "production": "range",
+      "source_section": "8.5",
+      "fields": [
+        { "name": "kind", "type": "RangeKind", "optional": false, "note": "Explicit (low..high) or AttributeRange (name.Range[(N)])" },
+        { "name": "low", "type": "Option<Expression>", "optional": true },
+        { "name": "high", "type": "Option<Expression>", "optional": true },
+        { "name": "prefix_name", "type": "Option<Name>", "optional": true, "note": "For attribute form: name.Range" },
+        { "name": "dimension", "type": "Option<Expression>", "optional": true, "note": "For name.Range(N)" },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "IndexConstraint",
+      "production": "index_constraint",
+      "source_section": "8.5",
+      "fields": [
+        { "name": "ranges", "type": "NonEmptyList<DiscreteRange>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "DiscreteRange",
+      "production": "discrete_range",
+      "source_section": "8.5",
+      "fields": [
+        { "name": "kind", "type": "DiscreteRangeKind", "optional": false, "note": "DiscreteSubtypeIndication or Range" },
+        { "name": "value", "type": "NodeRef<SubtypeIndication | Range>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "DiscriminantConstraint",
+      "production": "discriminant_constraint",
+      "source_section": "8.5",
+      "fields": [
+        { "name": "associations", "type": "NonEmptyList<DiscriminantAssociation>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "DiscriminantAssociation",
+      "production": "discriminant_association",
+      "source_section": "8.5",
+      "fields": [
+        { "name": "selector_names", "type": "List<Identifier>", "optional": false, "note": "Empty list if positional" },
+        { "name": "expression", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "DigitsConstraint",
+      "production": "digits_constraint",
+      "source_section": "8.5",
+      "fields": [
+        { "name": "digits_expr", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "range_constraint", "type": "Option<RangeConstraint>", "optional": true },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "DeltaConstraint",
+      "production": "delta_constraint",
+      "source_section": "8.5",
+      "fields": [
+        { "name": "delta_expr", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "range_constraint", "type": "Option<RangeConstraint>", "optional": true },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "DirectName",
+      "production": "direct_name",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "identifier", "type": "Identifier", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "IndexedComponent",
+      "production": "indexed_component",
+      "source_section": "8.6",
+      "clause_ids": ["SAFE@4aecf21:spec/02-restrictions.md#2.8.2.p131"],
+      "fields": [
+        { "name": "prefix", "type": "NodeRef<Name>", "optional": false },
+        { "name": "indices", "type": "NonEmptyList<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "Slice",
+      "production": "slice",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "prefix", "type": "NodeRef<Name>", "optional": false },
+        { "name": "discrete_range", "type": "NodeRef<DiscreteRange>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "SelectedComponent",
+      "production": "selected_component",
+      "source_section": "8.6",
+      "clause_ids": ["SAFE@4aecf21:spec/02-restrictions.md#2.4.1.p110"],
+      "fields": [
+        { "name": "prefix", "type": "NodeRef<Name>", "optional": false },
+        { "name": "selector", "type": "Identifier", "optional": false },
+        { "name": "resolved_kind", "type": "Option<SelectedComponentKind>", "optional": true, "note": "Populated during semantic analysis: RecordField, Attribute, PackageMember, ImplicitDereference. The parser creates SelectedComponent for all X.Y forms; semantic analysis classifies each case per the resolution rule in spec/02-restrictions.md section 2.4.1." },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "TypeConversion",
+      "production": "type_conversion",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "target_type", "type": "NodeRef<Name>", "optional": false },
+        { "name": "expression", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "FunctionCall",
+      "production": "function_call",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "name", "type": "NodeRef<Name>", "optional": false },
+        { "name": "parameters", "type": "Option<ActualParameterPart>", "optional": true },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ActualParameterPart",
+      "production": "actual_parameter_part",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "associations", "type": "NonEmptyList<ParameterAssociation>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ParameterAssociation",
+      "production": "parameter_association",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "formal_name", "type": "Option<Identifier>", "optional": true, "note": "Named association selector; absent for positional" },
+        { "name": "actual", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "Expression",
+      "production": "expression",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "relations", "type": "NonEmptyList<Relation>", "optional": false },
+        { "name": "logical_operator", "type": "Option<LogicalOperator>", "optional": true, "note": "And, AndThen, Or, OrElse, Xor; absent for single-relation expression. Ada's rule that mixed logical operators require parentheses is enforced by the parser." },
+        { "name": "resolved_type", "type": "Option<Identifier>", "optional": true, "note": "Populated during semantic analysis: the resolved type of this expression" },
+        { "name": "wide_arithmetic", "type": "Option<Boolean>", "optional": true, "note": "Populated during semantic analysis: true if this expression or any subexpression requires wide-integer lifting per D27 Rule 1" },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "Relation",
+      "production": "relation",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "left", "type": "NodeRef<SimpleExpression>", "optional": false },
+        { "name": "operator", "type": "Option<RelationalOperator>", "optional": true },
+        { "name": "right", "type": "Option<SimpleExpression>", "optional": true },
+        { "name": "membership_test", "type": "Option<MembershipTest>", "optional": true, "note": "For 'in' / 'not in' forms" },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "MembershipTest",
+      "production": "membership_choice_list",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "is_not_in", "type": "Boolean", "optional": false },
+        { "name": "choices", "type": "NonEmptyList<MembershipChoice>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "MembershipChoice",
+      "production": "membership_choice",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "kind", "type": "MembershipChoiceKind", "optional": false, "note": "Expression, Range, or SubtypeMark" },
+        { "name": "value", "type": "NodeRef<Expression | Range | Name>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "SimpleExpression",
+      "production": "simple_expression",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "unary_operator", "type": "Option<UnaryAddingOperator>", "optional": true },
+        { "name": "terms", "type": "NonEmptyList<Term>", "optional": false },
+        { "name": "binary_operators", "type": "List<BinaryAddingOperator>", "optional": false, "note": "Length is terms.length - 1" },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "Term",
+      "production": "term",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "factors", "type": "NonEmptyList<Factor>", "optional": false },
+        { "name": "operators", "type": "List<MultiplyingOperator>", "optional": false, "note": "Length is factors.length - 1" },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "Factor",
+      "production": "factor",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "kind", "type": "FactorKind", "optional": false, "note": "Power, Abs, Not, or Plain" },
+        { "name": "primary", "type": "NodeRef<Primary>", "optional": false },
+        { "name": "exponent", "type": "Option<Primary>", "optional": true, "note": "For '**' form" },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "Primary",
+      "production": "primary",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "kind", "type": "PrimaryKind", "optional": false, "note": "NumericLiteral, StringLiteral, CharacterLiteral, Null, Name, Allocator, Aggregate, ParenExpr, AnnotatedExpr, ConditionalExpr, DeclareExpr" },
+        { "name": "value", "type": "NodeRef<Literal | Name | Allocator | Aggregate | Expression | AnnotatedExpression | ConditionalExpression | DeclareExpression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "AnnotatedExpression",
+      "production": "annotated_expression",
+      "source_section": "8.6",
+      "clause_ids": [
+        "SAFE@4aecf21:spec/02-restrictions.md#2.4.2.p113",
+        "SAFE@4aecf21:spec/02-restrictions.md#2.4.2.p114"
+      ],
+      "fields": [
+        { "name": "expression", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "subtype_mark", "type": "NodeRef<Name>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "IfExpression",
+      "production": "if_expression",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "condition", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "then_expr", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "elsif_parts", "type": "List<ElsifExprPart>", "optional": false },
+        { "name": "else_expr", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ElsifExprPart",
+      "production": "if_expression (elsif clause)",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "condition", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "then_expr", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "CaseExpression",
+      "production": "case_expression",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "selecting_expr", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "alternatives", "type": "NonEmptyList<CaseExpressionAlternative>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "CaseExpressionAlternative",
+      "production": "case_expression_alternative",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "choices", "type": "NodeRef<DiscreteChoiceList>", "optional": false },
+        { "name": "expression", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "DeclareExpression",
+      "production": "declare_expression",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "declarations", "type": "List<ObjectDeclaration>", "optional": false },
+        { "name": "expression", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "RecordAggregate",
+      "production": "record_aggregate",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "is_null_record", "type": "Boolean", "optional": false },
+        { "name": "associations", "type": "List<RecordComponentAssociation>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ],
+      "note": "Aggregate disambiguation (record vs. array vs. delta) may not be fully resolvable at parse time. The parser may produce a generic Aggregate node; semantic analysis refines the variant. This schema presents the post-resolution forms."
+    },
+    {
+      "node_type": "RecordComponentAssociation",
+      "production": "record_component_association",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "choices", "type": "Option<ComponentChoiceList>", "optional": true, "note": "Absent for positional association" },
+        { "name": "expression", "type": "Option<Expression>", "optional": true, "note": "Absent when box (<>) is used" },
+        { "name": "is_box", "type": "Boolean", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ComponentChoiceList",
+      "production": "component_choice_list",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "is_others", "type": "Boolean", "optional": false },
+        { "name": "selectors", "type": "List<Identifier>", "optional": false, "note": "Empty when is_others is true" },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "PositionalArrayAggregate",
+      "production": "positional_array_aggregate",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "expressions", "type": "NonEmptyList<Expression>", "optional": false },
+        { "name": "others_expr", "type": "Option<Expression>", "optional": true, "note": "For 'others =>' form" },
+        { "name": "others_is_box", "type": "Boolean", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "NamedArrayAggregate",
+      "production": "named_array_aggregate",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "associations", "type": "NonEmptyList<ArrayComponentAssociation>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ArrayComponentAssociation",
+      "production": "array_component_association",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "choices", "type": "NodeRef<DiscreteChoiceList>", "optional": false },
+        { "name": "expression", "type": "Option<Expression>", "optional": true, "note": "Absent when box (<>) is used" },
+        { "name": "is_box", "type": "Boolean", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "DeltaAggregate",
+      "production": "delta_aggregate",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "base_expression", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "kind", "type": "DeltaAggregateKind", "optional": false, "note": "RecordDelta or ArrayDelta" },
+        { "name": "record_associations", "type": "Option<List<RecordComponentAssociation>>", "optional": true },
+        { "name": "array_associations", "type": "Option<NonEmptyList<ArrayComponentAssociation>>", "optional": true },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "SequenceOfStatements",
+      "production": "sequence_of_statements",
+      "source_section": "8.7",
+      "clause_ids": ["SAFE@4aecf21:spec/02-restrictions.md#2.9.p140"],
+      "fields": [
+        { "name": "items", "type": "NonEmptyList<InterleavedItem>", "optional": false, "note": "May contain both statements and interleaved declarations" },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "InterleavedItem",
+      "production": "interleaved_item",
+      "source_section": "8.7",
+      "clause_ids": ["SAFE@4aecf21:spec/02-restrictions.md#2.9.p140"],
+      "fields": [
+        { "name": "kind", "type": "InterleavedItemKind", "optional": false, "note": "Statement or BasicDeclaration" },
+        { "name": "item", "type": "NodeRef<Statement | BasicDeclaration>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "Statement",
+      "production": "statement",
+      "source_section": "8.7",
+      "fields": [
+        { "name": "label", "type": "Option<Identifier>", "optional": true },
+        { "name": "kind", "type": "StatementKind", "optional": false, "note": "Discriminant for the actual statement node" },
+        { "name": "statement", "type": "NodeRef<SimpleStatement | CompoundStatement>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "NullStatement",
+      "production": "null_statement",
+      "source_section": "8.7",
+      "fields": [
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "AssignmentStatement",
+      "production": "assignment_statement",
+      "source_section": "8.7",
+      "clause_ids": ["SAFE@4aecf21:spec/02-restrictions.md#2.8.1.p127"],
+      "fields": [
+        { "name": "target", "type": "NodeRef<Name>", "optional": false },
+        { "name": "expression", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "ownership_action", "type": "Option<OwnershipAction>", "optional": true, "note": "Populated during semantic analysis: Move (source nulled), None, or Dealloc (target freed before assign)" },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ProcedureCallStatement",
+      "production": "procedure_call_statement",
+      "source_section": "8.7",
+      "fields": [
+        { "name": "name", "type": "NodeRef<Name>", "optional": false },
+        { "name": "parameters", "type": "Option<ActualParameterPart>", "optional": true },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "SimpleReturnStatement",
+      "production": "simple_return_statement",
+      "source_section": "8.7",
+      "clause_ids": ["SAFE@4aecf21:spec/02-restrictions.md#2.8.1.p127"],
+      "fields": [
+        { "name": "expression", "type": "Option<Expression>", "optional": true },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ExtendedReturnStatement",
+      "production": "extended_return_statement",
+      "source_section": "8.7",
+      "fields": [
+        { "name": "name", "type": "Identifier", "optional": false },
+        { "name": "is_aliased", "type": "Boolean", "optional": false },
+        { "name": "return_type", "type": "NodeRef<SubtypeIndication | AccessDefinition>", "optional": false },
+        { "name": "initializer", "type": "Option<Expression>", "optional": true },
+        { "name": "body", "type": "NodeRef<SequenceOfStatements>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ExitStatement",
+      "production": "exit_statement",
+      "source_section": "8.7",
+      "fields": [
+        { "name": "loop_name", "type": "Option<Identifier>", "optional": true },
+        { "name": "condition", "type": "Option<Expression>", "optional": true },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "GotoStatement",
+      "production": "goto_statement",
+      "source_section": "8.7",
+      "fields": [
+        { "name": "label_name", "type": "Identifier", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "DelayStatement",
+      "production": "delay_statement",
+      "source_section": "8.7",
+      "clause_ids": ["SAFE@4aecf21:spec/02-restrictions.md#2.1.8.p60"],
+      "fields": [
+        { "name": "expression", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "IfStatement",
+      "production": "if_statement",
+      "source_section": "8.7",
+      "fields": [
+        { "name": "condition", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "then_stmts", "type": "NodeRef<SequenceOfStatements>", "optional": false },
+        { "name": "elsif_parts", "type": "List<ElsifPart>", "optional": false },
+        { "name": "else_stmts", "type": "Option<SequenceOfStatements>", "optional": true },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ElsifPart",
+      "production": "if_statement (elsif clause)",
+      "source_section": "8.7",
+      "fields": [
+        { "name": "condition", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "then_stmts", "type": "NodeRef<SequenceOfStatements>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "CaseStatement",
+      "production": "case_statement",
+      "source_section": "8.7",
+      "fields": [
+        { "name": "selecting_expr", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "alternatives", "type": "NonEmptyList<CaseStatementAlternative>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "CaseStatementAlternative",
+      "production": "case_statement_alternative",
+      "source_section": "8.7",
+      "fields": [
+        { "name": "choices", "type": "NodeRef<DiscreteChoiceList>", "optional": false },
+        { "name": "statements", "type": "NodeRef<SequenceOfStatements>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "LoopStatement",
+      "production": "loop_statement",
+      "source_section": "8.7",
+      "fields": [
+        { "name": "loop_name", "type": "Option<Identifier>", "optional": true },
+        { "name": "iteration_scheme", "type": "Option<IterationScheme>", "optional": true, "note": "Absent for unconditional loop" },
+        { "name": "body", "type": "NodeRef<SequenceOfStatements>", "optional": false },
+        { "name": "end_loop_name", "type": "Option<Identifier>", "optional": true },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "IterationScheme",
+      "production": "iteration_scheme",
+      "source_section": "8.7",
+      "fields": [
+        { "name": "kind", "type": "IterationKind", "optional": false, "note": "While, ForIn, ForOf" },
+        { "name": "condition", "type": "Option<Expression>", "optional": true, "note": "For 'while' form" },
+        { "name": "loop_variable", "type": "Option<Identifier>", "optional": true, "note": "For 'for' forms" },
+        { "name": "is_reverse", "type": "Boolean", "optional": false },
+        { "name": "discrete_range", "type": "Option<DiscreteSubtypeDefinition>", "optional": true, "note": "For 'for ... in' form" },
+        { "name": "iterable_name", "type": "Option<Name>", "optional": true, "note": "For 'for ... of' form" },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "BlockStatement",
+      "production": "block_statement",
+      "source_section": "8.7",
+      "fields": [
+        { "name": "block_name", "type": "Option<Identifier>", "optional": true },
+        { "name": "declarations", "type": "List<BasicDeclaration>", "optional": false },
+        { "name": "body", "type": "NodeRef<SequenceOfStatements>", "optional": false },
+        { "name": "end_block_name", "type": "Option<Identifier>", "optional": true },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "SubprogramDeclaration",
+      "production": "subprogram_declaration",
+      "source_section": "8.8",
+      "fields": [
+        { "name": "is_public", "type": "Boolean", "optional": false },
+        { "name": "spec", "type": "NodeRef<SubprogramSpecification>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "SubprogramBody",
+      "production": "subprogram_body",
+      "source_section": "8.8",
+      "fields": [
+        { "name": "is_public", "type": "Boolean", "optional": false },
+        { "name": "spec", "type": "NodeRef<SubprogramSpecification>", "optional": false },
+        { "name": "declarative_part", "type": "List<BasicDeclaration>", "optional": false },
+        { "name": "body", "type": "NodeRef<SequenceOfStatements>", "optional": false },
+        { "name": "end_designator", "type": "Option<Identifier>", "optional": true },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ProcedureSpecification",
+      "production": "procedure_specification",
+      "source_section": "8.8",
+      "fields": [
+        { "name": "name", "type": "Identifier", "optional": false },
+        { "name": "formal_part", "type": "Option<FormalPart>", "optional": true },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "FunctionSpecification",
+      "production": "function_specification",
+      "source_section": "8.8",
+      "fields": [
+        { "name": "name", "type": "Identifier", "optional": false },
+        { "name": "formal_part", "type": "Option<FormalPart>", "optional": true },
+        { "name": "return_type", "type": "NodeRef<Name | AccessDefinition>", "optional": false },
+        { "name": "returns_access_definition", "type": "Boolean", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "FormalPart",
+      "production": "formal_part",
+      "source_section": "8.8",
+      "fields": [
+        { "name": "parameters", "type": "NonEmptyList<ParameterSpecification>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ParameterSpecification",
+      "production": "parameter_specification",
+      "source_section": "8.8",
+      "fields": [
+        { "name": "names", "type": "NonEmptyList<Identifier>", "optional": false },
+        { "name": "is_aliased", "type": "Boolean", "optional": false },
+        { "name": "mode", "type": "ParameterMode", "optional": false, "note": "In (default), InOut, or Out" },
+        { "name": "param_type", "type": "NodeRef<Name | AccessDefinition>", "optional": false },
+        { "name": "is_access_definition", "type": "Boolean", "optional": false },
+        { "name": "default_expression", "type": "Option<Expression>", "optional": true },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ExpressionFunctionDeclaration",
+      "production": "expression_function_declaration",
+      "source_section": "8.8",
+      "fields": [
+        { "name": "is_public", "type": "Boolean", "optional": false },
+        { "name": "spec", "type": "NodeRef<FunctionSpecification>", "optional": false },
+        { "name": "expression", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "Subunit",
+      "production": "subunit",
+      "source_section": "8.9",
+      "fields": [
+        { "name": "parent_name", "type": "NodeRef<PackageName>", "optional": false },
+        { "name": "body", "type": "NodeRef<SubprogramBody>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "UseTypeClause",
+      "production": "use_type_clause",
+      "source_section": "8.10",
+      "clause_ids": ["SAFE@4aecf21:spec/02-restrictions.md#2.1.7.p52"],
+      "fields": [
+        { "name": "subtype_marks", "type": "NonEmptyList<Name>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "RepresentationItem",
+      "production": "representation_item",
+      "source_section": "8.11",
+      "fields": [
+        { "name": "kind", "type": "RepresentationItemKind", "optional": false },
+        { "name": "item", "type": "NodeRef<AttributeDefinitionClause | EnumerationRepresentationClause | RecordRepresentationClause | AspectSpecification>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "AttributeDefinitionClause",
+      "production": "attribute_definition_clause",
+      "source_section": "8.11",
+      "fields": [
+        { "name": "name", "type": "NodeRef<Name>", "optional": false },
+        { "name": "expression", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "EnumerationRepresentationClause",
+      "production": "enumeration_representation_clause",
+      "source_section": "8.11",
+      "fields": [
+        { "name": "subtype_mark", "type": "NodeRef<Name>", "optional": false },
+        { "name": "aggregate", "type": "NodeRef<Aggregate>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "RecordRepresentationClause",
+      "production": "record_representation_clause",
+      "source_section": "8.11",
+      "fields": [
+        { "name": "subtype_mark", "type": "NodeRef<Name>", "optional": false },
+        { "name": "mod_clause_expr", "type": "Option<Expression>", "optional": true },
+        { "name": "component_clauses", "type": "List<ComponentClause>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ComponentClause",
+      "production": "component_clause",
+      "source_section": "8.11",
+      "fields": [
+        { "name": "component_name", "type": "Identifier", "optional": false },
+        { "name": "position", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "first_bit", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "last_bit", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "AspectSpecification",
+      "production": "aspect_specification",
+      "source_section": "8.11",
+      "fields": [
+        { "name": "aspect_mark", "type": "Identifier", "optional": false },
+        { "name": "expression", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "TaskDeclaration",
+      "production": "task_declaration",
+      "source_section": "8.12",
+      "clause_ids": [
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.1.p1",
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.1.p2",
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.1.p3",
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.1.p6"
+      ],
+      "fields": [
+        { "name": "name", "type": "Identifier", "optional": false },
+        { "name": "priority", "type": "Option<Expression>", "optional": true },
+        { "name": "declarative_part", "type": "List<BasicDeclaration>", "optional": false },
+        { "name": "body", "type": "NodeRef<SequenceOfStatements>", "optional": false },
+        { "name": "end_name", "type": "Identifier", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ChannelDeclaration",
+      "production": "channel_declaration",
+      "source_section": "8.12",
+      "clause_ids": [
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.2.p12",
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.2.p13",
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.2.p14",
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.2.p15"
+      ],
+      "fields": [
+        { "name": "is_public", "type": "Boolean", "optional": false },
+        { "name": "name", "type": "Identifier", "optional": false },
+        { "name": "element_type", "type": "NodeRef<Name>", "optional": false },
+        { "name": "capacity", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "SendStatement",
+      "production": "send_statement",
+      "source_section": "8.12",
+      "clause_ids": [
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p27",
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p27a"
+      ],
+      "fields": [
+        { "name": "channel_name", "type": "NodeRef<Name>", "optional": false },
+        { "name": "expression", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ReceiveStatement",
+      "production": "receive_statement",
+      "source_section": "8.12",
+      "clause_ids": [
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p28",
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p28a"
+      ],
+      "fields": [
+        { "name": "channel_name", "type": "NodeRef<Name>", "optional": false },
+        { "name": "target", "type": "NodeRef<Name>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "TrySendStatement",
+      "production": "try_send_statement",
+      "source_section": "8.12",
+      "clause_ids": [
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p29",
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p29a"
+      ],
+      "fields": [
+        { "name": "channel_name", "type": "NodeRef<Name>", "optional": false },
+        { "name": "expression", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "success_var", "type": "NodeRef<Name>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "TryReceiveStatement",
+      "production": "try_receive_statement",
+      "source_section": "8.12",
+      "clause_ids": [
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p30"
+      ],
+      "fields": [
+        { "name": "channel_name", "type": "NodeRef<Name>", "optional": false },
+        { "name": "target", "type": "NodeRef<Name>", "optional": false },
+        { "name": "success_var", "type": "NodeRef<Name>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "SelectStatement",
+      "production": "select_statement",
+      "source_section": "8.12",
+      "clause_ids": [
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.4.p32",
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.4.p39",
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.4.p41"
+      ],
+      "fields": [
+        { "name": "arms", "type": "NonEmptyList<SelectArm>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "SelectArm",
+      "production": "select_arm",
+      "source_section": "8.12",
+      "fields": [
+        { "name": "kind", "type": "SelectArmKind", "optional": false, "note": "Channel or Delay" },
+        { "name": "arm", "type": "NodeRef<ChannelArm | DelayArm>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "ChannelArm",
+      "production": "channel_arm",
+      "source_section": "8.12",
+      "clause_ids": [
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.4.p37",
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.4.p43"
+      ],
+      "fields": [
+        { "name": "variable_name", "type": "Identifier", "optional": false },
+        { "name": "subtype_mark", "type": "NodeRef<Name>", "optional": false },
+        { "name": "channel_name", "type": "NodeRef<Name>", "optional": false },
+        { "name": "statements", "type": "NodeRef<SequenceOfStatements>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "DelayArm",
+      "production": "delay_arm",
+      "source_section": "8.12",
+      "clause_ids": [
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.4.p38",
+        "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.4.p40"
+      ],
+      "fields": [
+        { "name": "duration_expr", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "statements", "type": "NodeRef<SequenceOfStatements>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "Pragma",
+      "production": "pragma",
+      "source_section": "8.13",
+      "clause_ids": ["SAFE@4aecf21:spec/02-restrictions.md#2.1.10.p68"],
+      "fields": [
+        { "name": "name", "type": "Identifier", "optional": false },
+        { "name": "arguments", "type": "List<PragmaArgumentAssociation>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "PragmaArgumentAssociation",
+      "production": "pragma_argument_association",
+      "source_section": "8.13",
+      "fields": [
+        { "name": "formal_name", "type": "Option<Identifier>", "optional": true },
+        { "name": "value", "type": "NodeRef<Expression | Name>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "NumericLiteral",
+      "production": "numeric_literal",
+      "source_section": "8.14",
+      "fields": [
+        { "name": "text", "type": "String", "optional": false },
+        { "name": "is_based", "type": "Boolean", "optional": false },
+        { "name": "is_real", "type": "Boolean", "optional": false },
+        { "name": "resolved_value", "type": "Option<String>", "optional": true, "note": "Populated during semantic analysis: the parsed numeric value as a decimal string for use by the emitter" },
+        { "name": "span", "type": "Span", "optional": false }
+      ],
+      "note": "Raw text is stored for source fidelity. The semantic analysis phase parses and evaluates the literal value into resolved_value for use during emission and range analysis."
+    },
+    {
+      "node_type": "StringLiteral",
+      "production": "string_literal",
+      "source_section": "8.14",
+      "fields": [
+        { "name": "value", "type": "String", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "CharacterLiteral",
+      "production": "character_literal",
+      "source_section": "8.14",
+      "fields": [
+        { "name": "value", "type": "Character", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    }
+  ],
+  "enumerations": [
+    {
+      "name": "PackageItemKind",
+      "values": ["BasicDeclaration", "TaskDeclaration", "ChannelDeclaration", "UseTypeClause", "RepresentationItem", "Pragma"]
+    },
+    {
+      "name": "BasicDeclarationKind",
+      "values": ["TypeDeclaration", "SubtypeDeclaration", "ObjectDeclaration", "NumberDeclaration", "SubprogramDeclaration", "SubprogramBody", "ExpressionFunctionDeclaration", "RenamingDeclaration", "SubunitStub", "IncompleteTypeDeclaration"]
+    },
+    {
+      "name": "TypeDefinitionKind",
+      "values": ["Enumeration", "SignedInteger", "Modular", "FloatingPoint", "OrdinaryFixedPoint", "DecimalFixedPoint", "UnconstrainedArray", "ConstrainedArray", "Record", "AccessToObject", "Derived"]
+    },
+    {
+      "name": "ConstraintKind",
+      "values": ["Range", "Index", "Discriminant", "Digits", "Delta"]
+    },
+    {
+      "name": "LogicalOperator",
+      "values": ["And", "AndThen", "Or", "OrElse", "Xor"]
+    },
+    {
+      "name": "RelationalOperator",
+      "values": ["Equal", "NotEqual", "LessThan", "LessEqual", "GreaterThan", "GreaterEqual"]
+    },
+    {
+      "name": "BinaryAddingOperator",
+      "values": ["Plus", "Minus", "Ampersand"]
+    },
+    {
+      "name": "UnaryAddingOperator",
+      "values": ["Plus", "Minus"]
+    },
+    {
+      "name": "MultiplyingOperator",
+      "values": ["Multiply", "Divide", "Mod", "Rem"]
+    },
+    {
+      "name": "FactorKind",
+      "values": ["Plain", "Power", "Abs", "Not"]
+    },
+    {
+      "name": "PrimaryKind",
+      "values": ["NumericLiteral", "StringLiteral", "CharacterLiteral", "Null", "Name", "Allocator", "Aggregate", "ParenExpr", "AnnotatedExpr", "ConditionalExpr", "DeclareExpr"]
+    },
+    {
+      "name": "ParameterMode",
+      "values": ["In", "InOut", "Out"]
+    },
+    {
+      "name": "IterationKind",
+      "values": ["While", "ForIn", "ForOf"]
+    },
+    {
+      "name": "StatementKind",
+      "values": ["Null", "Assignment", "ProcedureCall", "SimpleReturn", "ExtendedReturn", "Exit", "Goto", "Delay", "Send", "Receive", "TrySend", "TryReceive", "If", "Case", "Loop", "Block", "Select", "Pragma"]
+    },
+    {
+      "name": "SelectArmKind",
+      "values": ["Channel", "Delay"]
+    },
+    {
+      "name": "SelectedComponentKind",
+      "values": ["RecordField", "Attribute", "PackageMember", "ImplicitDereference"],
+      "note": "Populated during semantic analysis; not set by parser. The parser creates SelectedComponent for all X.Y forms. Semantic analysis classifies each based on the type/kind of the prefix per the resolution rule in spec/02-restrictions.md section 2.4.1."
+    },
+    {
+      "name": "AllocatorKind",
+      "values": ["SubtypeOnly", "Annotated"]
+    },
+    {
+      "name": "RangeKind",
+      "values": ["Explicit", "AttributeRange"]
+    },
+    {
+      "name": "DiscreteSubtypeDefKind",
+      "values": ["SubtypeIndication", "Range"]
+    },
+    {
+      "name": "DiscreteRangeKind",
+      "values": ["DiscreteSubtypeIndication", "Range"]
+    },
+    {
+      "name": "DiscreteChoiceKind",
+      "values": ["ChoiceExpression", "SubtypeIndication", "Range", "Others"]
+    },
+    {
+      "name": "MembershipChoiceKind",
+      "values": ["Expression", "Range", "SubtypeMark"]
+    },
+    {
+      "name": "EnumLiteralKind",
+      "values": ["Identifier", "CharacterLiteral"]
+    },
+    {
+      "name": "DeltaAggregateKind",
+      "values": ["RecordDelta", "ArrayDelta"]
+    },
+    {
+      "name": "InterleavedItemKind",
+      "values": ["Statement", "BasicDeclaration"]
+    },
+    {
+      "name": "RepresentationItemKind",
+      "values": ["AttributeDefinitionClause", "EnumerationRepresentationClause", "RecordRepresentationClause", "AspectSpecification"]
+    },
+    {
+      "name": "RenamingDeclarationKind",
+      "values": ["Object", "Package", "Subprogram"]
+    },
+    {
+      "name": "ComponentItemKind",
+      "values": ["ComponentDeclaration", "RepresentationItem"]
+    },
+    {
+      "name": "OwnershipAction",
+      "values": ["Move", "None"],
+      "note": "Populated during semantic analysis on AssignmentStatement nodes for access type assignments. 'Move' indicates the source is nulled after assignment per spec/02-restrictions.md section 2.3.2."
+    },
+    {
+      "name": "AggregateKind",
+      "values": ["Record", "PositionalArray", "NamedArray", "Delta"],
+      "note": "Used by the parser when aggregate form is ambiguous. Semantic analysis resolves to the specific aggregate node type."
+    }
+  ],
+  "abstract_productions_coverage": {
+    "note": "The following BNF productions are abstract alternation productions, alias productions, or lexical productions that do not require distinct AST node types. They are covered by discriminant enumerations, structural identity with their referent, or the lexer.",
+    "alternation_productions": [
+      { "production": "type_definition", "covered_by": "TypeDefinitionKind enumeration on TypeDeclaration" },
+      { "production": "constraint", "covered_by": "ConstraintKind enumeration on SubtypeIndication" },
+      { "production": "scalar_constraint", "covered_by": "ConstraintKind (Range, Digits, Delta)" },
+      { "production": "simple_statement", "covered_by": "StatementKind enumeration" },
+      { "production": "compound_statement", "covered_by": "StatementKind enumeration" },
+      { "production": "return_statement", "covered_by": "StatementKind (SimpleReturn, ExtendedReturn)" },
+      { "production": "conditional_expression", "covered_by": "PrimaryKind.ConditionalExpr with IfExpression or CaseExpression" },
+      { "production": "aggregate", "covered_by": "AggregateKind / PrimaryKind.Aggregate" },
+      { "production": "array_aggregate", "covered_by": "PositionalArrayAggregate or NamedArrayAggregate" },
+      { "production": "array_type_definition", "covered_by": "UnconstrainedArrayDefinition or ConstrainedArrayDefinition" },
+      { "production": "access_type_definition", "covered_by": "AccessToObjectDefinition" },
+      { "production": "record_component_association_list", "covered_by": "List<RecordComponentAssociation> on RecordAggregate" },
+      { "production": "renaming_declaration", "covered_by": "RenamingDeclarationKind enumeration" },
+      { "production": "basic_declaration", "covered_by": "BasicDeclarationKind enumeration" },
+      { "production": "package_item", "covered_by": "PackageItemKind enumeration" },
+      { "production": "component_item", "covered_by": "ComponentItemKind enumeration" },
+      { "production": "select_arm", "covered_by": "SelectArmKind enumeration via SelectArm node" },
+      { "production": "subprogram_specification", "covered_by": "ProcedureSpecification or FunctionSpecification" },
+      { "production": "representation_item", "covered_by": "RepresentationItemKind enumeration via RepresentationItem node" }
+    ],
+    "alias_productions": [
+      { "production": "subtype_mark", "alias_for": "name", "note": "Structurally identical to Name" },
+      { "production": "condition", "alias_for": "expression", "note": "Structurally identical to Expression" },
+      { "production": "choice_expression", "alias_for": "simple_expression", "note": "Structurally identical to SimpleExpression" },
+      { "production": "selector_name", "alias_for": "identifier", "note": "Structurally identical to Identifier" },
+      { "production": "defining_identifier", "alias_for": "identifier", "note": "Structurally identical to Identifier" },
+      { "production": "defining_character_literal", "alias_for": "character_literal", "note": "Structurally identical to CharacterLiteral" },
+      { "production": "discriminant_direct_name", "alias_for": "identifier", "note": "Structurally identical to Identifier" },
+      { "production": "component_name", "alias_for": "identifier", "note": "Structurally identical to Identifier" },
+      { "production": "loop_name", "alias_for": "identifier", "note": "Structurally identical to Identifier" },
+      { "production": "block_name", "alias_for": "identifier", "note": "Structurally identical to Identifier" },
+      { "production": "label_name", "alias_for": "identifier", "note": "Structurally identical to Identifier" },
+      { "production": "channel_name", "alias_for": "name", "note": "Structurally identical to Name" },
+      { "production": "parent_unit_name", "alias_for": "package_name", "note": "Structurally identical to PackageName" },
+      { "production": "designator", "alias_for": "identifier", "note": "Structurally identical to Identifier" },
+      { "production": "default_expression", "alias_for": "expression", "note": "Structurally identical to Expression" },
+      { "production": "static_expression", "alias_for": "expression", "note": "Structurally identical to Expression" },
+      { "production": "static_simple_expression", "alias_for": "simple_expression", "note": "Structurally identical to SimpleExpression" },
+      { "production": "handled_sequence_of_statements", "alias_for": "sequence_of_statements", "note": "Structurally identical (Safe has no exception handlers)" },
+      { "production": "declarative_part", "alias_for": "List<BasicDeclaration>", "note": "Represented as a list field on containing nodes" },
+      { "production": "defining_identifier_list", "alias_for": "NonEmptyList<Identifier>", "note": "Represented as a list field on containing nodes" },
+      { "production": "mode", "alias_for": "ParameterMode", "note": "Represented as ParameterMode enumeration" }
+    ],
+    "lexical_productions": [
+      "identifier", "identifier_start", "identifier_extend",
+      "numeric_literal", "decimal_literal", "based_literal",
+      "numeral", "base", "based_numeral", "extended_digit",
+      "exponent", "character_literal", "string_literal",
+      "string_element", "comment", "letter", "digit", "label"
+    ]
+  },
+  "name_resolution_note": "Name resolution ambiguity: IndexedComponent, Slice, TypeConversion, and FunctionCall all share the syntactic form name(args). The parser produces a generic CallOrIndex node during parsing. Semantic analysis reclassifies it into the correct concrete form. This schema presents the post-resolution forms. The parser implementation may use an intermediate node type not listed here."
+}

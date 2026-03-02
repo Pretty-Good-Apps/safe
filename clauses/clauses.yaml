@@ -1,0 +1,2638 @@
+---
+meta:
+  source_commit: 4aecf219ffa5473bfc42b026a66c8bdea2ce5872
+  extraction_date: '2026-03-02'
+  extractor: Language Lawyer Agent
+  spec_files_parsed:
+  - spec/00-front-matter.md
+  - spec/01-base-definition.md
+  - spec/02-restrictions.md
+  - spec/03-single-file-packages.md
+  - spec/04-tasks-and-channels.md
+  - spec/05-assurance.md
+  - spec/06-conformance.md
+  - spec/07-annex-a-retained-library.md
+  - spec/08-syntax-summary.md
+  total_clauses: 205
+clauses:
+- id: "SAFE@4aecf21:spec/00-front-matter.md#0.1.p1:40d0d4cf"
+  text: |-
+    This document specifies the Safe programming language. Safe is a systems programming language defined subtractively from ISO/IEC 8652:2023 (Ada 2022).
+  section: '0.1'
+  section_title: Title and Language Name
+  source_file: spec/00-front-matter.md
+  paragraph: '1'
+  classification: conformance_requirement
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/00-front-matter.md#0.1.p2:9e5cd9ab"
+  text: The file extension for Safe source files is .safe.
+  section: '0.1'
+  section_title: Title and Language Name
+  source_file: spec/00-front-matter.md
+  paragraph: '2'
+  classification: implementation_requirement
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/00-front-matter.md#0.5.p21:5eb1de72"
+  text: |-
+    This specification uses 'shall' for requirements, 'may' for permissions, and 'should' for recommendations (in informative text only).
+  section: '0.5'
+  section_title: Method of Description
+  source_file: spec/00-front-matter.md
+  paragraph: '21'
+  classification: conformance_requirement
+  normative: true
+  tags: []
+  tbd: false
+  notes: Normative voice convention
+- id: "SAFE@4aecf21:spec/00-front-matter.md#0.8.p27:5000a79a"
+  text: Each item shall be resolved before baselining.
+  section: '0.8'
+  section_title: TBD Register
+  source_file: spec/00-front-matter.md
+  paragraph: '27'
+  classification: conformance_requirement
+  normative: true
+  tags:
+  - TBD
+  tbd: true
+  notes: Applies to all 14 TBD items (TBD-01 through TBD-14)
+- id: "SAFE@4aecf21:spec/01-base-definition.md#1.p1:e7bf1014"
+  text: |-
+    The Safe language is defined as ISO/IEC 8652:2023 (Ada 2022), as restricted by Section 2 and modified by Sections 3-4 of this document.
+  section: '1'
+  section_title: Base Definition
+  source_file: spec/01-base-definition.md
+  paragraph: '1'
+  classification: conformance_requirement
+  normative: true
+  tags:
+  - D1
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/01-base-definition.md#1.p2:b610468e"
+  text: |-
+    All syntax, legality rules, static semantics, dynamic semantics, and implementation requirements of 8652:2023 apply to Safe programs except where explicitly excluded or modified by this specification.
+  section: '1'
+  section_title: Base Definition
+  source_file: spec/01-base-definition.md
+  paragraph: '2'
+  classification: conformance_requirement
+  normative: true
+  tags:
+  - D1
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/01-base-definition.md#1.p3:a2ff4ad4"
+  text: |-
+    A construct that appears in 8652:2023 but is not mentioned in Section 2 (Restrictions and Modifications) is retained in Safe with its 8652:2023 semantics, subject to the notation changes specified in Section 2, S2.4 (dot notation for attributes, type annotation syntax).
+  section: '1'
+  section_title: Base Definition
+  source_file: spec/01-base-definition.md
+  paragraph: '3'
+  classification: static_semantics
+  normative: true
+  tags:
+  - D1
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/01-base-definition.md#1.p6:b83ece40"
+  text: |-
+    Any feature of 8652:2023 not addressed by this specification or its cross-referenced sections is retained with its standard semantics.
+  section: '1'
+  section_title: Base Definition
+  source_file: spec/01-base-definition.md
+  paragraph: '6'
+  classification: static_semantics
+  normative: true
+  tags:
+  - D1
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.1.p2:75c5cfea"
+  text: A conforming implementation shall reject any program that uses a reserved word as an identifier.
+  section: 2.1.1
+  section_title: Lexical Elements
+  source_file: spec/02-restrictions.md
+  paragraph: '2'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: "Reserved words. Cross-ref: identical clause appears as SAFE@4aecf21:spec/08-syntax-summary.md#8.15.p1:75c5cfea (same hash, same text, authoritative list in S8.15)."
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.1.p3:f8550668"
+  text: |-
+    Safe adds the following reserved words: public, channel, send, receive, try_send, try_receive, capacity, from. These identifiers shall not be used as user-defined names in Safe programs.
+  section: 2.1.1
+  section_title: Lexical Elements
+  source_file: spec/02-restrictions.md
+  paragraph: '3'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: Additional reserved words
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.1.p4:b8e73758"
+  text: A conforming implementation shall reject any use of tick for attribute references or qualified expressions.
+  section: 2.1.1
+  section_title: Lexical Elements
+  source_file: spec/02-restrictions.md
+  paragraph: '4'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D20
+  tbd: false
+  notes: Tick notation exclusion
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.2.p5:c8832ac8"
+  text: A conforming implementation shall reject any subtype declaration bearing a Static_Predicate or Dynamic_Predicate aspect.
+  section: 2.1.2
+  section_title: Declarations and Types
+  source_file: spec/02-restrictions.md
+  paragraph: '5'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: Subtype predicates excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.2.p7:2de62408"
+  text: |-
+    A conforming implementation shall reject any tagged type declaration, type extension declaration, abstract type or subprogram declaration, or interface type declaration.
+  section: 2.1.2
+  section_title: Declarations and Types
+  source_file: spec/02-restrictions.md
+  paragraph: '7'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D18
+  tbd: false
+  notes: Tagged types excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.2.p9:faae18b9"
+  text: A conforming implementation shall reject any access-to-subprogram type declaration.
+  section: 2.1.2
+  section_title: Declarations and Types
+  source_file: spec/02-restrictions.md
+  paragraph: '9'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D18
+  tbd: false
+  notes: Access-to-subprogram excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.2.p11:3fd55933"
+  text: A conforming implementation shall reject any discriminant of an access type.
+  section: 2.1.2
+  section_title: Declarations and Types
+  source_file: spec/02-restrictions.md
+  paragraph: '11'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: Access discriminants excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.2.p12:8da68138"
+  text: |-
+    A conforming implementation shall reject any type derivation from Ada.Finalization.Controlled or Ada.Finalization.Limited_Controlled.
+  section: 2.1.2
+  section_title: Declarations and Types
+  source_file: spec/02-restrictions.md
+  paragraph: '12'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: Controlled types excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.3.p14:4ab42f23"
+  text: A conforming implementation shall reject any declaration of a type with Implicit_Dereference aspect.
+  section: 2.1.3
+  section_title: Names and Expressions
+  source_file: spec/02-restrictions.md
+  paragraph: '14'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: User-defined references excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.3.p15:9092af85"
+  text: A conforming implementation shall reject any declaration of a type with Constant_Indexing or Variable_Indexing aspect.
+  section: 2.1.3
+  section_title: Names and Expressions
+  source_file: spec/02-restrictions.md
+  paragraph: '15'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: User-defined indexing excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.3.p16:6436f829"
+  text: |-
+    A conforming implementation shall reject any declaration of a type with Integer_Literal, Real_Literal, or String_Literal aspect.
+  section: 2.1.3
+  section_title: Names and Expressions
+  source_file: spec/02-restrictions.md
+  paragraph: '16'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: User-defined literals excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.3.p17:be123e5f"
+  text: A conforming implementation shall reject any extension aggregate.
+  section: 2.1.3
+  section_title: Names and Expressions
+  source_file: spec/02-restrictions.md
+  paragraph: '17'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: Extension aggregates excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.3.p19:29c43768"
+  text: A conforming implementation shall reject any container aggregate.
+  section: 2.1.3
+  section_title: Names and Expressions
+  source_file: spec/02-restrictions.md
+  paragraph: '19'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: Container aggregates excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.3.p22:58a7c04c"
+  text: A conforming implementation shall reject any quantified expression (for all, for some).
+  section: 2.1.3
+  section_title: Names and Expressions
+  source_file: spec/02-restrictions.md
+  paragraph: '22'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D19
+  tbd: false
+  notes: Quantified expressions excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.3.p23:e51d510c"
+  text: A conforming implementation shall reject any reduction expression.
+  section: 2.1.3
+  section_title: Names and Expressions
+  source_file: spec/02-restrictions.md
+  paragraph: '23'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: Reduction expressions excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.3.p25:f55ddbee"
+  text: A conforming implementation shall reject any qualified expression using tick notation.
+  section: 2.1.3
+  section_title: Names and Expressions
+  source_file: spec/02-restrictions.md
+  paragraph: '25'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D20
+  - D21
+  tbd: false
+  notes: Qualified expressions replaced by type annotation
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.4.p29:f27b01a7"
+  text: A conforming implementation shall reject any declaration of a type with Default_Iterator or Iterator_Element aspect.
+  section: 2.1.4
+  section_title: Statements
+  source_file: spec/02-restrictions.md
+  paragraph: '29'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: User-defined iterators excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.4.p31:3aff42cb"
+  text: A conforming implementation shall reject any procedural iterator.
+  section: 2.1.4
+  section_title: Statements
+  source_file: spec/02-restrictions.md
+  paragraph: '31'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: Procedural iterators excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.4.p32:d090f2f1"
+  text: A conforming implementation shall reject any parallel block statement.
+  section: 2.1.4
+  section_title: Statements
+  source_file: spec/02-restrictions.md
+  paragraph: '32'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: Parallel blocks excluded; safe concurrency via tasks/channels
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.5.p34:70346a23"
+  text: "A conforming implementation shall reject any subprogram bearing Pre, Post, Pre'Class, or Post'Class aspects."
+  section: 2.1.5
+  section_title: Subprograms
+  source_file: spec/02-restrictions.md
+  paragraph: '34'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D19
+  tbd: false
+  notes: Contracts excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.5.p35:9db565e8"
+  text: "A conforming implementation shall reject any user-authored Global or Global'Class aspect in Safe source."
+  section: 2.1.5
+  section_title: Subprograms
+  source_file: spec/02-restrictions.md
+  paragraph: '35'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D22
+  tbd: false
+  notes: Global aspects auto-derived
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.5.p36:ba7835b4"
+  text: Each subprogram identifier denotes exactly one subprogram within a given declarative region.
+  section: 2.1.5
+  section_title: Subprograms
+  source_file: spec/02-restrictions.md
+  paragraph: '36'
+  classification: static_semantics
+  normative: true
+  tags:
+  - D12
+  tbd: false
+  notes: No overloading simplification
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.5.p38:872f4ec6"
+  text: A return statement shall not appear within a task body.
+  section: 2.1.5
+  section_title: Subprograms
+  source_file: spec/02-restrictions.md
+  paragraph: '38'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: Task non-termination constraint
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.5.p40:cc41753d"
+  text: |-
+    A conforming implementation shall reject any user-defined operator function (a function whose designator is an operator symbol).
+  section: 2.1.5
+  section_title: Subprograms
+  source_file: spec/02-restrictions.md
+  paragraph: '40'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D12
+  tbd: false
+  notes: Operator overloading excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.6.p44:a5524a86"
+  text: A conforming implementation shall reject any standalone package body compilation unit.
+  section: 2.1.6
+  section_title: Packages
+  source_file: spec/02-restrictions.md
+  paragraph: '44'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D6
+  tbd: false
+  notes: Single-file model
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.7.p51:3bd0226a"
+  text: A conforming implementation shall reject any use Package_Name; clause.
+  section: 2.1.7
+  section_title: Visibility Rules
+  source_file: spec/02-restrictions.md
+  paragraph: '51'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D13
+  tbd: false
+  notes: General use clauses excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.8.p57:6fc7a14c"
+  text: Safe tasks shall not terminate.
+  section: 2.1.8
+  section_title: Tasks and Synchronisation
+  source_file: spec/02-restrictions.md
+  paragraph: '57'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.8.p58:9bf4999c"
+  text: A conforming implementation shall reject any user-declared protected type or protected object declaration.
+  section: 2.1.8
+  section_title: Tasks and Synchronisation
+  source_file: spec/02-restrictions.md
+  paragraph: '58'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: Protected objects excluded from user code
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.8.p59:95c073d3"
+  text: |-
+    A conforming implementation shall reject any entry_declaration, accept_statement, entry_call_statement, or requeue_statement.
+  section: 2.1.8
+  section_title: Tasks and Synchronisation
+  source_file: spec/02-restrictions.md
+  paragraph: '59'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: Entry/accept model excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.8.p60:75dc85e6"
+  text: A conforming implementation shall reject any delay until statement.
+  section: 2.1.8
+  section_title: Tasks and Synchronisation
+  source_file: spec/02-restrictions.md
+  paragraph: '60'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: Absolute delay excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.8.p61:f91fb172"
+  text: |-
+    A conforming implementation shall reject any selective_accept, timed_entry_call, conditional_entry_call, or asynchronous_select.
+  section: 2.1.8
+  section_title: Tasks and Synchronisation
+  source_file: spec/02-restrictions.md
+  paragraph: '61'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: Ada select model excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.8.p62:9053b623"
+  text: A conforming implementation shall reject any abort statement.
+  section: 2.1.8
+  section_title: Tasks and Synchronisation
+  source_file: spec/02-restrictions.md
+  paragraph: '62'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.9.p65:a6f8ab1c"
+  text: Library units shall be packages; library-level subprograms are not permitted as compilation units.
+  section: 2.1.9
+  section_title: Program Structure
+  source_file: spec/02-restrictions.md
+  paragraph: '65'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D6
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.9.p66:3d98f9e9"
+  text: A conforming implementation shall reject any program with circular with dependencies among compilation units.
+  section: 2.1.9
+  section_title: Program Structure
+  source_file: spec/02-restrictions.md
+  paragraph: '66'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D7
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.10.p67:50d815f0"
+  text: |-
+    A conforming implementation shall reject any exception declaration, exception handler, raise statement or raise expression, or pragma Suppress/Unsuppress applied to language-defined checks.
+  section: 2.1.10
+  section_title: Exceptions
+  source_file: spec/02-restrictions.md
+  paragraph: '67'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D14
+  tbd: false
+  notes: Exceptions excluded in entirety
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.11.p69:4ced1c77"
+  text: A conforming implementation shall reject any generic declaration, generic body, or generic instantiation.
+  section: 2.1.11
+  section_title: Generic Units
+  source_file: spec/02-restrictions.md
+  paragraph: '69'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D16
+  tbd: false
+  notes: Generics excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.12.p77:8b158e82"
+  text: A conforming implementation shall reject any machine code insertion.
+  section: 2.1.12
+  section_title: Representation Issues
+  source_file: spec/02-restrictions.md
+  paragraph: '77'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D24
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.12.p78:803e4add"
+  text: A conforming implementation shall reject any instantiation of or reference to Ada.Unchecked_Conversion.
+  section: 2.1.12
+  section_title: Representation Issues
+  source_file: spec/02-restrictions.md
+  paragraph: '78'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.12.p79:90727967"
+  text: A conforming implementation shall reject any use of .Unchecked_Access.
+  section: 2.1.12
+  section_title: Representation Issues
+  source_file: spec/02-restrictions.md
+  paragraph: '79'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.12.p80:15d3c6f7"
+  text: |-
+    A conforming implementation shall reject any Storage_Pool aspect specification, any storage pool type declaration, and any reference to Ada.Unchecked_Deallocation in Safe source.
+  section: 2.1.12
+  section_title: Representation Issues
+  source_file: spec/02-restrictions.md
+  paragraph: '80'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.12.p82:453192f0"
+  text: A conforming implementation shall reject any stream attribute reference or stream type declaration.
+  section: 2.1.12
+  section_title: Representation Issues
+  source_file: spec/02-restrictions.md
+  paragraph: '82'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: Streams excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.13.p84:84829058"
+  text: A conforming implementation shall reject any pragma Import, pragma Export, pragma Convention, and all of Annex B.
+  section: 2.1.13
+  section_title: Annexes
+  source_file: spec/02-restrictions.md
+  paragraph: '84'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D24
+  tbd: false
+  notes: Foreign interface excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.1.13.p91:4a433f78"
+  text: A conforming implementation shall reject any use of Annex J features.
+  section: 2.1.13
+  section_title: Annexes
+  source_file: spec/02-restrictions.md
+  paragraph: '91'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: Obsolescent features excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.2.p93:301d16b8"
+  text: |-
+    A conforming implementation shall reject any Safe source containing a user-authored instance of any aspect listed in paragraph 92.
+  section: '2.2'
+  section_title: Excluded SPARK Verification-Only Aspects
+  source_file: spec/02-restrictions.md
+  paragraph: '93'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D22
+  tbd: false
+  notes: 12 SPARK aspects auto-derived or excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.7.p124:ef993f07"
+  text: A conforming implementation shall reject any Safe source bearing any aspect listed in paragraph 123.
+  section: '2.7'
+  section_title: Contract Exclusions
+  source_file: spec/02-restrictions.md
+  paragraph: '124'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D19
+  tbd: false
+  notes: 12 contract aspects excluded
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.2.p96a:0eaf48aa"
+  text: The source object becomes null after the assignment.
+  section: 2.3.2
+  section_title: Move Semantics
+  source_file: spec/02-restrictions.md
+  paragraph: 96a
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - ownership
+  - D17
+  tbd: false
+  notes: Move nulls source
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.2.p96c:0b45de01"
+  text: |-
+    A conforming implementation shall reject any subsequent dereference of the source object unless it has been reassigned or verified as non-null.
+  section: 2.3.2
+  section_title: Move Semantics
+  source_file: spec/02-restrictions.md
+  paragraph: 96c
+  classification: legality_rule
+  normative: true
+  tags:
+  - ownership
+  - D17
+  tbd: false
+  notes: Post-move dereference rejected
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.2.p97a:8d0214d5"
+  text: The target of any move into a pool-specific owning access variable shall be provably null at the point of the move.
+  section: 2.3.2
+  section_title: Move Semantics
+  source_file: spec/02-restrictions.md
+  paragraph: 97a
+  classification: legality_rule
+  normative: true
+  tags:
+  - ownership
+  - D17
+  tbd: false
+  notes: Null-before-move legality rule
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.2.p97a-diag:dc259149"
+  text: |-
+    A conforming implementation shall reject any move into a variable that is not provably null at that program point, with a diagnostic identifying the variable and the unresolvable ownership conflict.
+  section: 2.3.2
+  section_title: Move Semantics
+  source_file: spec/02-restrictions.md
+  paragraph: 97a-diag
+  classification: legality_rule
+  normative: true
+  tags:
+  - ownership
+  - D17
+  tbd: false
+  notes: Null-before-move diagnostic
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.3.p99b:47108b45"
+  text: |-
+    The lender (the source of the borrow) is frozen: no read, write, or move of the lender is permitted while the borrow is active.
+  section: 2.3.3
+  section_title: Borrowing
+  source_file: spec/02-restrictions.md
+  paragraph: 99b
+  classification: legality_rule
+  normative: true
+  tags:
+  - ownership
+  - D17
+  tbd: false
+  notes: Borrow freezes lender
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.3.p100a:ba849e66"
+  text: |-
+    An anonymous access variable shall only receive its value at its point of declaration. A conforming implementation shall reject any assignment to an anonymous access variable after its declaration.
+  section: 2.3.3
+  section_title: Borrowing
+  source_file: spec/02-restrictions.md
+  paragraph: 100a
+  classification: legality_rule
+  normative: true
+  tags:
+  - ownership
+  - D17
+  tbd: false
+  notes: Initialisation-only restriction
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.4a.p102a:5bc5ab8b"
+  text: The scope of a borrower or observer shall be contained within the scope of the lender or observed object.
+  section: 2.3.4a
+  section_title: Lifetime Containment
+  source_file: spec/02-restrictions.md
+  paragraph: 102a
+  classification: legality_rule
+  normative: true
+  tags:
+  - ownership
+  - D17
+  tbd: false
+  notes: Lifetime-containment legality rule
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.4a.p102a-a:ae729065"
+  text: |-
+    A conforming implementation shall reject any borrow or observe where the borrower/observer could outlive the lender/observed object.
+  section: 2.3.4a
+  section_title: Lifetime Containment
+  source_file: spec/02-restrictions.md
+  paragraph: 102a-a
+  classification: legality_rule
+  normative: true
+  tags:
+  - ownership
+  - D17
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.4a.p102b:2ed757bd"
+  text: No access value shall designate a deallocated object at any reachable program point.
+  section: 2.3.4a
+  section_title: Lifetime Containment
+  source_file: spec/02-restrictions.md
+  paragraph: 102b
+  classification: legality_rule
+  normative: true
+  tags:
+  - ownership
+  - D17
+  tbd: false
+  notes: No dangling access values
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.4a.p102b-diag:ddab22c8"
+  text: |-
+    A conforming implementation shall reject any program where it cannot establish that all access values designate live objects throughout their reachable lifetime.
+  section: 2.3.4a
+  section_title: Lifetime Containment
+  source_file: spec/02-restrictions.md
+  paragraph: 102b-diag
+  classification: legality_rule
+  normative: true
+  tags:
+  - ownership
+  - D17
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.5.p103a:520dc0d4"
+  text: |-
+    If an allocator cannot obtain sufficient storage to create the designated object, the program is aborted. The implementation shall invoke the runtime abort handler with a diagnostic that identifies the source location of the failing allocator.
+  section: 2.3.5
+  section_title: Allocators and Automatic Deallocation
+  source_file: spec/02-restrictions.md
+  paragraph: 103a
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - ownership
+  tbd: false
+  notes: Allocation failure aborts
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.5.p104:d9f9b8d9"
+  text: |-
+    When a pool-specific access variable goes out of scope and its value is non-null, the designated object is automatically deallocated.
+  section: 2.3.5
+  section_title: Allocators and Automatic Deallocation
+  source_file: spec/02-restrictions.md
+  paragraph: '104'
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - ownership
+  - D17
+  tbd: false
+  notes: Auto-deallocation at scope exit
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.5.p104a:b70c1d15"
+  text: |-
+    Named access-to-constant types are pool-specific and allocate from a pool. Automatic deallocation at scope exit applies to named access-to-constant variables in the same manner as pool-specific access-to-variable variables.
+  section: 2.3.5
+  section_title: Allocators and Automatic Deallocation
+  source_file: spec/02-restrictions.md
+  paragraph: 104a
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - ownership
+  tbd: false
+  notes: Named access-to-constant deallocation
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.5.p105:d4a9cdb4"
+  text: |-
+    When multiple pool-specific access objects exit scope simultaneously, the order of deallocation is the reverse of their declaration order.
+  section: 2.3.5
+  section_title: Allocators and Automatic Deallocation
+  source_file: spec/02-restrictions.md
+  paragraph: '105'
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - ownership
+  tbd: false
+  notes: Reverse declaration order deallocation
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.5.p106:bae12394"
+  text: |-
+    General access-to-variable types (access all T) cannot be deallocated, as they may designate stack-allocated (aliased) objects.
+  section: 2.3.5
+  section_title: Allocators and Automatic Deallocation
+  source_file: spec/02-restrictions.md
+  paragraph: '106'
+  classification: static_semantics
+  normative: true
+  tags:
+  - ownership
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.7.p108:083e15a2"
+  text: |-
+    All ownership checking is local to the compilation unit. A conforming implementation shall verify ownership rules using only the current compilation unit's source and the dependency interface information of its direct and transitive dependencies.
+  section: 2.3.7
+  section_title: Ownership Checking Scope
+  source_file: spec/02-restrictions.md
+  paragraph: '108'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - ownership
+  tbd: false
+  notes: Local ownership checking
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.8.p111:42819528"
+  text: |-
+    A conforming implementation shall reject any use of .Access on a local aliased variable where the result could escape the variable's scope.
+  section: 2.3.8
+  section_title: Accessibility Rules
+  source_file: spec/02-restrictions.md
+  paragraph: '111'
+  classification: legality_rule
+  normative: true
+  tags:
+  - ownership
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.8.p111a:a858bdfc"
+  text: A function shall not return the result of .Access applied to one of its local aliased variables or parameters.
+  section: 2.3.8
+  section_title: Accessibility Rules
+  source_file: spec/02-restrictions.md
+  paragraph: 111a
+  classification: legality_rule
+  normative: true
+  tags:
+  - ownership
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.8.p111b:2921e9d2"
+  text: The result of .Access on a local aliased variable shall not be assigned to a variable declared in an enclosing scope.
+  section: 2.3.8
+  section_title: Accessibility Rules
+  source_file: spec/02-restrictions.md
+  paragraph: 111b
+  classification: legality_rule
+  normative: true
+  tags:
+  - ownership
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.8.p111c:819cc398"
+  text: The result of .Access on a local aliased variable shall not be sent through a channel.
+  section: 2.3.8
+  section_title: Accessibility Rules
+  source_file: spec/02-restrictions.md
+  paragraph: 111c
+  classification: legality_rule
+  normative: true
+  tags:
+  - ownership
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.8.p113:75fcd707"
+  text: |-
+    A conforming implementation shall discharge the accessibility check row in the runtime check table entirely at compile time. No runtime accessibility check code shall be emitted.
+  section: 2.3.8
+  section_title: Accessibility Rules
+  source_file: spec/02-restrictions.md
+  paragraph: '113'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - Silver
+  - accessibility-check
+  tbd: false
+  notes: All accessibility checks compile-time
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.3.8.p109-end:5d18703e"
+  text: No runtime accessibility check is ever required.
+  section: 2.3.8
+  section_title: Accessibility Rules
+  source_file: spec/02-restrictions.md
+  paragraph: 109-end
+  classification: static_semantics
+  normative: true
+  tags:
+  - Silver
+  - accessibility-check
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.8.1.p126:812b54a8"
+  text: All integer arithmetic expressions shall be evaluated in a mathematical integer type with no overflow.
+  section: 2.8.1
+  section_title: "Rule 1: Wide Intermediate Arithmetic"
+  source_file: spec/02-restrictions.md
+  paragraph: '126'
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - D27
+  - Silver
+  - Rule1
+  - integer-overflow
+  tbd: false
+  notes: D27 Rule 1
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.8.1.p127:d5d93439"
+  text: |-
+    Range checks shall be performed only at narrowing points: assigned to an object, passed as a parameter, returned from a function, used as the operand of a type conversion, or used as the expression of a type annotation.
+  section: 2.8.1
+  section_title: "Rule 1: Wide Intermediate Arithmetic"
+  source_file: spec/02-restrictions.md
+  paragraph: '127'
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - D27
+  - Silver
+  - Rule1
+  - range-check
+  tbd: false
+  notes: Narrowing point enumeration
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.8.1.p128:d2e83ca8"
+  text: |-
+    If the static range of any declared integer type in the program exceeds the 64-bit signed range, the program is nonconforming and a conforming implementation shall reject it.
+  section: 2.8.1
+  section_title: "Rule 1: Wide Intermediate Arithmetic"
+  source_file: spec/02-restrictions.md
+  paragraph: '128'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D27
+  - Silver
+  - Rule1
+  tbd: false
+  notes: 64-bit range bound
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.8.1.p129:9f3b1394"
+  text: |-
+    If a conforming implementation cannot establish, by sound static range analysis, that every intermediate subexpression of an integer arithmetic expression stays within the 64-bit signed range, the expression shall be rejected with a diagnostic.
+  section: 2.8.1
+  section_title: "Rule 1: Wide Intermediate Arithmetic"
+  source_file: spec/02-restrictions.md
+  paragraph: '129'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D27
+  - Silver
+  - Rule1
+  tbd: false
+  notes: Intermediate overflow legality rule
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.8.1.p130:2289e5b2"
+  text: |-
+    Narrowing checks at all five categories of narrowing point shall be discharged via sound static range analysis on the wide result.
+  section: 2.8.1
+  section_title: "Rule 1: Wide Intermediate Arithmetic"
+  source_file: spec/02-restrictions.md
+  paragraph: '130'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D27
+  - Silver
+  - Rule1
+  - range-check
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.8.2.p131:30aba5f5"
+  text: "The index expression in an indexed_component shall be provably within the array object's index bounds at compile time."
+  section: 2.8.2
+  section_title: "Rule 2: Provable Index Safety"
+  source_file: spec/02-restrictions.md
+  paragraph: '131'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D27
+  - Silver
+  - Rule2
+  - index-check
+  tbd: false
+  notes: D27 Rule 2
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.8.2.p132:8613ecf4"
+  text: |-
+    If neither condition holds, the program is nonconforming and the implementation shall reject it with a diagnostic identifying the indexed_component and the unresolvable bound relationship.
+  section: 2.8.2
+  section_title: "Rule 2: Provable Index Safety"
+  source_file: spec/02-restrictions.md
+  paragraph: '132'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D27
+  - Silver
+  - Rule2
+  - index-check
+  tbd: false
+  notes: Index check rejection
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.8.3.p133:0610d951"
+  text: The right operand of the operators /, mod, and rem shall be provably nonzero at compile time.
+  section: 2.8.3
+  section_title: "Rule 3: Division by Provably Nonzero Divisor"
+  source_file: spec/02-restrictions.md
+  paragraph: '133'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D27
+  - Silver
+  - Rule3
+  - division-check
+  tbd: false
+  notes: D27 Rule 3
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.8.3.p134:90a17a3b"
+  text: |-
+    If none of the conditions in paragraph 133 holds, the program is nonconforming and a conforming implementation shall reject the expression with a diagnostic.
+  section: 2.8.3
+  section_title: "Rule 3: Division by Provably Nonzero Divisor"
+  source_file: spec/02-restrictions.md
+  paragraph: '134'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D27
+  - Silver
+  - Rule3
+  - division-check
+  tbd: false
+  notes: Division check rejection
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.8.4.p136:fa5e94b7"
+  text: |-
+    Dereference of an access value shall require the access subtype to be not null. A conforming implementation shall reject any dereference where the access subtype at the point of dereference does not exclude null.
+  section: 2.8.4
+  section_title: "Rule 4: Not-Null Dereference"
+  source_file: spec/02-restrictions.md
+  paragraph: '136'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D27
+  - Silver
+  - Rule4
+  - null-check
+  tbd: false
+  notes: D27 Rule 4
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.8.5.p139:d50bc714"
+  text: A conforming implementation shall ensure that all predefined floating-point types have Machine_Overflows equal to False.
+  section: 2.8.5
+  section_title: "Rule 5: Floating-Point Non-Trapping Semantics"
+  source_file: spec/02-restrictions.md
+  paragraph: '139'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D27
+  - Silver
+  - Rule5
+  - float-overflow
+  - float-div-zero
+  - float-nan
+  tbd: false
+  notes: D27 Rule 5 - IEEE 754 non-trapping
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.8.5.p139b:5e20032b"
+  text: |-
+    The implementation shall apply sound static range analysis to establish that the value at the narrowing point is a finite number within the target type's model range.
+  section: 2.8.5
+  section_title: "Rule 5: Floating-Point Non-Trapping Semantics"
+  source_file: spec/02-restrictions.md
+  paragraph: 139b
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D27
+  - Silver
+  - Rule5
+  - float-range-check
+  tbd: false
+  notes: Float range analysis at narrowing
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.8.5.p139c:7fad4f7d"
+  text: |-
+    If a conforming implementation cannot establish, by sound static range analysis, that a floating-point narrowing point is safe, the program is nonconforming and shall be rejected with a diagnostic.
+  section: 2.8.5
+  section_title: "Rule 5: Floating-Point Non-Trapping Semantics"
+  source_file: spec/02-restrictions.md
+  paragraph: 139c
+  classification: legality_rule
+  normative: true
+  tags:
+  - D27
+  - Silver
+  - Rule5
+  - float-range-check
+  tbd: false
+  notes: Float narrowing rejection
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.8.5.p139d:56f1f36b"
+  text: |-
+    NaN and infinity shall not survive narrowing: no conforming program can assign NaN or infinity to a typed floating-point variable, pass it as a parameter, return it from a function, convert it to a more restrictive type, or annotate it with a type annotation.
+  section: 2.8.5
+  section_title: "Rule 5: Floating-Point Non-Trapping Semantics"
+  source_file: spec/02-restrictions.md
+  paragraph: 139d
+  classification: legality_rule
+  normative: true
+  tags:
+  - D27
+  - Silver
+  - Rule5
+  - float-range-check
+  - float-nan
+  tbd: false
+  notes: NaN/infinity containment
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.9.p140:7eeb1bb6"
+  text: Declarations and statements may interleave freely after begin.
+  section: '2.9'
+  section_title: Interleaved Declarations
+  source_file: spec/02-restrictions.md
+  paragraph: '140'
+  classification: static_semantics
+  normative: true
+  tags:
+  - D11
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/02-restrictions.md#2.10.p141:9e5dc3fe"
+  text: |-
+    Each subprogram identifier shall denote exactly one subprogram within a given declarative region. A conforming implementation shall reject any declarative region containing two subprogram declarations with the same identifier.
+  section: '2.10'
+  section_title: No Overloading
+  source_file: spec/02-restrictions.md
+  paragraph: '141'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D12
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.p0:dcd1bc13"
+  text: |-
+    A conforming implementation shall make the public interface available to dependent compilation units for separate compilation; the mechanism is implementation-defined.
+  section: '3'
+  section_title: Single-File Packages
+  source_file: spec/03-single-file-packages.md
+  paragraph: '0'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D6
+  tbd: false
+  notes: Preamble requirement
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.2.1.p8:cb47c342"
+  text: |-
+    The defining_identifier after end in a package unit shall match the defining_identifier after package. A conforming implementation shall reject any package where the end identifier does not match.
+  section: 3.2.1
+  section_title: Matching End Identifier
+  source_file: spec/03-single-file-packages.md
+  paragraph: '8'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D6
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.2.2.p9:d7d76101"
+  text: |-
+    Every name used in a declaration or statement shall have been declared earlier in the same scope or in a with'd package. A conforming implementation shall reject any reference to a name that has not been declared at or before the point of use.
+  section: 3.2.2
+  section_title: Declaration-Before-Use
+  source_file: spec/03-single-file-packages.md
+  paragraph: '9'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D6
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.2.3.p12:b76eb7bf"
+  text: |-
+    The body completing a forward declaration shall appear later in the same declarative region. The subprogram specification of the body shall conform to the forward declaration.
+  section: 3.2.3
+  section_title: Forward Declarations for Mutual Recursion
+  source_file: spec/03-single-file-packages.md
+  paragraph: '12'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.2.3.p13:8bf74e20"
+  text: A conforming implementation shall reject a forward declaration with no completing body in the same declarative region.
+  section: 3.2.3
+  section_title: Forward Declarations for Mutual Recursion
+  source_file: spec/03-single-file-packages.md
+  paragraph: '13'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.2.3.p14:c205a40a"
+  text: |-
+    If the subprogram is public, the public keyword shall appear on the forward declaration. The completing body shall not repeat the public keyword. A conforming implementation shall reject a completing body that bears public when a forward declaration for the same subprogram exists.
+  section: 3.2.3
+  section_title: Forward Declarations for Mutual Recursion
+  source_file: spec/03-single-file-packages.md
+  paragraph: '14'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D8
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.2.4.p15:e090edc2"
+  text: |-
+    A package shall not contain executable statements at the package level. All executable code shall appear within subprogram bodies or task bodies. A conforming implementation shall reject any executable statement appearing directly in the package item list.
+  section: 3.2.4
+  section_title: No Package-Level Statements
+  source_file: spec/03-single-file-packages.md
+  paragraph: '15'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D6
+  - D7
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.2.5.p19:05cb629b"
+  text: A conforming implementation shall reject any public annotation on a declaration kind not listed in paragraph 17.
+  section: 3.2.5
+  section_title: Public Keyword Visibility Rules
+  source_file: spec/03-single-file-packages.md
+  paragraph: '19'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D8
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.2.5.p20:d2c1d841"
+  text: |-
+    A declaration without the public keyword is private to the declaring package and shall not be directly visible to any other compilation unit.
+  section: 3.2.5
+  section_title: Public Keyword Visibility Rules
+  source_file: spec/03-single-file-packages.md
+  paragraph: '20'
+  classification: static_semantics
+  normative: true
+  tags:
+  - D8
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.2.6.p23:26dc2217"
+  text: |-
+    Clients shall not access individual fields of an opaque type. A conforming implementation shall reject any selected component on an opaque type that names a record field, when the reference occurs outside the declaring package.
+  section: 3.2.6
+  section_title: Opaque Types
+  source_file: spec/03-single-file-packages.md
+  paragraph: '23'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D9
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.2.6.p24:12e57227"
+  text: |-
+    The implementation shall export sufficient information for clients to allocate objects of the opaque type (size and alignment).
+  section: 3.2.6
+  section_title: Opaque Types
+  source_file: spec/03-single-file-packages.md
+  paragraph: '24'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D9
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.2.9.p31:c2a3dc04"
+  text: |-
+    Circular with dependencies among compilation units are prohibited. A conforming implementation shall reject any set of compilation units forming a cycle in the with dependency graph.
+  section: 3.2.9
+  section_title: Circular Dependencies Prohibited
+  source_file: spec/03-single-file-packages.md
+  paragraph: '31'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D7
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.2.10.p32:be83c6b5"
+  text: |-
+    A library unit shall be a package. Library-level subprograms are not permitted as compilation units. A conforming implementation shall reject any library-level subprogram declaration or body.
+  section: 3.2.10
+  section_title: Library Units
+  source_file: spec/03-single-file-packages.md
+  paragraph: '32'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D6
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.3.1.p33:b08ead48"
+  text: |-
+    A conforming implementation shall make the following information available for each package, to support separate compilation and cross-unit legality checking.
+  section: 3.3.1
+  section_title: Dependency Interface Information
+  source_file: spec/03-single-file-packages.md
+  paragraph: '33'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D6
+  tbd: false
+  notes: 9 categories of interface info
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.3.1.p34:2a0b2728"
+  text: The mechanism for conveying this information is implementation-defined.
+  section: 3.3.1
+  section_title: Dependency Interface Information
+  source_file: spec/03-single-file-packages.md
+  paragraph: '34'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D6
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.3.1.p35:0bbb4bb7"
+  text: "If required dependency interface information is unavailable for a with'd package, the program shall be rejected."
+  section: 3.3.1
+  section_title: Dependency Interface Information
+  source_file: spec/03-single-file-packages.md
+  paragraph: '35'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D6
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.3.4.p40:cdfbcb6b"
+  text: |-
+    A child package does not have additional visibility into the non-public declarations of its parent beyond what with Parent; provides.
+  section: 3.3.4
+  section_title: Child Packages
+  source_file: spec/03-single-file-packages.md
+  paragraph: '40'
+  classification: static_semantics
+  normative: true
+  tags:
+  - D6
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.4.1.p42:b88e8ad4"
+  text: Package-level variable initialisers are evaluated at load time in declaration order (top to bottom).
+  section: 3.4.1
+  section_title: Package Initialisation
+  source_file: spec/03-single-file-packages.md
+  paragraph: '42'
+  classification: dynamic_semantics
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.4.2.p44:a655dde4"
+  text: "If package A withs package B, then B's initialisers complete before A's initialisers begin."
+  section: 3.4.2
+  section_title: Cross-Package Initialisation Order
+  source_file: spec/03-single-file-packages.md
+  paragraph: '44'
+  classification: dynamic_semantics
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.4.2.p45:80712e1a"
+  text: |-
+    The initialisation order across all compilation units is a topological sort of the with dependency graph. The order among packages with no direct or transitive dependency is implementation-defined but deterministic for a given program.
+  section: 3.4.2
+  section_title: Cross-Package Initialisation Order
+  source_file: spec/03-single-file-packages.md
+  paragraph: '45'
+  classification: dynamic_semantics
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.4.3.p46:b5f92bd9"
+  text: All package-level initialisation across all compilation units completes before any task begins executing.
+  section: 3.4.3
+  section_title: Task Startup Sequencing
+  source_file: spec/03-single-file-packages.md
+  paragraph: '46'
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.5.1.p47:b7e93197"
+  text: |-
+    A conforming implementation shall provide a mechanism for conveying dependency interface information between separately compiled units. The mechanism is implementation-defined.
+  section: 3.5.1
+  section_title: Dependency Interface Mechanism
+  source_file: spec/03-single-file-packages.md
+  paragraph: '47'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D6
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.5.1.p48:616dd05d"
+  text: |-
+    The mechanism shall be sufficient to support: legality checking of client code against provider interfaces, task-variable ownership checking using effect summaries from transitive dependencies, and incremental recompilation when a provider's interface changes.
+  section: 3.5.1
+  section_title: Dependency Interface Mechanism
+  source_file: spec/03-single-file-packages.md
+  paragraph: '48'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D6
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/03-single-file-packages.md#3.5.2.p49:02b25de0"
+  text: |-
+    A conforming implementation shall support separate compilation of packages. Each package shall be compilable independently, given only its source and the dependency interface information of its with'd packages.
+  section: 3.5.2
+  section_title: Separate Compilation
+  source_file: spec/03-single-file-packages.md
+  paragraph: '49'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D6
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.1.p2:78f022f7"
+  text: |-
+    A task declaration shall appear only at the top level of a package. A conforming implementation shall reject any task declaration appearing within a subprogram body, block statement, or nested scope.
+  section: '4.1'
+  section_title: Task Declarations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '2'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.1.p3:542e0dee"
+  text: Each task declaration creates exactly one task. There are no task types, no dynamic task creation, no task arrays.
+  section: '4.1'
+  section_title: Task Declarations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '3'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.1.p4:016e5737"
+  text: |-
+    The defining_identifier after end shall match the defining_identifier after task. A conforming implementation shall reject any task where the end identifier does not match.
+  section: '4.1'
+  section_title: Task Declarations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '4'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.1.p5:4e4afebc"
+  text: |-
+    If a Priority aspect is specified, the static expression shall evaluate to a value in the range System.Any_Priority. A conforming implementation shall reject a priority value outside this range.
+  section: '4.1'
+  section_title: Task Declarations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '5'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.1.p6:be85291b"
+  text: A task declaration shall not bear the public keyword.
+  section: '4.1'
+  section_title: Task Declarations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '6'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.1.p7:393c53c2"
+  text: |-
+    Task declarations shall not be nested. A task body shall not contain another task declaration. A conforming implementation shall reject any task declaration appearing within a task body.
+  section: '4.1'
+  section_title: Task Declarations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '7'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.1.p9:b4640bda"
+  text: |-
+    If no Priority is specified, the task has the default priority defined by the implementation. The default priority shall be documented by the implementation.
+  section: '4.1'
+  section_title: Task Declarations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '9'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.1.p10:92a67777"
+  text: Each task declaration creates a single task that begins execution after all package-level initialisation completes.
+  section: '4.1'
+  section_title: Task Declarations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '10'
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.1.p11:2460c5cb"
+  text: |-
+    The task executes its handled_sequence_of_statements as an independent thread of control. Scheduling among tasks is preemptive priority-based.
+  section: '4.1'
+  section_title: Task Declarations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '11'
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.2.p13:4f888b03"
+  text: |-
+    A channel declaration shall appear only at the top level of a package. A conforming implementation shall reject any channel declaration appearing within a subprogram body, task body, or nested scope.
+  section: '4.2'
+  section_title: Channel Declarations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '13'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.2.p14:a35bd0fa"
+  text: |-
+    The element type shall be a definite type. A conforming implementation shall reject a channel whose element type is indefinite.
+  section: '4.2'
+  section_title: Channel Declarations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '14'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.2.p15:b5b29b0e"
+  text: |-
+    The capacity shall evaluate to a positive integer. A conforming implementation shall reject a channel with a capacity less than 1.
+  section: '4.2'
+  section_title: Channel Declarations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '15'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.2.p20:8aa1a21e"
+  text: "A channel is a FIFO queue: elements are dequeued in the order they were enqueued."
+  section: '4.2'
+  section_title: Channel Declarations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '20'
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.2.p21:c6a92460"
+  text: |-
+    When the implementation maps channels to underlying synchronisation mechanisms, it shall assign a ceiling priority to each channel. The ceiling priority of a channel shall be at least the maximum of the priorities of all tasks that access that channel.
+  section: '4.2'
+  section_title: Channel Declarations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '21'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: Ceiling priority for channels
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.2.p21a:16ec46cb"
+  text: |-
+    A conforming implementation shall compute each channel's ceiling priority from the priorities of all tasks that access the channel, using channel-access summaries from dependency interface information for cross-package calls.
+  section: '4.2'
+  section_title: Channel Declarations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: 21a
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: Cross-package ceiling computation
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p23:197d9a49"
+  text: "The expression in a send or try_send shall be of the channel's element type or a subtype thereof."
+  section: '4.3'
+  section_title: Channel Operations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '23'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p24:9e47ed4c"
+  text: "The name in a receive or try_receive shall denote a variable of the channel's element type or a subtype thereof."
+  section: '4.3'
+  section_title: Channel Operations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '24'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p25:961abe5a"
+  text: The final name in try_send and try_receive shall denote a variable of type Boolean.
+  section: '4.3'
+  section_title: Channel Operations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '25'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p26:3a9449c1"
+  text: Channel operations shall not appear at the package level.
+  section: '4.3'
+  section_title: Channel Operations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '26'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p27:ef0ce6bd"
+  text: |-
+    send Ch, Value: Enqueue Value into channel Ch. If Ch is full, the current task blocks until space becomes available. The expression Value is evaluated before the enqueue.
+  section: '4.3'
+  section_title: Channel Operations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '27'
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: send semantics
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p27a:8ed3c1d4"
+  text: |-
+    If the element type is an owning access type, send performs a move: the source object becomes null after the send completes. A conforming implementation shall reject any subsequent dereference of the source object unless it has been reassigned or verified as non-null.
+  section: '4.3'
+  section_title: Channel Operations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: 27a
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - D28
+  - ownership
+  tbd: false
+  notes: Ownership transfer on send
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p28:ea6bd13c"
+  text: |-
+    receive Ch, Variable: Dequeue the front element of channel Ch into Variable. If Ch is empty, the current task blocks until an element becomes available.
+  section: '4.3'
+  section_title: Channel Operations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '28'
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: receive semantics
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p28a:4cb19779"
+  text: |-
+    If the element type is an owning access type, receive performs a move from the channel into Variable. The null-before-move legality rule applies: Variable shall be provably null at the point of the receive.
+  section: '4.3'
+  section_title: Channel Operations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: 28a
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - D28
+  - ownership
+  tbd: false
+  notes: Ownership transfer on receive
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p29:f792d704"
+  text: |-
+    try_send Ch, Value, Success: Attempt to enqueue Value into channel Ch without blocking. The operation is performed atomically.
+  section: '4.3'
+  section_title: Channel Operations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '29'
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: try_send semantics
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p29a:8d3f2225"
+  text: |-
+    If the element type is an owning access type, the move of Value occurs only when the enqueue succeeds. The implementation shall ensure that the evaluation of Value and the fullness check are performed atomically.
+  section: '4.3'
+  section_title: Channel Operations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: 29a
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - D28
+  - ownership
+  tbd: false
+  notes: Move-only-on-success for try_send
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p29b:7121ccd7"
+  text: |-
+    For owning access types, the implementation shall not null the source variable until the enqueue is confirmed to succeed.
+  section: '4.3'
+  section_title: Channel Operations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: 29b
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D28
+  - ownership
+  tbd: false
+  notes: Deferred nulling for try_send
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p30:62619161"
+  text: |-
+    try_receive Ch, Variable, Success: Attempt to dequeue the front element of channel Ch without blocking. Variable shall be provably null at the point of the try_receive.
+  section: '4.3'
+  section_title: Channel Operations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '30'
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - D28
+  - ownership
+  tbd: false
+  notes: try_receive semantics
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p31:a7297e97"
+  text: |-
+    Channel operations are atomic with respect to other channel operations on the same channel. The implementation shall ensure that concurrent send and receive operations on the same channel do not corrupt the channel state.
+  section: '4.3'
+  section_title: Channel Operations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '31'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: Channel atomicity
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p31a:a621d08c"
+  text: |-
+    At any point during program execution, each designated object reachable through an owning access value in a channel element is owned by exactly one entity.
+  section: '4.3'
+  section_title: Channel Operations
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: 31a
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - D28
+  - ownership
+  tbd: false
+  notes: Channel ownership invariant
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.4.p33:7a94ab51"
+  text: A select statement shall contain at least one channel_arm.
+  section: '4.4'
+  section_title: Select Statement
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '33'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.4.p34:f0f83b83"
+  text: |-
+    At most one delay_arm may appear in a select statement. A conforming implementation shall reject a select with more than one delay_arm.
+  section: '4.4'
+  section_title: Select Statement
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '34'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.4.p35:2ad6e64f"
+  text: |-
+    Only receive operations appear in select arms, not send. A conforming implementation shall reject any select arm that attempts a send operation.
+  section: '4.4'
+  section_title: Select Statement
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '35'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.4.p36:0bffbd47"
+  text: The subtype_mark in a channel_arm shall match the element type of the named channel.
+  section: '4.4'
+  section_title: Select Statement
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '36'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.4.p37:6ced8129"
+  text: The defining_identifier in a channel_arm introduces a new variable, scoped to the statements of that arm.
+  section: '4.4'
+  section_title: Select Statement
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '37'
+  classification: static_semantics
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.4.p38:35ed84d9"
+  text: The expression in a delay_arm shall be of type Duration or a type convertible to Duration.
+  section: '4.4'
+  section_title: Select Statement
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '38'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.4.p39:1012f4db"
+  text: |-
+    When the select statement is evaluated, the implementation tests each arm in declaration order. The first arm whose channel has data available is selected.
+  section: '4.4'
+  section_title: Select Statement
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '39'
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: select arm ordering
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.4.p40:4cfdeffe"
+  text: If the delay expires before any channel arm becomes ready, the delay arm is selected.
+  section: '4.4'
+  section_title: Select Statement
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '40'
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.4.p41:cdf6a558"
+  text: If multiple channels become ready simultaneously, the first listed channel arm is selected. This is deterministic.
+  section: '4.4'
+  section_title: Select Statement
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '41'
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: Deterministic select
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.4.p42:dce8ac38"
+  text: If no channel arm is ready and no delay arm is present, the select blocks until one channel arm becomes ready.
+  section: '4.4'
+  section_title: Select Statement
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '42'
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.5.p45:8bdd0c99"
+  text: |-
+    Each package-level variable shall be accessed by at most one task. The implementation shall verify this at compile time. A conforming implementation shall reject any program where a package-level variable is accessed by more than one task.
+  section: '4.5'
+  section_title: Task-Variable Ownership
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '45'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  - ownership
+  tbd: false
+  notes: No shared mutable state
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.5.p47:bc08fb3b"
+  text: |-
+    For subprograms in with'd packages, the implementation shall use the effect summaries from dependency interface information to determine which package-level variables are accessed. The ownership check shall be completable from the compilation unit's source plus its direct and transitive dependency interface information.
+  section: '4.5'
+  section_title: Task-Variable Ownership
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '47'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D28
+  - ownership
+  tbd: false
+  notes: Cross-package transitivity
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.5.p49:d2001725"
+  text: |-
+    A subprogram shall not access any package-level variable if it is callable from more than one task. A conforming implementation shall reject any subprogram that accesses a package-level variable and is callable from multiple task bodies.
+  section: '4.5'
+  section_title: Task-Variable Ownership
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '49'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  - ownership
+  tbd: false
+  notes: Multi-task subprogram restriction
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.5.p50:2882310a"
+  text: |-
+    Channel operations do not constitute access to a package-level variable for the purposes of the task-variable ownership rule.
+  section: '4.5'
+  section_title: Task-Variable Ownership
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '50'
+  classification: static_semantics
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: Channels exempt from ownership rule
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.6.p53:897d5577"
+  text: Tasks shall not terminate. The outermost statement of the task body shall be an unconditional loop statement.
+  section: '4.6'
+  section_title: Non-Termination Legality Rule
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '53'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.6.p53b:19b7c4ae"
+  text: |-
+    A return statement shall not appear anywhere within a task body. A conforming implementation shall reject any return statement within a task body.
+  section: '4.6'
+  section_title: Non-Termination Legality Rule
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: 53b
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.6.p53c:77a5f52c"
+  text: No exit statement within the task body shall name or otherwise target the outermost loop.
+  section: '4.6'
+  section_title: Non-Termination Legality Rule
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: 53c
+  classification: legality_rule
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.7.p56:55e4230e"
+  text: |-
+    All package-level declarations and initialisations across all compilation units complete before any task begins executing. This is a language-level sequencing guarantee.
+  section: '4.7'
+  section_title: Task Startup
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '56'
+  classification: dynamic_semantics
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/04-tasks-and-channels.md#4.7.p58:d10f9cd1"
+  text: The order in which tasks are activated relative to each other is implementation-defined.
+  section: '4.7'
+  section_title: Task Startup
+  source_file: spec/04-tasks-and-channels.md
+  paragraph: '58'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/05-assurance.md#5.1.p2:14a5a600"
+  text: Every conforming Safe program achieves Stone, Bronze, and Silver without developer-supplied annotations.
+  section: '5.1'
+  section_title: Overview of Assurance Levels
+  source_file: spec/05-assurance.md
+  paragraph: '2'
+  classification: conformance_requirement
+  normative: true
+  tags:
+  - D26
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/05-assurance.md#5.2.1.p3:ce5a8fe7"
+  text: |-
+    Every conforming Safe program shall have complete and correct flow information derivable from its source without user-supplied annotations.
+  section: 5.2.1
+  section_title: Normative Statement (Bronze)
+  source_file: spec/05-assurance.md
+  paragraph: '3'
+  classification: conformance_requirement
+  normative: true
+  tags:
+  - D26
+  - Bronze
+  tbd: false
+  notes: Bronze guarantee
+- id: "SAFE@4aecf21:spec/05-assurance.md#5.2.2.p5:a07e15ef"
+  text: |-
+    For each subprogram, a conforming implementation shall be able to determine the set of package-level variables read and written, including transitive effects through called subprograms.
+  section: 5.2.2
+  section_title: Global Information
+  source_file: spec/05-assurance.md
+  paragraph: '5'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D26
+  - Bronze
+  tbd: false
+  notes: Global equivalent
+- id: "SAFE@4aecf21:spec/05-assurance.md#5.2.3.p8:dfb93f2c"
+  text: For each subprogram, a conforming implementation shall be able to determine which outputs depend on which inputs.
+  section: 5.2.3
+  section_title: Depends Information
+  source_file: spec/05-assurance.md
+  paragraph: '8'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D26
+  - Bronze
+  tbd: false
+  notes: Depends equivalent
+- id: "SAFE@4aecf21:spec/05-assurance.md#5.2.4.p11:b89bd341"
+  text: |-
+    For each package, a conforming implementation shall be able to determine which package-level variables are initialised at elaboration.
+  section: 5.2.4
+  section_title: Initializes Information
+  source_file: spec/05-assurance.md
+  paragraph: '11'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D26
+  - Bronze
+  tbd: false
+  notes: Initializes equivalent
+- id: "SAFE@4aecf21:spec/05-assurance.md#5.3.1.p12:99a94209"
+  text: |-
+    Every conforming Safe program shall be free of runtime errors. Every runtime check that the implementation must perform shall be dischargeable from static type and range information derivable from the program text, combined with the D27 legality rules.
+  section: 5.3.1
+  section_title: Normative Statement (Silver)
+  source_file: spec/05-assurance.md
+  paragraph: '12'
+  classification: conformance_requirement
+  normative: true
+  tags:
+  - D27
+  - Silver
+  tbd: false
+  notes: Silver guarantee
+- id: "SAFE@4aecf21:spec/05-assurance.md#5.3.1.p12a:047a8410"
+  text: |-
+    The Silver guarantee covers the runtime checks enumerable from the program text and the language semantics. It does not cover resource exhaustion conditions (allocation failure, stack overflow).
+  section: 5.3.1
+  section_title: Normative Statement (Silver)
+  source_file: spec/05-assurance.md
+  paragraph: 12a
+  classification: conformance_requirement
+  normative: true
+  tags:
+  - Silver
+  tbd: false
+  notes: Silver scope
+- id: "SAFE@4aecf21:spec/05-assurance.md#5.3.2.p15:1ab3314c"
+  text: |-
+    A conforming implementation shall reject any program where the static range of a declared integer type exceeds 64-bit signed range.
+  section: 5.3.2
+  section_title: Wide Intermediate Arithmetic
+  source_file: spec/05-assurance.md
+  paragraph: '15'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D27
+  - Silver
+  - Rule1
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/05-assurance.md#5.3.2.p16:2e323902"
+  text: |-
+    A conforming implementation shall reject any integer expression where it cannot establish that all intermediate subexpressions stay within 64-bit signed range.
+  section: 5.3.2
+  section_title: Wide Intermediate Arithmetic
+  source_file: spec/05-assurance.md
+  paragraph: '16'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D27
+  - Silver
+  - Rule1
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/05-assurance.md#5.3.6.p25:e8253bd7"
+  text: The implementation shall discharge range checks via sound static range analysis.
+  section: 5.3.6
+  section_title: Range Checks at Narrowing Points
+  source_file: spec/05-assurance.md
+  paragraph: '25'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D27
+  - Silver
+  - range-check
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/05-assurance.md#5.3.6.p26:9ca2c786"
+  text: |-
+    If a conforming implementation cannot establish that a narrowing point is safe, the program is nonconforming and shall be rejected with a diagnostic.
+  section: 5.3.6
+  section_title: Range Checks at Narrowing Points
+  source_file: spec/05-assurance.md
+  paragraph: '26'
+  classification: legality_rule
+  normative: true
+  tags:
+  - D27
+  - Silver
+  - range-check
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/05-assurance.md#5.3.7.p27:e63b291b"
+  text: The implementation shall verify that access to a variant component is consistent with the current discriminant value.
+  section: 5.3.7
+  section_title: Discriminant Checks
+  source_file: spec/05-assurance.md
+  paragraph: '27'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - Silver
+  - discriminant-check
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/05-assurance.md#5.3.7a.p28a:5936dbea"
+  text: |-
+    A conforming implementation shall ensure that all predefined floating-point types use IEEE 754 default non-trapping arithmetic (Machine_Overflows = False).
+  section: 5.3.7a
+  section_title: Floating-Point Non-Trapping Semantics
+  source_file: spec/05-assurance.md
+  paragraph: 28a
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D27
+  - Silver
+  - Rule5
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/05-assurance.md#5.3.9.p30:c7a2cbdb"
+  text: |-
+    If a conforming implementation cannot establish that a required runtime check will not fail, the program is nonconforming and the implementation shall reject it with a diagnostic.
+  section: 5.3.9
+  section_title: Hard Rejection Rule
+  source_file: spec/05-assurance.md
+  paragraph: '30'
+  classification: conformance_requirement
+  normative: true
+  tags:
+  - Silver
+  tbd: false
+  notes: Hard rejection
+- id: "SAFE@4aecf21:spec/05-assurance.md#5.3.9.p31:f6ea7939"
+  text: |-
+    There is no 'developer must restructure' advisory - failure to satisfy any Silver-level proof obligation is a compilation error, not a warning.
+  section: 5.3.9
+  section_title: Hard Rejection Rule
+  source_file: spec/05-assurance.md
+  paragraph: '31'
+  classification: conformance_requirement
+  normative: true
+  tags:
+  - Silver
+  tbd: false
+  notes: No advisory warnings
+- id: "SAFE@4aecf21:spec/05-assurance.md#5.4.1.p32:90d4f527"
+  text: The channel-based tasking model guarantees data race freedom as a language property.
+  section: 5.4.1
+  section_title: Data Race Freedom
+  source_file: spec/05-assurance.md
+  paragraph: '32'
+  classification: conformance_requirement
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/05-assurance.md#5.4.1.p33:0fc25399"
+  text: |-
+    The implementation shall verify data race freedom through task-variable ownership analysis: each package-level variable is accessed by at most one task.
+  section: 5.4.1
+  section_title: Data Race Freedom
+  source_file: spec/05-assurance.md
+  paragraph: '33'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D28
+  - ownership
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/05-assurance.md#5.4.2.p34:198b1ddf"
+  text: |-
+    When mapping channels to underlying synchronisation mechanisms, the implementation shall use ceiling priority rules to prevent priority inversion.
+  section: 5.4.2
+  section_title: Priority Inversion Avoidance
+  source_file: spec/05-assurance.md
+  paragraph: '34'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D28
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/05-assurance.md#5.4.4.p40:36087a2c"
+  text: Effect summaries on task bodies shall reference only owned variables and channel operations.
+  section: 5.4.4
+  section_title: Task-Variable Ownership
+  source_file: spec/05-assurance.md
+  paragraph: '40'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - D28
+  - ownership
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/06-conformance.md#6.1.p1a:ba2c1d31"
+  text: |-
+    A conforming implementation shall accept every conforming program and produce an executable representation or a functionally equivalent intermediary.
+  section: '6.1'
+  section_title: Conforming Implementation
+  source_file: spec/06-conformance.md
+  paragraph: 1a
+  classification: conformance_requirement
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/06-conformance.md#6.1.p1b:3890c549"
+  text: |-
+    A conforming implementation shall reject every non-conforming program with a diagnostic that identifies the violated rule.
+  section: '6.1'
+  section_title: Conforming Implementation
+  source_file: spec/06-conformance.md
+  paragraph: 1b
+  classification: conformance_requirement
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/06-conformance.md#6.1.p1c:1f8fe478"
+  text: |-
+    A conforming implementation shall implement the dynamic semantics of 8652:2023 correctly for all conforming programs, as modified by this specification.
+  section: '6.1'
+  section_title: Conforming Implementation
+  source_file: spec/06-conformance.md
+  paragraph: 1c
+  classification: conformance_requirement
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/06-conformance.md#6.1.p1d:19219997"
+  text: A conforming implementation shall enforce all legality rules defined in this specification, including the D27 Rules 1-5.
+  section: '6.1'
+  section_title: Conforming Implementation
+  source_file: spec/06-conformance.md
+  paragraph: 1d
+  classification: conformance_requirement
+  normative: true
+  tags:
+  - D27
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/06-conformance.md#6.1.p1e:d0e6c93b"
+  text: A conforming implementation shall enforce the task-variable ownership rule as a legality rule.
+  section: '6.1'
+  section_title: Conforming Implementation
+  source_file: spec/06-conformance.md
+  paragraph: 1e
+  classification: conformance_requirement
+  normative: true
+  tags:
+  - D28
+  - ownership
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/06-conformance.md#6.1.p1f:2410637e"
+  text: A conforming implementation shall derive flow analysis information without requiring user-supplied annotations.
+  section: '6.1'
+  section_title: Conforming Implementation
+  source_file: spec/06-conformance.md
+  paragraph: 1f
+  classification: conformance_requirement
+  normative: true
+  tags:
+  - D26
+  - Bronze
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/06-conformance.md#6.1.p1g:80745a1e"
+  text: |-
+    A conforming implementation shall provide a mechanism for separate compilation of units and combination of separately compiled units into a program.
+  section: '6.1'
+  section_title: Conforming Implementation
+  source_file: spec/06-conformance.md
+  paragraph: 1g
+  classification: implementation_requirement
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/06-conformance.md#6.1.p2:983b5f84"
+  text: |-
+    A conforming implementation may provide additional capabilities beyond those required by this specification, provided that these do not alter the semantics of conforming programs.
+  section: '6.1'
+  section_title: Conforming Implementation
+  source_file: spec/06-conformance.md
+  paragraph: '2'
+  classification: conformance_requirement
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/06-conformance.md#6.2.p4:3e238301"
+  text: |-
+    A program for which a conforming implementation cannot establish that all required runtime checks are dischargeable is non-conforming and shall be rejected.
+  section: '6.2'
+  section_title: Conforming Program
+  source_file: spec/06-conformance.md
+  paragraph: '4'
+  classification: conformance_requirement
+  normative: true
+  tags:
+  - Silver
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/06-conformance.md#6.4.p11:f35e2134"
+  text: |-
+    All static analyses performed by a conforming implementation to enforce the D27 rules shall be sound: they may conservatively reject programs that are actually safe, but they shall never accept programs that contain potential runtime errors.
+  section: '6.4'
+  section_title: Soundness
+  source_file: spec/06-conformance.md
+  paragraph: '11'
+  classification: conformance_requirement
+  normative: true
+  tags:
+  - D27
+  - Silver
+  tbd: false
+  notes: Soundness requirement
+- id: "SAFE@4aecf21:spec/06-conformance.md#6.4.p11b:6e973d1d"
+  text: If a conforming implementation cannot establish that a runtime check is dischargeable, it shall reject the program.
+  section: '6.4'
+  section_title: Soundness
+  source_file: spec/06-conformance.md
+  paragraph: 11b
+  classification: conformance_requirement
+  normative: true
+  tags:
+  - D27
+  - Silver
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/06-conformance.md#6.5.1.p16:b89b7765"
+  text: |-
+    A conforming implementation shall support separate compilation of Safe packages. Each package shall be compilable independently using only its source and the dependency interface information of its with'd packages.
+  section: 6.5.1
+  section_title: Separate Compilation
+  source_file: spec/06-conformance.md
+  paragraph: '16'
+  classification: implementation_requirement
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/06-conformance.md#6.5.2.p17:70300f7a"
+  text: |-
+    A conforming implementation shall provide a mechanism for conveying dependency interface information between separately compiled units.
+  section: 6.5.2
+  section_title: Dependency Interface
+  source_file: spec/06-conformance.md
+  paragraph: '17'
+  classification: implementation_requirement
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/06-conformance.md#6.5.2.p18:ae5640ac"
+  text: |-
+    The dependency interface shall include at minimum: public declarations and their types, subprogram signatures, effect summaries, size and alignment for opaque types, and channel-access summaries.
+  section: 6.5.2
+  section_title: Dependency Interface
+  source_file: spec/06-conformance.md
+  paragraph: '18'
+  classification: implementation_requirement
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/06-conformance.md#6.5.3.p19:5d4dfb69"
+  text: |-
+    A conforming implementation shall provide a mechanism for combining separately compiled units into an executable program.
+  section: 6.5.3
+  section_title: Linking
+  source_file: spec/06-conformance.md
+  paragraph: '19'
+  classification: implementation_requirement
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/06-conformance.md#6.6.p20a:d74e6ca7"
+  text: |-
+    When a conforming implementation rejects a non-conforming program, the diagnostic shall identify the source file, line number, and column of the violation.
+  section: '6.6'
+  section_title: Diagnostics
+  source_file: spec/06-conformance.md
+  paragraph: 20a
+  classification: implementation_requirement
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/06-conformance.md#6.6.p20b:74ad00a2"
+  text: The diagnostic shall identify which rule is violated.
+  section: '6.6'
+  section_title: Diagnostics
+  source_file: spec/06-conformance.md
+  paragraph: 20b
+  classification: implementation_requirement
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/06-conformance.md#6.7.p22:03afd0a4"
+  text: A conforming implementation shall document its choices for each implementation-defined behaviour.
+  section: '6.7'
+  section_title: Implementation-Defined Behaviour
+  source_file: spec/06-conformance.md
+  paragraph: '22'
+  classification: implementation_requirement
+  normative: true
+  tags:
+  - impl-defined
+  tbd: false
+  notes: 9 categories of impl-defined behaviour
+- id: "SAFE@4aecf21:spec/06-conformance.md#6.8.p23:3419a843"
+  text: |-
+    A conforming implementation shall provide a runtime system sufficient to support: task creation and scheduling, channel operations with blocking semantics, the relative delay statement, automatic deallocation at scope exit, and the runtime abort handler.
+  section: '6.8'
+  section_title: Runtime Requirements
+  source_file: spec/06-conformance.md
+  paragraph: '23'
+  classification: implementation_requirement
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/07-annex-a-retained-library.md#A.1.p3:70deff00"
+  text: |-
+    Exception declarations in Standard (Constraint_Error, Program_Error, Storage_Error, Tasking_Error) are excluded. These names remain reserved but have no semantic meaning in Safe.
+  section: A.1
+  section_title: The Package Standard
+  source_file: spec/07-annex-a-retained-library.md
+  paragraph: '3'
+  classification: static_semantics
+  normative: true
+  tags:
+  - D14
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/07-annex-a-retained-library.md#A.4.1.p19:891ffa81"
+  text: "The package Ada.Strings is modified: exception declarations are excluded. Enumeration types and constants are retained."
+  section: A.4.1
+  section_title: Ada.Strings
+  source_file: spec/07-annex-a-retained-library.md
+  paragraph: '19'
+  classification: static_semantics
+  normative: true
+  tags: []
+  tbd: false
+  notes: ''
+- id: "SAFE@4aecf21:spec/08-syntax-summary.md#8.15.p1:75c5cfea"
+  text: A conforming implementation shall reject any program that uses a reserved word as an identifier.
+  section: '8.15'
+  section_title: Reserved Words
+  source_file: spec/08-syntax-summary.md
+  paragraph: '1'
+  classification: legality_rule
+  normative: true
+  tags: []
+  tbd: false
+  notes: "Authoritative reserved word list. Cross-ref: identical clause appears as SAFE@4aecf21:spec/02-restrictions.md#2.1.1.p2:75c5cfea (same hash, same text, restriction stated in S2.1.1)."
+- id: "SAFE@4aecf21:spec/08-syntax-summary.md#8.16.p2:ccb1533b"
+  text: "Any construct that appears in 8652:2023 but does not appear in this grammar is excluded from Safe."
+  section: '8.16'
+  section_title: Grammar Summary
+  source_file: spec/08-syntax-summary.md
+  paragraph: '2'
+  classification: conformance_requirement
+  normative: true
+  tags: []
+  tbd: false
+  notes: Grammar is authoritative
