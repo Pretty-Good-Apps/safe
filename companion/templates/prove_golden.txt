@@ -1,0 +1,18 @@
+Summary of SPARK analysis
+=========================
+
+---------------------------------------------------------------------------------------------------
+SPARK Analysis results        Total        Flow                      Provers   Justified   Unproved
+---------------------------------------------------------------------------------------------------
+Data Dependencies                 .           .                            .           .          .
+Flow Dependencies                 .           .                            .           .          .
+Initialization                   12          12                            .           .          .
+Non-Aliasing                      .           .                            .           .          .
+Run-time Checks                  35           .                    34 (CVC5)           1          .
+Assertions                        9           .                     9 (CVC5)           .          .
+Functional Contracts             80           .    80 (CVC5 99%, Trivial 1%)           .          .
+LSP Verification                  .           .                            .           .          .
+Termination                      42          42                            .           .          .
+Concurrency                       .           .                            .           .          .
+---------------------------------------------------------------------------------------------------
+Total                           178    54 (30%)                    123 (69%)      1 (1%)          .

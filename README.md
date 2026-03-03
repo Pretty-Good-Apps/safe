@@ -1,0 +1,165 @@
+# Safe
+
+A systems programming language defined subtractively from Ada 2022, designed so programs can be proven free of runtime errors without developer annotations.
+
+[![CI](https://github.com/agentc1/safe/actions/workflows/ci.yml/badge.svg)](https://github.com/agentc1/safe/actions/workflows/ci.yml)
+![Spec version](https://img.shields.io/badge/spec-v0.1_working_draft-blue)
+
+---
+
+## What Is Safe?
+
+Safe is built on ISO/IEC 8652:2023 (Ada 2022). It is a curated subset -- removing exceptions, tagged types, and generics -- augmented with new constructs including static tasks and typed channels. Conforming Safe programs compile via any conforming Ada 2022 compiler after translation.
+
+The language provides two assurance levels without annotations, contracts, or proof hints. **Bronze** (flow analysis) guarantees no data races and no uninitialised reads. **Silver** (absence of runtime errors) guarantees no overflow, no division by zero, no out-of-bounds indexing, no null dereference, and no double ownership. Programs that cannot be proved safe are rejected -- never accepted with warnings.
+
+These guarantees are enforced by five D27 rules constraining arithmetic, indexing, division, dereference, and floating-point so that every runtime check is provably safe from static type and range information alone. See [`spec/05-assurance.md`](spec/05-assurance.md) for the D27 rules and [`spec/04-tasks-and-channels.md`](spec/04-tasks-and-channels.md) for the concurrency model.
+
+---
+
+## What Does This Repository Contain?
+
+### Language Specification
+
+The `spec/` directory contains 10 Markdown files (4,451 lines) forming a delta document that references Ada 2022 (ISO/IEC 8652:2023). Entry point: [`spec/00-front-matter.md`](spec/00-front-matter.md).
+
+### Compiler Translation Rules
+
+The `compiler/` directory contains [`translation_rules.md`](compiler/translation_rules.md) (14-section Safe-to-Ada translation reference) and [`ast_schema.json`](compiler/ast_schema.json) (JSON AST schema). Together they define the interface a future compiler must satisfy.
+
+### SPARK Companion
+
+The `companion/spark/` directory contains a formal verification artefact: 25 ghost functions and 23 proof obligation procedures, verified at Silver level. The companion encodes the Safe specification's normative clauses as SPARK 2022 contracts. See [`release/COMPANION_README.md`](release/COMPANION_README.md) for the full overview.
+
+### Verified Emission Templates
+
+The `companion/templates/` directory contains 8 templates demonstrating how a Safe compiler would emit provably correct Ada/SPARK for each D27 rule category. 178 verification conditions across 11 units, 0 unproved. See [`docs/template_inventory.md`](docs/template_inventory.md).
+
+---
+
+## Key Statistics
+
+| Metric | Value |
+|--------|-------|
+| Spec files | 10 (4,451 lines) |
+| Normative clauses | 205 |
+| Ghost functions / PO procedures | 25 / 23 |
+| Companion VCs (flow / proved / justified / unproved) | 29 / 34 / 1 / 0 (64 total) |
+| Template VCs (flow / proved / justified / unproved) | 54 / 123 / 1 / 0 (178 total, 11 units) |
+| Tracked assumptions | 13 (4 critical, 4 major, 5 minor) |
+| Test files | 76 |
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+| Tool | Minimum Version |
+|------|----------------|
+| GNAT | >= 14.x (Ada 2022) |
+| GNATprove | >= 25.x |
+| Alire | >= 2.x |
+| CVC5 | >= 1.0.8 |
+| Z3 | >= 4.12 |
+| Alt-Ergo | >= 2.5 |
+
+### Run the Pipeline
+
+```bash
+# Full 5-step pipeline (compile -> flow -> prove -> extract -> diff)
+scripts/run_all.sh
+
+# Individual steps
+scripts/run_gnatprove_flow.sh   # Bronze gate
+scripts/run_gnatprove_prove.sh  # Silver gate
+```
+
+For the expanded pipeline description, see [`release/COMPANION_README.md`](release/COMPANION_README.md) Section 2.
+
+---
+
+## Repository Structure
+
+```
+safe/
+├── spec/                        # Language specification (10 files)
+├── compiler/                    # Translation rules + AST schema
+├── companion/
+│   ├── spark/                   # Safe_Model + Safe_PO
+│   ├── gen/                     # Build config, proof golden
+│   ├── templates/               # 8 verified emission templates
+│   └── assumptions.yaml         # 13 tracked assumptions
+├── clauses/                     # 205 clauses + PO mappings
+├── tests/                       # 76 test files (5 categories)
+├── docs/                        # Technical documentation
+├── scripts/                     # CI and automation (8 scripts)
+├── meta/                        # Frozen commit SHA, generator version
+├── release/                     # Companion README, status report
+├── references/                  # SPARK RM extracts, Ada standards
+├── audit/                       # M4 audit report
+└── archive/                     # Historical artefacts
+```
+
+---
+
+## Documentation Guide
+
+| Looking for... | Go to |
+|----------------|-------|
+| Language specification | [`spec/00-front-matter.md`](spec/00-front-matter.md) |
+| Safe-to-Ada translation rules | [`compiler/translation_rules.md`](compiler/translation_rules.md) |
+| SPARK companion overview | [`release/COMPANION_README.md`](release/COMPANION_README.md) |
+| Full traceability | [`docs/traceability_matrix.md`](docs/traceability_matrix.md) |
+| PO procedure index | [`docs/po_index.md`](docs/po_index.md) |
+| GNATprove configuration | [`docs/gnatprove_profile.md`](docs/gnatprove_profile.md) |
+| Template inventory | [`docs/template_inventory.md`](docs/template_inventory.md) |
+| Assumption registry | [`companion/assumptions.yaml`](companion/assumptions.yaml) |
+| Status report | [`release/status_report.md`](release/status_report.md) |
+| Spec generation decisions | [`EXEC_SUMMARY.md`](EXEC_SUMMARY.md) |
+| Spec change log | [`CHANGELOG.md`](CHANGELOG.md) |
+
+---
+
+## Continuous Integration
+
+Two parallel CI jobs run on every push and pull request to `main`:
+
+- **`spark-verify`** -- Companion: 64 VCs, 0 unproved
+- **`templates-verify`** -- Templates pipeline: 178 VCs, 0 unproved
+
+Both execute the 5-step pipeline (compile, flow, prove, extract, diff) and fail on any unproved check or assumption budget violation.
+
+See [`release/COMPANION_README.md`](release/COMPANION_README.md) Section 8 for the pipeline diagram and [`.github/workflows/ci.yml`](.github/workflows/ci.yml) for the workflow definition.
+
+---
+
+## Status
+
+| Property | Value |
+|----------|-------|
+| Spec version | Working Draft v0.1 |
+| Frozen spec commit | `4aecf21` |
+| Generator | spec2spark v0.1.0 |
+| Companion status | All 13 tasks complete |
+| Emission templates | 8/8 proved (178 VCs, 0 unproved) |
+
+There is no compiler implementation yet. The translation rules and AST schema in `compiler/` define the interface a future compiler must satisfy.
+
+This repository is a fork of [berkeleynerd/safe](https://github.com/berkeleynerd/safe).
+
+---
+
+## Contributing
+
+Open an issue before submitting a pull request. Areas of particular interest:
+
+- Compiler implementation
+- Test cases for D27 rules and language features
+- Specification review and feedback
+
+---
+
+## Licence
+
+No licence file exists yet. All rights reserved until a licence is chosen.
