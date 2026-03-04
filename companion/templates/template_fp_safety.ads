@@ -59,8 +59,10 @@ is
 
    --  Pattern: Compound operation — intermediate sum, division,
    --  narrowing.  Models: result := narrow((A + B) / C).
-   --  Half-range bounds on A, B model the compiler's static range
-   --  analysis guaranteeing A + B does not overflow.
+   --  Half_Range is a proof harness bound — a sufficient condition
+   --  ensuring A + B cannot overflow.  The compiler's actual range
+   --  analysis may produce tighter or program-specific bounds; the
+   --  emitter substitutes those bounds into this slot.
    Half_Range : constant Long_Float := Long_Float'Last / 2.0;
 
    procedure Compute_And_Narrow

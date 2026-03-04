@@ -14,7 +14,7 @@ is
    --
    --  Emission pattern from translation_rules.md Section 5.1:
    --    If channel is non-empty, dequeue and set Success := True.
-   --    Otherwise, set Item := 0 (default) and Success := False.
+   --    Otherwise, set Item := Default_Element and Success := False.
    --  The PO hook Check_Channel_Not_Empty is called when Count > 0.
    -------------------------------------------------------------------
    procedure Try_Receive
@@ -38,7 +38,7 @@ is
          Success := True;
       else
          --  Channel empty: no item available.
-         Item := 0;
+         Item := Default_Element;
          Success := False;
       end if;
    end Try_Receive;
@@ -48,27 +48,35 @@ is
    --
    --  Emission pattern from translation_rules.md Section 5:
    --    Bounded polling loop tests arms in declaration order.
-   --    Arm 1 = Ch_A, Arm 2 = Ch_B, Delay arm = Deadline_Elapsed.
+   --    Arm 1 = Ch_A, Arm 2 = Ch_B, Delay arm = Deadline(Iter).
    --    Loop exits when an arm fires or deadline elapses.
    -------------------------------------------------------------------
    procedure Select_With_Delay
-     (Ch_A             : in out Channel;
-      Ch_B             : in out Channel;
-      Deadline_Elapsed : Boolean;
-      Result           : out Element_Type;
-      Timed_Out        : out Boolean)
+     (Ch_A      : in out Channel;
+      Ch_B      : in out Channel;
+      Deadline  : Deadline_Schedule;
+      Result    : out Element_Type;
+      Timed_Out : out Boolean)
    is
       Select_Done : Boolean := False;
       Success     : Boolean;
       Item        : Element_Type;
    begin
-      Result    := 0;
+      Result    := Default_Element;
       Timed_Out := False;
 
-      for Iter in 1 .. Max_Poll_Iterations loop
+      for Iter in Poll_Range loop
          pragma Loop_Invariant (Is_Valid (Ch_A));
          pragma Loop_Invariant (Is_Valid (Ch_B));
          pragma Loop_Invariant (not Select_Done);
+         pragma Loop_Invariant (not Timed_Out);
+         pragma Loop_Invariant
+           (Ch_A.Count = Ch_A.Count'Loop_Entry
+            and then Ch_B.Count = Ch_B.Count'Loop_Entry);
+         --  No previous iteration had the deadline elapsed.
+         pragma Loop_Invariant
+           (for all J in Poll_Range =>
+              (if J < Iter then not Deadline (J)));
 
          --  Arm 1: Ch_A (highest priority per declaration order).
          Try_Receive (Ch_A, Item, Success);
@@ -86,9 +94,9 @@ is
             end if;
          end if;
 
-         --  Delay arm: check deadline (tested only if no channel arm fired).
+         --  Delay arm: per-iteration deadline check.
          if not Select_Done then
-            if Deadline_Elapsed then
+            if Deadline (Iter) then
                Timed_Out := True;
                Select_Done := True;
             end if;
@@ -116,13 +124,17 @@ is
       Success     : Boolean;
       Item        : Element_Type;
    begin
-      Result := 0;
+      Result := Default_Element;
       Found  := False;
 
       for Iter in 1 .. Max_Poll_Iterations loop
          pragma Loop_Invariant (Is_Valid (Ch_A));
          pragma Loop_Invariant (Is_Valid (Ch_B));
          pragma Loop_Invariant (not Select_Done);
+         pragma Loop_Invariant (not Found);
+         pragma Loop_Invariant
+           (Ch_A.Count = Ch_A.Count'Loop_Entry
+            and then Ch_B.Count = Ch_B.Count'Loop_Entry);
 
          --  Arm 1: Ch_A (highest priority per declaration order).
          Try_Receive (Ch_A, Item, Success);

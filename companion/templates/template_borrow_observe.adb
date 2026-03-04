@@ -40,7 +40,7 @@ is
 
       --  Enter borrow scope: freeze lender.
       Lender.Is_Borrowed := True;
-      pragma Assert (Lender.Is_Borrowed);
+      pragma Assert (Is_Consistent (Lender));  --  Borrowed
 
       --  Modify through borrower (models: *borrower = New_Value).
       Lender.Value := New_Value;
@@ -48,6 +48,7 @@ is
 
       --  Exit borrow scope: restore lender to Owned.
       Lender.Is_Borrowed := False;
+      pragma Assert (Is_Consistent (Lender));  --  Owned
    end Borrow_And_Modify;
 
    -------------------------------------------------------------------
@@ -69,13 +70,14 @@ is
 
       --  Enter observe scope.
       Lender.Is_Observed := True;
-      pragma Assert (Lender.Is_Observed);
+      pragma Assert (Is_Consistent (Lender));  --  Observed
 
       --  Read through observer (models: result = *observer).
       Result := Lender.Value;
 
       --  Exit observe scope: restore lender to Owned.
       Lender.Is_Observed := False;
+      pragma Assert (Is_Consistent (Lender));  --  Owned
    end Observe_And_Read;
 
    -------------------------------------------------------------------
@@ -97,6 +99,7 @@ is
 
       --  Enter first observe scope.
       Lender.Is_Observed := True;
+      pragma Assert (Is_Consistent (Lender));  --  Observed
 
       --  Read through first observer.
       R1 := Lender.Value;
@@ -110,6 +113,7 @@ is
 
       --  Exit both observe scopes: restore lender to Owned.
       Lender.Is_Observed := False;
+      pragma Assert (Is_Consistent (Lender));  --  Owned
    end Two_Observers;
 
 end Template_Borrow_Observe;

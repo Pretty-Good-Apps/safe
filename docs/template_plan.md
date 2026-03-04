@@ -159,7 +159,7 @@ Alire dependencies are required.
   exercising the Observed→Observed transition.
   Hooks: `Check_Borrow_Exclusive`, `Check_Observe_Shared`.
   Clauses: 2.3.3.p99b (borrow), 2.3.4a.p102a (observe).
-  Result: 15 VCs (6 flow, 9 proof) — all proved.
+  Result: 20 VCs (7 flow, 13 proof) — all proved.
 - `template_fp_safety.ads/.adb` — Demonstrates floating-point narrowing
   patterns: not-NaN check, not-infinity check, safe FP division, and a
   compound operation with intermediate narrowing. Half-range bounds on
@@ -170,29 +170,30 @@ Alire dependencies are required.
   Result: 24 VCs (7 flow, 17 proof) — all proved.
 - `template_select_polling.ads/.adb` — Demonstrates the select-to-polling-loop
   lowering pattern. Models two-arm selects (with and without delay arm) using
-  bounded `for` loops with loop invariants. Deadline check abstracted to
-  Boolean flag (assumption T-01).
+  bounded `for` loops with loop invariants. Deadline modeled as a
+  per-iteration `Deadline_Schedule` array (assumption T-01).
   Hooks: `Check_Channel_Not_Empty` (at each Try_Receive point).
   Clauses: 4.4.p33-p42 (select semantics, arm ordering, determinism).
-  Result: 34 VCs (12 flow, 22 proof) — all proved.
+  Result: 46 VCs (14 flow, 32 proof) — all proved.
 - New assumption T-01 added to `companion/assumptions.yaml`
-- M1-M5 templates verified: full regression passes (288 VCs, 0 unproved)
-- `prove_golden.txt` baseline updated (215 → 288 VCs)
+- M1-M5 templates verified: full regression passes (305 VCs, 0 unproved)
+- `prove_golden.txt` baseline updated (215 → 305 VCs)
 - `docs/template_inventory.md` updated with new template entries
-- Assumption count: 12 (within <= 15 budget)
+- Assumption count: 14 total (13 baseline + T-01; within <= 15 budget)
 
-### M7: Narrowing Completeness + Final Audit
+### M7: Narrowing Completeness + Final Audit (Complete)
 - `template_narrow_conversion.ads/.adb` — Demonstrates narrowing at the
   type-conversion point, exercising the last unexercised narrowing hook.
   Hooks: `Narrow_Conversion`.
   Clauses: 2.8.1.p127, 2.8.1.p130.
-  Expected ~3-5 VCs.
-- Final PO hook coverage audit: confirm all 23 Safe_PO procedures are
-  exercised by at least one template.
-- Final `docs/template_inventory.md` update with complete VC counts.
-- Final `prove_golden.txt` baseline update.
-- Final audit bundle: complete coverage matrix, assumption ledger,
-  traceability matrix update, CI verification.
+  Result: 15 VCs (2 flow, 13 proof) — all proved.
+- Final PO hook coverage audit: all 23 `Safe_PO` procedures are exercised
+  by at least one template (23/23 = 100%).
+- M1-M6 templates verified: full regression passes (320 VCs, 0 unproved)
+- `prove_golden.txt` baseline updated (305 → 320 VCs)
+- `docs/template_inventory.md` updated with final template entry
+- Assumption count: 14 total (13 baseline + T-01; within <= 15 budget)
+- No new assumptions introduced
 
 ## 4. Clause Traceability
 

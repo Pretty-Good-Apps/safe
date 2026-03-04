@@ -42,6 +42,18 @@ is
       Value       : Integer;
    end record;
 
+   --  State consistency: flags correspond to exactly one of the five
+   --  ownership states (Owned, Null, Moved, Borrowed, Observed).
+   --  Rejects illegal combinations such as Borrowed+Observed or
+   --  Moved without Null.
+   function Is_Consistent (P : Ptr_Model) return Boolean is
+     (not (P.Is_Borrowed and then P.Is_Observed)
+      and then not (P.Is_Borrowed and then P.Is_Null)
+      and then not (P.Is_Observed and then P.Is_Null)
+      and then not (P.Is_Borrowed and then P.Is_Moved)
+      and then not (P.Is_Observed and then P.Is_Moved)
+      and then (if P.Is_Moved then P.Is_Null));
+
    --  Owned: not null, not moved, not borrowed, not observed.
    function Is_Owned (P : Ptr_Model) return Boolean is
      (not P.Is_Null
