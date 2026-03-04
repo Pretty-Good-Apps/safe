@@ -152,42 +152,34 @@ Alire dependencies are required.
 - `prove_golden.txt` baseline updated (184 -> 215 VCs)
 - `docs/template_inventory.md` updated with new template entries
 
-### M6: Select Lowering + Floating-Point
-- `template_select_polling.ads/.adb` — Demonstrates the select-to-polling-loop
-  lowering pattern. Models a two-arm select with ordered channel arms and a
-  delay arm. The template uses `Try_Receive`-style non-blocking receives
-  (modeled as procedures with Boolean success flags), a `Select_Done` loop
-  variable, and a deadline check for the delay arm.
-  SPARK constraint: `Ada.Real_Time` and `delay` statements are not provable
-  in SPARK mode. The template models the polling structure and arm-priority
-  logic sequentially, using a loop with invariant tracking which arms have
-  been tested. The timing/delay mechanism is abstracted to a Boolean flag
-  (deadline elapsed) whose value is an assumption.
-  Hooks: `Check_Channel_Not_Empty` (at each Try_Receive point).
-  New assumption required: T-01 "Select polling deadline check is faithful
-  to wall-clock elapsed time" (severity: minor, category: B).
-  Clauses: 4.4.p32-p44 (select semantics), 4.4.p39 (polling pattern),
-  4.4.p41 (arm priority), 4.4.p42 (no-delay variant).
-  Expected ~8-15 VCs (loop invariant for arm ordering, assertions for
-  Select_Done termination, preconditions on Try_Receive calls).
-- `template_fp_safety.ads/.adb` — Demonstrates floating-point narrowing
-  patterns: not-NaN check, not-infinity check, and safe FP division. Models
-  the emission pattern where the compiler inserts FP safety assertions at
-  narrowing points, mirroring the integer narrowing pattern from M1.
-  Hooks: `FP_Not_NaN`, `FP_Not_Infinity`, `FP_Safe_Div`.
-  Clauses: 2.8.5.p139-p139e, 5.3.7a.p28a.
-  Expected ~6-10 VCs.
+### M6: Select Lowering + Floating-Point + Borrow/Observe (Complete)
 - `template_borrow_observe.ads/.adb` — Demonstrates borrow and observe
   ownership patterns. Models exclusive borrow (mutable temporary lend) and
-  shared observe (read-only temporary lend), exercising the two remaining
-  unexercised ownership PO hooks.
+  shared observe (read-only temporary lend), including nested observers
+  exercising the Observed→Observed transition.
   Hooks: `Check_Borrow_Exclusive`, `Check_Observe_Shared`.
   Clauses: 2.3.3.p99b (borrow), 2.3.4a.p102a (observe).
-  Expected ~4-8 VCs.
-- Update `prove_golden.txt` baseline
-- Update `docs/template_inventory.md` with new template entries
-- Update `docs/traceability_matrix.md` with new clause coverage
-- Verify assumption budget remains within limits (target: <=15 total)
+  Result: 15 VCs (6 flow, 9 proof) — all proved.
+- `template_fp_safety.ads/.adb` — Demonstrates floating-point narrowing
+  patterns: not-NaN check, not-infinity check, safe FP division, and a
+  compound operation with intermediate narrowing. Half-range bounds on
+  operands model the compiler's static range analysis guaranteeing
+  intermediate sums do not overflow.
+  Hooks: `FP_Not_NaN`, `FP_Not_Infinity`, `FP_Safe_Div`.
+  Clauses: 2.8.5.p139-p139e, 5.3.7a.p28a.
+  Result: 24 VCs (7 flow, 17 proof) — all proved.
+- `template_select_polling.ads/.adb` — Demonstrates the select-to-polling-loop
+  lowering pattern. Models two-arm selects (with and without delay arm) using
+  bounded `for` loops with loop invariants. Deadline check abstracted to
+  Boolean flag (assumption T-01).
+  Hooks: `Check_Channel_Not_Empty` (at each Try_Receive point).
+  Clauses: 4.4.p33-p42 (select semantics, arm ordering, determinism).
+  Result: 34 VCs (12 flow, 22 proof) — all proved.
+- New assumption T-01 added to `companion/assumptions.yaml`
+- M1-M5 templates verified: full regression passes (288 VCs, 0 unproved)
+- `prove_golden.txt` baseline updated (215 → 288 VCs)
+- `docs/template_inventory.md` updated with new template entries
+- Assumption count: 12 (within <= 15 budget)
 
 ### M7: Narrowing Completeness + Final Audit
 - `template_narrow_conversion.ads/.adb` — Demonstrates narrowing at the

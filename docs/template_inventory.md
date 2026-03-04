@@ -1,7 +1,7 @@
 # Verified Emission Templates — Inventory
 
 **Status:** Complete
-**Updated:** 2026-03-03
+**Updated:** 2026-03-04
 
 ## Template Summary
 
@@ -17,17 +17,20 @@
 | 8 | `template_index_safety`     | M4        | `Safe_Index`, `Narrow_Indexing`                      | 14  | Proved   |
 | 9 | `template_effect_summary`   | M5        | (none -- flow-analysis template)                     | 3   | Proved   |
 | 10| `template_package_structure` | M5       | `Narrow_Parameter`                                   | 6   | Proved   |
+| 11| `template_borrow_observe`   | M6       | `Check_Borrow_Exclusive`, `Check_Observe_Shared`     | 9   | Proved   |
+| 12| `template_fp_safety`        | M6       | `FP_Not_NaN`, `FP_Not_Infinity`, `FP_Safe_Div`       | 17  | Proved   |
+| 13| `template_select_polling`   | M6       | `Check_Channel_Not_Empty`                             | 22  | Proved   |
 
 \* VCs = proof checks discharged by SMT provers (Silver level); flow
 checks (Bronze level) are reported separately in the Proof Summary below.
 
-**Total template proof VCs: 104** (all proved)
+**Total template proof VCs: 152** (all proved)
 
 ## Proof Summary
 
-215 total VCs across 13 units (Safe_Model, Safe_PO, Safe_Runtime, 10 templates):
-- Flow (Bronze): 76 checks (35%) — all passed
-- Proof (Silver): 138 checks (64%) — all proved (CVC5 99%, Trivial 1%)
+288 total VCs across 16 units (Safe_Model, Safe_PO, Safe_Runtime, 13 templates):
+- Flow (Bronze): 101 checks (35%) — all passed
+- Proof (Silver): 186 proved + 1 justified (65%) (CVC5 99%, Trivial 1%)
 - Justified: 1 (FP_Safe_Div float overflow, see A-05)
 - Unproved: 0
 
@@ -43,6 +46,9 @@ checks (Bronze level) are reported separately in the Proof Summary below.
 | `template_index_safety`     | 4    | 14    | 18    | CVC5    |
 | `template_effect_summary`   | 19   | 3     | 22    | CVC5    |
 | `template_package_structure` | 3   | 6     | 9     | CVC5    |
+| `template_borrow_observe`   | 6    | 9     | 15    | CVC5    |
+| `template_fp_safety`        | 7    | 17    | 24    | CVC5    |
+| `template_select_polling`   | 12   | 22    | 34    | CVC5    |
 
 ## Max Steps
 
@@ -50,19 +56,20 @@ Max steps used for successful proof: 2 (well within budget).
 
 ## Assumption Ledger (Template-specific)
 
-No template-specific assumptions were required. All 10 templates prove
-under the existing companion assumptions (see `companion/assumptions.yaml`).
+One template-specific assumption was introduced in M6. All other
+templates prove under the existing companion assumptions
+(see `companion/assumptions.yaml`).
 
-| ID | Description | Clause | Introduced |
-|----|-------------|--------|------------|
-| —  | (none)      | —      | —          |
+| ID   | Description | Clause | Introduced |
+|------|-------------|--------|------------|
+| T-01 | Select polling deadline check is faithful to wall-clock elapsed time | 4.4 | M6 |
 
-## Coverage Boundary (M0–M5 vs M6–M7)
+## Coverage Boundary (M0–M6 vs M7)
 
-This inventory covers the **M0–M5 template suite**. The table below maps
+This inventory covers the **M0–M6 template suite**. The table below maps
 `compiler/translation_rules.md` sections to template coverage status.
 
-**Covered by M0–M5 templates:**
+**Covered by M0–M6 templates:**
 
 | Rule / Section | Clauses | Template(s) |
 |---------------|---------|-------------|
@@ -70,17 +77,17 @@ This inventory covers the **M0–M5 template suite**. The table below maps
 | Rule 2 — Safe indexing | 2.8.2.p131-p132, 5.3.1.p12 | `template_index_safety` |
 | Rule 3 — Safe division | 2.8.3.p133-p134, 5.3.1.p12 | `template_division_nonzero` |
 | Rule 4 — Not-null dereference | 2.8.4.p136, 5.3.1.p12 | `template_not_null_deref` |
+| Rule 5 — FP safety | 2.8.5.p139-p139e, 5.3.7a.p28a | `template_fp_safety` |
 | §2.3 — Ownership (move, scope dealloc) | 2.3.2.p96a-p96c, 2.3.5.p104 | `template_ownership_move`, `template_scope_dealloc` |
+| §2.3 — Borrow & observe | 2.3.3.p99b, 2.3.4a.p102a | `template_borrow_observe` |
 | §4.2-4.3 — Channel FIFO | 4.2.p15, 4.3.p27-p31 | `template_channel_fifo` |
+| §4.4 — Select polling | 4.4.p33-p42 | `template_select_polling` |
 | §4.5 — Task declaration | 4.5.p45, 5.4.1.p32-p33 | `template_task_decl` |
 | §5.2 — Effect summaries | 5.2.2.p5, 5.2.3.p8, 5.2.4.p11 | `template_effect_summary` |
 | §3.1 — Package structure | 3.2.6.p23-p24, 2.9.p140 | `template_package_structure` |
 
-**Deferred to M6–M7 (see `docs/template_plan.md`):**
+**Deferred to M7 (see `docs/template_plan.md`):**
 
 | Rule / Section | Clauses | Planned Template | Milestone |
 |---------------|---------|-----------------|-----------|
-| §4.4 — Select polling | 4.4.p32-p44, 4.4.p39, 4.4.p41-p42 | `template_select_polling` | M6 |
-| Rule 5 — FP safety | 2.8.5.p139-p139e, 5.3.7a.p28a | `template_fp_safety` | M6 |
-| §2.3 — Borrow & observe | 2.3.3.p99b, 2.3.4a.p102a | `template_borrow_observe` | M6 |
 | Rule 1 — Narrow conversion | 2.8.1.p127, 2.8.1.p130 | `template_narrow_conversion` | M7 |

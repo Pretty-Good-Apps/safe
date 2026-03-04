@@ -1,11 +1,11 @@
 # Verified Emission Templates
 
-This directory contains 10 SPARK 2022 packages (M1–M5 complete) that demonstrate,
+This directory contains 13 SPARK 2022 packages (M1–M6 complete) that demonstrate,
 and formally verify, the Ada/SPARK code shapes a Safe compiler emitter must
-produce. Four additional templates are planned across milestones M6–M7. Each
-template is a concrete, stand-alone package (no generics) that a compiler
-instantiates by substituting application-specific types, bounds, and constants
-into its public API.
+produce. One additional template is planned for milestone M7. Each template is a
+concrete, stand-alone package (no generics) that a compiler instantiates by
+substituting application-specific types, bounds, and constants into its public
+API.
 
 ## How the compiler emitter uses these templates
 
@@ -37,19 +37,21 @@ The mapping from Safe constructs to templates is defined in
 | `template_index_safety` | Rule 2 | Safe array indexing with bounds assertion | `Safe_Index`, `Narrow_Indexing` |
 | `template_effect_summary` | Section 5.2 | Global/Depends/Initializes/Constant_After_Elaboration | (none -- flow analysis) |
 | `template_package_structure` | Section 3.1 | .ads/.adb split, opaque type, interleaved-to-declare lowering | `Narrow_Parameter` |
+| `template_borrow_observe` | Section 2.3 | Exclusive borrow + shared observe ownership transitions | `Check_Borrow_Exclusive`, `Check_Observe_Shared` |
+| `template_fp_safety` | Rule 5 | FP narrowing: not-NaN, not-infinity, safe FP division | `FP_Not_NaN`, `FP_Not_Infinity`, `FP_Safe_Div` |
+| `template_select_polling` | Section 4.4 | Select-to-polling-loop lowering with bounded iteration | `Check_Channel_Not_Empty` |
 
 Each `.ads` file carries clause IDs in its header comment tracing to the
 frozen spec commit (`4aecf21`).
 
 ## Roadmap
 
-Milestones M0–M5 are complete. The following milestones add 4 templates to
-reach full coverage of `translation_rules.md` and all 23 `Safe_PO` hooks:
+Milestones M0–M6 are complete. One template remains for M7:
 
 | Milestone | Templates | Status |
 |-----------|-----------|--------|
 | M5 | `template_effect_summary`, `template_package_structure` | Complete |
-| M6 | `template_select_polling`, `template_fp_safety`, `template_borrow_observe` | Planned |
+| M6 | `template_select_polling`, `template_fp_safety`, `template_borrow_observe` | Complete |
 | M7 | `template_narrow_conversion` + final PO hook coverage audit | Planned |
 
 See [`docs/template_plan.md`](../../docs/template_plan.md) for detailed
@@ -90,15 +92,15 @@ alr exec -- gnatprove -P templates.gpr \
 
 ## Proof status
 
-215 total VCs across 13 units, 0 unproved. The checked-in baseline is
+288 total VCs across 16 units, 0 unproved. The checked-in baseline is
 `prove_golden.txt`. CI diffs every run against this baseline and fails on
 drift.
 
 ## Assumptions
 
-No template-specific assumptions were introduced. All 10 templates prove under
-the existing companion assumptions tracked in
-[`companion/assumptions.yaml`](../assumptions.yaml).
+One template-specific assumption (T-01: select polling deadline faithfulness)
+was introduced in M6. All other templates prove under the existing companion
+assumptions tracked in [`companion/assumptions.yaml`](../assumptions.yaml).
 
 ## Further reading
 
