@@ -216,8 +216,8 @@ Each template traces to specific D27 specification clauses:
 | `template_channel_fifo`    | §4.2-4.3 | 4.2.p15, 4.3.p27-p31       |
 | `template_task_decl`       | §4.5     | 4.5.p45, 5.4.1.p32-p33     |
 | `template_index_safety`    | Rule 2   | 2.8.2.p131-p132, 5.3.1.p12 |
-| `template_effect_summary`  | §5.2     | 5.2.p5, 5.2.2.p6, 5.2.3.p10, 5.2.4.p11 |
-| `template_package_structure`| §3.1    | 3.1.p1, 3.1.p6-p7, 3.2.6.p21-p24, 2.9.p140 |
+| `template_effect_summary`  | §5.2     | 5.2.2.p5, 5.2.3.p8, 5.2.4.p11 |
+| `template_package_structure`| §3.1    | 3.2.6.p23-p24, 2.9.p140 |
 | `template_select_polling`  | §4.4     | 4.4.p32-p44, 4.4.p39, 4.4.p41-p42 |
 | `template_fp_safety`       | Rule 5   | 2.8.5.p139-p139e, 5.3.7a.p28a |
 | `template_borrow_observe`  | §2.3     | 2.3.3.p99b, 2.3.4a.p102a |
