@@ -90,7 +90,12 @@ is
       Result           : out Element_Type;
       Timed_Out        : out Boolean)
      with Pre  => Is_Valid (Ch_A) and then Is_Valid (Ch_B),
-          Post => Is_Valid (Ch_A) and then Is_Valid (Ch_B);
+          Post =>
+            Is_Valid (Ch_A) and then Is_Valid (Ch_B)
+            and then (if Timed_Out then
+                        Deadline_Elapsed
+                        and then Ch_A.Count = Ch_A.Count'Old
+                        and then Ch_B.Count = Ch_B.Count'Old);
 
    --  Two-arm select without delay arm.
    --  Arms are tested in declaration order: Ch_A (Arm 1), Ch_B (Arm 2).
@@ -101,6 +106,9 @@ is
       Result : out Element_Type;
       Found  : out Boolean)
      with Pre  => Is_Valid (Ch_A) and then Is_Valid (Ch_B),
-          Post => Is_Valid (Ch_A) and then Is_Valid (Ch_B);
+          Post =>
+            Is_Valid (Ch_A) and then Is_Valid (Ch_B)
+            and then Found =
+              (Ch_A.Count'Old > 0 or else Ch_B.Count'Old > 0);
 
 end Template_Select_Polling;

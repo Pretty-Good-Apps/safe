@@ -69,6 +69,10 @@ is
          pragma Loop_Invariant (Is_Valid (Ch_A));
          pragma Loop_Invariant (Is_Valid (Ch_B));
          pragma Loop_Invariant (not Select_Done);
+         pragma Loop_Invariant (not Timed_Out);
+         pragma Loop_Invariant
+           (Ch_A.Count = Ch_A.Count'Loop_Entry
+            and then Ch_B.Count = Ch_B.Count'Loop_Entry);
 
          --  Arm 1: Ch_A (highest priority per declaration order).
          Try_Receive (Ch_A, Item, Success);
@@ -123,6 +127,10 @@ is
          pragma Loop_Invariant (Is_Valid (Ch_A));
          pragma Loop_Invariant (Is_Valid (Ch_B));
          pragma Loop_Invariant (not Select_Done);
+         pragma Loop_Invariant (not Found);
+         pragma Loop_Invariant
+           (Ch_A.Count = Ch_A.Count'Loop_Entry
+            and then Ch_B.Count = Ch_B.Count'Loop_Entry);
 
          --  Arm 1: Ch_A (highest priority per declaration order).
          Try_Receive (Ch_A, Item, Success);
