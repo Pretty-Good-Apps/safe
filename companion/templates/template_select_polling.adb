@@ -48,7 +48,7 @@ is
    --
    --  Emission pattern from translation_rules.md Section 5:
    --    Bounded polling loop tests arms in declaration order.
-   --    Arm 1 = Ch_A, Arm 2 = Ch_B, Delay arm = Deadline_Elapsed.
+   --    Arm 1 = Ch_A, Arm 2 = Ch_B, Delay arm = Deadline(Iter).
    --    Loop exits when an arm fires or deadline elapses.
    -------------------------------------------------------------------
    procedure Select_With_Delay

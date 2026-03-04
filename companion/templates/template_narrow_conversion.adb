@@ -30,7 +30,7 @@ is
       Narrow_Conversion
         (Long_Long_Integer (Wide_Result), Ratio_Range);
 
-      return Long_Long_Integer (Wide_Result);
+      return Ratio (Long_Long_Integer (Wide_Result));
    end Percent_To_Ratio;
 
    -------------------------------------------------------------------
@@ -60,7 +60,7 @@ is
       Narrow_Conversion
         (Long_Long_Integer (Wide_Result), Percentage_Range);
 
-      Result := Long_Long_Integer (Wide_Result);
+      Result := Percentage (Long_Long_Integer (Wide_Result));
    end Scale_And_Convert;
 
 end Template_Narrow_Conversion;
