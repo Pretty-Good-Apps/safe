@@ -1,8 +1,8 @@
 # Verified Emission Templates
 
-This directory contains 8 SPARK 2022 packages (M1–M4 complete) that demonstrate,
+This directory contains 10 SPARK 2022 packages (M1–M5 complete) that demonstrate,
 and formally verify, the Ada/SPARK code shapes a Safe compiler emitter must
-produce. Six additional templates are planned across milestones M5–M7. Each
+produce. Four additional templates are planned across milestones M6–M7. Each
 template is a concrete, stand-alone package (no generics) that a compiler
 instantiates by substituting application-specific types, bounds, and constants
 into its public API.
@@ -35,18 +35,20 @@ The mapping from Safe constructs to templates is defined in
 | `template_channel_fifo` | Section 4.2-4.3 | Bounded FIFO channel (protected object model) | `Check_Channel_Not_Full`, `Check_Channel_Not_Empty`, `Check_Channel_Capacity_Positive` |
 | `template_task_decl` | Section 4.5 | Task-variable exclusive ownership | `Check_Exclusive_Ownership` |
 | `template_index_safety` | Rule 2 | Safe array indexing with bounds assertion | `Safe_Index`, `Narrow_Indexing` |
+| `template_effect_summary` | Section 5.2 | Global/Depends/Initializes/Constant_After_Elaboration | (none -- flow analysis) |
+| `template_package_structure` | Section 3.1 | .ads/.adb split, opaque type, interleaved-to-declare lowering | `Narrow_Parameter` |
 
 Each `.ads` file carries clause IDs in its header comment tracing to the
 frozen spec commit (`4aecf21`).
 
 ## Roadmap
 
-Milestones M0–M4 are complete. The following milestones add 6 templates to
+Milestones M0–M5 are complete. The following milestones add 4 templates to
 reach full coverage of `translation_rules.md` and all 23 `Safe_PO` hooks:
 
 | Milestone | Templates | Status |
 |-----------|-----------|--------|
-| M5 | `template_effect_summary`, `template_package_structure` | Planned |
+| M5 | `template_effect_summary`, `template_package_structure` | Complete |
 | M6 | `template_select_polling`, `template_fp_safety`, `template_borrow_observe` | Planned |
 | M7 | `template_narrow_conversion` + final PO hook coverage audit | Planned |
 
@@ -88,13 +90,13 @@ alr exec -- gnatprove -P templates.gpr \
 
 ## Proof status
 
-184 total VCs across 11 units, 0 unproved. The checked-in baseline is
+211 total VCs across 13 units, 0 unproved. The checked-in baseline is
 `prove_golden.txt`. CI diffs every run against this baseline and fails on
 drift.
 
 ## Assumptions
 
-No template-specific assumptions were introduced. All 8 templates prove under
+No template-specific assumptions were introduced. All 10 templates prove under
 the existing companion assumptions tracked in
 [`companion/assumptions.yaml`](../assumptions.yaml).
 

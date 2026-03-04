@@ -15,14 +15,16 @@
 | 6 | `template_channel_fifo`     | M3        | `Check_Channel_Not_Full/Empty/Capacity_Positive`    | 13  | Proved   |
 | 7 | `template_task_decl`        | M3        | `Check_Exclusive_Ownership`                          | 12  | Proved   |
 | 8 | `template_index_safety`     | M4        | `Safe_Index`, `Narrow_Indexing`                      | 14  | Proved   |
+| 9 | `template_effect_summary`   | M5        | (none -- flow-analysis template)                     | 2   | Proved   |
+| 10| `template_package_structure` | M5       | `Narrow_Parameter`                                   | 6   | Proved   |
 
-**Total template VCs: 95** (all proved)
+**Total template VCs: 103** (all proved)
 
 ## Proof Summary
 
-184 total VCs across 11 units (Safe_Model, Safe_PO, Safe_Runtime, 8 templates):
-- Flow (Bronze): 54 checks (29%) — all passed
-- Proof (Silver): 129 checks (70%) — all proved (CVC5 99%, Trivial 1%)
+211 total VCs across 13 units (Safe_Model, Safe_PO, Safe_Runtime, 10 templates):
+- Flow (Bronze): 73 checks (35%) — all passed
+- Proof (Silver): 137 checks (65%) — all proved (CVC5 99%, Trivial 1%)
 - Justified: 1 (FP_Safe_Div float overflow, see A-05)
 - Unproved: 0
 
@@ -36,6 +38,8 @@
 | `template_channel_fifo`     | 7    | 13    | 20    | CVC5    |
 | `template_task_decl`        | 2    | 12    | 14    | CVC5    |
 | `template_index_safety`     | 4    | 14    | 18    | CVC5    |
+| `template_effect_summary`   | 16   | 2     | 18    | CVC5    |
+| `template_package_structure` | 3   | 6     | 9     | CVC5    |
 
 ## Max Steps
 
@@ -43,19 +47,19 @@ Max steps used for successful proof: 2 (well within budget).
 
 ## Assumption Ledger (Template-specific)
 
-No template-specific assumptions were required. All 8 templates prove
+No template-specific assumptions were required. All 10 templates prove
 under the existing companion assumptions (see `companion/assumptions.yaml`).
 
 | ID | Description | Clause | Introduced |
 |----|-------------|--------|------------|
 | —  | (none)      | —      | —          |
 
-## Coverage Boundary (M0–M4 vs M5–M7)
+## Coverage Boundary (M0–M5 vs M6–M7)
 
-This inventory covers the **M0–M4 template suite**. The table below maps
+This inventory covers the **M0–M5 template suite**. The table below maps
 `compiler/translation_rules.md` sections to template coverage status.
 
-**Covered by M0–M4 templates:**
+**Covered by M0–M5 templates:**
 
 | Rule / Section | Clauses | Template(s) |
 |---------------|---------|-------------|
@@ -66,13 +70,13 @@ This inventory covers the **M0–M4 template suite**. The table below maps
 | §2.3 — Ownership (move, scope dealloc) | 2.3.2.p96a-p96c, 2.3.5.p104 | `template_ownership_move`, `template_scope_dealloc` |
 | §4.2-4.3 — Channel FIFO | 4.2.p15, 4.3.p27-p31 | `template_channel_fifo` |
 | §4.5 — Task declaration | 4.5.p45, 5.4.1.p32-p33 | `template_task_decl` |
+| §5.2 — Effect summaries | 5.2.2.p5, 5.2.3.p8, 5.2.4.p11 | `template_effect_summary` |
+| §3.1 — Package structure | 3.2.6.p23-p24, 2.9.p140 | `template_package_structure` |
 
-**Deferred to M5–M7 (see `docs/template_plan.md`):**
+**Deferred to M6–M7 (see `docs/template_plan.md`):**
 
 | Rule / Section | Clauses | Planned Template | Milestone |
 |---------------|---------|-----------------|-----------|
-| §5.2 — Effect summaries | 5.2.p5, 5.2.2.p6, 5.2.3.p10, 5.2.4.p11 | `template_effect_summary` | M5 |
-| §3.1 — Package structure | 3.1.p1, 3.1.p6-p7, 3.2.6.p21-p24, 2.9.p140 | `template_package_structure` | M5 |
 | §4.4 — Select polling | 4.4.p32-p44, 4.4.p39, 4.4.p41-p42 | `template_select_polling` | M6 |
 | Rule 5 — FP safety | 2.8.5.p139-p139e, 5.3.7a.p28a | `template_fp_safety` | M6 |
 | §2.3 — Borrow & observe | 2.3.3.p99b, 2.3.4a.p102a | `template_borrow_observe` | M6 |
