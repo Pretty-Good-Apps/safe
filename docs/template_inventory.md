@@ -30,7 +30,7 @@ checks (Bronze level) are reported separately in the Proof Summary below.
 
 288 total VCs across 16 units (Safe_Model, Safe_PO, Safe_Runtime, 13 templates):
 - Flow (Bronze): 101 checks (35%) — all passed
-- Proof (Silver): 186 checks (65%) — all proved (CVC5 99%, Trivial 1%)
+- Proof (Silver): 186 proved + 1 justified (65%) (CVC5 99%, Trivial 1%)
 - Justified: 1 (FP_Safe_Div float overflow, see A-05)
 - Unproved: 0
 

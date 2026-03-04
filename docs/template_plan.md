@@ -179,7 +179,7 @@ Alire dependencies are required.
 - M1-M5 templates verified: full regression passes (288 VCs, 0 unproved)
 - `prove_golden.txt` baseline updated (215 → 288 VCs)
 - `docs/template_inventory.md` updated with new template entries
-- Assumption count: 12 (within 13-15 budget)
+- Assumption count: 12 (within <= 15 budget)
 
 ### M7: Narrowing Completeness + Final Audit
 - `template_narrow_conversion.ads/.adb` — Demonstrates narrowing at the

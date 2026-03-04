@@ -12,10 +12,17 @@
 --    3. A delay arm is modeled as a Boolean flag (Deadline_Elapsed)
 --    4. The polling loop is bounded (for loop) for proof termination
 --
---  SPARK constraints:
+--  SPARK constraints and modeling compromises:
 --    - Ada.Real_Time and delay statements are not provable in SPARK.
 --      The deadline check is abstracted to a Boolean parameter (T-01).
---    - Bounded for loop avoids need for pragma Loop_Variant.
+--      In emitted code this flag is recomputed each iteration via
+--      Safe_Runtime.Elapsed_Since; the template models a single
+--      snapshot (see assumption T-01).
+--    - Bounded for loop (Max_Poll_Iterations) replaces the emitted
+--      while-not-Select_Done loop. Real polling is unbounded (Section
+--      5.2 specifies indefinite polling until an arm fires), but SPARK
+--      requires termination proof. Loop exhaustion yields default
+--      output (Result = 0, Found/Timed_Out = False).
 --    - Item := 0 on failure paths satisfies SPARK flow analysis for
 --      out parameter initialization.
 --
@@ -63,6 +70,7 @@ is
       Success : out Boolean)
      with Pre  => Is_Valid (Ch),
           Post => Is_Valid (Ch)
+                  and then Success = (Ch.Count'Old > 0)
                   and then (if Success then
                               Ch.Count = Ch.Count'Old - 1
                             else
@@ -70,7 +78,8 @@ is
 
    --  Two-arm select with delay arm.
    --  Arms are tested in declaration order: Ch_A (Arm 1), Ch_B (Arm 2).
-   --  If Deadline_Elapsed is True, the delay arm fires immediately.
+   --  If Deadline_Elapsed is True, the delay arm becomes eligible
+   --  immediately, but a ready channel arm still takes precedence.
    --
    --  Assumption T-01: Deadline_Elapsed faithfully represents wall-clock
    --  elapsed time (see companion/assumptions.yaml T-01).
