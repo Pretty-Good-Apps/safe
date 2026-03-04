@@ -181,18 +181,19 @@ Alire dependencies are required.
 - `docs/template_inventory.md` updated with new template entries
 - Assumption count: 14 total (13 baseline + T-01; within <= 15 budget)
 
-### M7: Narrowing Completeness + Final Audit
+### M7: Narrowing Completeness + Final Audit (Complete)
 - `template_narrow_conversion.ads/.adb` — Demonstrates narrowing at the
   type-conversion point, exercising the last unexercised narrowing hook.
   Hooks: `Narrow_Conversion`.
   Clauses: 2.8.1.p127, 2.8.1.p130.
-  Expected ~3-5 VCs.
-- Final PO hook coverage audit: confirm all 23 Safe_PO procedures are
-  exercised by at least one template.
-- Final `docs/template_inventory.md` update with complete VC counts.
-- Final `prove_golden.txt` baseline update.
-- Final audit bundle: complete coverage matrix, assumption ledger,
-  traceability matrix update, CI verification.
+  Result: 15 VCs (2 flow, 13 proof) — all proved.
+- Final PO hook coverage audit: all 23 `Safe_PO` procedures are exercised
+  by at least one template (23/23 = 100%).
+- M1-M6 templates verified: full regression passes (320 VCs, 0 unproved)
+- `prove_golden.txt` baseline updated (305 → 320 VCs)
+- `docs/template_inventory.md` updated with final template entry
+- Assumption count: 14 total (13 baseline + T-01; within <= 15 budget)
+- No new assumptions introduced
 
 ## 4. Clause Traceability
 

@@ -20,17 +20,18 @@
 | 11| `template_borrow_observe`   | M6       | `Check_Borrow_Exclusive`, `Check_Observe_Shared`     | 13  | Proved   |
 | 12| `template_fp_safety`        | M6       | `FP_Not_NaN`, `FP_Not_Infinity`, `FP_Safe_Div`       | 17  | Proved   |
 | 13| `template_select_polling`   | M6       | `Check_Channel_Not_Empty`                             | 32  | Proved   |
+| 14| `template_narrow_conversion`| M7       | `Narrow_Conversion`                                   | 13  | Proved   |
 
 \* VCs = proof checks discharged by SMT provers (Silver level); flow
 checks (Bronze level) are reported separately in the Proof Summary below.
 
-**Total template proof VCs: 166** (all proved)
+**Total template proof VCs: 179** (all proved)
 
 ## Proof Summary
 
-305 total VCs across 16 units (Safe_Model, Safe_PO, Safe_Runtime, 13 templates):
-- Flow (Bronze): 104 checks (34%) — all passed
-- Proof (Silver): 200 proved + 1 justified (66%) (CVC5 99%, Trivial 1%)
+320 total VCs across 17 units (Safe_Model, Safe_PO, Safe_Runtime, 14 templates):
+- Flow (Bronze): 106 checks (33%) — all passed
+- Proof (Silver): 213 proved + 1 justified (67%) (CVC5 99%, Trivial 1%)
 - Justified: 1 (FP_Safe_Div float overflow, see A-05)
 - Unproved: 0
 
@@ -49,6 +50,7 @@ checks (Bronze level) are reported separately in the Proof Summary below.
 | `template_borrow_observe`   | 7    | 13    | 20    | CVC5    |
 | `template_fp_safety`        | 7    | 17    | 24    | CVC5    |
 | `template_select_polling`   | 14   | 32    | 46    | CVC5    |
+| `template_narrow_conversion`| 2    | 13    | 15    | CVC5    |
 
 ## Max Steps
 
@@ -65,12 +67,13 @@ assumptions (see `companion/assumptions.yaml`).
 |------|-------------|--------|------------|
 | T-01 | Select polling deadline check is faithful to wall-clock elapsed time | 4.4 | M6 |
 
-## Coverage Boundary (M0–M6 vs M7)
+## Coverage Boundary (M0–M7 Complete)
 
-This inventory covers the **M0–M6 template suite**. The table below maps
-`compiler/translation_rules.md` sections to template coverage status.
+This inventory covers the **M0–M7 template suite** (all milestones complete).
+The table below maps `compiler/translation_rules.md` sections to template
+coverage. All 23 `Safe_PO` hooks are exercised.
 
-**Covered by M0–M6 templates:**
+**Covered by M0–M7 templates:**
 
 | Rule / Section | Clauses | Template(s) |
 |---------------|---------|-------------|
@@ -86,9 +89,4 @@ This inventory covers the **M0–M6 template suite**. The table below maps
 | §4.5 — Task declaration | 4.5.p45, 5.4.1.p32-p33 | `template_task_decl` |
 | §5.2 — Effect summaries | 5.2.2.p5, 5.2.3.p8, 5.2.4.p11 | `template_effect_summary` |
 | §3.1 — Package structure | 3.2.6.p23-p24, 2.9.p140 | `template_package_structure` |
-
-**Deferred to M7 (see `docs/template_plan.md`):**
-
-| Rule / Section | Clauses | Planned Template | Milestone |
-|---------------|---------|-----------------|-----------|
-| Rule 1 — Narrow conversion | 2.8.1.p127, 2.8.1.p130 | `template_narrow_conversion` | M7 |
+| Rule 1 — Narrow conversion | 2.8.1.p127, 2.8.1.p130 | `template_narrow_conversion` |

@@ -1,9 +1,9 @@
 # Verified Emission Templates
 
-This directory contains 13 SPARK 2022 packages (M1–M6 complete) that demonstrate,
+This directory contains 14 SPARK 2022 packages (M1–M7 complete) that demonstrate,
 and formally verify, the Ada/SPARK code shapes a Safe compiler emitter must
-produce. One additional template is planned for milestone M7. Each template is a
-concrete, stand-alone package (no generics) that a compiler instantiates by
+produce. All 23 `Safe_PO` proof obligation hooks are exercised. Each template is
+a concrete, stand-alone package (no generics) that a compiler instantiates by
 substituting application-specific types, bounds, and constants into its public
 API.
 
@@ -40,19 +40,20 @@ The mapping from Safe constructs to templates is defined in
 | `template_borrow_observe` | Section 2.3 | Exclusive borrow + shared observe ownership transitions | `Check_Borrow_Exclusive`, `Check_Observe_Shared` |
 | `template_fp_safety` | Rule 5 | FP narrowing: not-NaN, not-infinity, safe FP division | `FP_Not_NaN`, `FP_Not_Infinity`, `FP_Safe_Div` |
 | `template_select_polling` | Section 4.4 | Select-to-polling-loop lowering with bounded iteration | `Check_Channel_Not_Empty` |
+| `template_narrow_conversion` | Rule 1 | Type-conversion narrowing with wide intermediate | `Narrow_Conversion` |
 
 Each `.ads` file carries clause IDs in its header comment tracing to the
 frozen spec commit (`4aecf21`).
 
 ## Roadmap
 
-Milestones M0–M6 are complete. One template remains for M7:
+All milestones (M0–M7) are complete. PO hook coverage: 23/23 (100%).
 
 | Milestone | Templates | Status |
 |-----------|-----------|--------|
 | M5 | `template_effect_summary`, `template_package_structure` | Complete |
 | M6 | `template_select_polling`, `template_fp_safety`, `template_borrow_observe` | Complete |
-| M7 | `template_narrow_conversion` + final PO hook coverage audit | Planned |
+| M7 | `template_narrow_conversion` + final PO hook coverage audit | Complete |
 
 See [`docs/template_plan.md`](../../docs/template_plan.md) for detailed
 milestone definitions including hooks, clauses, expected VCs, and risks.
@@ -92,7 +93,7 @@ alr exec -- gnatprove -P templates.gpr \
 
 ## Proof status
 
-305 total VCs across 16 units, 0 unproved. The checked-in baseline is
+320 total VCs across 17 units, 0 unproved. The checked-in baseline is
 `prove_golden.txt`. CI diffs every run against this baseline and fails on
 drift.
 
