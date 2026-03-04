@@ -130,28 +130,27 @@ Alire dependencies are required.
 - Complete `docs/template_inventory.md`
 - Create audit bundle: VC counts, assumption ledger, traceability matrix
 
-### M5: Effect Summaries + Package Structure
+### M5: Effect Summaries + Package Structure (Complete)
 - `template_effect_summary.ads/.adb` — Demonstrates emitter-generated
-  `Global`, `Depends`, and `Initializes` aspects on a package with
-  package-level state, multiple subprograms with cross-variable data flow,
-  and a `Constant_After_Elaboration` variable. This is primarily a Bronze-gate
-  template: GNATprove flow analysis verifies the contracts, while proof-mode
-  confirms that the runtime behavior is consistent with the declared effects.
-  Hooks: none (flow aspects are verified by GNATprove itself, not PO hooks).
-  Clauses: 5.2.p5, 5.2.2.p6, 5.2.3.p10, 5.2.4.p11.
-  Expected ~4-8 VCs (flow checks dominate; proof VCs from any range checks in
-  the example subprograms).
+  `Global`, `Depends`, `Initializes`, and `Constant_After_Elaboration`
+  aspects on a package with package-level state, multiple subprograms with
+  cross-variable data flow, and a `Constant_After_Elaboration` variable.
+  Bronze-gate template: GNATprove flow analysis verifies the contracts,
+  while proof-mode confirms runtime behavior is consistent with declared
+  effects. Hooks: none (flow aspects verified by GNATprove itself).
+  Clauses: 5.2.2.p5, 5.2.3.p8, 5.2.4.p11.
+  Result: 18 VCs (16 flow, 2 proof) — all proved.
 - `template_package_structure.ads/.adb` — Demonstrates the `.ads`/`.adb` split
   pattern, opaque type emission (`type T is private` in visible part, full
   record in private part), and interleaved-declaration-to-declare-block
   lowering. Includes a subprogram whose body uses nested `declare` blocks to
   model Safe's interleaved declarations. Hooks: `Narrow_Parameter` (exercising
-  narrowing at a parameter-passing point, currently unexercised).
-  Clauses: 3.1.p1, 3.1.p6-p7, 3.2.6.p21-p24, 2.9.p140.
-  Expected ~3-6 VCs.
-- Verify M1-M4 templates still pass with the new units added
-- Update `prove_golden.txt` baseline
-- Update `docs/template_inventory.md` with new template entries
+  narrowing at a parameter-passing point, previously unexercised).
+  Clauses: 3.2.6.p23-p24, 2.9.p140.
+  Result: 9 VCs (3 flow, 6 proof) — all proved.
+- M1-M4 templates verified: full regression passes (211 VCs, 0 unproved)
+- `prove_golden.txt` baseline updated (184 -> 211 VCs)
+- `docs/template_inventory.md` updated with new template entries
 
 ### M6: Select Lowering + Floating-Point
 - `template_select_polling.ads/.adb` — Demonstrates the select-to-polling-loop
