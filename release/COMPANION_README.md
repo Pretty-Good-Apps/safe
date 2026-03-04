@@ -66,7 +66,7 @@ safe/
 │   ├── clauses.yaml           # 205 extracted normative clauses (2,638 lines)
 │   └── po_map.yaml            # 205 PO entries mapping clauses to artifacts (1,662 lines)
 ├── companion/
-│   ├── assumptions.yaml       # 13 tracked assumptions (220 lines)
+│   ├── assumptions.yaml       # 14 tracked assumptions (220 lines)
 │   ├── gen/
 │   │   ├── companion.gpr      # GNAT project file (31 lines)
 │   │   └── prove_golden.txt   # Golden proof baseline (19 lines)
@@ -120,7 +120,7 @@ safe/
 | -- Proved (CVC5) | 34 (53%) |
 | -- Justified | 1 (2%) -- FP_Safe_Div, assumption A-05 |
 | -- Unproved | 0 |
-| Tracked assumptions | 13 (4 critical, 4 major, 5 minor) |
+| Tracked assumptions | 14 (4 critical, 4 major, 6 minor) |
 | Test files | 76 |
 | Documentation files | 4 |
 | CI scripts | 8 |
@@ -156,15 +156,15 @@ safe/
 
 ## 7. Assumption Registry
 
-The companion tracks 13 assumptions -- dependencies that the SPARK model relies on but cannot verify within SPARK itself. Full details are in `companion/assumptions.yaml`.
+The companion tracks 14 assumptions -- dependencies that the SPARK model relies on but cannot verify within SPARK itself. Full details are in `companion/assumptions.yaml`.
 
 | Severity | Count | IDs |
 |----------|-------|-----|
 | Critical | 4 | A-01 (64-bit intermediates), A-02 (IEEE 754 non-trapping), A-03 (range analysis soundness), A-04 (channel serialization) |
 | Major | 4 | A-05 (FP division overflow guard), B-01 (ownership state completeness), B-02 (FIFO ordering), B-03 (task-var map coverage) |
-| Minor | 5 | B-04 (Boolean null model), C-01 (flow analysis sufficiency), C-02 (Ghost erasure), D-01 (select polling conformance), D-02 (frozen spec commit) |
+| Minor | 6 | B-04 (Boolean null model), C-01 (flow analysis sufficiency), C-02 (Ghost erasure), D-01 (select polling conformance), D-02 (frozen spec commit), T-01 (select deadline faithfulness) |
 
-**Budget limits:** max 15 total (current: 13), max 4 critical (current: 4). Both within limits.
+**Budget limits:** max 15 total (current: 14), max 4 critical (current: 4). Both within limits.
 
 ---
 

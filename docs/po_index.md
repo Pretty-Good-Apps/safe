@@ -599,6 +599,9 @@ The following assumptions are made across PO entries. Each must be validated or 
      - `spec/02-restrictions.md#2.8.5.p139:d50bc714`
      - `spec/05-assurance.md#5.3.7a.p28a:5936dbea`
 
+13. **Select polling deadline check is faithful to wall-clock elapsed time**
+   - Used by: template_select_polling (`spec/04-tasks-and-channels.md#4.4`)
+
 ---
 
 ## Risk Assessment

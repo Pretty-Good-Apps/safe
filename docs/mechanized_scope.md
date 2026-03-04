@@ -18,7 +18,7 @@ However, the SPARK companion operates at the level of individual procedure contr
 
 2. **Properties that span the entire language semantics.** The claim that "all integer arithmetic in Safe evaluates via 64-bit intermediates with overflow caught at narrowing points" is a statement about the language's evaluation semantics, not about any single procedure. SMT solvers reason about quantifier-free formulas over fixed theories; they do not reason about inductively-defined languages.
 
-3. **Assumptions that are inherently outside SPARK's scope.** The companion tracks 13 assumptions in `assumptions.yaml`, of which 4 are critical and 4 are major. Some of these (notably A-03, B-01, B-02) could in principle be discharged by formal proof, but the proofs require induction over data structures or state machines that SMT solvers do not handle well.
+3. **Assumptions that are inherently outside SPARK's scope.** The companion tracks 14 assumptions in `assumptions.yaml`, of which 4 are critical and 4 are major. Some of these (notably A-03, B-01, B-02) could in principle be discharged by formal proof, but the proofs require induction over data structures or state machines that SMT solvers do not handle well.
 
 Mechanized proof in Coq or Isabelle/HOL provides a complementary verification layer. A mechanized proof is a machine-checked mathematical argument whose correctness depends only on the proof assistant's trusted kernel (a small, audited piece of software), not on the heuristics of SMT solvers. Where SPARK gives confidence that specific runtime checks cannot fail, mechanized proofs give confidence that the underlying models are sound.
 
@@ -420,7 +420,7 @@ Both developments share the following design principles:
 
 ## 5. Assumptions That Mechanized Proofs Could Discharge
 
-The companion tracks 13 assumptions in `companion/assumptions.yaml`. The following table identifies which assumptions could be moved from status `open` to status `mechanically verified` by the proofs described in this document.
+The companion tracks 14 assumptions in `companion/assumptions.yaml`. The following table identifies which assumptions could be moved from status `open` to status `mechanically verified` by the proofs described in this document.
 
 | Assumption | Summary | Severity | Current Status | Mechanized Proof | Discharge Scope |
 |-----------|---------|----------|---------------|-----------------|----------------|

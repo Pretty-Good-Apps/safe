@@ -1154,7 +1154,7 @@ The K semantics provides the formal foundation at the top of this chain, while G
 
 ## 10. Assumption Linkage
 
-The SPARK companion tracks 13 assumptions in `companion/assumptions.yaml` -- dependencies that the companion relies on but cannot verify within SPARK itself. Several of these assumptions directly affect the semantic modeling choices made in this K definition. This section maps each relevant assumption to its K semantic counterpart and notes whether the K semantics can help discharge the assumption or whether it remains an external dependency.
+The SPARK companion tracks 14 assumptions in `companion/assumptions.yaml` -- dependencies that the companion relies on but cannot verify within SPARK itself. Several of these assumptions directly affect the semantic modeling choices made in this K definition. This section maps each relevant assumption to its K semantic counterpart and notes whether the K semantics can help discharge the assumption or whether it remains an external dependency.
 
 ### 10.1 Assumption-to-K-Component Mapping
 

@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary
 
-The Safe Language Annotated SPARK Companion has completed all 13 tasks (T0-T12) of its implementation plan. The companion extracts 205 normative clauses from the Safe specification, maps each to a proof obligation entry, encodes 23 PO procedures and 25 ghost functions in SPARK 2022, and verifies all artifacts through a 5-step CI pipeline. The proof baseline shows 64 total checks with 0 unproved. The assumption budget of 13 (4 critical) is within defined limits. This report provides the quantitative status for the M4 release audit.
+The Safe Language Annotated SPARK Companion has completed all 13 tasks (T0-T12) of its implementation plan. The companion extracts 205 normative clauses from the Safe specification, maps each to a proof obligation entry, encodes 23 PO procedures and 25 ghost functions in SPARK 2022, and verifies all artifacts through a 5-step CI pipeline. The proof baseline shows 64 total checks with 0 unproved. The assumption budget of 14 (4 critical) is within defined limits. This report provides the quantitative status for the M4 release audit.
 
 ---
 
@@ -25,7 +25,7 @@ The Safe Language Annotated SPARK Companion has completed all 13 tasks (T0-T12) 
 | T5 | GNAT project file | `companion/gen/companion.gpr` | COMPLETE | Ada 2022 mode, prove config |
 | T6 | Bronze gate (flow analysis) | Flow analysis results | COMPLETE | 29/29 flow checks, 0 errors |
 | T7 | Silver gate (proof) | `companion/gen/prove_golden.txt` | COMPLETE | 64 checks, 34 proved, 1 justified, 0 unproved |
-| T8 | Assumption registry | `companion/assumptions.yaml` | COMPLETE | 13 assumptions (4 critical, 4 major, 5 minor) |
+| T8 | Assumption registry | `companion/assumptions.yaml` | COMPLETE | 14 assumptions (4 critical, 4 major, 6 minor) |
 | T9 | Test suite | `tests/` (76 files across 5 dirs) | COMPLETE | 30 positive, 33 negative, 3 golden, 5 concurrency, 5 diagnostics |
 | T10 | Documentation | `docs/` (4 files) | COMPLETE | Traceability, GNATprove profile |
 | T11 | CI pipeline | `scripts/` (8 files) | COMPLETE | 5-step pipeline: compile → flow → prove → extract → diff |
@@ -67,7 +67,7 @@ gnatprove --mode=prove --level=2 --prover=cvc5,z3,altergo --steps=0 --timeout=12
 
 | Metric | Limit | Actual | Status |
 |--------|-------|--------|--------|
-| Total assumptions | ≤ 15 | 13 | WITHIN LIMITS |
+| Total assumptions | ≤ 15 | 14 | WITHIN LIMITS |
 | Critical assumptions | ≤ 4 | 4 | AT LIMIT |
 
 ---
@@ -97,7 +97,7 @@ gnatprove --mode=prove --level=2 --prover=cvc5,z3,altergo --steps=0 --timeout=12
 |------|-------|-------------|
 | `companion/gen/companion.gpr` | 31 | GNAT project file (Ada 2022, prove switches) |
 | `companion/gen/prove_golden.txt` | 19 | Golden proof baseline |
-| `companion/assumptions.yaml` | 220 | 13 tracked assumptions with severity/affect/status |
+| `companion/assumptions.yaml` | 220 | 14 tracked assumptions with severity/affect/status |
 
 ### 4.4 Documentation
 
@@ -221,8 +221,9 @@ gnatprove --mode=prove --level=2 --prover=cvc5,z3,altergo --steps=0 --timeout=12
 | C-02 | Proof-only (Ghost) procedures have no runtime effect | Minor | Proof-Mode | Open |
 | D-01 | Select lowering via polling is conformant | Minor | Specification | Open |
 | D-02 | Frozen spec commit is authoritative | Minor | Specification | Open |
+| T-01 | Select polling deadline check is faithful to wall-clock elapsed time | Minor | Modeling | Open |
 
-**Budget status:** 13 total (limit: 15), 4 critical (limit: 4) -- WITHIN LIMITS.
+**Budget status:** 14 total (limit: 15), 4 critical (limit: 4) -- WITHIN LIMITS.
 
 ---
 
@@ -262,11 +263,11 @@ These process-level recommendations have been addressed in the CI workflow.
 | 4 | All SHA references across all files are consistent (`4aecf21...`) | PASS |
 | 5 | No phantom file references in CSV or po_map.yaml | PASS |
 | 6 | Traceability matrix is complete: 205 clauses, no orphans | PASS |
-| 7 | Assumption budget: 13 total ≤ 15, 4 critical ≤ 4 | PASS |
+| 7 | Assumption budget: 14 total ≤ 15, 4 critical ≤ 4 | PASS |
 | 8 | Proof golden: 64 checks, 0 unproved | PASS |
 | 9 | All 76 test files exist on disk | PASS |
 | 10 | All 23 PO procedures referenced in po_index.md | PASS |
-| 11 | All 13 assumptions cross-referenced in traceability matrix | PASS |
+| 11 | All 14 assumptions cross-referenced in traceability matrix | PASS |
 
 ---
 
