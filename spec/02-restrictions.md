@@ -1124,7 +1124,7 @@ end Unsafe_Scale;
 
 145. Safe's error model distinguishes two categories of failure:
 
-   (a) **Non-recoverable failures** terminate the program via the runtime abort handler. These include assertion failure (paragraph 68) and allocation failure (paragraph 103a). A conforming implementation shall not attempt to resume execution after an abort.
+   (a) **Fatal failures** invoke the runtime abort handler. These include assertion failure (paragraph 68) and allocation failure (paragraph 103a). In the current model, a fatal failure terminates the program. A future version of Safe may introduce task-level fault containment (see paragraph 151a), in which case a fatal failure would terminate only the failing task rather than the entire program — but the failing task's execution is never resumed.
 
    (b) **Recoverable failures** represent conditions that a caller can meaningfully respond to: parse failures, lookup misses, invalid inputs, protocol errors, resource unavailability, and similar domain-level conditions. Since exceptions are excluded (paragraph 67), recoverable failures shall be communicated through explicit return values.
 
@@ -1178,7 +1178,7 @@ The discriminated result convention and the status-code convention serve differe
 
 A conforming implementation shall accept both forms.
 
-150. **Guidance on abort vs. result.** The following conditions warrant program abort rather than a result return:
+150. **Guidance on fatal failure vs. result.** The following conditions warrant a fatal failure (runtime abort handler) rather than a result return:
 
    (a) Assertion violations (`pragma Assert`).
 
@@ -1188,4 +1188,16 @@ A conforming implementation shall accept both forms.
 
 All other domain-level failures — including but not limited to invalid input, missing data, communication timeouts, and format errors — should use the discriminated result convention.
 
-151. **Future evolution.** The current convention requires each API to define its own result type, because generics are excluded (paragraph 69). A future version of Safe may introduce a built-in parametric type constructor (e.g., `Result[T, E]`) and an error-propagation operator to reduce boilerplate. Such features would be additive — programs written using the per-type discriminated result convention defined in this section would remain conforming.
+151. **Future evolution: parametric result type.** The current convention requires each API to define its own result type, because generics are excluded (paragraph 69). A future version of Safe may introduce a built-in parametric type constructor (e.g., `Result[T, E]`) and an error-propagation operator to reduce boilerplate. Such features would be additive — programs written using the per-type discriminated result convention defined in this section would remain conforming.
+
+151a. **Future evolution: task-level fault containment.** Safe's ownership model guarantees that a task's mutable state is unreachable from other tasks (Section 4, §4.2). This isolation property means that a fatal failure in one task cannot corrupt another task's state. A future version of Safe may exploit this property to contain fatal failures to the failing task rather than aborting the entire program. Such a feature would interact with the error model as follows:
+
+   (a) **Sequential code** would continue to use the discriminated result convention for recoverable failures. Fatal failures within a task would terminate that task.
+
+   (b) **Concurrent code** would gain a notification mechanism (likely channel-based) through which a supervisor task learns that a peer task has failed. The supervisor could then take corrective action (restart the failed task, redistribute work, or initiate orderly shutdown).
+
+   (c) **Channel state** on task failure would need defined semantics: messages already enqueued by the failing task remain valid (ownership was transferred on `send`); pending receives from the failing task's channels would need a defined resolution.
+
+   (d) The three-tier failure model would be: recoverable failures (Result types in sequential code, error messages on channels in concurrent code), contained failures (task abort with supervisor notification), and catastrophic failures (program abort for conditions like stack overflow or hardware fault).
+
+This feature is under consideration and does not affect the normative status of the conventions defined in paragraphs 146–150.
