@@ -100,11 +100,11 @@ This section enumerates every feature of ISO/IEC 8652:2023 (Ada 2022) that Safe 
 
 #### 4.7 Qualified Expressions
 
-25. **Qualified expressions (§4.7).** Excluded. The `T'(Expr)` syntax is replaced by type annotation syntax `(Expr : T)`. A conforming implementation shall reject any qualified expression using tick notation. See §2.4.2.
+25. **Qualified expressions (§4.7).** Excluded. The `T'(Expr)` syntax is replaced by type annotation syntax `(Expr as T)`. A conforming implementation shall reject any qualified expression using tick notation. See §2.4.2.
 
 #### 4.8 Allocators
 
-26. **Allocators (§4.8).** Retained, with modified syntax. The allocator syntax uses type annotation in place of qualified expressions: `new (Expr : T)` instead of `new T'(Expr)`. The allocator `new T` (without an initialising expression) is retained where T has default initialisation. See §2.4.2 for interaction with type annotation syntax.
+26. **Allocators (§4.8).** Retained, with modified syntax. The allocator syntax uses type annotation in place of qualified expressions: `new (Expr as T)` instead of `new T'(Expr)`. The allocator `new T` (without an initialising expression) is retained where T has default initialisation. See §2.4.2 for interaction with type annotation syntax.
 
 #### 4.10 Image Attributes
 
@@ -349,8 +349,8 @@ This section enumerates every feature of ISO/IEC 8652:2023 (Ada 2022) that Safe 
 |-----------------|----------------------|-------------------|
 | Pool-specific access-to-variable | `type T_Ptr is access T;` | Owner — can be moved, borrowed, or observed |
 | Non-null subtype of pool-specific | `subtype T_Ref is not null T_Ptr;` | Non-null owner — legal for dereference |
-| Anonymous access-to-variable | `A : access T := ...` | Local borrower — X frozen while A in scope |
-| Anonymous access-to-constant | `A : access constant T := ...` | Local observer — X frozen while A in scope |
+| Anonymous access-to-variable | `A : access T = ...` | Local borrower — X frozen while A in scope |
+| Anonymous access-to-constant | `A : access constant T = ...` | Local observer — X frozen while A in scope |
 | Named access-to-constant | `type C_Ptr is access constant T;` | Not subject to ownership checking; data is constant |
 | General access-to-variable | `type G_Ptr is access all T;` | Subject to ownership checking; cannot be deallocated |
 
@@ -366,7 +366,7 @@ This section enumerates every feature of ISO/IEC 8652:2023 (Ada 2022) that Safe 
 
 97. Move semantics apply to:
 
-   (a) Direct assignment of access-to-variable values: `Y := X;`
+   (a) Direct assignment of access-to-variable values: `Y = X;`
 
    (b) Return of an access-to-variable value from a function.
 
@@ -406,7 +406,7 @@ end loop;
 
 98. A **borrow** creates a temporary mutable alias to a designated object. Borrowing occurs when:
 
-   (a) An anonymous access-to-variable object is initialised from an owning access value: `Y : access T := X;`
+   (a) An anonymous access-to-variable object is initialised from an owning access value: `Y : access T = X;`
 
    (b) An `in out` mode access parameter receives an owning access value at a call site.
 
@@ -428,7 +428,7 @@ end loop;
 
 101. An **observe** creates a temporary read-only alias to a designated object. Observing occurs when:
 
-   (a) An anonymous access-to-constant object is initialised from an owning access value using `.Access`: `Y : access constant T := X.Access;`
+   (a) An anonymous access-to-constant object is initialised from an owning access value using `.Access`: `Y : access constant T = X.Access;`
 
    (b) An `in` mode access parameter receives an owning access value at a call site.
 
@@ -458,7 +458,7 @@ end loop;
 
 103. **Allocators.** The `new` allocator creates a new designated object and returns an owning access value. The allocator syntax is:
 
-   - `new (Expr : T)` — creates an object of type T initialised with Expr.
+   - `new (Expr as T)` — creates an object of type T initialised with Expr.
    - `new T` — creates an object of type T with default initialisation (when T has default initialisation).
 
 103a. **Allocation failure.** If an allocator cannot obtain sufficient storage to create the designated object, the program is aborted. The implementation shall invoke the runtime abort handler with a diagnostic that identifies the source location of the failing allocator. This is consistent with the error model for `pragma Assert` failure: both are non-recoverable conditions that terminate the program. Rationale: in 8652:2023, allocation failure raises `Storage_Error`; since exceptions are excluded (paragraph 31), Safe replaces the exception with a hard abort.
@@ -503,9 +503,9 @@ end loop;
 
 110. **`.Access` on a heap-designated object.** When `.Access` is applied to an object designated by a pool-specific owning access value (a heap-allocated object), the result has the accessibility level of the owning access type's declaration. This permits:
 
-   (a) Creating an anonymous access-to-constant observer: `Y : access constant T := X.Access;` — governed by the borrowing/observing rules (§2.3.3, §2.3.4) and lifetime containment (§2.3.4a).
+   (a) Creating an anonymous access-to-constant observer: `Y : access constant T = X.Access;` — governed by the borrowing/observing rules (§2.3.3, §2.3.4) and lifetime containment (§2.3.4a).
 
-   (b) Creating an anonymous access-to-variable borrow: `Y : access T := X;` — governed by borrowing rules.
+   (b) Creating an anonymous access-to-variable borrow: `Y : access T = X;` — governed by borrowing rules.
 
 111. **`.Access` on a local aliased object.** When `.Access` is applied to a local aliased variable (a stack-allocated object), the result has the accessibility level of the local scope in which the variable is declared. A conforming implementation shall reject any use of `.Access` on a local aliased variable where the result could escape the variable's scope. Specifically:
 
@@ -524,7 +524,7 @@ type G_Ptr is access all Integer;  -- declared at package level
 
 function Bad return G_Ptr is
 begin
-    X : aliased Integer := 42;
+    X : aliased Integer = 42;
     return X.Access;  -- REJECTED: X has deeper accessibility than G_Ptr
 end Bad;
 ```
@@ -536,9 +536,9 @@ type G_Ptr is access all Integer;
 
 procedure Use_Local is
 begin
-    X : aliased Integer := 42;
-    G : G_Ptr := X.Access;   -- legal: G declared in same scope as X
-    G.all := 99;              -- legal: G_Ptr is not null by flow analysis
+    X : aliased Integer = 42;
+    G : G_Ptr = X.Access;   -- legal: G declared in same scope as X
+    G.all = 99;              -- legal: G_Ptr is not null by flow analysis
                                -- (or use not-null subtype for dereference)
 end Use_Local;
 -- G goes out of scope before X (reverse declaration order)
@@ -582,23 +582,23 @@ A conforming implementation shall discharge the accessibility check row in the r
 
 ### 2.4.2 Type Annotation Syntax
 
-113. Ada's qualified expression syntax `T'(Expr)` is replaced by type annotation syntax `(Expr : T)`.
+113. Ada's qualified expression syntax `T'(Expr)` is replaced by type annotation syntax `(Expr as T)`.
 
 114. **Grammar.**
 
 ```
-annotated_expression ::= '(' expression ':' subtype_mark ')'
+annotated_expression ::= '(' expression 'as' subtype_mark ')'
 ```
 
-115. **Precedence.** The colon `:` binds looser than any operator. Parentheses are always required around type annotation expressions to avoid ambiguity with declaration syntax.
+115. **Precedence.** The keyword `as` binds looser than any operator. Parentheses are always required around type annotation expressions to avoid ambiguity with declaration syntax.
 
 116. **Usage contexts.** Type annotation is used wherever Ada 2022 uses qualified expressions:
 
-   (a) Aggregate disambiguation: `(others => 0) : Buffer_Type` becomes `((others => 0) : Buffer_Type)`.
+   (a) Aggregate disambiguation: `(others = 0) as Buffer_Type` becomes `((others = 0) as Buffer_Type)`.
 
-   (b) Allocators: `new T'(Expr)` becomes `new (Expr : T)`.
+   (b) Allocators: `new T'(Expr)` becomes `new (Expr as T)`.
 
-   (c) Type assertion in expressions: `T'(X)` becomes `(X : T)`.
+   (c) Type assertion in expressions: `T'(X)` becomes `(X as T)`.
 
 ---
 
@@ -834,7 +834,7 @@ annotated_expression ::= '(' expression ':' subtype_mark ')'
 
    (d) Used as the operand of a type conversion whose target type or subtype has a more restrictive range than the operand's type.
 
-   (e) Used as the expression of a type annotation `(Expr : T)` (see §2.4.2).
+   (e) Used as the expression of a type annotation `(Expr as T)` (see §2.4.2).
 
 128. If the static range of any declared integer type in the program exceeds the 64-bit signed range (-(2^63) .. (2^63 - 1)), the program is nonconforming and a conforming implementation shall reject it.
 
@@ -989,7 +989,7 @@ end Rate;
 public function Average (A, B : Reading) return Reading is
 begin
     return (A + B) / 2;  -- legal: 2 is a static nonzero expression
-                          -- D27 proof: divisor = 2 /= 0
+                          -- D27 proof: divisor == 2 != 0
 end Average;
 ```
 
@@ -1015,14 +1015,14 @@ public type Node_Ptr is access Node;            -- nullable, for storage
 public subtype Node_Ref is not null Node_Ptr;   -- non-null, for dereference
 ```
 
-138. Null comparison (`= null`, `/= null`) is always legal on any access type; only dereference requires the not-null guarantee.
+138. Null comparison (`== null`, `!= null`) is always legal on any access type; only dereference requires the not-null guarantee.
 
 **Example (conforming):**
 
 ```ada
 public function Value_Of (N : Node_Ref) return Integer
 is (N.Value);  -- legal: Node_Ref excludes null
-               -- D27 proof: N /= null by subtype
+               -- D27 proof: N != null by subtype
 ```
 
 **Nonconforming Example — Rule 4 violation at dereference:**

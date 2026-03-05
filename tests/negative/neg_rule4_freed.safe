@@ -19,9 +19,9 @@ package Freed_Test is
       Outer_Ref : access Data;
    begin
       declare
-         Owner : Data_Ptr := new Data'(42);
+         Owner : Data_Ptr = new Data'(42);
       begin
-         Outer_Ref := Owner;  -- borrow
+         Outer_Ref = Owner;  -- borrow
       end;
       --  Owner has been deallocated; Outer_Ref is dangling.
       return Integer (Outer_Ref.all);  -- ERROR: dangling reference

@@ -20,13 +20,13 @@ package Accumulator is
    --  Accumulate: sum all elements of the array.
    --  Loop invariant ensures Sum stays in 0 .. I * 100.
    function Accumulate (Data : Values) return Total_Range is
-      Sum : Total_Range := 0;
+      Sum : Total_Range = 0;
    begin
       for I in Index loop
          --  Wide intermediate: Sum + Data(I) is at most 2000 + 100 = 2100
          --  but Sum is bounded by (I-1)*100 and Data(I) by 100,
          --  so Sum + Data(I) <= I*100 <= 2000, within Total_Range.
-         Sum := Sum + Total_Range (Data (I));
+         Sum = Sum + Total_Range (Data (I));
       end loop;
       --  Narrowing point (return): Sum is in 0..2000.
       return Sum;

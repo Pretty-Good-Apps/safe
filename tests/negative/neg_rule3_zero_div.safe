@@ -9,7 +9,7 @@ package Zero_Div_Test is
 
    type Value is range -100 .. 100;
 
-   --  Divide: divides A by B without checking B /= 0.
+   --  Divide: divides A by B without checking B != 0.
    --  B's range includes zero, so division is not provably safe.
    function Divide (A, B : Value) return Value is
    begin

@@ -20,7 +20,7 @@ package Low_Pass_Filter is
    function Init_Filter (Initial : Signal;
                          Coeff   : Alpha_Range) return Filter_State is
    begin
-      return Filter_State'(Output => Initial, Alpha => Coeff);
+      return Filter_State'(Output = Initial, Alpha = Coeff);
    end Init_Filter;
 
    --  Update: output = Alpha * input + (1 - Alpha) * previous_output.
@@ -32,11 +32,11 @@ package Low_Pass_Filter is
       A : Long_Float;
       Result : Long_Float;
    begin
-      A := Long_Float (State.Alpha);
-      Result := A * Long_Float (Input)
+      A = Long_Float (State.Alpha);
+      Result = A * Long_Float (Input)
               + (1.0 - A) * Long_Float (State.Output);
       --  Narrowing point (assignment): Result is in -100..100, finite.
-      State.Output := Signal (Result);
+      State.Output = Signal (Result);
    end Update;
 
 end Low_Pass_Filter;

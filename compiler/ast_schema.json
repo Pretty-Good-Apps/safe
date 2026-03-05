@@ -470,10 +470,10 @@
         "SAFE@4aecf21:spec/02-restrictions.md#2.3.5.p103a:520dc0d4"
       ],
       "fields": [
-        { "name": "kind", "type": "AllocatorKind", "optional": false, "note": "SubtypeOnly (new T) or Annotated (new (Expr : T))" },
+        { "name": "kind", "type": "AllocatorKind", "optional": false, "note": "SubtypeOnly (new T) or Annotated (new (Expr as T))" },
         { "name": "subtype_indication", "type": "Option<SubtypeIndication>", "optional": true, "note": "For 'new T' form" },
-        { "name": "expression", "type": "Option<Expression>", "optional": true, "note": "For 'new (Expr : T)' form" },
-        { "name": "subtype_mark", "type": "Option<Name>", "optional": true, "note": "For 'new (Expr : T)' form" },
+        { "name": "expression", "type": "Option<Expression>", "optional": true, "note": "For 'new (Expr as T)' form" },
+        { "name": "subtype_mark", "type": "Option<Name>", "optional": true, "note": "For 'new (Expr as T)' form" },
         { "name": "span", "type": "Span", "optional": false }
       ]
     },
@@ -838,7 +838,7 @@
       "source_section": "8.6",
       "fields": [
         { "name": "expressions", "type": "NonEmptyList<Expression>", "optional": false },
-        { "name": "others_expr", "type": "Option<Expression>", "optional": true, "note": "For 'others =>' form" },
+        { "name": "others_expr", "type": "Option<Expression>", "optional": true, "note": "For 'others =' form" },
         { "name": "others_is_box", "type": "Boolean", "optional": false },
         { "name": "span", "type": "Span", "optional": false }
       ]

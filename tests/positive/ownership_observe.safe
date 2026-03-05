@@ -31,12 +31,12 @@ package Ownership_Observe is
    --  Use_Observe: creates an owned config, then observes it twice.
    --  Multiple observations of the same owned object are safe.
    procedure Use_Observe is
-      Owner : Config_Ptr := new Config'(Rate => 100, Limit => 500);
+      Owner : Config_Ptr = new Config'(Rate = 100, Limit = 500);
       R     : Natural;
       L     : Natural;
    begin
-      R := Read_Rate (Owner);
-      L := Read_Limit (Owner);
+      R = Read_Rate (Owner);
+      L = Read_Limit (Owner);
       --  Owner regains full ownership after observations end.
       --  Owner goes out of scope; automatic deallocation.
    end Use_Observe;

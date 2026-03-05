@@ -16,7 +16,7 @@ package Narrow_Fail is
    --  The compiler cannot prove that V is in -100..100.
    procedure Unsafe_Assign (V : Wide; Result : out Narrow) is
    begin
-      Result := Narrow (V);  -- ERROR: V may not be in -100..100
+      Result = Narrow (V);  -- ERROR: V may not be in -100..100
    end Unsafe_Assign;
 
 end Narrow_Fail;

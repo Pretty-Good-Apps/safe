@@ -15,7 +15,7 @@ This section specifies Safe's concurrency model. Safe provides concurrency throu
 ```
 task_declaration ::=
     'task' defining_identifier
-        [ 'with' 'Priority' '=>' static_expression ] 'is'
+        [ 'with' 'Priority' '=' static_expression ] 'is'
     [ declarative_part ]
     'begin'
         handled_sequence_of_statements
@@ -169,11 +169,11 @@ select_arm ::=
     channel_arm | delay_arm
 
 channel_arm ::=
-    'when' defining_identifier ':' subtype_mark 'from' channel_name '=>'
+    'when' defining_identifier ':' subtype_mark 'from' channel_name 'then'
         sequence_of_statements
 
 delay_arm ::=
-    'delay' expression '=>'
+    'delay' expression 'then'
         sequence_of_statements
 ```
 
@@ -283,21 +283,21 @@ package Pipeline is
     channel Raw_Data : Measurement capacity 16;
     channel Processed : Measurement capacity 8;
 
-    task Producer with Priority => 10 is
+    task Producer with Priority = 10 is
     begin
         loop
-            Sample : Measurement := Read_Sensor;
+            Sample : Measurement = Read_Sensor;
             send Raw_Data, Sample;
             delay 0.01;
         end loop;
     end Producer;
 
-    task Consumer with Priority => 5 is
+    task Consumer with Priority = 5 is
     begin
         loop
             M : Measurement;
             receive Raw_Data, M;
-            Result : Measurement := Process(M);
+            Result : Measurement = Process(M);
             send Processed, Result;
             -- D27 proof: all types match; no runtime errors
         end loop;
@@ -347,37 +347,37 @@ package Router is
     channel Jobs_B : Job capacity 4;
     public channel Results : Result capacity 8;
 
-    task Dispatcher with Priority => 8 is
-        Count : Job_Id := 1;
+    task Dispatcher with Priority = 8 is
+        Count : Job_Id = 1;
     begin
         loop
-            J : Job := (Id => Count, Data => Integer(Count) * 10);
+            J : Job = (Id = Count, Data = Integer(Count) * 10);
             -- D27 proof: Count * 10 fits in Integer (wide intermediate)
             Ok : Boolean;
             try_send Jobs_A, J, Ok;
             if not Ok then
                 send Jobs_B, J;
             end if;
-            Count := (if Count = Job_Id.Last then Job_Id.First else Count + 1);
+            Count = (if Count == Job_Id.Last then Job_Id.First else Count + 1);
         end loop;
     end Dispatcher;
 
-    task Worker_A with Priority => 5 is
+    task Worker_A with Priority = 5 is
     begin
         loop
             J : Job;
             receive Jobs_A, J;
-            send Results, (Id => J.Id, Value => J.Data + 1);
+            send Results, (Id = J.Id, Value = J.Data + 1);
             -- D27 proof: J.Data + 1 may overflow Integer; wide intermediate handles it
         end loop;
     end Worker_A;
 
-    task Worker_B with Priority => 5 is
+    task Worker_B with Priority = 5 is
     begin
         loop
             J : Job;
             receive Jobs_B, J;
-            send Results, (Id => J.Id, Value => J.Data + 2);
+            send Results, (Id = J.Id, Value = J.Data + 2);
         end loop;
     end Worker_B;
 
@@ -400,25 +400,25 @@ package Controller is
     public channel Responses : Status capacity 4;
     channel Heartbeats : Boolean capacity 1;
 
-    Current_State : Status := Stopped;  -- owned by Control_Loop
+    Current_State : Status = Stopped;  -- owned by Control_Loop
 
-    task Control_Loop with Priority => 10 is
+    task Control_Loop with Priority = 10 is
     begin
         loop
             select
-                when Cmd : Command from Commands =>
+                when Cmd : Command from Commands then
                     case Cmd is
-                        when Start =>
-                            Current_State := Running;
+                        when Start then
+                            Current_State = Running;
                             send Responses, Running;
-                        when Stop =>
-                            Current_State := Stopped;
+                        when Stop then
+                            Current_State = Stopped;
                             send Responses, Stopped;
-                        when Reset =>
-                            Current_State := Stopped;
+                        when Reset then
+                            Current_State = Stopped;
                             send Responses, Stopped;
                     end case;
-                or delay 5.0 =>
+                or delay 5.0 then
                     send Heartbeats, True;
             end select;
         end loop;

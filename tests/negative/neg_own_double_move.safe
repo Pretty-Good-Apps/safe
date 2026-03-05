@@ -13,13 +13,13 @@ package Double_Move_Test is
 
    --  Double_Move: moves Source twice.
    procedure Double_Move is
-      Source  : Payload_Ptr := new Payload'(42);
-      Target1 : Payload_Ptr := null;
-      Target2 : Payload_Ptr := null;
+      Source  : Payload_Ptr = new Payload'(42);
+      Target1 : Payload_Ptr = null;
+      Target2 : Payload_Ptr = null;
    begin
-      Target1 := Source;
+      Target1 = Source;
       --  Source is now null (moved).
-      Target2 := Source;  -- ERROR: Source has already been moved
+      Target2 = Source;  -- ERROR: Source has already been moved
    end Double_Move;
 
 end Double_Move_Test;

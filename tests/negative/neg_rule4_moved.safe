@@ -15,13 +15,13 @@ package Moved_Deref_Test is
 
    --  Use_After_Move: dereferences Source after it has been moved to Target.
    procedure Use_After_Move is
-      Source : Data_Ptr := new Data'(Value => 42);
-      Target : Data_Ptr := null;
+      Source : Data_Ptr = new Data'(Value = 42);
+      Target : Data_Ptr = null;
       V      : Integer;
    begin
-      Target := Source;
+      Target = Source;
       --  Source is now null (moved).
-      V := Source.all.Value;  -- ERROR: Source has been moved (is null)
+      V = Source.all.Value;  -- ERROR: Source has been moved (is null)
    end Use_After_Move;
 
 end Moved_Deref_Test;

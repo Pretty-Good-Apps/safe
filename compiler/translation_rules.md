@@ -47,15 +47,15 @@ The following table maps each Safe construct to its Ada/SPARK emission pattern. 
 | `X.Image(V)` | `X'Image(V)` | SAFE@4aecf21:spec/02-restrictions.md#2.4.1.p112 | Parameterised attribute |
 | `X.Access` | `X'Access` | SAFE@4aecf21:spec/02-restrictions.md#2.4.1.p109 | Dot-to-tick |
 | `X.Valid` | `X'Valid` | SAFE@4aecf21:spec/02-restrictions.md#2.4.1.p109 | Dot-to-tick |
-| `(Expr : T)` (type annotation) | `T'(Expr)` (qualified expression) | SAFE@4aecf21:spec/02-restrictions.md#2.4.2.p113 | AST: `AnnotatedExpression`. Reverse annotation to qualified expr |
-| `new (Expr : T)` (allocator) | `new T'(Expr)` | SAFE@4aecf21:spec/02-restrictions.md#2.4.2.p116 | AST: `Allocator` with `kind=Annotated`. Combined with dot-to-tick |
+| `(Expr as T)` (type annotation) | `T'(Expr)` (qualified expression) | SAFE@4aecf21:spec/02-restrictions.md#2.4.2.p113 | AST: `AnnotatedExpression`. Reverse annotation to qualified expr |
+| `new (Expr as T)` (allocator) | `new T'(Expr)` | SAFE@4aecf21:spec/02-restrictions.md#2.4.2.p116 | AST: `Allocator` with `kind=Annotated`. Combined with dot-to-tick |
 | `new T` (allocator, default init) | `new T` | SAFE@4aecf21:spec/02-restrictions.md#2.4.2.p116 | AST: `Allocator` with `kind=SubtypeOnly`. Direct pass-through |
 | `type T is range L .. H;` | `type T is range L .. H;` | SAFE@4aecf21:spec/08-syntax-summary.md#8.4 | AST: `SignedIntegerTypeDefinition`. Direct pass-through |
 | `type T is access T2;` | `type T is access T2;` | SAFE@4aecf21:spec/08-syntax-summary.md#8.4 | AST: `AccessToObjectDefinition`. Direct pass-through |
 | `subtype T_Ref is not null T_Ptr;` | `subtype T_Ref is not null T_Ptr;` | SAFE@4aecf21:spec/02-restrictions.md#2.3.1.p95 | AST: `SubtypeDeclaration`. Direct pass-through |
 | Integer arithmetic `A + B` | `Wide_Integer(A) + Wide_Integer(B)` | SAFE@4aecf21:spec/02-restrictions.md#2.8.1.p126 | AST: `Expression` with `wide_arithmetic=true`. Wide intermediate lifting |
 | Narrowing: `return Expr` | `return T(Wide_Expr)` | SAFE@4aecf21:spec/02-restrictions.md#2.8.1.p127 | AST: `SimpleReturnStatement`. Range check at narrowing point |
-| Narrowing: `X := Expr` | `X := T(Wide_Expr);` | SAFE@4aecf21:spec/02-restrictions.md#2.8.1.p127 | AST: `AssignmentStatement`. Range check at narrowing point |
+| Narrowing: `X = Expr` | `X := T(Wide_Expr);` | SAFE@4aecf21:spec/02-restrictions.md#2.8.1.p127 | AST: `AssignmentStatement`. Range check at narrowing point |
 | `task T ... end T;` | Ada task type + single instance | SAFE@4aecf21:spec/04-tasks-and-channels.md#4.1.p1 | AST: `TaskDeclaration`. See Section 6 |
 | `channel C : T capacity N;` | Protected object with bounded buffer | SAFE@4aecf21:spec/04-tasks-and-channels.md#4.2.p12 | AST: `ChannelDeclaration`. See Section 4 |
 | `send C, Expr;` | `C.Send(Expr);` (entry call) | SAFE@4aecf21:spec/04-tasks-and-channels.md#4.3.p27 | AST: `SendStatement`. Blocking entry call |
@@ -104,8 +104,8 @@ Safe `name.Range` and `name.Range(N)` emit as `name'Range` and `name'Range(N)`. 
 ```
 -- Safe source:
 return B(B.First);
-X : Integer := T.Last;
-S : String := V.Image;
+X : Integer = T.Last;
+S : String = V.Image;
 
 -- Emitted Ada:
 return B(B'First);
@@ -149,19 +149,19 @@ RETAINED_ATTRIBUTES : constant array of String :=
 
 ### 3.1 Basic Rule
 
-Safe `(Expr : T)` emits as Ada `T'(Expr)`.
+Safe `(Expr as T)` emits as Ada `T'(Expr)`.
 
 ### 3.2 In Allocators
 
-Safe `new (Expr : T)` emits as Ada `new T'(Expr)`.
+Safe `new (Expr as T)` emits as Ada `new T'(Expr)`.
 
 ### 3.3 Examples
 
 ```
 -- Safe source:
-X := ((others => 0) : Buffer_Type);
-P := new (42 : Integer);
-Foo ((X : T));
+X = ((others = 0) as Buffer_Type);
+P = new (42 as Integer);
+Foo ((X as T));
 
 -- Emitted Ada:
 X := Buffer_Type'(others => 0);
@@ -175,7 +175,7 @@ When the expression inside a type annotation involves integer arithmetic, the em
 
 ```
 -- Safe source:
-Y := ((A + B) : Reading);
+Y = ((A + B) as Reading);
 
 -- Emitted Ada (standard case):
 Y := Reading(Safe_Runtime.Wide_Integer(A) + Safe_Runtime.Wide_Integer(B));
@@ -337,11 +337,11 @@ Safe's `select` statement multiplexes channel receive operations. Ada does not h
 ```
 -- Safe source:
 select
-   when Msg : Command from Commands =>
+   when Msg : Command from Commands then
       Handle(Msg);
-   or when Data : Integer from Data_Ch =>
+   or when Data : Integer from Data_Ch then
       Process(Data);
-   or delay 5.0 =>
+   or delay 5.0 then
       Timeout_Handler;
 end select;
 ```
@@ -435,7 +435,7 @@ Each Safe `task` declaration becomes an Ada task type with a single instance:
 
 ```
 -- Safe source:
-task Producer with Priority => 10 is
+task Producer with Priority = 10 is
    ...
 begin
    loop
@@ -516,9 +516,9 @@ This ensures all package elaboration completes before any task activates (SAFE@4
 
 | Safe Ownership Operation | Emitted Ada Pattern | Clause |
 |---|---|---|
-| Move: `Y := X;` (access assignment) | `Y := X; X := null;` | SAFE@4aecf21:spec/02-restrictions.md#2.3.2.p96 |
-| Borrow: `Y : access T := X;` | `declare Y : access T := X; begin ... end;` | SAFE@4aecf21:spec/02-restrictions.md#2.3.3.p98 |
-| Observe: `Y : access constant T := X.Access;` | `declare Y : access constant T := X'Access; begin ... end;` | SAFE@4aecf21:spec/02-restrictions.md#2.3.4.p101 |
+| Move: `Y = X;` (access assignment) | `Y := X; X := null;` | SAFE@4aecf21:spec/02-restrictions.md#2.3.2.p96 |
+| Borrow: `Y : access T = X;` | `declare Y : access T := X; begin ... end;` | SAFE@4aecf21:spec/02-restrictions.md#2.3.3.p98 |
+| Observe: `Y : access constant T = X.Access;` | `declare Y : access constant T := X'Access; begin ... end;` | SAFE@4aecf21:spec/02-restrictions.md#2.3.4.p101 |
 | Parameter borrow: `P(X)` where param is `in out` access | Direct pass-through; SPARK ownership checks apply | SAFE@4aecf21:spec/02-restrictions.md#2.3.3.p98(b) |
 | Parameter observe: `P(X)` where param is `in` access | Direct pass-through; SPARK ownership checks apply | SAFE@4aecf21:spec/02-restrictions.md#2.3.4.p101(b) |
 | Scope-exit deallocation | `Free(Var);` before scope end | SAFE@4aecf21:spec/02-restrictions.md#2.3.5.p104 |
@@ -529,7 +529,7 @@ For every assignment of an owning access value, the emitter inserts a null-assig
 
 ```ada
 -- Safe source:
-Y := X;
+Y = X;
 
 -- Emitted Ada:
 Y := X;
@@ -594,7 +594,7 @@ Narrowing (conversion back to the target type) occurs at exactly five points (SA
 
 | Narrowing Point | Emission Pattern | AST Node |
 |---|---|---|
-| Assignment: `X := Expr;` | `X := Target_Type(Wide_Expr);` | `AssignmentStatement` |
+| Assignment: `X = Expr;` | `X := Target_Type(Wide_Expr);` | `AssignmentStatement` |
 | Parameter passing | `Call(Target_Type(Wide_Expr));` | `ProcedureCallStatement` / `FunctionCall` |
 | Function return | `return Target_Type(Wide_Expr);` | `SimpleReturnStatement` |
 | Type conversion | `Target_Type(Wide_Expr)` | `TypeConversion` |
@@ -674,8 +674,8 @@ When multiple owning access objects exit scope simultaneously, they are dealloca
 
 ```ada
 -- Safe source:
-A : Node_Ptr := new Node'(...);
-B : Node_Ptr := new Node'(...);
+A : Node_Ptr = new Node'(...);
+B : Node_Ptr = new Node'(...);
 -- ... end of scope
 
 -- Emitted Ada (before end):
@@ -714,7 +714,7 @@ Deallocation calls are duplicated at each scope exit point (before each `return`
 -- Safe source:
 public procedure Process (Flag : Boolean) is
 begin
-   N : Node_Ptr := new Node'(Value => 0, Next => null);
+   N : Node_Ptr = new Node'(Value = 0, Next = null);
    if Flag then
       return;       -- early exit: N must be freed
    end if;
@@ -863,9 +863,9 @@ Safe allows interleaved declarations and statements after `begin`. Ada requires 
 -- Safe source:
 public procedure Example is
 begin
-   X : Integer := 0;
+   X : Integer = 0;
    Do_Something(X);
-   Y : Integer := X + 1;
+   Y : Integer = X + 1;
    Do_More(Y);
 end Example;
 
@@ -1075,21 +1075,21 @@ package Pipeline is
    channel Raw_Data : Measurement capacity 16;
    public channel Processed : Measurement capacity 8;
 
-   task Producer with Priority => 10 is
+   task Producer with Priority = 10 is
    begin
       loop
-         Sample : Measurement := Read_Sensor;
+         Sample : Measurement = Read_Sensor;
          send Raw_Data, Sample;
          delay 0.01;
       end loop;
    end Producer;
 
-   task Consumer with Priority => 5 is
+   task Consumer with Priority = 5 is
    begin
       loop
          M : Measurement;
          receive Raw_Data, M;
-         Result : Measurement := ((M + 1) / 2 : Measurement);
+         Result : Measurement = ((M + 1) / 2 : Measurement);
          send Processed, Result;
       end loop;
    end Consumer;
@@ -1315,13 +1315,13 @@ package Ownership is
    -- Move: caller's pointer is nulled after call
    public function Make_Node (V : Integer) return Node_Ptr is
    begin
-      return new ((V, null) : Node);
+      return new ((V, null) as Node);
    end Make_Node;
 
    -- Borrow: mutable temporary access via in-out parameter
    public procedure Set_Value (N : in out Node_Ref; V : Integer) is
    begin
-      N.Value := V;
+      N.Value = V;
    end Set_Value;
 
    -- Observe: read-only access
@@ -1331,15 +1331,15 @@ package Ownership is
    -- Demonstrates automatic deallocation at scope exit
    public procedure Demo is
    begin
-      A : Node_Ptr := Make_Node(10);
-      B : Node_Ptr := Make_Node(20);
+      A : Node_Ptr = Make_Node(10);
+      B : Node_Ptr = Make_Node(20);
 
       -- Move: A transferred to C, A becomes null
-      C : Node_Ptr := A;
+      C : Node_Ptr = A;
 
       -- Use C (which now owns the node)
-      pragma Assert(C /= null);
-      Ref : Node_Ref := Node_Ref(C);
+      pragma Assert(C != null);
+      Ref : Node_Ref = Node_Ref(C);
       Set_Value(Ref, 42);
 
       -- End of scope: C and B deallocated in reverse order

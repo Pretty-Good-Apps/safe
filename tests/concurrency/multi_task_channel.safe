@@ -18,26 +18,26 @@ package Multi_Task_Channel is
 
    --  Producer_A: sends events with Source = 1.
    task Producer_A is
-      Seq : Natural := 0;
+      Seq : Natural = 0;
    begin
       loop
-         send Event_Ch, Event'(Source => 1, Code => Seq);
-         Seq := Seq + 1;
+         send Event_Ch, Event'(Source = 1, Code = Seq);
+         Seq = Seq + 1;
          if Seq > 1_000_000 then
-            Seq := 0;
+            Seq = 0;
          end if;
       end loop;
    end Producer_A;
 
    --  Producer_B: sends events with Source = 2.
    task Producer_B is
-      Seq : Natural := 0;
+      Seq : Natural = 0;
    begin
       loop
-         send Event_Ch, Event'(Source => 2, Code => Seq);
-         Seq := Seq + 1;
+         send Event_Ch, Event'(Source = 2, Code = Seq);
+         Seq = Seq + 1;
          if Seq > 1_000_000 then
-            Seq := 0;
+            Seq = 0;
          end if;
       end loop;
    end Producer_B;
@@ -46,21 +46,21 @@ package Multi_Task_Channel is
    --  Channel atomicity guarantees each event is received intact.
    task Consumer is
       E : Event;
-      Count_A : Natural := 0;
-      Count_B : Natural := 0;
+      Count_A : Natural = 0;
+      Count_B : Natural = 0;
    begin
       loop
          receive Event_Ch, E;
-         if E.Source = 1 then
-            Count_A := Count_A + 1;
-         elsif E.Source = 2 then
-            Count_B := Count_B + 1;
+         if E.Source == 1 then
+            Count_A = Count_A + 1;
+         elsif E.Source == 2 then
+            Count_B = Count_B + 1;
          end if;
          if Count_A > 1_000_000 then
-            Count_A := 0;
+            Count_A = 0;
          end if;
          if Count_B > 1_000_000 then
-            Count_B := 0;
+            Count_B = 0;
          end if;
       end loop;
    end Consumer;

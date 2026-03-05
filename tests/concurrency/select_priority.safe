@@ -17,28 +17,28 @@ package Select_Priority is
 
    --  Feeder_High: sends commands on the high-priority channel.
    task Feeder_High is
-      Cmd : Command := 1;
+      Cmd : Command = 1;
    begin
       loop
          send High_Ch, Cmd;
          if Cmd < 10 then
-            Cmd := Cmd + 1;
+            Cmd = Cmd + 1;
          else
-            Cmd := 1;
+            Cmd = 1;
          end if;
       end loop;
    end Feeder_High;
 
    --  Feeder_Low: sends status on the low-priority channel.
    task Feeder_Low is
-      S : Status := 0;
+      S : Status = 0;
    begin
       loop
          send Low_Ch, S;
          if S < 255 then
-            S := S + 1;
+            S = S + 1;
          else
-            S := 0;
+            S = 0;
          end if;
       end loop;
    end Feeder_Low;
@@ -46,20 +46,20 @@ package Select_Priority is
    --  Dispatcher: uses select to receive from multiple channels.
    --  High_Ch arm appears first, so it has priority when both are ready.
    task Dispatcher is
-      Processed : Natural := 0;
+      Processed : Natural = 0;
    begin
       loop
          select
-            receive High_Ch, Cmd : Command =>
+            receive High_Ch, Cmd : Command then
                --  High-priority command received.
-               Processed := Processed + 1;
+               Processed = Processed + 1;
          or
-            receive Low_Ch, S : Status =>
+            receive Low_Ch, S : Status then
                --  Low-priority status received.
-               Processed := Processed + 1;
+               Processed = Processed + 1;
          end select;
          if Processed > 1_000_000 then
-            Processed := 0;
+            Processed = 0;
          end if;
       end loop;
    end Dispatcher;

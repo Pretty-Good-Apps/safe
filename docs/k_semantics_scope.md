@@ -101,7 +101,7 @@ Phase 1 formalizes the sequential, single-task subset of Safe sufficient to expr
 | Literals | Numeric literals, character literals, string literals, `null` | `NumericLiteral`, `CharacterLiteral`, `StringLiteral` |
 | Names | Direct names, selected components (field access, package member), indexed components | `DirectName`, `SelectedComponent`, `IndexedComponent` |
 | Type conversion | Explicit type conversions | `TypeConversion` |
-| Type annotation | `(Expr : T)` syntax | `AnnotatedExpression` |
+| Type annotation | `(Expr as T)` syntax | `AnnotatedExpression` |
 | Conditional | `if` expressions, `case` expressions | `IfExpression`, `CaseExpression` |
 | Aggregates | Record aggregates, positional array aggregates, named array aggregates, delta aggregates | `RecordAggregate`, `PositionalArrayAggregate`, `NamedArrayAggregate`, `DeltaAggregate` |
 
@@ -109,7 +109,7 @@ Phase 1 formalizes the sequential, single-task subset of Safe sufficient to expr
 
 | Category | Constructs | AST Nodes |
 |---|---|---|
-| Assignment | `X := Expr;` with narrowing-point check | `AssignmentStatement` |
+| Assignment | `X = Expr;` with narrowing-point check | `AssignmentStatement` |
 | Procedure call | `P(Args);` with parameter narrowing | `ProcedureCallStatement` |
 | Return | `return Expr;` with return narrowing | `SimpleReturnStatement`, `ExtendedReturnStatement` |
 | Control flow | `if`/`elsif`/`else`, `case`, `loop` (while, for-in, for-of, unconditional), `exit`, `goto`, `null` | `IfStatement`, `CaseStatement`, `LoopStatement`, `ExitStatement`, `GotoStatement`, `NullStatement` |
@@ -136,9 +136,9 @@ Phase 2 adds the memory model: heap-allocated objects, ownership state tracking,
 | Operation | Ownership Transition | Source State After | Spec Reference |
 |---|---|---|---|
 | Allocator (`new`) | Null_State -> Owned | (new variable) | 2.3.5, p103 |
-| Move (`Y := X;` for access types) | source: Owned -> Moved; target: * -> Owned | source = null | 2.3.2, p96 |
-| Borrow (`Y : access T := X;`) | source: Owned -> Borrowed | source frozen | 2.3.3, p98 |
-| Observe (`Y : access constant T := X.Access;`) | source: Owned -> Observed (or Observed -> Observed) | source frozen (reads permitted) | 2.3.4, p101 |
+| Move (`Y = X;` for access types) | source: Owned -> Moved; target: * -> Owned | source = null | 2.3.2, p96 |
+| Borrow (`Y : access T = X;`) | source: Owned -> Borrowed | source frozen | 2.3.3, p98 |
+| Observe (`Y : access constant T = X.Access;`) | source: Owned -> Observed (or Observed -> Observed) | source frozen (reads permitted) | 2.3.4, p101 |
 | Borrow end (scope exit) | source: Borrowed -> Owned | source unfrozen | 2.3.3, p99(d) |
 | Observe end (scope exit) | source: Observed -> Owned | source unfrozen | 2.3.4, p102(d) |
 | Scope-exit deallocation | Owned -> Null_State | variable deallocated | 2.3.5, p104 |
@@ -451,7 +451,7 @@ rule <k> narrowConversion(intVal(V), intType(Lo, Hi))
          => checkNarrow(V, Lo, Hi) ~> intVal(V) ... </k>
 ```
 
-Corresponds to `Safe_PO.Narrow_Conversion` (safe_po.ads, line 104). Type annotation `(Expr : T)` uses the same rule, since the annotated expression translates to a conversion at the target type (compiler/translation_rules.md section 3).
+Corresponds to `Safe_PO.Narrow_Conversion` (safe_po.ads, line 104). Type annotation `(Expr as T)` uses the same rule, since the annotated expression translates to a conversion at the target type (compiler/translation_rules.md section 3).
 
 **4.2.6 Floating-Point Narrowing (D27 Rule 5)**
 

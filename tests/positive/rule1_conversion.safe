@@ -19,11 +19,11 @@ package Safe_Conversion is
       Clamped : Wide_Value;
    begin
       if V < -1000 then
-         Clamped := -1000;
+         Clamped = -1000;
       elsif V > 1000 then
-         Clamped := 1000;
+         Clamped = 1000;
       else
-         Clamped := V;
+         Clamped = V;
       end if;
       --  Narrowing point (conversion): Clamped is in -1000..1000.
       return Narrow_Value (Clamped);

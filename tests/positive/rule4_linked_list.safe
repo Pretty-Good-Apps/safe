@@ -16,28 +16,28 @@ package Safe_Linked_List is
    end record;
 
    --  Length: counts the number of nodes in the list.
-   --  The while loop guard checks Current /= null before dereference.
+   --  The while loop guard checks Current != null before dereference.
    function Length (Head : Node_Ptr) return Natural is
-      Count   : Natural := 0;
-      Current : Node_Ptr := Head;
+      Count   : Natural = 0;
+      Current : Node_Ptr = Head;
    begin
-      while Current /= null loop
+      while Current != null loop
          --  Current is provably not null by the while guard.
-         Count := Count + 1;
-         Current := Current.all.Next;
+         Count = Count + 1;
+         Current = Current.all.Next;
       end loop;
       return Count;
    end Length;
 
    --  Sum: sums all values in the list.
    function Sum (Head : Node_Ptr) return Integer is
-      Total   : Integer := 0;
-      Current : Node_Ptr := Head;
+      Total   : Integer = 0;
+      Current : Node_Ptr = Head;
    begin
-      while Current /= null loop
+      while Current != null loop
          --  Current is provably not null by the while guard.
-         Total := Total + Current.all.Value;
-         Current := Current.all.Next;
+         Total = Total + Current.all.Value;
+         Current = Current.all.Next;
       end loop;
       return Total;
    end Sum;
