@@ -1124,7 +1124,7 @@ end Unsafe_Scale;
 
 145. Safe's error model distinguishes two categories of failure:
 
-   (a) **Fatal failures** invoke the runtime abort handler. These include assertion failure (paragraph 68) and allocation failure (paragraph 103a). In the current model, a fatal failure terminates the program. A future version of Safe may introduce task-level fault containment for assertion failures (see paragraph 151a), in which case an assertion failure would terminate only the failing task rather than the entire program — but the failing task's execution is never resumed. Allocation failure would remain a program abort unless per-task allocation budgets are introduced (paragraph 151b).
+   (a) **Fatal failures** invoke the runtime abort handler. These include assertion failure (paragraph 68) and allocation failure (paragraph 103a). In the current model, a fatal failure terminates the program. A future version of Safe may introduce task-level fault containment for assertion failures (see paragraph 151a), in which case an assertion failure would terminate only the failing task rather than the entire program — but the failing task's execution is never resumed from the point of failure. A supervisor may restart the task from its initial entry point (paragraph 151d), which is distinct from resumption. Allocation failure would remain a program abort unless per-task allocation budgets are introduced (paragraph 151b).
 
    (b) **Recoverable failures** represent conditions that a caller can meaningfully respond to: parse failures, lookup misses, invalid inputs, protocol errors, resource unavailability, and similar domain-level conditions. Since exceptions are excluded (paragraph 67), recoverable failures shall be communicated through explicit return values.
 
@@ -1170,13 +1170,15 @@ A conforming implementation shall treat a conditional branch on the discriminant
 
 149. **Coexistence with status-code parameters.** Safe's channel operations (`try_send`, `try_receive`) use Boolean out-parameters to report success or failure (Section 4, §4.3). This form is appropriate for statement-level primitives where the operation has side effects and the result is not a computed value.
 
-The discriminated result convention and the status-code convention serve different contexts:
+The discriminated result convention, the status-code convention, and result-typed channels serve different contexts:
 
    (a) **Functions that compute a fallible value** should return a discriminated result record.
 
    (b) **Statements or procedures with side effects** that may fail non-fatally may use a Boolean out-parameter to report success.
 
-A conforming implementation shall accept both forms.
+   (c) **Concurrent error reporting** should use channels whose element type is a discriminated result record. This unifies the sequential and concurrent error models: the same `Result` layout represents failure in both contexts, delivered via function return in sequential code and via `send`/`receive` in concurrent code.
+
+A conforming implementation shall accept all three forms.
 
 150. **Guidance on fatal failure vs. result.** The following conditions warrant a fatal failure (runtime abort handler) rather than a result return:
 
@@ -1203,16 +1205,18 @@ All other domain-level failures — including but not limited to invalid input, 
 151c. **Notification mechanism.** A supervisor task must learn that a peer task has failed. The minimal surface syntax would be an optional aspect on the task declaration designating a typed fault channel:
 
 ```ada
-channel Faults : Fault_Event capacity 4;
+channel Worker_Faults : Fault_Event capacity 4;
 
-task Worker with Priority = 5, Faults = Faults is
+task Worker with Priority = 5, Fault_Channel = Worker_Faults is
    ...
 end Worker;
 ```
 
 When the runtime detects a containable failure in `Worker`, it posts a fault event (identifying the failed task, the fault kind, and the source location) to the designated channel. The supervisor receives fault events through ordinary `receive` or `select` operations — no new control-flow mechanism is needed.
 
-151d. **Restart and the non-termination rule.** Tasks are syntactically required to be non-terminating (Section 4, §4.6, paragraph 53). A task-level "restart" does not violate this rule: the programmer-visible task body remains an unconditional loop with no `return` or outer `exit`. The runtime may end a failing execution instance and re-enter the task body at its initial entry point (re-elaborating local declarations), but this is a runtime recovery mechanism, not a language-level termination. The task is never observed to have "completed" in the Ada sense.
+151d. **Restart and the non-termination rule.** Tasks are syntactically required to be non-terminating (Section 4, §4.6, paragraph 53). A task-level "restart" does not violate this rule: the programmer-visible task body remains an unconditional loop with no `return` or outer `exit`. The runtime may end a failing execution instance and re-enter the task body at its initial entry point, but this is a runtime recovery mechanism, not a language-level termination. The task is never observed to have "completed" in the Ada sense.
+
+On restart, all task-local state is reset: local declarations within the task body are re-elaborated with their initial values, and package-level variables owned by the task are re-initialised to their declaration values. This ensures the task starts from a known-good state — the assertion failure may have been caused by corrupted local state, and preserving that state across a restart would defeat the purpose of recovery. If a task needs to persist state across restarts, the supervisor should hold it and send it to the restarted task via a channel.
 
 151e. **Channel state on task failure.** The existing channel and ownership semantics constrain the options:
 
