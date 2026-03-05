@@ -33,7 +33,7 @@ package Vector_Normalize is
       if Mag_Sq > 0.0 then
          --  Mag_Sq is provably positive and finite (bounded inputs).
          --  Sqrt of a positive finite value is positive and finite.
-         Mag = Long_Float'Copy_Sign (1.0, Mag_Sq);  -- placeholder for sqrt
+         Mag = Long_Float.Copy_Sign (1.0, Mag_Sq);  -- placeholder for sqrt
          --  Mag is provably nonzero and finite.
          --  Narrowing point (assignment): each division yields finite result.
          V.X = Component (Long_Float (V.X) / Mag);

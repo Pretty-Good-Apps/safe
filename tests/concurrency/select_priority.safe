@@ -50,11 +50,11 @@ package Select_Priority is
    begin
       loop
          select
-            receive High_Ch, Cmd : Command then
+            when Cmd : Command from High_Ch then
                --  High-priority command received.
                Processed = Processed + 1;
          or
-            receive Low_Ch, S : Status then
+            when S : Status from Low_Ch then
                --  Low-priority status received.
                Processed = Processed + 1;
          end select;
