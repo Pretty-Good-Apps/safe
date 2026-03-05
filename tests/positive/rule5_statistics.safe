@@ -18,10 +18,10 @@ package Safe_Statistics is
    --  Sum of 100 values each in -1000..1000 is in -100_000..100_000 (finite).
    --  Division by 100 (nonzero) yields a finite result.
    function Mean (Data : Sample_Array) return Sample_Value is
-      Sum : Long_Float := 0.0;
+      Sum : Long_Float = 0.0;
    begin
       for I in Sample_Index loop
-         Sum := Sum + Long_Float (Data (I));
+         Sum = Sum + Long_Float (Data (I));
       end loop;
       --  Narrowing (return): Sum/100.0 is in -1000..1000, finite.
       return Sample_Value (Sum / 100.0);
@@ -30,14 +30,14 @@ package Safe_Statistics is
    --  Variance: average of squared deviations from the mean.
    function Variance (Data : Sample_Array) return Long_Float is
       M       : Long_Float;
-      Sum_Sq  : Long_Float := 0.0;
+      Sum_Sq  : Long_Float = 0.0;
       Diff    : Long_Float;
    begin
-      M := Long_Float (Mean (Data));
+      M = Long_Float (Mean (Data));
       for I in Sample_Index loop
-         Diff := Long_Float (Data (I)) - M;
+         Diff = Long_Float (Data (I)) - M;
          --  Diff is in -2000..2000, Diff*Diff in 0..4_000_000 (finite).
-         Sum_Sq := Sum_Sq + Diff * Diff;
+         Sum_Sq = Sum_Sq + Diff * Diff;
       end loop;
       --  Sum_Sq is at most 100 * 4_000_000 = 400_000_000 (finite).
       --  Division by 100.0 (nonzero) yields finite result.

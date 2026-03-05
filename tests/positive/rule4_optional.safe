@@ -15,7 +15,7 @@ package Safe_Optional is
    function Get_Or_Default (P : Value_Ptr;
                             Default : Value) return Value is
    begin
-      if P /= null then
+      if P != null then
          --  P is provably not null by the guard.
          return P.all;
       else
@@ -26,7 +26,7 @@ package Safe_Optional is
    --  Has_Value: checks if the pointer is non-null.
    function Has_Value (P : Value_Ptr) return Boolean is
    begin
-      return P /= null;
+      return P != null;
    end Has_Value;
 
 end Safe_Optional;

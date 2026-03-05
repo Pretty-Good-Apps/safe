@@ -13,7 +13,7 @@ package Empty_Array_Test is
    type Flex_Array is array (Index range <>) of Element;
 
    --  First_Element: attempts to access the first element.
-   --  If Arr is empty (Arr'Length = 0), there is no element at index 1.
+   --  If Arr is empty (Arr.Length = 0), there is no element at index 1.
    function First_Element (Arr : Flex_Array) return Element is
    begin
       return Arr (1);  -- ERROR: Arr may be empty

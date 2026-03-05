@@ -12,10 +12,10 @@ package Off_By_One_Test is
 
    --  Sum_Plus_One: iterates from 1 to 11, but array only goes to 10.
    function Sum_Plus_One (Arr : Data) return Integer is
-      Total : Integer := 0;
+      Total : Integer = 0;
    begin
       for I in 1 .. 11 loop
-         Total := Total + Arr (Idx (I));  -- ERROR: I = 11 is out of bounds
+         Total = Total + Arr (Idx (I));  -- ERROR: I = 11 is out of bounds
       end loop;
       return Total;
    end Sum_Plus_One;

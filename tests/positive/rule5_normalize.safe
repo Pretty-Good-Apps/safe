@@ -29,19 +29,19 @@ package Vector_Normalize is
       Mag_Sq : Long_Float;
       Mag    : Long_Float;
    begin
-      Mag_Sq := Magnitude_Sq (V);
+      Mag_Sq = Magnitude_Sq (V);
       if Mag_Sq > 0.0 then
          --  Mag_Sq is provably positive and finite (bounded inputs).
          --  Sqrt of a positive finite value is positive and finite.
-         Mag := Long_Float'Copy_Sign (1.0, Mag_Sq);  -- placeholder for sqrt
+         Mag = Long_Float'Copy_Sign (1.0, Mag_Sq);  -- placeholder for sqrt
          --  Mag is provably nonzero and finite.
          --  Narrowing point (assignment): each division yields finite result.
-         V.X := Component (Long_Float (V.X) / Mag);
-         V.Y := Component (Long_Float (V.Y) / Mag);
-         V.Z := Component (Long_Float (V.Z) / Mag);
-         Success := True;
+         V.X = Component (Long_Float (V.X) / Mag);
+         V.Y = Component (Long_Float (V.Y) / Mag);
+         V.Z = Component (Long_Float (V.Z) / Mag);
+         Success = True;
       else
-         Success := False;
+         Success = False;
       end if;
    end Normalize;
 

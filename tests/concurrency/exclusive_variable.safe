@@ -18,27 +18,27 @@ package Exclusive_Variable is
 
    --  Task_A: owns Counter_A exclusively. Sends result via channel.
    task Task_A is
-      Counter_A : Counter := 0;
+      Counter_A : Counter = 0;
    begin
       loop
-         Counter_A := Counter_A + 1;
+         Counter_A = Counter_A + 1;
          if Counter_A >= 1000 then
             send Sync_Ch, Counter_A;
-            Counter_A := 0;
+            Counter_A = 0;
          end if;
       end loop;
    end Task_A;
 
    --  Task_B: owns Counter_B exclusively. Receives via channel.
    task Task_B is
-      Counter_B : Counter := 0;
+      Counter_B : Counter = 0;
       Received  : Counter;
    begin
       loop
          receive Sync_Ch, Received;
-         Counter_B := Counter_B + Received;
+         Counter_B = Counter_B + Received;
          if Counter_B > 500_000 then
-            Counter_B := 0;
+            Counter_B = 0;
          end if;
       end loop;
    end Task_B;

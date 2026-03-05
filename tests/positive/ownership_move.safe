@@ -19,14 +19,14 @@ package Ownership_Move is
    --  Transfer: moves ownership from Source to Target.
    --  After the move, Source is null and only Target is used.
    procedure Transfer is
-      Source : Payload_Ptr := new Payload'(Value => 42);
-      Target : Payload_Ptr := null;
+      Source : Payload_Ptr = new Payload'(Value = 42);
+      Target : Payload_Ptr = null;
    begin
       --  Target is provably null before the move (just declared null).
-      Target := Source;
+      Target = Source;
       --  Source is now null (moved). Do not dereference Source.
       --  Target is now the owner and can be safely dereferenced.
-      Target.all.Value := 100;
+      Target.all.Value = 100;
       --  Target goes out of scope; automatic deallocation occurs.
    end Transfer;
 

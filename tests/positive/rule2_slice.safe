@@ -18,13 +18,13 @@ package Safe_Slice is
    function Sum_Subrange (Buf : Buffer;
                           First : Index;
                           Last  : Index) return Natural is
-      Total : Natural := 0;
+      Total : Natural = 0;
    begin
       if First <= Last then
          for I in First .. Last loop
             --  I is in First..Last, both of type Index (1..100).
             --  Provably within Buffer's bounds.
-            Total := Total + Natural (Buf (I));
+            Total = Total + Natural (Buf (I));
          end loop;
       end if;
       return Total;

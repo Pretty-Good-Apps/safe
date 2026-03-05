@@ -19,7 +19,7 @@ package Safe_Parameters is
    begin
       --  Wide arithmetic: Base * P is at most 10_000 * 100 = 1_000_000,
       --  well within 64-bit range. Division by 100 narrows back.
-      Result := Wide_Int ((Wide_Int (Base) * Wide_Int (P)) / 100);
+      Result = Wide_Int ((Wide_Int (Base) * Wide_Int (P)) / 100);
    end Apply_Percentage;
 
    --  Compute_Scaled: demonstrates safe parameter passing by
@@ -29,12 +29,12 @@ package Safe_Parameters is
    begin
       --  Clamp Raw to 0..100 before passing as Percentage.
       if Raw < 0 then
-         Pct := 0;
+         Pct = 0;
       elsif Raw > 100 then
-         Pct := 100;
+         Pct = 100;
       else
          --  Narrowing point (parameter): Raw is in 0..100.
-         Pct := Percentage (Raw);
+         Pct = Percentage (Raw);
       end if;
       Apply_Percentage (Pct, 5000, Output);
    end Compute_Scaled;

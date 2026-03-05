@@ -16,14 +16,14 @@ package FIFO_Ordering is
 
    --  Producer: sends 0, 1, 2, ..., 999, 0, 1, ... in order.
    task Producer is
-      N : Sequence_Number := 0;
+      N : Sequence_Number = 0;
    begin
       loop
          send Seq_Ch, N;
          if N < 999 then
-            N := N + 1;
+            N = N + 1;
          else
-            N := 0;
+            N = 0;
          end if;
       end loop;
    end Producer;
@@ -31,7 +31,7 @@ package FIFO_Ordering is
    --  Consumer: receives values and verifies ordering.
    --  Each received value should equal the expected next sequence number.
    task Consumer is
-      Expected : Sequence_Number := 0;
+      Expected : Sequence_Number = 0;
       Received : Sequence_Number;
    begin
       loop
@@ -39,9 +39,9 @@ package FIFO_Ordering is
          --  FIFO guarantees Received = Expected.
          --  (In a real test harness, an assertion would verify this.)
          if Expected < 999 then
-            Expected := Expected + 1;
+            Expected = Expected + 1;
          else
-            Expected := 0;
+            Expected = 0;
          end if;
       end loop;
    end Consumer;

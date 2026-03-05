@@ -21,7 +21,7 @@ package Safe_Interpolate is
    function Lerp (A, B : Value; T : Param) return Value is
       Result : Long_Float;
    begin
-      Result := Long_Float (A)
+      Result = Long_Float (A)
               + Long_Float (T) * (Long_Float (B) - Long_Float (A));
       --  Narrowing point (return): result is in -1000..1000 (bounded).
       return Value (Result);

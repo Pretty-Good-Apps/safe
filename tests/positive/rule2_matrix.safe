@@ -17,11 +17,11 @@ package Safe_Matrix is
    --  range from 1 to 4, so diagonal access M(I, I) is always
    --  within bounds.
    function Trace (M : Matrix_4x4) return Cell is
-      Sum : Cell := 0;
+      Sum : Cell = 0;
    begin
       for I in Row_Index loop
          --  I is Row_Index (1..4), also valid as Col_Index (1..4).
-         Sum := Sum + M (I, Col_Index (I));
+         Sum = Sum + M (I, Col_Index (I));
       end loop;
       return Sum;
    end Trace;
@@ -34,9 +34,9 @@ package Safe_Matrix is
          for J in Col_Index loop
             if Col_Index (I) < J then
                --  Both indices are of their respective types.
-               Temp := M (I, J);
-               M (I, J) := M (Row_Index (J), Col_Index (I));
-               M (Row_Index (J), Col_Index (I)) := Temp;
+               Temp = M (I, J);
+               M (I, J) = M (Row_Index (J), Col_Index (I));
+               M (Row_Index (J), Col_Index (I)) = Temp;
             end if;
          end loop;
       end loop;

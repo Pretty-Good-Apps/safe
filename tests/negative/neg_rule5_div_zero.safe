@@ -10,7 +10,7 @@ package FP_Div_Zero_Test is
 
    type Measurement is digits 6 range -1000.0 .. 1000.0;
 
-   --  Normalize: divides Value by Scale without checking Scale /= 0.0.
+   --  Normalize: divides Value by Scale without checking Scale != 0.0.
    --  If Scale is 0.0, the result is +/- infinity (IEEE 754).
    --  Infinity cannot survive the narrowing to Measurement.
    function Normalize (Value : Measurement;

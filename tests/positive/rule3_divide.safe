@@ -22,7 +22,7 @@ package Safe_Divide is
    --  Guarded_Div: uses a runtime check to ensure nonzero.
    function Guarded_Div (A, B : Result_Value) return Result_Value is
    begin
-      if B /= 0 then
+      if B != 0 then
          --  B is provably nonzero by the guard.
          return A / B;
       else

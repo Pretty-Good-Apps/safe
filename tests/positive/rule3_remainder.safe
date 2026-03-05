@@ -23,7 +23,7 @@ package Safe_Remainder is
    --  The literal 2 is provably nonzero.
    function Is_Even (V : Signed_Value) return Boolean is
    begin
-      return (V rem 2) = 0;
+      return (V rem 2) == 0;
    end Is_Even;
 
 end Safe_Remainder;

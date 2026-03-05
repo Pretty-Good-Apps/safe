@@ -17,13 +17,13 @@ package Lifetime_Test is
       Ref : access Value;
    begin
       declare
-         Owner : Value_Ptr := new Value'(42);
+         Owner : Value_Ptr = new Value'(42);
       begin
-         Ref := Owner;  -- borrow from Owner
+         Ref = Owner;  -- borrow from Owner
       end;
       --  Owner is out of scope; designated object is deallocated.
       --  Ref now dangles.
-      Ref.all := 99;  -- ERROR: borrower outlives lender
+      Ref.all = 99;  -- ERROR: borrower outlives lender
    end Dangling_Borrow;
 
 end Lifetime_Test;

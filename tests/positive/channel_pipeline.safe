@@ -20,14 +20,14 @@ package Pipeline is
 
    --  Producer: generates sample data and sends to Raw_Ch.
    task Producer is
-      Counter : Sample := 0;
+      Counter : Sample = 0;
    begin
       loop
          send Raw_Ch, Counter;
          if Counter < 10_000 then
-            Counter := Counter + 1;
+            Counter = Counter + 1;
          else
-            Counter := 0;
+            Counter = 0;
          end if;
       end loop;
    end Producer;
@@ -40,8 +40,8 @@ package Pipeline is
    begin
       loop
          receive Raw_Ch, Input;
-         --  Simple low-pass: output = input / 2 (safe, 2 /= 0).
-         Output := Input / 2;
+         --  Simple low-pass: output = input / 2 (safe, 2 != 0).
+         Output = Input / 2;
          send Filtered_Ch, Output;
       end loop;
    end Filter;
@@ -49,14 +49,14 @@ package Pipeline is
    --  Consumer: receives from Filtered_Ch and processes.
    task Consumer is
       Data : Sample;
-      Sum  : Natural := 0;
+      Sum  : Natural = 0;
    begin
       loop
          receive Filtered_Ch, Data;
-         Sum := Sum + Natural (Data);
+         Sum = Sum + Natural (Data);
          --  Prevent unbounded growth.
          if Sum > 1_000_000 then
-            Sum := 0;
+            Sum = 0;
          end if;
       end loop;
    end Consumer;

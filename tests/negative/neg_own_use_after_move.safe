@@ -16,13 +16,13 @@ package Use_After_Move_Test is
 
    --  Read_After_Move: reads Source.all after moving Source to Target.
    procedure Read_After_Move is
-      Source : Item_Ptr := new Item'(Id => 1, Count => 10);
-      Target : Item_Ptr := null;
+      Source : Item_Ptr = new Item'(Id = 1, Count = 10);
+      Target : Item_Ptr = null;
       V      : Natural;
    begin
-      Target := Source;
+      Target = Source;
       --  Source is now moved (null).
-      V := Source.all.Count;  -- ERROR: dereference of moved variable
+      V = Source.all.Count;  -- ERROR: dereference of moved variable
    end Read_After_Move;
 
 end Use_After_Move_Test;

@@ -58,9 +58,9 @@ This section specifies the language-level assurance guarantees provided by Safe.
 
 9. **Algorithm (informative).** The implementation tracks data flow through assignments, expressions, and conditional control flow:
 
-   (a) Direct assignment: `X := f(A, B)` creates a dependency from A and B to X.
+   (a) Direct assignment: `X = f(A, B)` creates a dependency from A and B to X.
 
-   (b) Conditional: `if C then X := A; else X := B;` creates dependencies from C, A, and B to X.
+   (b) Conditional: `if C then X = A; else X = B;` creates dependencies from C, A, and B to X.
 
    (c) Loop iteration: conservative over-approximation is acceptable.
 
@@ -90,7 +90,7 @@ This section specifies the language-level assurance guarantees provided by Safe.
 
 16. A conforming implementation shall reject any integer expression where it cannot establish that all intermediate subexpressions stay within 64-bit signed range.
 
-17. **How this discharges overflow checks.** Since intermediate results are computed in a wide type, integer overflow in subexpressions is impossible. The only points where a range violation can occur are at narrowing: assignment to a typed variable, return from a function, parameter passing, type conversion to a more restrictive type, and type annotation `(Expr : T)`. At these points, the implementation performs sound static range analysis on the wide intermediate to establish that the result is within the target type's range.
+17. **How this discharges overflow checks.** Since intermediate results are computed in a wide type, integer overflow in subexpressions is impossible. The only points where a range violation can occur are at narrowing: assignment to a typed variable, return from a function, parameter passing, type conversion to a more restrictive type, and type annotation `(Expr as T)`. At these points, the implementation performs sound static range analysis on the wide intermediate to establish that the result is within the target type's range.
 
 18. Interval analysis is one permitted technique for range analysis; no specific algorithm is mandated.
 
@@ -114,7 +114,7 @@ This section specifies the language-level assurance guarantees provided by Safe.
 
 ### 5.3.6 Range Checks at Narrowing Points
 
-25. Range checks occur at every narrowing point: when a wide intermediate result is assigned to a typed variable, returned from a function, passed as a parameter, used as the operand of a type conversion to a more restrictive type, or used as the expression of a type annotation `(Expr : T)`. The implementation shall discharge these checks via sound static range analysis.
+25. Range checks occur at every narrowing point: when a wide intermediate result is assigned to a typed variable, returned from a function, passed as a parameter, used as the operand of a type conversion to a more restrictive type, or used as the expression of a type annotation `(Expr as T)`. The implementation shall discharge these checks via sound static range analysis.
 
 26. If a conforming implementation cannot establish that a narrowing point is safe (i.e., the computed range of the wide intermediate does not fit within the target type), the program is nonconforming and shall be rejected with a diagnostic.
 
@@ -203,7 +203,7 @@ This section specifies the language-level assurance guarantees provided by Safe.
 channel A_to_B : Integer capacity 1;
 channel B_to_A : Integer capacity 1;
 
-task T_A with Priority => 5 is
+task T_A with Priority = 5 is
 begin
     loop
         send A_to_B, 1;      -- blocks if A_to_B full
@@ -212,7 +212,7 @@ begin
     end loop;
 end T_A;
 
-task T_B with Priority => 5 is
+task T_B with Priority = 5 is
 begin
     loop
         send B_to_A, 2;      -- blocks if B_to_A full
@@ -290,7 +290,7 @@ end Averaging;
 package Lookup is
 
     public type Sensor_Id is range 0 .. 15;
-    Calibration : array (Sensor_Id) of Float := (others => 1.0);
+    Calibration : array (Sensor_Id) of Float = (others = 1.0);
 
     public function Get_Cal (Id : Sensor_Id) return Float is
     begin
@@ -375,19 +375,19 @@ package Lists is
     public function Head_Value (List : Node_Ref) return Integer
     is (List.Value);
     -- Rule 4: Node_Ref is not null; dereference provably safe
-    -- D27 proof: List /= null by subtype
+    -- D27 proof: List != null by subtype
 
     public function Has_Next (N : Node_Ref) return Boolean
-    is (N.Next /= null);
+    is (N.Next != null);
     -- Null comparison is always legal; no dereference here
 
     public function Next_Value (N : Node_Ref) return Integer is
     begin
-        pragma Assert (N.Next /= null);
-        Ref : Node_Ref := Node_Ref(N.Next);
+        pragma Assert (N.Next != null);
+        Ref : Node_Ref = Node_Ref(N.Next);
         return Ref.Value;
         -- Rule 4: Ref is Node_Ref (not null); dereference safe
-        -- D27 proof: Ref /= null by conversion from checked non-null
+        -- D27 proof: Ref != null by conversion from checked non-null
     end Next_Value;
 
 end Lists;
@@ -415,14 +415,14 @@ package Trees is
     -- Move: ownership transfers from caller to new node
     public function Make_Leaf (V : Integer) return Tree_Ptr is
     begin
-        return new ((V, null, null) : Tree_Node);
+        return new ((V, null, null) as Tree_Node);
         -- D27 proof: aggregate fields match Tree_Node
     end Make_Leaf;
 
     -- Borrow: mutable temporary access
     public procedure Set_Value (T : in out Tree_Ref; V : Integer) is
     begin
-        T.Value := V;
+        T.Value = V;
         -- T is borrowed (in out mode); caller frozen during call
         -- D27 proof: Tree_Ref is not null; dereference safe
     end Set_Value;
@@ -436,11 +436,11 @@ package Trees is
     -- Automatic deallocation: when owner goes out of scope
     public procedure Example_Scope is
     begin
-        N : Tree_Ptr := Make_Leaf(42);
+        N : Tree_Ptr = Make_Leaf(42);
         -- N owns the allocated node
-        pragma Assert (N /= null);
-        Ref : Tree_Ref := Tree_Ref(N);
-        V : Integer := Get_Value(Ref);
+        pragma Assert (N != null);
+        Ref : Tree_Ref = Tree_Ref(N);
+        V : Integer = Get_Value(Ref);
         -- N is automatically deallocated when Example_Scope returns
     end Example_Scope;
 
@@ -531,19 +531,19 @@ package Monitor is
     channel Readings : Sensors.Reading capacity 32;
     channel Alarms   : Alarm_Level capacity 8;
 
-    task Sampler with Priority => 10 is
+    task Sampler with Priority = 10 is
     begin
         loop
-            R : Sensors.Reading := Sensors.Get_Reading(0);
+            R : Sensors.Reading = Sensors.Get_Reading(0);
             send Readings, R;
             delay 0.1;
         end loop;
     end Sampler;
 
-    Threshold : Sensors.Reading := 3000;
+    Threshold : Sensors.Reading = 3000;
     -- Owned by Evaluator (only task accessing it)
 
-    task Evaluator with Priority => 5 is
+    task Evaluator with Priority = 5 is
     begin
         loop
             R : Sensors.Reading;

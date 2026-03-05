@@ -24,36 +24,36 @@ package Try_Send_Ownership is
    task Sender is
       P       : Payload_Ptr;
       Success : Boolean;
-      Counter : Natural := 0;
+      Counter : Natural = 0;
    begin
       loop
-         P := new Payload'(Id => Counter, Value => Counter * 10);
+         P = new Payload'(Id = Counter, Value = Counter * 10);
          try_send Data_Ch, P, Success;
          if Success then
             --  P is now null (moved to channel). Do not dereference.
             null;
          else
             --  Send failed; P still owns the payload. Safe to use.
-            P.all.Value := P.all.Value + 1;
+            P.all.Value = P.all.Value + 1;
             --  Retry: this time blocking send.
             send Data_Ch, P;
          end if;
-         Counter := Counter + 1;
+         Counter = Counter + 1;
          if Counter > 1_000_000 then
-            Counter := 0;
+            Counter = 0;
          end if;
       end loop;
    end Sender;
 
    --  Receiver: receives payloads, takes ownership.
    task Receiver is
-      Item : Payload_Ptr := null;
+      Item : Payload_Ptr = null;
    begin
       loop
          receive Data_Ch, Item;
          --  Item is now owned by this task.
-         if Item /= null then
-            Item.all.Value := 0;  -- process
+         if Item != null then
+            Item.all.Value = 0;  -- process
          end if;
          --  Item goes out of scope at end of loop iteration;
          --  auto-deallocation reclaims storage.

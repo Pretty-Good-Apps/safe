@@ -22,7 +22,7 @@ package Safe_Average is
       if Total <= Natural (Count) * 10_000 then
          return Measurement (Total / Natural (Count));
       else
-         return Measurement'Last;
+         return Measurement.Last;
       end if;
    end Compute_Average;
 

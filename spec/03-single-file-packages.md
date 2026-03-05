@@ -154,7 +154,7 @@ Clients can declare variables of type `T` (the implementation exports size and a
 
    (c) Assign objects of type `T` (unless limited).
 
-   (d) Test equality of objects of type `T` (predefined `=` and `/=`).
+   (d) Test equality of objects of type `T` (predefined `==` and `!=`).
 
 23. Clients shall not access individual fields of an opaque type. A conforming implementation shall reject any selected component on an opaque type that names a record field, when the reference occurs outside the declaring package.
 
@@ -178,17 +178,17 @@ Clients can declare variables of type `T` (the implementation exports size and a
 
 ### 3.2.8 Type Annotation Syntax
 
-28. Ada's qualified expression syntax `T'(Expr)` is replaced by type annotation syntax `(Expr : T)`.
+28. Ada's qualified expression syntax `T'(Expr)` is replaced by type annotation syntax `(Expr as T)`.
 
-29. Parentheses are always required around type annotation expressions. The colon `:` binds looser than any operator.
+29. Parentheses are always required around type annotation expressions. The keyword `as` binds looser than any operator.
 
 30. Examples:
 
-   (a) Aggregate disambiguation: `((others => 0) : Buffer_Type)`
+   (a) Aggregate disambiguation: `((others = 0) as Buffer_Type)`
 
-   (b) Allocators: `new (Expr : T)` instead of `new T'(Expr)`
+   (b) Allocators: `new (Expr as T)` instead of `new T'(Expr)`
 
-   (c) In argument position: `Foo ((X : T))`
+   (c) In argument position: `Foo ((X as T))`
 
 ### 3.2.9 Circular Dependencies Prohibited
 
@@ -319,7 +319,7 @@ package Temperatures is
 
     public subtype Room_Temperature is Kelvin range 273.15 .. 323.15;
 
-    Absolute_Zero : constant Kelvin := 0.0;
+    Absolute_Zero : constant Kelvin = 0.0;
 
     public function To_Celsius (T : Kelvin) return Float is
     begin
@@ -349,13 +349,13 @@ package Buffers is
     public subtype Buffer_Index is Buffer_Size;
 
     public type Buffer is private record
-        Data   : array (Buffer_Index) of Character := (others => ' ');
-        Length : Buffer_Size := 1;
+        Data   : array (Buffer_Index) of Character = (others = ' ');
+        Length : Buffer_Size = 1;
     end record;
 
     public function Create (Size : Buffer_Size) return Buffer is
     begin
-        return (Data => (others => ' '), Length => Size);
+        return (Data = (others = ' '), Length = Size);
         -- D27 proof: aggregate values in range
     end Create;
 
@@ -405,14 +405,14 @@ package Navigation is
 
     public type Heading is range 0 .. 359;
 
-    Current_Speed : Units.Metres_Per_Second := 0.0;
-    Current_Heading : Heading := 0;
+    Current_Speed : Units.Metres_Per_Second = 0.0;
+    Current_Heading : Heading = 0;
 
     public procedure Update (D : Units.Metres; T : Units.Seconds;
                              H : Heading) is
     begin
-        Current_Speed := Units.Speed(D, T);
-        Current_Heading := H;
+        Current_Speed = Units.Speed(D, T);
+        Current_Heading = H;
     end Update;
 
     public function Get_Speed return Units.Metres_Per_Second
@@ -436,27 +436,27 @@ package Sensors is
     public subtype Channel_Count is Integer range 1 .. 8;
 
     type Calibration is private record
-        Scale  : Float := 1.0;
-        Bias   : Integer := 0;
+        Scale  : Float = 1.0;
+        Bias   : Integer = 0;
     end record;
 
-    Cal_Table : array (Channel_Id) of Calibration :=
-        (others => (Scale => 1.0, Bias => 0));
+    Cal_Table : array (Channel_Id) of Calibration =
+        (others = (Scale = 1.0, Bias = 0));
 
-    Initialized : Boolean := False;
+    Initialized : Boolean = False;
 
     public function Is_Initialized return Boolean
     is (Initialized);
 
     public procedure Initialize is
     begin
-        Default_Cal : constant Calibration := (Scale => 1.0, Bias => 0);
+        Default_Cal : constant Calibration = (Scale = 1.0, Bias = 0);
         -- Interleaved declaration after begin
         for I in Channel_Id.First .. Channel_Id.Last loop
             -- Dot notation for attributes: Channel_Id.First, Channel_Id.Last
-            Cal_Table (I) := Default_Cal;
+            Cal_Table (I) = Default_Cal;
         end loop;
-        Initialized := True;
+        Initialized = True;
     end Initialize;
 
     public function Average (A, B : Reading) return Reading is

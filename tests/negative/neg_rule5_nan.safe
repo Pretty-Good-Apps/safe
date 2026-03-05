@@ -14,8 +14,8 @@ package NaN_Test is
    --  Produce_NaN: 0.0 / 0.0 is NaN. Assigning to Temp is a narrowing
    --  point where NaN is not allowed.
    function Produce_NaN return Temp is
-      X : Long_Float := 0.0;
-      Y : Long_Float := 0.0;
+      X : Long_Float = 0.0;
+      Y : Long_Float = 0.0;
    begin
       return Temp (X / Y);  -- ERROR: 0.0/0.0 = NaN, cannot narrow
    end Produce_NaN;

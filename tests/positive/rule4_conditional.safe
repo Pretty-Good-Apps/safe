@@ -14,17 +14,17 @@ package Safe_Conditional is
    --  Each pointer is null-checked before dereference.
    function Max_Of_Two (A, B : Config_Ptr) return Config_Value is
    begin
-      if A /= null and then B /= null then
+      if A != null and then B != null then
          --  Both A and B are provably not null.
          if A.all >= B.all then
             return A.all;
          else
             return B.all;
          end if;
-      elsif A /= null then
+      elsif A != null then
          --  A is provably not null.
          return A.all;
-      elsif B /= null then
+      elsif B != null then
          --  B is provably not null.
          return B.all;
       else

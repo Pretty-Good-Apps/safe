@@ -66,14 +66,14 @@ subtype_declaration ::=
 
 object_declaration ::=
     [ 'public' ] defining_identifier_list ':' [ 'aliased' ] [ 'constant' ]
-        subtype_indication [ ':=' expression ] ';'
+        subtype_indication [ '=' expression ] ';'
   | [ 'public' ] defining_identifier_list ':' [ 'aliased' ] [ 'constant' ]
-        array_type_definition [ ':=' expression ] ';'
+        array_type_definition [ '=' expression ] ';'
   | [ 'public' ] defining_identifier_list ':' [ 'aliased' ] [ 'constant' ]
-        access_definition [ ':=' expression ] ';'
+        access_definition [ '=' expression ] ';'
 
 number_declaration ::=
-    [ 'public' ] defining_identifier_list ':' 'constant' ':=' static_expression ';'
+    [ 'public' ] defining_identifier_list ':' 'constant' '=' static_expression ';'
 
 defining_identifier_list ::=
     defining_identifier { ',' defining_identifier }
@@ -177,13 +177,13 @@ component_item ::=
   | representation_item
 
 component_declaration ::=
-    defining_identifier_list ':' component_definition [ ':=' default_expression ] ';'
+    defining_identifier_list ':' component_definition [ '=' default_expression ] ';'
 
 known_discriminant_part ::=
     '(' discriminant_specification { ';' discriminant_specification } ')'
 
 discriminant_specification ::=
-    defining_identifier_list ':' subtype_mark [ ':=' default_expression ]
+    defining_identifier_list ':' subtype_mark [ '=' default_expression ]
 
 variant_part ::=
     'case' discriminant_direct_name 'is'
@@ -191,7 +191,7 @@ variant_part ::=
     'end' 'case' ';'
 
 variant ::=
-    'when' discrete_choice_list '=>'
+    'when' discrete_choice_list 'then'
         component_list
 
 discrete_choice_list ::=
@@ -216,7 +216,7 @@ derived_type_definition ::=
 
 allocator ::=
     'new' subtype_indication
-  | 'new' '(' expression ':' subtype_mark ')'
+  | 'new' '(' expression 'as' subtype_mark ')'
 ```
 
 ## 8.5 Subtype Indications
@@ -258,7 +258,7 @@ discriminant_constraint ::=
     '(' discriminant_association { ',' discriminant_association } ')'
 
 discriminant_association ::=
-    [ selector_name { '|' selector_name } '=>' ] expression
+    [ selector_name { '|' selector_name } '=' ] expression
 
 digits_constraint ::=
     'digits' static_expression [ range_constraint ]
@@ -303,7 +303,7 @@ actual_parameter_part ::=
     '(' parameter_association { ',' parameter_association } ')'
 
 parameter_association ::=
-    [ selector_name '=>' ] expression
+    [ selector_name '=' ] expression
 
 expression ::=
     relation { 'and' relation }
@@ -347,7 +347,7 @@ primary ::=
   | declare_expression
 
 annotated_expression ::=
-    '(' expression ':' subtype_mark ')'
+    '(' expression 'as' subtype_mark ')'
 
 conditional_expression ::=
     if_expression
@@ -363,7 +363,7 @@ case_expression ::=
         case_expression_alternative { ',' case_expression_alternative }
 
 case_expression_alternative ::=
-    'when' discrete_choice_list '=>' expression
+    'when' discrete_choice_list 'then' expression
 
 declare_expression ::=
     'declare' { object_declaration }
@@ -376,7 +376,7 @@ condition ::=
     expression
 
 relational_operator ::=
-    '=' | '/=' | '<' | '<=' | '>' | '>='
+    '==' | '!=' | '<' | '<=' | '>' | '>='
 
 binary_adding_operator ::=
     '+' | '-' | '&'
@@ -400,8 +400,8 @@ record_component_association_list ::=
   | 'null' 'record'
 
 record_component_association ::=
-    [ component_choice_list '=>' ] expression
-  | component_choice_list '=>' '<>'
+    [ component_choice_list '=' ] expression
+  | component_choice_list '=' '<>'
 
 component_choice_list ::=
     selector_name { '|' selector_name }
@@ -413,15 +413,15 @@ array_aggregate ::=
 
 positional_array_aggregate ::=
     '(' expression ',' expression { ',' expression } ')'
-  | '(' expression { ',' expression } ',' 'others' '=>' expression ')'
-  | '(' expression { ',' expression } ',' 'others' '=>' '<>' ')'
+  | '(' expression { ',' expression } ',' 'others' '=' expression ')'
+  | '(' expression { ',' expression } ',' 'others' '=' '<>' ')'
 
 named_array_aggregate ::=
     '(' array_component_association { ',' array_component_association } ')'
 
 array_component_association ::=
-    discrete_choice_list '=>' expression
-  | discrete_choice_list '=>' '<>'
+    discrete_choice_list '=' expression
+  | discrete_choice_list '=' '<>'
 
 delta_aggregate ::=
     '(' expression 'with' 'delta' record_component_association_list ')'
@@ -463,7 +463,7 @@ null_statement ::=
     'null' ';'
 
 assignment_statement ::=
-    name ':=' expression ';'
+    name '=' expression ';'
 
 procedure_call_statement ::=
     name [ actual_parameter_part ] ';'
@@ -476,11 +476,11 @@ simple_return_statement ::=
 
 extended_return_statement ::=
     'return' defining_identifier ':' [ 'aliased' ] subtype_indication
-        [ ':=' expression ] 'do'
+        [ '=' expression ] 'do'
         handled_sequence_of_statements
     'end' 'return' ';'
   | 'return' defining_identifier ':' access_definition
-        [ ':=' expression ] 'do'
+        [ '=' expression ] 'do'
         handled_sequence_of_statements
     'end' 'return' ';'
 
@@ -515,7 +515,7 @@ case_statement ::=
     'end' 'case' ';'
 
 case_statement_alternative ::=
-    'when' discrete_choice_list '=>'
+    'when' discrete_choice_list 'then'
         sequence_of_statements
 
 loop_statement ::=
@@ -576,9 +576,9 @@ formal_part ::=
 
 parameter_specification ::=
     defining_identifier_list ':' [ 'aliased' ] mode subtype_mark
-        [ ':=' default_expression ]
+        [ '=' default_expression ]
   | defining_identifier_list ':' access_definition
-        [ ':=' default_expression ]
+        [ '=' default_expression ]
 
 mode ::=
     [ 'in' ] | 'in' 'out' | 'out'
@@ -640,7 +640,7 @@ component_clause ::=
         static_simple_expression '..' static_simple_expression ';'
 
 aspect_specification ::=
-    'with' aspect_mark '=>' expression
+    'with' aspect_mark '=' expression
 
 aspect_mark ::=
     identifier
@@ -651,7 +651,7 @@ aspect_mark ::=
 ```
 task_declaration ::=
     'task' defining_identifier
-        [ 'with' 'Priority' '=>' static_expression ] 'is'
+        [ 'with' 'Priority' '=' static_expression ] 'is'
     [ declarative_part ]
     'begin'
         handled_sequence_of_statements
@@ -683,11 +683,11 @@ select_arm ::=
     channel_arm | delay_arm
 
 channel_arm ::=
-    'when' defining_identifier ':' subtype_mark 'from' channel_name '=>'
+    'when' defining_identifier ':' subtype_mark 'from' channel_name 'then'
         sequence_of_statements
 
 delay_arm ::=
-    'delay' expression '=>'
+    'delay' expression 'then'
         sequence_of_statements
 
 channel_name ::= name
@@ -701,8 +701,8 @@ pragma ::=
         { ',' pragma_argument_association } ')' ] ';'
 
 pragma_argument_association ::=
-    [ identifier '=>' ] expression
-  | [ identifier '=>' ] name
+    [ identifier '=' ] expression
+  | [ identifier '=' ] name
 ```
 
 ## 8.14 Lexical Elements

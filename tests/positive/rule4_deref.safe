@@ -21,7 +21,7 @@ package Safe_Deref is
    procedure Write_Value (P : Data_Ptr; V : Data) is
    begin
       --  P is provably not null.
-      P.all := V;
+      P.all = V;
    end Write_Value;
 
 end Safe_Deref;
