@@ -8,12 +8,12 @@
 
 ## Repo Facts
 
-- `tests/positive`: 31
+- `tests/positive`: 32
 - `tests/negative`: 35
 - `tests/golden`: 3
 - `tests/concurrency`: 5
 - `tests/diagnostics_golden`: 5
-- **Total test files:** 79
+- **Total test files:** 80
 
 ## Task Ledger
 

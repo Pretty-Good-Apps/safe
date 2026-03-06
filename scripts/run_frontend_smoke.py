@@ -20,6 +20,7 @@ COMPILER_ROOT = REPO_ROOT / "compiler_impl"
 DEFAULT_REPORT = REPO_ROOT / "execution" / "reports" / "pr00-pr04-frontend-smoke.json"
 POSITIVE_AST = REPO_ROOT / "tests" / "positive" / "rule1_accumulate.safe"
 POSITIVE_PIPELINE = REPO_ROOT / "tests" / "positive" / "channel_pipeline.safe"
+EQUALITY_CHECK = REPO_ROOT / "tests" / "positive" / "result_equality_check.safe"
 
 
 def normalize_text(text: str, *, temp_root: Path | None = None) -> str:
@@ -143,6 +144,18 @@ def main() -> int:
             env=env,
             temp_root=temp_root,
         )
+        # Regression test: == must be lexed as a single token (not two =).
+        # The file contains "S == 0" and "S != 0" in function bodies.
+        # If == is not recognized, the lexer produces two = tokens, and
+        # the check command may silently accept or produce a misleading error.
+        # We verify that safec check exits 0 (no lex/parse/semantic errors).
+        eq_check_run = run(
+            [str(safec), "check", str(EQUALITY_CHECK)],
+            cwd=REPO_ROOT,
+            env=env,
+            temp_root=temp_root,
+        )
+
         check_accumulate = run(
             [str(safec), "check", str(POSITIVE_AST)],
             cwd=REPO_ROOT,
@@ -204,11 +217,13 @@ def main() -> int:
             "build": build,
             "ast": ast_run,
             "ast_validation": ast_validate,
+            "equality_regression": eq_check_run,
             "check_runs": [check_accumulate, check_pipeline],
             "deterministic_outputs": file_hashes,
             "samples": {
                 "ast": str(POSITIVE_AST.relative_to(REPO_ROOT)),
                 "emit": str(POSITIVE_PIPELINE.relative_to(REPO_ROOT)),
+                "equality": str(EQUALITY_CHECK.relative_to(REPO_ROOT)),
             },
         }
 

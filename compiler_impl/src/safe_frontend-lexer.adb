@@ -19,13 +19,25 @@ package body Safe_Frontend.Lexer is
    begin
       return
         Lowered in
-          "access" | "begin" | "body" | "case" | "channel" | "constant" | "declare"
-          | "delay" | "else" | "elsif" | "end" | "for" | "function" | "if"
-          | "in" | "is" | "loop" | "new" | "null" | "or" | "others"
-          | "package" | "pragma" | "private" | "procedure" | "public"
-          | "record" | "rem" | "return" | "select" | "send" | "subtype"
-          | "task" | "then" | "type" | "use" | "when" | "while"
-          | "with" | "xor" | "receive";
+          --  Ada 2022 reserved words retained in Safe (spec §8.15)
+          "abort" | "abs" | "abstract" | "accept" | "access"
+          | "aliased" | "all" | "and" | "array" | "at"
+          | "begin" | "body" | "case" | "constant" | "declare"
+          | "delay" | "delta" | "digits" | "do" | "else"
+          | "elsif" | "end" | "entry" | "exception" | "exit"
+          | "for" | "function" | "generic" | "goto" | "if"
+          | "in" | "interface" | "is" | "limited" | "loop"
+          | "mod" | "new" | "not" | "null" | "of"
+          | "or" | "others" | "out" | "overriding" | "package"
+          | "parallel" | "pragma" | "private" | "procedure" | "protected"
+          | "raise" | "range" | "record" | "rem" | "renames"
+          | "requeue" | "return" | "reverse" | "select" | "separate"
+          | "some" | "subtype" | "synchronized" | "tagged" | "task"
+          | "terminate" | "then" | "type" | "until" | "use"
+          | "when" | "while" | "with" | "xor"
+          --  Safe additional reserved words (spec §8.15)
+          | "public" | "channel" | "send" | "receive"
+          | "try_send" | "try_receive" | "capacity" | "from";
    end Is_Keyword;
 
    function Make_Span
@@ -232,7 +244,7 @@ package body Safe_Frontend.Lexer is
                Two_Char     : constant String :=
                  (if Index + 1 <= Text'Length then Text (Index .. Index + 1) else "");
             begin
-               if Two_Char in ".." | ":=" | "!=" | "<=" | ">=" | "=>" | "/=" then
+               if Two_Char in ".." | ":=" | "!=" | "<=" | ">=" | "=>" | "/=" | "==" then
                   Advance;
                   Advance;
                   Append_Token

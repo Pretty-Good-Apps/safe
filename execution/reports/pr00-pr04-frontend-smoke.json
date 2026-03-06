@@ -29,7 +29,7 @@
     "cwd": "$REPO_ROOT/compiler_impl",
     "returncode": 0,
     "stderr": "",
-    "stdout": "Note: Synchronizing workspace...\nNothing to update.\n\nNote: Building safec=0.1.0-dev/safec.gpr...\ngprbuild: \"safec\" up to date\nSuccess: Build finished successfully in 0.76 seconds.\n"
+    "stdout": "Note: Building safec=0.1.0-dev/safec.gpr...\ngprbuild: \"safec\" up to date\nSuccess: Build finished successfully in 0.72 seconds.\n"
   },
   "check_runs": [
     {
@@ -61,8 +61,20 @@
     "out/channel_pipeline.mir.json": "2ddbae8f0274621054199dd7c97b47595a060de836f3d559f8a158511e2a0efb",
     "out/channel_pipeline.typed.json": "da318e04fc9224a7bcd4cf94f123f8b8c8e454a660f7f324ed2b74436d5d168b"
   },
+  "equality_regression": {
+    "command": [
+      "compiler_impl/bin/safec",
+      "check",
+      "tests/positive/result_equality_check.safe"
+    ],
+    "cwd": "$REPO_ROOT",
+    "returncode": 0,
+    "stderr": "",
+    "stdout": ""
+  },
   "samples": {
     "ast": "tests/positive/rule1_accumulate.safe",
-    "emit": "tests/positive/channel_pipeline.safe"
+    "emit": "tests/positive/channel_pipeline.safe",
+    "equality": "tests/positive/result_equality_check.safe"
   }
 }
