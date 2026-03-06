@@ -1,3 +1,5 @@
+with Ada.Exceptions;
+with Ada.IO_Exceptions;
 with Ada.Characters.Handling;
 with Ada.Directories;
 with Ada.Strings.Fixed;
@@ -9,6 +11,7 @@ with Safe_Frontend.Mir;
 with Safe_Frontend.Parser;
 with Safe_Frontend.Semantics;
 with Safe_Frontend.Source;
+with Safe_Frontend.Types;
 
 package body Safe_Frontend.Driver is
    package FD renames Safe_Frontend.Diagnostics;
@@ -16,11 +19,13 @@ package body Safe_Frontend.Driver is
    package FM renames Safe_Frontend.Mir;
    package FP renames Safe_Frontend.Parser;
    package FS renames Safe_Frontend.Source;
+   package FT renames Safe_Frontend.Types;
    type Pipeline_Result is record
       Ast         : Safe_Frontend.Ast.Compilation_Unit;
       Typed       : Safe_Frontend.Semantics.Typed_Unit;
       Mir_Unit    : FM.Unit;
       Diagnostics : FD.Diagnostic_Vectors.Vector;
+      Internal_Failure : Boolean := False;
       Success     : Boolean := False;
    end record;
 
@@ -44,30 +49,71 @@ package body Safe_Frontend.Driver is
       Ada.Text_IO.Close (File);
    end Write_File;
 
-   function Run_Pipeline (Path : String; Include_Semantics : Boolean := True) return Pipeline_Result is
-      Input       : constant FS.Source_File := FS.Load (Path);
-      Diagnostics : FD.Diagnostic_Vectors.Vector;
-      Tokens      : FL.Token_Vectors.Vector := FL.Lex (Input, Diagnostics);
-      Result      : Pipeline_Result;
+   function Failure_Exit_Code (Result : Pipeline_Result) return Integer is
    begin
-      Result.Diagnostics := Diagnostics;
-      if FD.Has_Errors (Result.Diagnostics) then
-         return Result;
+      if Result.Internal_Failure then
+         return Safe_Frontend.Exit_Internal;
       end if;
-      Result.Ast := FP.Parse (Input, Tokens, Result.Diagnostics);
-      if FD.Has_Errors (Result.Diagnostics) or else not Include_Semantics then
-         Result.Success := not FD.Has_Errors (Result.Diagnostics);
+      return Safe_Frontend.Exit_Diagnostics;
+   end Failure_Exit_Code;
+
+   function Run_Pipeline (Path : String; Include_Semantics : Boolean := True) return Pipeline_Result is
+      Result : Pipeline_Result;
+   begin
+      declare
+         Input  : constant FS.Source_File := FS.Load (Path);
+         Tokens : constant FL.Token_Vectors.Vector := FL.Lex (Input, Result.Diagnostics);
+      begin
+         if FD.Has_Errors (Result.Diagnostics) then
+            return Result;
+         end if;
+         Result.Ast := FP.Parse (Input, Tokens, Result.Diagnostics);
+         if FD.Has_Errors (Result.Diagnostics) or else not Include_Semantics then
+            Result.Success := not FD.Has_Errors (Result.Diagnostics);
+            return Result;
+         end if;
+         Result.Typed :=
+           Safe_Frontend.Semantics.Analyze
+             (Result.Ast, Tokens, Result.Diagnostics);
+         if FD.Has_Errors (Result.Diagnostics) then
+            return Result;
+         end if;
+         Result.Mir_Unit := FM.Lower (Result.Typed);
+         Result.Success := True;
          return Result;
-      end if;
-      Result.Typed :=
-        Safe_Frontend.Semantics.Analyze
-          (Result.Ast, Tokens, Result.Diagnostics);
-      if FD.Has_Errors (Result.Diagnostics) then
+      end;
+   exception
+      when Ada.IO_Exceptions.Name_Error =>
+         FD.Add_Error
+           (Collection => Result.Diagnostics,
+            Path       => Path,
+            Span       => FT.Null_Span,
+            Code       => "SC0001",
+            Message    => "input file not found",
+            Note       => "could not open `" & Path & "`");
          return Result;
-      end if;
-      Result.Mir_Unit := FM.Lower (Result.Typed);
-      Result.Success := True;
-      return Result;
+      when Ada.IO_Exceptions.Use_Error =>
+         FD.Add_Error
+           (Collection => Result.Diagnostics,
+            Path       => Path,
+            Span       => FT.Null_Span,
+            Code       => "SC0002",
+            Message    => "input file could not be read",
+            Note       => "could not read `" & Path & "`");
+         return Result;
+      when Error : others =>
+         Result.Internal_Failure := True;
+         FD.Add_Error
+           (Collection => Result.Diagnostics,
+            Path       => Path,
+            Span       => FT.Null_Span,
+            Code       => "SC9001",
+            Message    => "internal compiler error",
+            Note       =>
+              Ada.Exceptions.Exception_Name (Error)
+              & ": "
+              & Ada.Exceptions.Exception_Message (Error));
+         return Result;
    end Run_Pipeline;
 
    function Run_Ast (Path : String) return Integer is
@@ -75,7 +121,7 @@ package body Safe_Frontend.Driver is
    begin
       if not Result.Success then
          FD.Print (Result.Diagnostics);
-         return Safe_Frontend.Exit_Diagnostics;
+         return Failure_Exit_Code (Result);
       end if;
       Ada.Text_IO.Put
         (Safe_Frontend.Ast.To_Json (Result.Ast));
@@ -87,7 +133,7 @@ package body Safe_Frontend.Driver is
    begin
       if not Result.Success then
          FD.Print (Result.Diagnostics);
-         return Safe_Frontend.Exit_Diagnostics;
+         return Failure_Exit_Code (Result);
       end if;
       return Safe_Frontend.Exit_Success;
    end Run_Check;
@@ -102,7 +148,7 @@ package body Safe_Frontend.Driver is
    begin
       if not Result.Success then
          FD.Print (Result.Diagnostics);
-         return Safe_Frontend.Exit_Diagnostics;
+         return Failure_Exit_Code (Result);
       end if;
 
       Ada.Directories.Create_Path (Out_Dir);

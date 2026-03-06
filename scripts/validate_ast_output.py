@@ -20,6 +20,25 @@ STRICT_NODE_FIELDS = {
     "PackageUnit": {"items"},
     "PackageItem": {"item"},
 }
+PACKAGE_ITEM_TARGETS = {
+    "BasicDeclaration": {
+        "TypeDeclaration",
+        "SubtypeDeclaration",
+        "ObjectDeclaration",
+        "NumberDeclaration",
+        "SubunitStub",
+        "ObjectRenamingDeclaration",
+        "PackageRenamingDeclaration",
+        "SubprogramRenamingDeclaration",
+        "SubprogramDeclaration",
+        "SubprogramBody",
+    },
+    "TaskDeclaration": {"TaskDeclaration"},
+    "ChannelDeclaration": {"ChannelDeclaration"},
+    "UseTypeClause": {"UseTypeClause"},
+    "RepresentationItem": {"RepresentationItem"},
+    "Pragma": {"Pragma"},
+}
 
 
 def fail(message: str) -> None:
@@ -76,26 +95,6 @@ def validate_node(
     if contract is None:
         fail(f"{path}.node_type {node_type!r} is not defined in compiler/ast_schema.json")
 
-    package_item_targets = {
-        "BasicDeclaration": {
-            "TypeDeclaration",
-            "SubtypeDeclaration",
-            "ObjectDeclaration",
-            "NumberDeclaration",
-            "SubunitStub",
-            "ObjectRenamingDeclaration",
-            "PackageRenamingDeclaration",
-            "SubprogramRenamingDeclaration",
-            "SubprogramDeclaration",
-            "SubprogramBody",
-        },
-        "TaskDeclaration": {"TaskDeclaration"},
-        "ChannelDeclaration": {"ChannelDeclaration"},
-        "UseTypeClause": {"UseTypeClause"},
-        "RepresentationItem": {"RepresentationItem"},
-        "Pragma": {"Pragma"},
-    }
-
     fields = contract.get("fields", [])
     for field in fields:
         name = field["name"]
@@ -122,7 +121,7 @@ def validate_node(
         target_types = [target for target in split_targets(type_spec) if target in contracts]
         if node_type == "PackageItem" and name == "item":
             kind = node.get("kind")
-            allowed_targets = package_item_targets.get(kind)
+            allowed_targets = PACKAGE_ITEM_TARGETS.get(kind)
             if not allowed_targets:
                 fail(f"{path}.kind must resolve to a known PackageItem target set")
             if not isinstance(value, dict):

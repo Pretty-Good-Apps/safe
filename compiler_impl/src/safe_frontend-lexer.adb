@@ -92,6 +92,15 @@ package body Safe_Frontend.Lexer is
          Start_Column : Positive;
          End_Line     : Positive;
          End_Column   : Positive) is
+         Suggestion : constant String :=
+           (if Lexeme = ":=" then
+               "Use current Safe syntax (`=` for assignment)."
+            elsif Lexeme = "/=" then
+               "Use current Safe syntax (`!=` for inequality)."
+            elsif Lexeme = "=>" then
+               "Use current Safe syntax (`=` for named associations/aggregates and `then` for select arms)."
+            else
+               "Use current Safe syntax.");
       begin
          FD.Add_Error
            (Collection => Diagnostics,
@@ -99,8 +108,7 @@ package body Safe_Frontend.Lexer is
             Span       => Make_Span (Start_Line, Start_Column, End_Line, End_Column),
             Code       => "SC1001",
             Message    => "legacy token " & Character'Val (34) & Lexeme & Character'Val (34) & " is not allowed",
-            Suggestion =>
-              "Use current Safe syntax (`=` for assignment, `!=` for inequality, `then` for select arms).");
+            Suggestion => Suggestion);
       end Report_Legacy_Token;
 
    begin

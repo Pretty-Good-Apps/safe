@@ -22,6 +22,29 @@ POSITIVE_AST = REPO_ROOT / "tests" / "positive" / "rule1_accumulate.safe"
 POSITIVE_PIPELINE = REPO_ROOT / "tests" / "positive" / "channel_pipeline.safe"
 
 
+def normalize_text(text: str, *, temp_root: Path | None = None) -> str:
+    result = text
+    if temp_root is not None:
+        result = result.replace(str(temp_root), "$TMPDIR")
+    return result.replace(str(REPO_ROOT), "$REPO_ROOT")
+
+
+def normalize_argv(argv: list[str], *, temp_root: Path | None = None) -> list[str]:
+    normalized: list[str] = []
+    for item in argv:
+        candidate = Path(item)
+        if candidate.is_absolute():
+            if temp_root is not None and temp_root in candidate.parents:
+                normalized.append("$TMPDIR/" + str(candidate.relative_to(temp_root)))
+            elif REPO_ROOT in candidate.parents:
+                normalized.append(str(candidate.relative_to(REPO_ROOT)))
+            else:
+                normalized.append(candidate.name)
+        else:
+            normalized.append(item)
+    return normalized
+
+
 def find_command(name: str, fallback: Path | None = None) -> str:
     found = shutil.which(name)
     if found:
@@ -37,6 +60,7 @@ def run(
     cwd: Path,
     env: dict[str, str] | None = None,
     stdout_path: Path | None = None,
+    temp_root: Path | None = None,
 ) -> dict[str, Any]:
     if stdout_path is not None:
         stdout_path.parent.mkdir(parents=True, exist_ok=True)
@@ -62,11 +86,11 @@ def run(
         )
         stdout_text = completed.stdout
     result = {
-        "command": argv,
-        "cwd": str(cwd),
+        "command": normalize_argv(argv, temp_root=temp_root),
+        "cwd": normalize_text(str(cwd), temp_root=temp_root),
         "returncode": completed.returncode,
-        "stdout": stdout_text,
-        "stderr": completed.stderr,
+        "stdout": normalize_text(stdout_text, temp_root=temp_root),
+        "stderr": normalize_text(completed.stderr, temp_root=temp_root),
     }
     if completed.returncode != 0:
         raise RuntimeError(json.dumps(result, indent=2))
@@ -111,21 +135,25 @@ def main() -> int:
             cwd=REPO_ROOT,
             env=env,
             stdout_path=ast_path,
+            temp_root=temp_root,
         )
         ast_validate = run(
             [python, str(REPO_ROOT / "scripts" / "validate_ast_output.py"), str(ast_path)],
             cwd=REPO_ROOT,
             env=env,
+            temp_root=temp_root,
         )
         check_accumulate = run(
             [str(safec), "check", str(POSITIVE_AST)],
             cwd=REPO_ROOT,
             env=env,
+            temp_root=temp_root,
         )
         check_pipeline = run(
             [str(safec), "check", str(POSITIVE_PIPELINE)],
             cwd=REPO_ROOT,
             env=env,
+            temp_root=temp_root,
         )
 
         emit_a_root = temp_root / "emit-a"
@@ -143,6 +171,7 @@ def main() -> int:
                 ],
                 cwd=REPO_ROOT,
                 env=env,
+                temp_root=temp_root,
             )
 
         expected_files = {

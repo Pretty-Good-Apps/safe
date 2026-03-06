@@ -4,11 +4,10 @@
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Set
+from typing import Any, Dict, List, Set
 
 from render_execution_status import DASHBOARD_PATH, TRACKER_PATH, load_tracker, render_dashboard
 

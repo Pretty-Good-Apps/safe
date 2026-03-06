@@ -64,7 +64,7 @@ package body Safe_Frontend.Diagnostics is
    procedure Print (Collection : Diagnostic_Vectors.Vector) is
    begin
       if not Collection.Is_Empty then
-         Ada.Text_IO.Put (Format (Collection));
+         Ada.Text_IO.Put (Ada.Text_IO.Current_Error, Format (Collection));
       end if;
    end Print;
 end Safe_Frontend.Diagnostics;

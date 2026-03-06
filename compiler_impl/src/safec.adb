@@ -52,6 +52,8 @@ begin
             if Ada.Command_Line.Argument_Count < 6
               or else Out_Arg = 0
               or else Interface_Arg = 0
+              or else Out_Arg >= Ada.Command_Line.Argument_Count
+              or else Interface_Arg >= Ada.Command_Line.Argument_Count
             then
                Exit_Code := Usage;
             else

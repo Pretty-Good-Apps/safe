@@ -1,55 +1,55 @@
 {
   "ast": {
     "command": [
-      "/Users/agentc1/src/github.com/agentc1/safe/compiler_impl/bin/safec",
+      "compiler_impl/bin/safec",
       "ast",
-      "/Users/agentc1/src/github.com/agentc1/safe/tests/positive/rule1_accumulate.safe"
+      "tests/positive/rule1_accumulate.safe"
     ],
-    "cwd": "/Users/agentc1/src/github.com/agentc1/safe",
+    "cwd": "$REPO_ROOT",
     "returncode": 0,
     "stderr": "",
     "stdout": "{\"node_type\":\"CompilationUnit\",\"context_clause\":{\"node_type\":\"ContextClause\",\"with_clauses\":[]},\"package_unit\":{\"node_type\":\"PackageUnit\",\"name\":\"Accumulator\",\"items\":[{\"node_type\":\"PackageItem\",\"kind\":\"BasicDeclaration\",\"item\":{\"node_type\":\"TypeDeclaration\",\"is_public\":false,\"name\":\"Small_Int\",\"discriminant_part\":null,\"type_definition\":{\"text\":\"type Small_Int is range 0 .. 100 ;\"},\"span\":{\"start_line\":12,\"start_col\":4,\"end_line\":12,\"end_col\":36}},\"span\":{\"start_line\":12,\"start_col\":4,\"end_line\":12,\"end_col\":36}},{\"node_type\":\"PackageItem\",\"kind\":\"BasicDeclaration\",\"item\":{\"node_type\":\"TypeDeclaration\",\"is_public\":false,\"name\":\"Index\",\"discriminant_part\":null,\"type_definition\":{\"text\":\"type Index is range 1 .. 20 ;\"},\"span\":{\"start_line\":13,\"start_col\":4,\"end_line\":13,\"end_col\":31}},\"span\":{\"start_line\":13,\"start_col\":4,\"end_line\":13,\"end_col\":31}},{\"node_type\":\"PackageItem\",\"kind\":\"BasicDeclaration\",\"item\":{\"node_type\":\"TypeDeclaration\",\"is_public\":false,\"name\":\"Values\",\"discriminant_part\":null,\"type_definition\":{\"text\":\"type Values is array ( Index ) of Small_Int ;\"},\"span\":{\"start_line\":14,\"start_col\":4,\"end_line\":14,\"end_col\":45}},\"span\":{\"start_line\":14,\"start_col\":4,\"end_line\":14,\"end_col\":45}},{\"node_type\":\"PackageItem\",\"kind\":\"BasicDeclaration\",\"item\":{\"node_type\":\"TypeDeclaration\",\"is_public\":false,\"name\":\"Total_Range\",\"discriminant_part\":null,\"type_definition\":{\"text\":\"type Total_Range is range 0 .. 2000 ;\"},\"span\":{\"start_line\":18,\"start_col\":4,\"end_line\":18,\"end_col\":39}},\"span\":{\"start_line\":18,\"start_col\":4,\"end_line\":18,\"end_col\":39}},{\"node_type\":\"PackageItem\",\"kind\":\"BasicDeclaration\",\"item\":{\"node_type\":\"SubprogramBody\",\"is_public\":false,\"spec\":{\"name\":\"Accumulate\",\"signature\":\"function Accumulate ( Data : Values ) return Total_Range is Sum : Total_Range = 0 ;\",\"return_type\":\"Total_Range\"},\"declarative_part\":[],\"body\":{\"statement_count\":0},\"end_designator\":\"Accumulate\",\"span\":{\"start_line\":22,\"start_col\":4,\"end_line\":33,\"end_col\":18}},\"span\":{\"start_line\":22,\"start_col\":4,\"end_line\":33,\"end_col\":18}}],\"end_name\":\"Accumulator\",\"span\":{\"start_line\":10,\"start_col\":1,\"end_line\":35,\"end_col\":16}},\"span\":{\"start_line\":10,\"start_col\":1,\"end_line\":35,\"end_col\":16}}\n"
   },
   "ast_validation": {
     "command": [
-      "/usr/bin/python3",
-      "/Users/agentc1/src/github.com/agentc1/safe/scripts/validate_ast_output.py",
-      "/var/folders/ld/m5s1_rsn63z4j_mj8jjd571r0000gn/T/safec-smoke-c6o7ni5d/rule1_accumulate.ast.json"
+      "python3",
+      "scripts/validate_ast_output.py",
+      "$TMPDIR/rule1_accumulate.ast.json"
     ],
-    "cwd": "/Users/agentc1/src/github.com/agentc1/safe",
+    "cwd": "$REPO_ROOT",
     "returncode": 0,
     "stderr": "",
-    "stdout": "/var/folders/ld/m5s1_rsn63z4j_mj8jjd571r0000gn/T/safec-smoke-c6o7ni5d/rule1_accumulate.ast.json: OK\n"
+    "stdout": "$TMPDIR/rule1_accumulate.ast.json: OK\n"
   },
   "build": {
     "command": [
-      "/Users/agentc1/bin/alr",
+      "alr",
       "build"
     ],
-    "cwd": "/Users/agentc1/src/github.com/agentc1/safe/compiler_impl",
+    "cwd": "$REPO_ROOT/compiler_impl",
     "returncode": 0,
-    "stderr": "",
-    "stdout": "Note: Building safec=0.1.0-dev/safec.gpr...\ngprbuild: \"safec\" up to date\nSuccess: Build finished successfully in 0.50 seconds.\n"
+    "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
+    "stdout": "Note: Building safec=0.1.0-dev/safec.gpr...\nCompile\n   [Ada]          safe_frontend-lexer.adb\nBind\n   [gprbind]      safec.bexch\n   [Ada]          safec.ali\nLink\n   [link]         safec.adb\nSuccess: Build finished successfully in 4.91 seconds.\n"
   },
   "check_runs": [
     {
       "command": [
-        "/Users/agentc1/src/github.com/agentc1/safe/compiler_impl/bin/safec",
+        "compiler_impl/bin/safec",
         "check",
-        "/Users/agentc1/src/github.com/agentc1/safe/tests/positive/rule1_accumulate.safe"
+        "tests/positive/rule1_accumulate.safe"
       ],
-      "cwd": "/Users/agentc1/src/github.com/agentc1/safe",
+      "cwd": "$REPO_ROOT",
       "returncode": 0,
       "stderr": "",
       "stdout": ""
     },
     {
       "command": [
-        "/Users/agentc1/src/github.com/agentc1/safe/compiler_impl/bin/safec",
+        "compiler_impl/bin/safec",
         "check",
-        "/Users/agentc1/src/github.com/agentc1/safe/tests/positive/channel_pipeline.safe"
+        "tests/positive/channel_pipeline.safe"
       ],
-      "cwd": "/Users/agentc1/src/github.com/agentc1/safe",
+      "cwd": "$REPO_ROOT",
       "returncode": 0,
       "stderr": "",
       "stdout": ""
