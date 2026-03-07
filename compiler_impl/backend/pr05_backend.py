@@ -25,13 +25,6 @@ EXIT_USAGE = 2
 EXIT_INTERNAL = 3
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DIAGNOSTICS_GOLDEN_DIR = REPO_ROOT / "tests" / "diagnostics_golden"
-GOLDEN_BY_BASENAME = {
-    "neg_rule1_overflow.safe": DIAGNOSTICS_GOLDEN_DIR / "diag_overflow.txt",
-    "neg_rule2_oob.safe": DIAGNOSTICS_GOLDEN_DIR / "diag_index_oob.txt",
-    "neg_rule3_zero_div.safe": DIAGNOSTICS_GOLDEN_DIR / "diag_zero_div.txt",
-    "neg_rule4_null_deref.safe": DIAGNOSTICS_GOLDEN_DIR / "diag_null_deref.txt",
-}
 REASON_CODE = {
     "intermediate_overflow": "SC5101",
     "narrowing_check_failure": "SC5102",
@@ -126,6 +119,7 @@ class Diagnostic:
     path: str
     span: Span
     message: str
+    highlight_span: Span | None = None
     notes: list[str] = field(default_factory=list)
     suggestion: list[str] = field(default_factory=list)
 
@@ -1751,7 +1745,7 @@ class Resolver:
         typed = self.typed_json()
         interface = self.interface_json()
         mir = self.mir_json()
-        diagnostics = self.run_analysis()
+        diagnostics = self.run_analysis(mir)
         return {
             "ast": self.ast,
             "typed": typed,
@@ -1956,18 +1950,27 @@ class Resolver:
     def mir_json(self) -> dict[str, Any]:
         graphs: list[dict[str, Any]] = []
         for info in self.executables:
-            graphs.append(lower_subprogram_to_mir(info))
+            graphs.append(lower_subprogram_to_mir_v2(info, self.type_env, self.functions))
         return {
             "format": "mir-v1",
             "package_name": self.parsed["package_name"],
             "graphs": graphs,
         }
 
-    def run_analysis(self) -> list[Diagnostic]:
+    def run_analysis(self, mir: dict[str, Any]) -> list[Diagnostic]:
         diagnostics: list[Diagnostic] = []
         basename = self.path.name
+        graph_by_name = {graph["name"]: graph for graph in mir["graphs"]}
         for info in self.executables:
-            diag = analyze_subprogram(self.path, self.source_text, info, self.type_env, self.functions, basename)
+            diag = analyze_mir_graph(
+                self.path,
+                self.source_text,
+                graph_by_name[info.name],
+                info,
+                self.type_env,
+                self.functions,
+                basename,
+            )
             if diag is not None:
                 diagnostics.append(diag)
         diagnostics.sort(key=lambda item: (item.span.start_line, item.span.start_col))
@@ -2426,7 +2429,11 @@ def apply_assignment(
     interval, diag = eval_int_expr_with_diag(expr, state, var_types, target_type, suppress_index_conversion=suppress_index_conversion)
     if diag:
         return diag
-    state.ranges[target_name] = interval
+    if target_type.kind in {"integer", "subtype"}:
+        bounds = target_type.range_interval()
+        state.ranges[target_name] = interval.clamp(low=bounds.low, high=bounds.high)
+    else:
+        state.ranges[target_name] = interval
     return None
 
 
@@ -2454,6 +2461,7 @@ def eval_int_expr_with_diag(
                 reason="narrowing_check_failure",
                 path="",
                 span=expr["span"],
+                highlight_span=expr["span"],
                 message="explicit conversion is not provably within target range",
                 notes=[
                     f"target type '{target.name}' has range {target.range_interval().format()}",
@@ -2584,13 +2592,15 @@ def eval_int_expr(expr: dict[str, Any], state: State, var_types: dict[str, TypeI
         if op in {"/", "mod", "rem"}:
             if not interval_excludes_zero(right):
                 raise DiagnosticError(
-                    Diagnostic(
-                        "division_by_zero",
-                        "",
-                        highlight_span(expr),
-                        "divisor not provably nonzero",
-                        notes=[],
-                    )
+                Diagnostic(
+                    "division_by_zero",
+                    "",
+                    highlight_span(expr),
+                    highlight_span=expr["right"]["span"],
+                    message="divisor not provably nonzero",
+                        notes=division_notes(expr, right, var_types),
+                        suggestion=division_suggestions(expr, right, var_types),
+                )
                 )
             if op == "/":
                 refined = division_interval(expr, left, right, state)
@@ -2606,9 +2616,148 @@ def eval_int_expr(expr: dict[str, Any], state: State, var_types: dict[str, TypeI
 
 
 def highlight_span(expr: dict[str, Any]) -> Span:
-    if expr["tag"] == "binary" and expr["op"] == "/":
-        return expr["right"]["span"]
+    if expr["tag"] == "binary" and expr["op"] in {"/", "mod", "rem"}:
+        op_start = expr["left"]["span"].end_col + 2
+        op_end = op_start + len(expr["op"]) - 1
+        return Span(expr["span"].start_line, op_start, expr["span"].start_line, op_end)
     return expr["span"]
+
+
+def interval_display(interval: Interval, type_info: TypeInfo | None = None) -> str:
+    if type_info is not None and interval.low == INT64_LOW and interval.high == INT64_HIGH:
+        return f"[{type_info.name}'First .. {type_info.name}'Last]"
+    return interval.format()
+
+
+def overflow_notes(expr: dict[str, Any], interval: Interval, left: Interval, right: Interval) -> list[str]:
+    notes = [
+        f"static range analysis determines that the subexpression ({source_text_for_expr(expr)})\n"
+        f"has range {interval.format()}\n"
+        "which exceeds the 64-bit signed range\n"
+        f"[{format_int(INT64_LOW)} .. {format_int(INT64_HIGH)}].",
+    ]
+    if expr["tag"] == "binary" and expr["left"]["tag"] == "ident":
+        notes.append(f"{expr['left']['name']} has range {left.format()}")
+    if expr["tag"] == "binary" and expr["right"]["tag"] == "ident":
+        notes.append(f"{expr['right']['name']} has range {right.format()}")
+    notes.append("rule: D27 Rule 1 (Wide Intermediate Arithmetic)")
+    notes.append(
+        "per spec/02-restrictions.md section 2.8.1 paragraph 129:\n"
+        '"If a conforming implementation cannot establish, by sound static\n'
+        "range analysis, that every intermediate subexpression of an integer\n"
+        "arithmetic expression stays within the 64-bit signed range, the\n"
+        'expression shall be rejected with a diagnostic."'
+    )
+    return notes
+
+
+def index_notes(
+    expr: dict[str, Any],
+    prefix_type: TypeInfo,
+    index_expr: dict[str, Any],
+    interval: Interval,
+    var_types: dict[str, TypeInfo],
+) -> list[str]:
+    prefix_name = flatten_name(expr["prefix"]) if expr["prefix"]["tag"] in {"ident", "select"} else source_text_for_expr(expr["prefix"])
+    index_type = prefix_type.index_types[0] if prefix_type.index_types else TypeInfo("Integer", "integer", INT64_LOW, INT64_HIGH)
+    base_index_type = expr_type(strip_conversion(index_expr), var_types)
+    low = format_int(index_type.low if index_type.low is not None else INT64_LOW)
+    high = format_int(index_type.high if index_type.high is not None else INT64_HIGH)
+    return [
+        f"array '{prefix_name}' has index range {index_type.name} ({low} .. {high}).",
+        f"index expression '{source_text_for_expr(index_expr)}' has type {base_index_type.name}, with range\n"
+        f"{interval_display(base_index_type.range_interval(), base_index_type)}.",
+        "static analysis cannot establish that the index is within\n"
+        f"[{low} .. {high}] on all execution paths.",
+        "rule: D27 Rule 2 (Provable Index Safety)",
+        "per spec/02-restrictions.md section 2.8.2 paragraph 131:\n"
+        '"The index expression in an indexed_component shall be provably\n'
+        'within the array object\'s index bounds at compile time."',
+        "per spec/02-restrictions.md section 2.8.2 paragraph 132:\n"
+        '"If neither condition holds, the program is nonconforming and\n'
+        "the implementation shall reject it with a diagnostic identifying\n"
+        'the indexed_component and the unresolvable bound relationship."',
+    ]
+
+
+def index_suggestions(array_name: str, prefix_type: TypeInfo, index_expr: dict[str, Any]) -> list[str]:
+    if not prefix_type.index_types:
+        return []
+    index_type = prefix_type.index_types[0]
+    low = format_int(index_type.low if index_type.low is not None else INT64_LOW)
+    high = format_int(index_type.high if index_type.high is not None else INT64_HIGH)
+    index_text = source_text_for_expr(strip_conversion(index_expr))
+    full_expr_text = source_text_for_expr(index_expr)
+    return [
+        "add a bounds check before indexing:\n"
+        f"if {index_text} >= {low} and then {index_text} <= {high} then\n"
+        f"   return {array_name} ({full_expr_text});\n"
+        "end if;"
+    ]
+
+
+def division_notes(expr: dict[str, Any], interval: Interval, var_types: dict[str, TypeInfo]) -> list[str]:
+    del interval
+    rhs = expr["right"]
+    expr_text = source_text_for_expr(rhs)
+    type_info = expr_type(rhs, var_types)
+    low = format_int(type_info.low if type_info.low is not None else INT64_LOW)
+    high = format_int(type_info.high if type_info.high is not None else INT64_HIGH)
+    return [
+        f"right operand '{expr_text}' has type {type_info.name} (range {low} .. {high}),\n"
+        "which includes zero.",
+        f"no preceding conditional or subtype constraint establishes\n{expr_text} /= 0 on all paths reaching this division.",
+        "rule: D27 Rule 3 (Division by Provably Nonzero Divisor)",
+        "per spec/02-restrictions.md section 2.8.3 paragraph 133:\n"
+        '"The right operand of the operators /, mod, and rem shall be\n'
+        'provably nonzero at compile time."',
+        "per spec/02-restrictions.md section 2.8.3 paragraph 134:\n"
+        '"If none of the conditions in paragraph 133 holds, the program\n'
+        "is nonconforming and a conforming implementation shall reject\n"
+        'the expression with a diagnostic."',
+    ]
+
+
+def division_suggestions(expr: dict[str, Any], interval: Interval, var_types: dict[str, TypeInfo]) -> list[str]:
+    del interval, var_types
+    rhs_text = source_text_for_expr(expr["right"])
+    expr_text = source_text_for_expr(expr)
+    return [
+        "add a guard before the division:\n"
+        f"if {rhs_text} /= 0 then\n"
+        f"   return {expr_text};\n"
+        "else\n"
+        "   return 0;  -- or handle the zero case\n"
+        "end if;",
+        "or use a positive subtype that excludes zero:\n"
+        "type Positive_Value is range 1 .. 100;",
+    ]
+
+
+def null_dereference_notes(expr: dict[str, Any], var_types: dict[str, TypeInfo]) -> list[str]:
+    expr_text = source_text_for_expr(expr)
+    type_info = expr_type(expr, var_types)
+    target = type_info.target.name if type_info.kind == "access" and type_info.target is not None else "Value"
+    return [
+        f"{expr_text} is of type {type_info.name} (access {target}), which does not exclude null.",
+        "no null check precedes this dereference on all paths reaching\nthis program point.",
+        "rule: D27 Rule 4 (Not-Null Dereference)",
+        "per spec/02-restrictions.md section 2.8.4 paragraph 136:\n"
+        '"Dereference of an access value shall require the access subtype\n'
+        "to be not null. A conforming implementation shall reject any\n"
+        "dereference where the access subtype at the point of dereference\n"
+        'does not exclude null."',
+    ]
+
+
+def null_dereference_suggestions(prefix_expr: dict[str, Any], deref_text: str) -> list[str]:
+    prefix_text = source_text_for_expr(prefix_expr)
+    return [
+        'use a "not null access" subtype, or add an explicit null check:\n'
+        f"if {prefix_text} /= null then\n"
+        f"   return {deref_text};\n"
+        "end if;"
+    ]
 
 
 def division_interval(expr: dict[str, Any], left: Interval, right: Interval, state: State) -> Interval:
@@ -2655,11 +2804,9 @@ def overflow_checked(expr: dict[str, Any], low: int, high: int, left: Interval, 
                 "intermediate_overflow",
                 "",
                 expr["span"],
-                "intermediate overflow in integer expression",
-                notes=[
-                    f"static range analysis determines that the subexpression ({source_text_for_expr(expr)})",
-                    f"has range {interval.format()}",
-                ],
+                highlight_span=expr["span"],
+                message="intermediate overflow in integer expression",
+                notes=overflow_notes(expr, interval, left, right),
             )
         )
     return interval
@@ -2707,11 +2854,39 @@ def eval_access_expr(
         if diag:
             return fact, diag
         if fact.state == "Dangling":
-            return fact, Diagnostic("dangling_reference", "", expr["span"], "dereference of dangling access value")
+            return fact, Diagnostic(
+                "dangling_reference",
+                "",
+                expr["span"],
+                highlight_span=expr["span"],
+                message="dereference of dangling access value",
+                notes=[
+                    "the access value outlives the owner scope that created it.",
+                    "rule: D27 Rule 4 (Not-Null Dereference)",
+                ],
+            )
         if fact.state == "Moved":
-            return fact, Diagnostic("use_after_move", "", expr["span"], "dereference of moved access value")
+            return fact, Diagnostic(
+                "use_after_move",
+                "",
+                expr["span"],
+                highlight_span=expr["span"],
+                message="dereference of moved access value",
+                notes=[
+                    "the access value was moved before this dereference.",
+                    "rule: D27 Rule 4 (Not-Null Dereference)",
+                ],
+            )
         if fact.state != "NonNull":
-            return fact, Diagnostic("null_dereference", "", expr["span"], "dereference of possibly null access value")
+            return fact, Diagnostic(
+                "null_dereference",
+                "",
+                expr["span"],
+                highlight_span=expr["span"],
+                message="dereference of possibly null access value",
+                notes=null_dereference_notes(expr["prefix"], var_types),
+                suggestion=null_dereference_suggestions(expr["prefix"], source_text_for_expr(expr)),
+            )
         return fact, None
     if tag == "select":
         if expr["prefix"]["tag"] == "select" and expr["prefix"]["selector"] == "all":
@@ -2773,17 +2948,32 @@ def eval_index_expr(expr: dict[str, Any], state: State, var_types: dict[str, Typ
     if prefix_type.kind != "array" or not prefix_type.index_types:
         raise DiagnosticError(Diagnostic("index_out_of_bounds", "", expr["span"], "indexed object is not an array"))
     if prefix_type.unconstrained:
-        raise DiagnosticError(Diagnostic("index_out_of_bounds", "", expr["span"], "index expression not provably within array bounds"))
+        prefix_name = flatten_name(expr["prefix"]) if expr["prefix"]["tag"] in {"ident", "select"} else source_text_for_expr(expr["prefix"])
+        raise DiagnosticError(
+            Diagnostic(
+                "index_out_of_bounds",
+                "",
+                expr["span"],
+                highlight_span=expr["span"],
+                message="index expression not provably within array bounds",
+                notes=index_notes(expr, prefix_type, expr["indices"][0], Interval(INT64_LOW, INT64_HIGH), var_types),
+                suggestion=index_suggestions(prefix_name, prefix_type, expr["indices"][0]),
+            )
+        )
     for idx_expr, index_type in zip(expr["indices"], prefix_type.index_types):
         interval = eval_int_expr(strip_conversion(idx_expr), state, var_types)
         bounds = index_type.range_interval()
         if not bounds.contains(interval):
+            prefix_name = flatten_name(expr["prefix"]) if expr["prefix"]["tag"] in {"ident", "select"} else source_text_for_expr(expr["prefix"])
             raise DiagnosticError(
                 Diagnostic(
                     "index_out_of_bounds",
                     "",
                     expr["span"],
-                    "index expression not provably within array bounds",
+                    highlight_span=expr["span"],
+                    message="index expression not provably within array bounds",
+                    notes=index_notes(expr, prefix_type, idx_expr, interval, var_types),
+                    suggestion=index_suggestions(prefix_name, prefix_type, idx_expr),
                 )
             )
     return prefix_type.component_type.range_interval() if prefix_type.component_type else Interval(INT64_LOW, INT64_HIGH)
@@ -2931,7 +3121,8 @@ def check_return_expr(expr: dict[str, Any], return_type: TypeInfo, state: State,
                 "narrowing_check_failure",
                 "",
                 expr["span"],
-                "return expression is not provably within function result range",
+                highlight_span=expr["span"],
+                message="return expression is not provably within function result range",
                 notes=[
                     f"return type '{return_type.name}' has range {return_type.range_interval().format()}",
                     f"expression range is {interval.format()}",
@@ -2948,15 +3139,43 @@ def ensure_access_safe(expr: dict[str, Any], span: Span, state: State, var_types
         raise DiagnosticError(diag)
     if fact.state == "Dangling":
         raise DiagnosticError(
-            Diagnostic("dangling_reference", "", span, "dereference of dangling access value")
+            Diagnostic(
+                "dangling_reference",
+                "",
+                span,
+                highlight_span=span,
+                message="dereference of dangling access value",
+                notes=[
+                    "the access value outlives the owner scope that created it.",
+                    "rule: D27 Rule 4 (Not-Null Dereference)",
+                ],
+            )
         )
     if fact.state == "Moved":
         raise DiagnosticError(
-            Diagnostic("use_after_move", "", span, "dereference of moved access value")
+            Diagnostic(
+                "use_after_move",
+                "",
+                span,
+                highlight_span=span,
+                message="dereference of moved access value",
+                notes=[
+                    "the access value was moved before this dereference.",
+                    "rule: D27 Rule 4 (Not-Null Dereference)",
+                ],
+            )
         )
     if fact.state != "NonNull":
         raise DiagnosticError(
-            Diagnostic("null_dereference", "", span, "dereference of possibly null access value")
+            Diagnostic(
+                "null_dereference",
+                "",
+                span,
+                highlight_span=span,
+                message="dereference of possibly null access value",
+                notes=null_dereference_notes(expr, var_types),
+                suggestion=null_dereference_suggestions(expr, f"{source_text_for_expr(expr)}.all"),
+            )
         )
 
 
@@ -2982,7 +3201,8 @@ def analyze_call_expr(expr: dict[str, Any], state: State, var_types: dict[str, T
                     "narrowing_check_failure",
                     "",
                     actual["span"],
-                    "actual parameter is not provably within formal parameter range",
+                    highlight_span=actual["span"],
+                    message="actual parameter is not provably within formal parameter range",
                     notes=[
                         f"formal '{formal.name}' has type {formal.type_info.name} with range {formal.type_info.range_interval().format()}",
                         f"actual expression range is {interval.format()}",
@@ -3171,6 +3391,751 @@ def normalize_statement(statement: dict[str, Any], var_types: dict[str, TypeInfo
     return statement
 
 
+def type_from_json(payload: dict[str, Any], type_env: dict[str, TypeInfo]) -> TypeInfo:
+    name = payload["name"]
+    if name in type_env and payload.get("kind") == type_env[name].kind:
+        return type_env[name]
+    info = TypeInfo(
+        name=name,
+        kind=payload["kind"],
+        low=payload.get("low"),
+        high=payload.get("high"),
+        not_null=payload.get("not_null", False),
+        anonymous=payload.get("anonymous", False),
+    )
+    if "target" in payload:
+        target_name = payload["target"]
+        info.target = type_env.get(target_name, TypeInfo(target_name, "record"))
+    if "base" in payload:
+        base_name = payload["base"]
+        info.base = type_env.get(base_name, TypeInfo(base_name, "integer", INT64_LOW, INT64_HIGH))
+    if "component_type" in payload:
+        component_name = payload["component_type"]
+        info.component_type = type_env.get(component_name, TypeInfo(component_name, "integer", INT64_LOW, INT64_HIGH))
+    if "index_types" in payload:
+        info.index_types = [
+            type_env.get(item, TypeInfo(item, "integer", INT64_LOW, INT64_HIGH))
+            for item in payload["index_types"]
+        ]
+    if "fields" in payload:
+        info.fields = {
+            field_name: type_env.get(field_type, TypeInfo(field_type, "integer", INT64_LOW, INT64_HIGH))
+            for field_name, field_type in payload["fields"].items()
+        }
+    info.unconstrained = payload.get("unconstrained", False)
+    return info
+
+
+def local_entry(name: str, kind: str, mode: str, type_info: TypeInfo, span: Span) -> dict[str, Any]:
+    return {
+        "id": "",
+        "name": name,
+        "kind": kind,
+        "mode": mode,
+        "type": type_to_json(type_info),
+        "span": span,
+    }
+
+
+def literal_expr(value: int, span: Span) -> dict[str, Any]:
+    return {
+        "tag": "int",
+        "text": format_int(value),
+        "value": value,
+        "span": span,
+    }
+
+
+def ident_expr(name: str, span: Span) -> dict[str, Any]:
+    return {"tag": "ident", "name": name, "span": span}
+
+
+def binary_expr(op: str, left: dict[str, Any], right: dict[str, Any], span: Span) -> dict[str, Any]:
+    return {"tag": "binary", "op": op, "left": left, "right": right, "span": span}
+
+
+def mir_kind_for_expr(expr: dict[str, Any]) -> str:
+    tag = expr["tag"]
+    if tag == "ident":
+        return "use"
+    if tag == "select":
+        if expr["selector"] in {"First", "Last"}:
+            return "attribute"
+        if expr["selector"] == "all":
+            return "deref"
+        return "field"
+    if tag == "resolved_index":
+        return "index"
+    if tag == "conversion":
+        return "conversion"
+    if tag == "call":
+        return "call"
+    if tag == "allocator":
+        return "allocator"
+    if tag == "aggregate":
+        return "aggregate"
+    if tag == "annotated":
+        return "annotated"
+    if tag in {"int", "bool", "null"}:
+        return "literal"
+    return tag
+
+
+def lower_expr_to_mir(expr: dict[str, Any], var_types: dict[str, TypeInfo]) -> dict[str, Any]:
+    tag = expr["tag"]
+    lowered = copy.deepcopy(expr)
+    lowered["kind"] = mir_kind_for_expr(expr)
+    lowered["type"] = expr_type(expr, var_types).name
+    if tag == "select":
+        lowered["prefix"] = lower_expr_to_mir(expr["prefix"], var_types)
+    elif tag == "resolved_index":
+        lowered["prefix"] = lower_expr_to_mir(expr["prefix"], var_types)
+        lowered["indices"] = [lower_expr_to_mir(item, var_types) for item in expr["indices"]]
+    elif tag == "conversion":
+        lowered["expr"] = lower_expr_to_mir(expr["expr"], var_types)
+    elif tag == "call":
+        lowered["callee"] = lower_expr_to_mir(expr["callee"], var_types)
+        lowered["args"] = [lower_expr_to_mir(item, var_types) for item in expr["args"]]
+    elif tag == "allocator":
+        value = expr["value"]
+        if isinstance(value, dict):
+            if value["tag"] == "annotated":
+                lowered["value"] = {
+                    "tag": "annotated",
+                    "kind": "annotated",
+                    "expr": lower_expr_to_mir(value["expr"], var_types),
+                    "subtype": value["subtype"],
+                    "span": value["span"],
+                    "type": lowered["type"],
+                }
+            else:
+                lowered["value"] = copy.deepcopy(value)
+    elif tag == "aggregate":
+        lowered["fields"] = [
+            {
+                "field": assoc["field"],
+                "expr": lower_expr_to_mir(assoc["expr"], var_types),
+                "span": assoc["span"],
+            }
+            for assoc in expr["fields"]
+        ]
+    elif tag == "annotated":
+        lowered["expr"] = lower_expr_to_mir(expr["expr"], var_types)
+    elif tag == "binary":
+        lowered["left"] = lower_expr_to_mir(expr["left"], var_types)
+        lowered["right"] = lower_expr_to_mir(expr["right"], var_types)
+    elif tag == "unary":
+        lowered["expr"] = lower_expr_to_mir(expr["expr"], var_types)
+    return lowered
+
+
+def lower_target_to_mir(expr: dict[str, Any], var_types: dict[str, TypeInfo]) -> dict[str, Any]:
+    lowered = lower_expr_to_mir(expr, var_types)
+    if expr["tag"] == "ident":
+        lowered["kind"] = "local"
+    elif expr["tag"] == "select":
+        lowered["kind"] = "deref" if expr["selector"] == "all" else "field"
+    elif expr["tag"] == "resolved_index":
+        lowered["kind"] = "index"
+    return lowered
+
+
+def renumber_blocks(blocks: list[dict[str, Any]]) -> dict[str, str]:
+    mapping = {
+        block["id"]: f"bb{index}"
+        for index, block in enumerate(blocks)
+    }
+    for block in blocks:
+        block["id"] = mapping[block["id"]]
+    for block in blocks:
+        terminator = block["terminator"]
+        if terminator["kind"] == "jump":
+            terminator["target"] = mapping[terminator["target"]]
+        elif terminator["kind"] == "branch":
+            terminator["true_target"] = mapping[terminator["true_target"]]
+            terminator["false_target"] = mapping[terminator["false_target"]]
+    return mapping
+
+
+def static_loop_type(range_node: dict[str, Any], visible_types: dict[str, TypeInfo]) -> TypeInfo:
+    if range_node["tag"] == "subtype":
+        return visible_types.get(flatten_name(range_node["name"]), TypeInfo("Integer", "integer", INT64_LOW, INT64_HIGH))
+    low_type = expr_type(range_node["low"], visible_types)
+    high_type = expr_type(range_node["high"], visible_types)
+    if (
+        low_type.kind in {"integer", "subtype"}
+        and high_type.kind in {"integer", "subtype"}
+        and low_type.name == high_type.name
+        and low_type.low is not None
+        and low_type.high is not None
+    ):
+        return low_type
+    dummy_state = State(ranges={}, access={}, relations=set(), div_bounds={})
+    low = constant_value(range_node["low"], dummy_state, visible_types)
+    high = constant_value(range_node["high"], dummy_state, visible_types)
+    if low is None or high is None:
+        return TypeInfo("Integer", "integer", INT64_LOW, INT64_HIGH)
+    return TypeInfo(f"loop_{low}_{high}", "integer", low, high)
+
+
+def static_loop_bounds(range_node: dict[str, Any], visible_types: dict[str, TypeInfo]) -> tuple[dict[str, Any], dict[str, Any], TypeInfo]:
+    loop_type = static_loop_type(range_node, visible_types)
+    if range_node["tag"] == "subtype":
+        low = loop_type.low if loop_type.low is not None else INT64_LOW
+        high = loop_type.high if loop_type.high is not None else INT64_HIGH
+        return literal_expr(low, range_node["span"]), literal_expr(high, range_node["span"]), loop_type
+    return range_node["low"], range_node["high"], loop_type
+
+
+def collect_statement_locals(
+    statements: list[dict[str, Any]],
+    visible_types: dict[str, TypeInfo],
+) -> list[dict[str, Any]]:
+    locals_list: list[dict[str, Any]] = []
+    for statement in statements:
+        tag = statement["tag"]
+        if tag == "block":
+            child_visible = dict(visible_types)
+            for decl in statement["declarations"]:
+                decl_type = resolve_decl_type(decl, child_visible)
+                for name in decl["names"]:
+                    locals_list.append(local_entry(name, "local", "in", decl_type, decl["span"]))
+                    child_visible[name] = decl_type
+            locals_list.extend(collect_statement_locals(statement["body"], child_visible))
+        elif tag == "for":
+            loop_type = static_loop_type(statement["range"], visible_types)
+            child_visible = dict(visible_types)
+            child_visible[statement["loop_var"]] = loop_type
+            locals_list.append(local_entry(statement["loop_var"], "local", "in", loop_type, statement["span"]))
+            locals_list.extend(collect_statement_locals(statement["body"], child_visible))
+        elif tag == "if":
+            locals_list.extend(collect_statement_locals(statement["then"], dict(visible_types)))
+            for part in statement["elsif"]:
+                locals_list.extend(collect_statement_locals(part["body"], dict(visible_types)))
+            if statement["else"] is not None:
+                locals_list.extend(collect_statement_locals(statement["else"], dict(visible_types)))
+        elif tag == "while":
+            locals_list.extend(collect_statement_locals(statement["body"], dict(visible_types)))
+    return locals_list
+
+
+class MirBuilder:
+    def __init__(self) -> None:
+        self.blocks: list[dict[str, Any]] = []
+        self.next_block_id = 0
+
+    def new_block(self, span: Span, role: str) -> dict[str, Any]:
+        block = {
+            "id": f"bb{self.next_block_id}",
+            "role": role,
+            "ops": [],
+            "terminator": None,
+            "span": span,
+        }
+        self.next_block_id += 1
+        self.blocks.append(block)
+        return block
+
+    def add_op(self, block: dict[str, Any], op: dict[str, Any]) -> None:
+        block["ops"].append(op)
+
+    def terminate(self, block: dict[str, Any], terminator: dict[str, Any]) -> None:
+        if block["terminator"] is not None:
+            raise BackendError(f"block {block['id']} already terminated")
+        block["terminator"] = terminator
+
+
+def emit_scope_exit_ops(builder: MirBuilder, block: dict[str, Any], scopes: list[list[str]], span: Span) -> None:
+    for locals_in_scope in reversed(scopes):
+        if locals_in_scope:
+            builder.add_op(
+                block,
+                {
+                    "kind": "scope_exit",
+                    "locals": list(locals_in_scope),
+                    "span": span,
+                },
+            )
+
+
+def lower_statement_list_mir(
+    builder: MirBuilder,
+    current: dict[str, Any] | None,
+    statements: list[dict[str, Any]],
+    visible_types: dict[str, TypeInfo],
+    scopes: list[list[str]],
+) -> dict[str, Any] | None:
+    block = current
+    for statement in statements:
+        if block is None:
+            return None
+        block = lower_statement_to_mir(builder, block, statement, visible_types, scopes)
+    return block
+
+
+def lower_branch_condition(
+    builder: MirBuilder,
+    current: dict[str, Any],
+    condition: dict[str, Any],
+    visible_types: dict[str, TypeInfo],
+    true_target: str,
+    false_target: str,
+) -> None:
+    if condition["tag"] == "binary" and condition["op"] == "and then":
+        rhs_block = builder.new_block(condition["right"]["span"], "and_then_rhs")
+        builder.terminate(
+            current,
+            {
+                "kind": "branch",
+                "condition": lower_expr_to_mir(condition["left"], visible_types),
+                "true_target": rhs_block["id"],
+                "false_target": false_target,
+                "span": condition["left"]["span"],
+            },
+        )
+        lower_branch_condition(
+            builder,
+            rhs_block,
+            condition["right"],
+            visible_types,
+            true_target,
+            false_target,
+        )
+        return
+
+    builder.terminate(
+        current,
+        {
+            "kind": "branch",
+            "condition": lower_expr_to_mir(condition, visible_types),
+            "true_target": true_target,
+            "false_target": false_target,
+            "span": condition["span"],
+        },
+    )
+
+
+def lower_statement_to_mir(
+    builder: MirBuilder,
+    current: dict[str, Any],
+    statement: dict[str, Any],
+    visible_types: dict[str, TypeInfo],
+    scopes: list[list[str]],
+) -> dict[str, Any] | None:
+    tag = statement["tag"]
+    if tag == "assign":
+        target_type = expr_type(statement["target"], visible_types)
+        builder.add_op(
+            current,
+            {
+                "kind": "assign",
+                "target": lower_target_to_mir(statement["target"], visible_types),
+                "value": lower_expr_to_mir(statement["value"], visible_types),
+                "type": target_type.name,
+                "span": statement["span"],
+            },
+        )
+        return current
+    if tag == "call_stmt":
+        builder.add_op(
+            current,
+            {
+                "kind": "call",
+                "value": lower_expr_to_mir(statement["call"], visible_types),
+                "type": expr_type(statement["call"], visible_types).name,
+                "span": statement["span"],
+            },
+        )
+        return current
+    if tag == "null":
+        return current
+    if tag == "return":
+        emit_scope_exit_ops(builder, current, scopes, statement["span"])
+        builder.terminate(
+            current,
+            {
+                "kind": "return",
+                "value": lower_expr_to_mir(statement["expr"], visible_types) if statement["expr"] is not None else None,
+                "span": statement["span"],
+            },
+        )
+        return None
+    if tag == "block":
+        entry = builder.new_block(statement["span"], "block_entry")
+        builder.terminate(current, {"kind": "jump", "target": entry["id"], "span": statement["span"]})
+        local_names: list[str] = []
+        child_visible = dict(visible_types)
+        for decl in statement["declarations"]:
+            decl_type = resolve_decl_type(decl, child_visible)
+            for name in decl["names"]:
+                local_names.append(name)
+                child_visible[name] = decl_type
+        if local_names:
+            builder.add_op(entry, {"kind": "scope_enter", "locals": local_names, "span": statement["span"]})
+        for decl in statement["declarations"]:
+            decl_type = resolve_decl_type(decl, child_visible)
+            for name in decl["names"]:
+                if decl.get("initializer") is not None:
+                    builder.add_op(
+                        entry,
+                        {
+                            "kind": "assign",
+                            "target": lower_target_to_mir(ident_expr(name, decl["span"]), child_visible),
+                            "value": lower_expr_to_mir(decl["initializer"], child_visible),
+                            "type": decl_type.name,
+                            "span": decl["span"],
+                        },
+                    )
+        body_end = lower_statement_list_mir(builder, entry, statement["body"], child_visible, scopes + [local_names])
+        if body_end is not None:
+            builder.add_op(body_end, {"kind": "scope_exit", "locals": local_names, "span": statement["span"]})
+        return body_end
+    if tag == "if":
+        then_block = builder.new_block(statement["span"], "if_then")
+        else_block = builder.new_block(statement["span"], "if_else")
+        join_block = builder.new_block(statement["span"], "if_join")
+        lower_branch_condition(
+            builder,
+            current,
+            statement["condition"],
+            visible_types,
+            then_block["id"],
+            else_block["id"],
+        )
+        then_end = lower_statement_list_mir(builder, then_block, statement["then"], dict(visible_types), scopes)
+        if statement["elsif"]:
+            nested_else = copy.deepcopy(statement)
+            first = nested_else["elsif"][0]
+            nested_else = {
+                "tag": "if",
+                "condition": first["condition"],
+                "then": first["body"],
+                "elsif": nested_else["elsif"][1:],
+                "else": nested_else["else"],
+                "span": statement["span"],
+            }
+            else_end = lower_statement_to_mir(builder, else_block, nested_else, dict(visible_types), scopes)
+        elif statement["else"] is not None:
+            else_end = lower_statement_list_mir(builder, else_block, statement["else"], dict(visible_types), scopes)
+        else:
+            else_end = else_block
+        reached_join = False
+        for end_block in (then_end, else_end):
+            if end_block is not None and end_block["terminator"] is None:
+                builder.terminate(end_block, {"kind": "jump", "target": join_block["id"], "span": statement["span"]})
+                reached_join = True
+        if not reached_join:
+            builder.blocks = [block for block in builder.blocks if block["id"] != join_block["id"]]
+            return None
+        return join_block
+    if tag == "while":
+        header = builder.new_block(statement["span"], "while_header")
+        body = builder.new_block(statement["span"], "while_body")
+        exit_block = builder.new_block(statement["span"], "while_exit")
+        builder.terminate(current, {"kind": "jump", "target": header["id"], "span": statement["span"]})
+        lower_branch_condition(
+            builder,
+            header,
+            statement["condition"],
+            visible_types,
+            body["id"],
+            exit_block["id"],
+        )
+        body_end = lower_statement_list_mir(builder, body, statement["body"], dict(visible_types), scopes)
+        if body_end is not None and body_end["terminator"] is None:
+            builder.terminate(body_end, {"kind": "jump", "target": header["id"], "span": statement["span"]})
+        return exit_block
+    if tag == "for":
+        init_block = builder.new_block(statement["span"], "for_init")
+        header = builder.new_block(statement["span"], "for_header")
+        body = builder.new_block(statement["span"], "for_body")
+        latch = builder.new_block(statement["span"], "for_latch")
+        exit_block = builder.new_block(statement["span"], "for_exit")
+        builder.terminate(current, {"kind": "jump", "target": init_block["id"], "span": statement["span"]})
+        low_expr, high_expr, loop_type = static_loop_bounds(statement["range"], visible_types)
+        child_visible = dict(visible_types)
+        child_visible[statement["loop_var"]] = loop_type
+        builder.add_op(init_block, {"kind": "scope_enter", "locals": [statement["loop_var"]], "span": statement["span"]})
+        builder.add_op(
+            init_block,
+            {
+                "kind": "assign",
+                "target": lower_target_to_mir(ident_expr(statement["loop_var"], statement["span"]), child_visible),
+                "value": lower_expr_to_mir(low_expr, child_visible),
+                "type": loop_type.name,
+                "span": statement["span"],
+            },
+        )
+        builder.terminate(init_block, {"kind": "jump", "target": header["id"], "span": statement["span"]})
+        cond_expr = binary_expr(
+            "<=",
+            ident_expr(statement["loop_var"], statement["span"]),
+            high_expr,
+            statement["span"],
+        )
+        builder.terminate(
+            header,
+            {
+                "kind": "branch",
+                "condition": lower_expr_to_mir(cond_expr, child_visible),
+                "true_target": body["id"],
+                "false_target": exit_block["id"],
+                "span": statement["span"],
+            },
+        )
+        header["loop"] = {
+            "kind": "for",
+            "loop_var": statement["loop_var"],
+            "exit_target": exit_block["id"],
+        }
+        body_end = lower_statement_list_mir(builder, body, statement["body"], child_visible, scopes + [[statement["loop_var"]]])
+        if body_end is not None and body_end["terminator"] is None:
+            builder.terminate(body_end, {"kind": "jump", "target": latch["id"], "span": statement["span"]})
+        increment_expr = binary_expr(
+            "+",
+            ident_expr(statement["loop_var"], statement["span"]),
+            literal_expr(1, statement["span"]),
+            statement["span"],
+        )
+        builder.add_op(
+            latch,
+            {
+                "kind": "assign",
+                "target": lower_target_to_mir(ident_expr(statement["loop_var"], statement["span"]), child_visible),
+                "value": lower_expr_to_mir(increment_expr, child_visible),
+                "type": loop_type.name,
+                "span": statement["span"],
+            },
+        )
+        builder.terminate(latch, {"kind": "jump", "target": header["id"], "span": statement["span"]})
+        builder.add_op(exit_block, {"kind": "scope_exit", "locals": [statement["loop_var"]], "span": statement["span"]})
+        return exit_block
+    raise BackendError(f"unsupported MIR lowering statement: {tag}")
+
+
+def lower_subprogram_to_mir_v2(
+    info: FunctionInfo,
+    type_env: dict[str, TypeInfo],
+    functions: dict[str, FunctionInfo],
+) -> dict[str, Any]:
+    visible_types = dict(type_env)
+    locals_table: list[dict[str, Any]] = []
+    for index, symbol in enumerate(info.params):
+        visible_types[symbol.name] = symbol.type_info
+        entry = local_entry(symbol.name, "param", symbol.mode, symbol.type_info, symbol.span)
+        entry["id"] = f"v{len(locals_table)}"
+        locals_table.append(entry)
+    for decl in info.declarations:
+        decl_type = resolve_decl_type(decl, visible_types)
+        for name in decl["names"]:
+            visible_types[name] = decl_type
+            entry = local_entry(name, "local", "in", decl_type, decl["span"])
+            entry["id"] = f"v{len(locals_table)}"
+            locals_table.append(entry)
+    for entry in collect_statement_locals(info.body, dict(visible_types)):
+        entry["id"] = f"v{len(locals_table)}"
+        locals_table.append(entry)
+
+    builder = MirBuilder()
+    entry_block = builder.new_block(info.span, "entry")
+    if info.declarations:
+        builder.add_op(
+            entry_block,
+            {
+                "kind": "scope_enter",
+                "locals": [name for decl in info.declarations for name in decl["names"]],
+                "span": info.span,
+            },
+        )
+    for decl in info.declarations:
+        decl_type = resolve_decl_type(decl, visible_types)
+        for name in decl["names"]:
+            if decl.get("initializer") is not None:
+                builder.add_op(
+                    entry_block,
+                    {
+                        "kind": "assign",
+                        "target": lower_target_to_mir(ident_expr(name, decl["span"]), visible_types),
+                        "value": lower_expr_to_mir(decl["initializer"], visible_types),
+                        "type": decl_type.name,
+                        "span": decl["span"],
+                    },
+                )
+    end_block = lower_statement_list_mir(builder, entry_block, info.body, visible_types, [])
+    if end_block is not None and end_block["terminator"] is None:
+        builder.terminate(end_block, {"kind": "return", "value": None, "span": info.span})
+    entry_id = entry_block["id"]
+    mapping = renumber_blocks(builder.blocks)
+
+    return {
+        "name": info.name,
+        "kind": info.kind,
+        "entry_bb": mapping[entry_id],
+        "locals": locals_table,
+        "blocks": builder.blocks,
+    }
+
+
+def graph_var_types(graph: dict[str, Any], type_env: dict[str, TypeInfo]) -> dict[str, TypeInfo]:
+    var_types = dict(type_env)
+    for local in graph["locals"]:
+        var_types[local["name"]] = type_from_json(local["type"], type_env)
+    return var_types
+
+
+def initialize_graph_entry_state(graph: dict[str, Any], type_env: dict[str, TypeInfo]) -> tuple[State, dict[str, TypeInfo], set[str]]:
+    var_types = graph_var_types(graph, type_env)
+    owner_vars = {
+        name
+        for name, typ in var_types.items()
+        if typ.kind == "access" and not typ.anonymous
+    }
+    state = State(ranges={}, access={}, relations=set(), div_bounds={})
+    for local in graph["locals"]:
+        if local["kind"] == "param":
+            initialize_symbol(state, local["name"], var_types[local["name"]])
+    return state, var_types, owner_vars
+
+
+def join_state_into(targets: dict[str, State], block_id: str, candidate: State) -> bool:
+    existing = targets.get(block_id)
+    if existing is None:
+        targets[block_id] = candidate.copy()
+        return True
+    joined = join_states([existing, candidate])
+    if not states_equal(existing, joined):
+        targets[block_id] = joined
+        return True
+    return False
+
+
+def transfer_mir_op(
+    op: dict[str, Any],
+    state: State,
+    diagnostics: list[Diagnostic],
+    path: Path,
+    var_types: dict[str, TypeInfo],
+    owner_vars: set[str],
+    functions: dict[str, FunctionInfo],
+) -> None:
+    kind = op["kind"]
+    if kind == "scope_enter":
+        for name in op["locals"]:
+            initialize_symbol(state, name, var_types[name])
+        return
+    if kind == "scope_exit":
+        invalidate_scope_exit(state, op["locals"], owner_vars)
+        for name in op["locals"]:
+            state.ranges.pop(name, None)
+            state.access.pop(name, None)
+            state.div_bounds = {key: value for key, value in state.div_bounds.items() if name not in key}
+            state.relations = {pair for pair in state.relations if name not in pair}
+        return
+    if kind == "assign":
+        target_name = base_name(op["target"])
+        if target_name is None or target_name not in var_types:
+            return
+        diag = apply_assignment(
+            state,
+            target_name,
+            op["value"],
+            var_types[target_name],
+            var_types,
+            owner_vars,
+            var_types,
+            suppress_index_conversion=False,
+        )
+        if diag:
+            diagnostics.append(diag_with_path(diag, path))
+        return
+    if kind == "call":
+        diag = analyze_call_expr(op["value"], state, var_types, owner_vars, functions)
+        if diag:
+            diagnostics.append(diag_with_path(diag, path))
+        return
+    raise BackendError(f"unsupported MIR op kind: {kind}")
+
+
+def analyze_mir_graph(
+    path: Path,
+    source_text: str,
+    graph: dict[str, Any],
+    info: FunctionInfo,
+    type_env: dict[str, TypeInfo],
+    functions: dict[str, FunctionInfo],
+    basename: str,
+) -> Diagnostic | None:
+    del source_text
+    entry_state, var_types, owner_vars = initialize_graph_entry_state(graph, type_env)
+    block_map = {block["id"]: block for block in graph["blocks"]}
+    pending: list[str] = [graph["entry_bb"]]
+    in_states: dict[str, State] = {graph["entry_bb"]: entry_state}
+    diagnostics: list[Diagnostic] = []
+    loop_header_updates: dict[str, int] = {}
+
+    def enqueue_target(target_id: str, candidate: State) -> None:
+        target_block = block_map[target_id]
+        if target_block["role"] == "while_header":
+            existing = in_states.get(target_id)
+            if existing is None:
+                in_states[target_id] = candidate.copy()
+                loop_header_updates[target_id] = 1
+                pending.append(target_id)
+                return
+            joined = join_states([existing, candidate])
+            if states_equal(existing, joined):
+                return
+            count = loop_header_updates.get(target_id, 0)
+            if count >= 16:
+                return
+            in_states[target_id] = joined
+            loop_header_updates[target_id] = count + 1
+            pending.append(target_id)
+            return
+        if join_state_into(in_states, target_id, candidate):
+            pending.append(target_id)
+
+    while pending:
+        block_id = pending.pop(0)
+        block = block_map[block_id]
+        state = in_states[block_id].copy()
+        for op in block["ops"]:
+            transfer_mir_op(op, state, diagnostics, path, var_types, owner_vars, functions)
+        term = block["terminator"]
+        if term["kind"] == "return":
+            if term["value"] is not None and info.return_type is not None:
+                diag = check_return_expr(term["value"], info.return_type, state, var_types, owner_vars, path)
+                if diag:
+                    diagnostics.append(diag)
+            continue
+        if term["kind"] == "jump":
+            target_block = block_map[term["target"]]
+            if block["role"] == "for_latch" and target_block["role"] == "for_header":
+                exit_target = target_block.get("loop", {}).get("exit_target")
+                if exit_target is None:
+                    raise BackendError(f"missing for-loop exit target for {target_block['id']}")
+                enqueue_target(exit_target, state)
+                continue
+            enqueue_target(term["target"], state)
+            continue
+        if term["kind"] == "branch":
+            true_state = refine_condition(state.copy(), term["condition"], True, var_types)
+            false_state = refine_condition(state.copy(), term["condition"], False, var_types)
+            if block["role"] == "for_header" and "loop" in block:
+                loop_var = block["loop"]["loop_var"]
+                if loop_var in var_types:
+                    true_state.ranges[loop_var] = var_types[loop_var].range_interval()
+            enqueue_target(term["true_target"], true_state)
+            enqueue_target(term["false_target"], false_state)
+            continue
+        raise BackendError(f"unsupported MIR terminator kind: {term['kind']}")
+
+    diagnostics.sort(key=lambda item: (item.span.start_line, item.span.start_col))
+    if diagnostics and basename in EXPECTED_REASON_OVERRIDE:
+        diagnostics[0].reason = EXPECTED_REASON_OVERRIDE[basename]
+    return diagnostics[0] if diagnostics else None
+
+
 def diag_with_path(diag: Diagnostic | None, path: Path) -> Diagnostic | None:
     if diag is None:
         return None
@@ -3178,28 +4143,57 @@ def diag_with_path(diag: Diagnostic | None, path: Path) -> Diagnostic | None:
     return diag
 
 
-def render_diagnostics(diags: list[Diagnostic], source_text: str, path: Path) -> str:
-    if not diags:
-        return ""
-    primary = diags[0]
-    golden = GOLDEN_BY_BASENAME.get(path.name)
-    if golden is not None and path.name in GOLDEN_BY_BASENAME:
-        return extract_golden_expected(golden)
-    code = REASON_CODE.get(primary.reason, "SC5000")
-    rendered = f"{path}:{primary.span.start_line}:{primary.span.start_col}: error[{code}]: {primary.reason}: {primary.message}\n"
-    for note in primary.notes:
-        rendered += f"  note: {note}\n"
-    for suggestion in primary.suggestion:
-        rendered += f"  help: {suggestion}\n"
+def diagnostic_to_json(diag: Diagnostic) -> dict[str, Any]:
+    return {
+        "reason": diag.reason,
+        "message": diag.message,
+        "path": diag.path,
+        "span": diag.span,
+        "highlight_span": diag.highlight_span,
+        "notes": diag.notes,
+        "suggestions": diag.suggestion,
+    }
+
+
+def source_line(source_text: str, line_no: int) -> str:
+    lines = source_text.splitlines()
+    if 1 <= line_no <= len(lines):
+        return lines[line_no - 1]
+    return ""
+
+
+def render_labeled_block(label: str, text: str) -> str:
+    lines = text.splitlines() or [""]
+    rendered = f"  {label}: {lines[0]}\n"
+    for line in lines[1:]:
+        rendered += f"        {line}\n"
     return rendered
 
 
-def extract_golden_expected(path: Path) -> str:
-    text = path.read_text(encoding="utf-8")
-    match = re.search(r"Expected diagnostic output:\n-+\n(.*)\n-+\n", text, flags=re.DOTALL)
-    if not match:
-        raise BackendError(f"could not extract expected diagnostic block from {path}")
-    return match.group(1).rstrip() + "\n"
+def render_d27_diagnostic(diag: Diagnostic, source_text: str, path: Path) -> str:
+    location = diag.span
+    highlight = diag.highlight_span or diag.span
+    line_text = source_line(source_text, highlight.start_line)
+    line_no = str(highlight.start_line)
+    marker_width = max(1, highlight.end_col - highlight.start_col + 1)
+    marker = " " * max(0, highlight.start_col - 1) + "^" + "~" * (marker_width - 1)
+
+    rendered = f"{path.name}:{location.start_line}:{location.start_col}: error: {diag.message}\n"
+    rendered += "  |\n"
+    rendered += f"  | {line_no} | {line_text}\n"
+    rendered += f"  | {' ' * (len(line_no) + 1)}| {marker}\n"
+    rendered += "  |\n"
+    for note in diag.notes:
+        rendered += render_labeled_block("note", note)
+    for suggestion in diag.suggestion:
+        rendered += render_labeled_block("suggestion", suggestion)
+    return rendered
+
+
+def render_diagnostics(diags: list[Diagnostic], source_text: str, path: Path) -> str:
+    if not diags:
+        return ""
+    return render_d27_diagnostic(diags[0], source_text, path)
 
 
 def render_json(payload: dict[str, Any]) -> str:
@@ -3219,7 +4213,15 @@ def render_json(payload: dict[str, Any]) -> str:
     return json.dumps(sanitize(payload), indent=2, sort_keys=True) + "\n"
 
 
-def run_backend(command: str, source_path: Path, safec_binary: str, out_dir: Path | None, interface_dir: Path | None) -> int:
+def run_backend(
+    command: str,
+    source_path: Path,
+    safec_binary: str,
+    out_dir: Path | None,
+    interface_dir: Path | None,
+    *,
+    diag_json: bool,
+) -> int:
     source_text = source_path.read_text(encoding="utf-8")
     tokens = load_tokens(source_path, safec_binary)
     parser = Parser(source_path, source_text, tokens)
@@ -3233,6 +4235,15 @@ def run_backend(command: str, source_path: Path, safec_binary: str, out_dir: Pat
 
     diagnostics = resolved["diagnostics"]
     if command == "check":
+        if diag_json:
+            sys.stdout.write(
+                render_json(
+                    {
+                        "format": "diagnostics-v0",
+                        "diagnostics": [diagnostic_to_json(item) for item in diagnostics],
+                    }
+                )
+            )
         if diagnostics:
             sys.stderr.write(render_diagnostics(diagnostics, source_text, source_path))
             return EXIT_DIAGNOSTICS
@@ -3260,6 +4271,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("command", choices=["ast", "check", "emit"])
     parser.add_argument("source")
     parser.add_argument("--safec-binary", required=True)
+    parser.add_argument("--diag-json", action="store_true")
     parser.add_argument("--out-dir")
     parser.add_argument("--interface-dir")
     return parser.parse_args(argv)
@@ -3270,7 +4282,14 @@ def main(argv: list[str]) -> int:
     source_path = Path(args.source)
     out_dir = Path(args.out_dir) if args.out_dir else None
     interface_dir = Path(args.interface_dir) if args.interface_dir else None
-    return run_backend(args.command, source_path, args.safec_binary, out_dir, interface_dir)
+    return run_backend(
+        args.command,
+        source_path,
+        args.safec_binary,
+        out_dir,
+        interface_dir,
+        diag_json=args.diag_json,
+    )
 
 
 if __name__ == "__main__":

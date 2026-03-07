@@ -7,6 +7,7 @@ This workspace hosts the current Safe compiler frontend through PR05.
 - `safec lex <file.safe>` lexes a Safe source file and writes versioned token JSON to stdout.
 - `safec ast <file.safe>` lexes and parses a Safe source file and writes AST JSON to stdout.
 - `safec check <file.safe>` runs the early semantic pipeline and exits nonzero if diagnostics are emitted.
+- `safec check --diag-json <file.safe>` keeps human stderr unchanged and also writes machine-readable semantic diagnostics to stdout for CI and harness use.
 - `safec emit <file.safe> --out-dir <dir> --interface-dir <dir>` writes the current frontend artifacts for downstream inspection and regression checks.
 
 The current frontend implements the sequential Rule 1-4 subset used by the existing D27 corpus. It now parses executable bodies, emits schema-true AST for the implemented subset, emits `typed-v1` and `mir-v1`, and checks the current Rule 1-4 corpus through `safec check`. It is still not the concurrency frontend or the Ada/SPARK emitter.
@@ -34,6 +35,7 @@ The current frontend implements the sequential Rule 1-4 subset used by the exist
 - `<stem>.mir.json`
   Format tag: `mir-v1`.
   Contents: package-level graph data, deterministic locals tables, blocks, typed ops, and explicit terminators for the implemented sequential subset.
+  Validation path: `python3 scripts/validate_mir_output.py`.
   Status: debug and regression artifact for the current sequential platform. Incompatible structural changes require a format-tag bump.
 
 - `<stem>.safei.json`
@@ -66,3 +68,4 @@ python3 scripts/run_pr05_d27_harness.py
 ```
 
 That harness diffs the four canonical diagnostics goldens byte-for-byte, runs the full current Rule 1-4 corpus gate, verifies deterministic repeated `emit` output on loop and short-circuit samples, and records results in `execution/reports/pr05-d27-report.json`.
+It also validates representative `mir-v1` artifacts and drives corpus reason matching through `safec check --diag-json` rather than parsing human stderr.

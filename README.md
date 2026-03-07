@@ -153,7 +153,7 @@ See [`release/COMPANION_README.md`](release/COMPANION_README.md) Section 8 for t
 | Emission templates | 14/14 proved (320 VCs, 0 unproved; M1–M7 complete) |
 | Compiler frontend | `compiler_impl/` PR00–PR05 sequential Rule 1–4 frontend landed |
 
-The repository now includes a sequential compiler frontend under `compiler_impl/`. It can lex `.safe` inputs via `safec lex`, emit schema-true AST for the implemented Rule 1–4 subset, emit `typed-v1` and `mir-v1`, run D27 Rule 1–4 checking over the current sequential corpus, and reproduce the four committed D27 diagnostics goldens. The translation rules and AST schema in `compiler/` remain the contract the later compiler phases must satisfy.
+The repository now includes a sequential compiler frontend under `compiler_impl/`. It can lex `.safe` inputs via `safec lex`, emit schema-true AST for the implemented Rule 1–4 subset, emit validated `typed-v1` and `mir-v1`, run D27 Rule 1–4 checking over the current sequential corpus, reproduce the four committed D27 diagnostics goldens, and expose machine-readable semantic diagnostics via `safec check --diag-json`. The translation rules and AST schema in `compiler/` remain the contract the later compiler phases must satisfy.
 
 
 ---

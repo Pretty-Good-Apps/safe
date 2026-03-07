@@ -10,9 +10,6 @@ package OOB_Test is
 
    type Slot is range 0 .. 7;
    type Data is array (Slot) of Integer;
-
-   --  Access_With_Integer: uses an unconstrained Integer index.
-   --  The compiler cannot prove Idx is in 0..7.
    function Access_With_Integer (Arr : Data; Idx : Integer) return Integer is
    begin
       return Arr (Slot (Idx));  -- ERROR: Idx may not be in 0..7

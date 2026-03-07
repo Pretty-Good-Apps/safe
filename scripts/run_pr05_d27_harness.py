@@ -91,12 +91,12 @@ DETERMINISM_SAMPLES = [
     REPO_ROOT / "tests" / "positive" / "rule4_conditional.safe",
 ]
 
-CANONICAL_REASON = {
-    "neg_rule1_overflow.safe": "intermediate_overflow",
-    "neg_rule2_oob.safe": "index_out_of_bounds",
-    "neg_rule3_zero_div.safe": "division_by_zero",
-    "neg_rule4_null_deref.safe": "null_dereference",
-}
+MIR_VALIDATION_SAMPLES = [
+    REPO_ROOT / "tests" / "positive" / "rule2_binary_search.safe",
+    REPO_ROOT / "tests" / "positive" / "rule3_divide.safe",
+    REPO_ROOT / "tests" / "positive" / "rule4_conditional.safe",
+    REPO_ROOT / "tests" / "positive" / "rule4_linked_list.safe",
+]
 
 
 def normalize_text(text: str, *, temp_root: Path | None = None) -> str:
@@ -180,13 +180,11 @@ def read_expected_reason(path: Path) -> str:
     return match.group(1)
 
 
-def extract_reason(stderr: str, basename: str) -> str:
-    if basename in CANONICAL_REASON:
-        return CANONICAL_REASON[basename]
-    match = re.search(r"error\[SC\d+\]:\s+([a-z_]+):", stderr)
-    if not match:
-        raise RuntimeError(f"could not extract semantic reason from stderr for {basename}")
-    return match.group(1)
+def read_diag_json(stdout: str, source: str) -> dict[str, Any]:
+    payload = json.loads(stdout)
+    require(payload.get("format") == "diagnostics-v0", f"{source}: unexpected diagnostics format")
+    require(isinstance(payload.get("diagnostics"), list), f"{source}: diagnostics must be a list")
+    return payload
 
 
 def emitted_paths(root: Path, sample: Path) -> dict[str, Path]:
@@ -252,24 +250,28 @@ def run_corpus_mode(safec: Path, env: dict[str, str], temp_root: Path) -> dict[s
     for relative in POSITIVE_CASES:
         source_path = REPO_ROOT / relative
         result = run(
-            [str(safec), "check", str(source_path)],
+            [str(safec), "check", "--diag-json", str(source_path)],
             cwd=REPO_ROOT,
             env=env,
             temp_root=temp_root,
         )
-        positives.append({"source": relative, "result": result})
+        payload = read_diag_json(result["stdout"], relative)
+        require(payload["diagnostics"] == [], f"{relative}: expected no diagnostics")
+        positives.append({"source": relative, "result": result, "diagnostics": payload})
 
     for relative in NEGATIVE_CASES:
         source_path = REPO_ROOT / relative
         result = run(
-            [str(safec), "check", str(source_path)],
+            [str(safec), "check", "--diag-json", str(source_path)],
             cwd=REPO_ROOT,
             env=env,
             temp_root=temp_root,
             expected_returncode=DIAGNOSTICS_EXIT,
         )
+        payload = read_diag_json(result["stdout"], relative)
+        require(payload["diagnostics"], f"{relative}: expected at least one diagnostic")
         expected_reason = read_expected_reason(source_path)
-        actual_reason = extract_reason(result["stderr"], source_path.name)
+        actual_reason = payload["diagnostics"][0]["reason"]
         require(
             actual_reason == expected_reason,
             f"reason mismatch for {relative}: expected {expected_reason}, got {actual_reason}",
@@ -280,6 +282,7 @@ def run_corpus_mode(safec: Path, env: dict[str, str], temp_root: Path) -> dict[s
                 "expected_reason": expected_reason,
                 "actual_reason": actual_reason,
                 "result": result,
+                "diagnostics": payload,
             }
         )
 
@@ -317,6 +320,42 @@ def run_determinism_checks(safec: Path, env: dict[str, str], temp_root: Path) ->
     return report
 
 
+def run_mir_validation(safec: Path, env: dict[str, str], temp_root: Path) -> list[dict[str, Any]]:
+    validator = REPO_ROOT / "scripts" / "validate_mir_output.py"
+    results: list[dict[str, Any]] = []
+    for sample in MIR_VALIDATION_SAMPLES:
+        root = temp_root / f"{sample.stem}-mir"
+        emit_result = run(
+            [
+                str(safec),
+                "emit",
+                str(sample),
+                "--out-dir",
+                str(root / "out"),
+                "--interface-dir",
+                str(root / "iface"),
+            ],
+            cwd=REPO_ROOT,
+            env=env,
+            temp_root=temp_root,
+        )
+        mir_path = root / "out" / f"{sample.stem.lower()}.mir.json"
+        validate_result = run(
+            [sys.executable, str(validator), str(mir_path)],
+            cwd=REPO_ROOT,
+            env=env,
+            temp_root=temp_root,
+        )
+        results.append(
+            {
+                "source": str(sample.relative_to(REPO_ROOT)),
+                "emit": emit_result,
+                "validate": validate_result,
+            }
+        )
+    return results
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -348,6 +387,7 @@ def main() -> int:
         if args.mode in {"all", "corpus"}:
             report["corpus_mode"] = run_corpus_mode(safec, env, temp_root)
         report["determinism"] = run_determinism_checks(safec, env, temp_root)
+        report["mir_validation"] = run_mir_validation(safec, env, temp_root)
 
     args.report.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"pr05 harness: OK ({args.report})")

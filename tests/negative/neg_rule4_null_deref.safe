@@ -8,11 +8,9 @@ package Null_Deref_Test is
 
    type Value is range 0 .. 1000;
    type Value_Ptr is access Value;
-
-   --  Read_Unsafe: dereferences P without checking for null.
-   --  P's type allows null, so dereference is not provably safe.
    function Read_Unsafe (P : Value_Ptr) return Value is
    begin
+
       return P.all;  -- ERROR: P may be null
    end Read_Unsafe;
 

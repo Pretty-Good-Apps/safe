@@ -11,6 +11,7 @@ procedure Safec is
       Ada.Text_IO.Put_Line ("  safec lex <file.safe>");
       Ada.Text_IO.Put_Line ("  safec ast <file.safe>");
       Ada.Text_IO.Put_Line ("  safec check <file.safe>");
+      Ada.Text_IO.Put_Line ("  safec check --diag-json <file.safe>");
       Ada.Text_IO.Put_Line
         ("  safec emit <file.safe> --out-dir <dir> --interface-dir <dir>");
       return Safe_Frontend.Exit_Usage;
@@ -45,8 +46,19 @@ begin
          Exit_Code := Safe_Frontend.Driver.Run_Lex (Argument (2));
       elsif Command = "ast" and then Ada.Command_Line.Argument_Count = 2 then
          Exit_Code := Safe_Frontend.Driver.Run_Ast (Argument (2));
-      elsif Command = "check" and then Ada.Command_Line.Argument_Count = 2 then
-         Exit_Code := Safe_Frontend.Driver.Run_Check (Argument (2));
+      elsif Command = "check" then
+         if Ada.Command_Line.Argument_Count = 2 then
+            Exit_Code := Safe_Frontend.Driver.Run_Check (Argument (2));
+         elsif Ada.Command_Line.Argument_Count = 3
+           and then Argument (2) = "--diag-json"
+         then
+            Exit_Code :=
+              Safe_Frontend.Driver.Run_Check
+                (Path      => Argument (3),
+                 Diag_Json => True);
+         else
+            Exit_Code := Usage;
+         end if;
       elsif Command = "emit" then
          declare
             Out_Arg       : constant Natural := Find_Option ("--out-dir");

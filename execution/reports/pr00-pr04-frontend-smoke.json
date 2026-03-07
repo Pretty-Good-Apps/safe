@@ -29,7 +29,7 @@
     "cwd": "$REPO_ROOT/compiler_impl",
     "returncode": 0,
     "stderr": "",
-    "stdout": "Note: Building safec=0.1.0-dev/safec.gpr...\ngprbuild: \"safec\" up to date\nSuccess: Build finished successfully in 1.04 seconds.\n"
+    "stdout": "Note: Building safec=0.1.0-dev/safec.gpr...\ngprbuild: \"safec\" up to date\nSuccess: Build finished successfully in 20.77 seconds.\n"
   },
   "check_runs": [
     {
@@ -59,13 +59,13 @@
     "tests/positive/rule2_binary_search.safe": {
       "iface/rule2_binary_search.safei.json": "81bfa361bded779e69123cbf766e9d7a889ce628c9d09f4dc282fca40e49b2de",
       "out/rule2_binary_search.ast.json": "3bf3885fbce47b61935b26dd0e47d80b62e639b12ebd5d50e810c4de46bf2fad",
-      "out/rule2_binary_search.mir.json": "618f96c6c99c0df1d062a0692320abdcfa6de321a52eae84e5a1365b770e8ddb",
+      "out/rule2_binary_search.mir.json": "e97e9ccb0f7b0663ea0186b2ff7587232243f8140fea1b89cc84768fec80bbff",
       "out/rule2_binary_search.typed.json": "fd37a1e8870757356fcac748c26051c5c9153faa34041321716a6369976761f5"
     },
     "tests/positive/rule4_conditional.safe": {
       "iface/rule4_conditional.safei.json": "adc38faa75fa95f5c99b82e09639dcc983da5786303a6fc86773284f38406ecc",
       "out/rule4_conditional.ast.json": "81bac520caf1204fc96af229fdcc0fa6e8d2e778b0ad573dedb6c630bf72c90e",
-      "out/rule4_conditional.mir.json": "771af47ecfd67d85ff6206b13746cd6fc8bf99bae9794c1bdeb1a64993ab7cef",
+      "out/rule4_conditional.mir.json": "a52b3ff3e21a05e21e338be49d3241e62ee15682493ab34082f19657d0626909",
       "out/rule4_conditional.typed.json": "0a918b635988f414485d85e7f20436aff3935a7ce5fb795213faffe860bfe1fd"
     }
   },

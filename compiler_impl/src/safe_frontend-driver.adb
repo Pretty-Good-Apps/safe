@@ -83,13 +83,16 @@ package body Safe_Frontend.Driver is
    function Run_Backend
      (Command       : String;
       Path          : String;
+      Diag_Json     : Boolean := False;
       Out_Dir       : String := "";
       Interface_Dir : String := "") return Integer
    is
       use type GNAT.OS_Lib.String_Access;
 
       Arg_Count : constant Positive :=
-        (if Command = "emit" then 9 else 5);
+        (if Command = "emit" then 9
+         elsif Diag_Json then 6
+         else 5);
       Args      : GNAT.OS_Lib.Argument_List (1 .. Arg_Count);
       Last      : Natural := 0;
 
@@ -104,6 +107,9 @@ package body Safe_Frontend.Driver is
       Push (Path);
       Push ("--safec-binary");
       Push (Full_Command_Name);
+      if Diag_Json then
+         Push ("--diag-json");
+      end if;
       if Command = "emit" then
          Push ("--out-dir");
          Push (Out_Dir);
@@ -232,9 +238,12 @@ package body Safe_Frontend.Driver is
       return Run_Backend ("ast", Path);
    end Run_Ast;
 
-   function Run_Check (Path : String) return Integer is
+   function Run_Check
+     (Path      : String;
+      Diag_Json : Boolean := False) return Integer
+   is
    begin
-      return Run_Backend ("check", Path);
+      return Run_Backend ("check", Path, Diag_Json => Diag_Json);
    end Run_Check;
 
    function Run_Emit
