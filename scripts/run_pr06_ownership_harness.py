@@ -66,7 +66,13 @@ DETERMINISM_SAMPLES = [
     REPO_ROOT / "tests" / "positive" / "ownership_inout.safe",
 ]
 
-MIR_VALIDATION_SAMPLES = DETERMINISM_SAMPLES
+MIR_VALIDATION_SAMPLES = [
+    *DETERMINISM_SAMPLES,
+]
+
+RETURN_EFFECT_EXPECTATIONS = {
+    "tests/positive/ownership_return.safe": "Move",
+}
 
 
 def normalize_text(text: str, *, temp_root: Path | None = None) -> str:
@@ -312,11 +318,26 @@ def run_mir_validation(safec: Path, env: dict[str, str], temp_root: Path) -> lis
             env=env,
             temp_root=temp_root,
         )
+        sample_rel = str(sample.relative_to(REPO_ROOT))
+        expected_return_effect = RETURN_EFFECT_EXPECTATIONS.get(sample_rel)
+        if expected_return_effect is not None:
+            payload = json.loads(mir_path.read_text(encoding="utf-8"))
+            actual_effects = [
+                block["terminator"].get("ownership_effect")
+                for graph in payload["graphs"]
+                for block in graph["blocks"]
+                if block["terminator"]["kind"] == "return"
+            ]
+            require(
+                expected_return_effect in actual_effects,
+                f"{sample_rel}: expected return ownership_effect {expected_return_effect}, got {actual_effects}",
+            )
         results.append(
             {
-                "source": str(sample.relative_to(REPO_ROOT)),
+                "source": sample_rel,
                 "emit": emit_result,
                 "validate": validate_result,
+                "expected_return_effect": expected_return_effect,
             }
         )
     return results

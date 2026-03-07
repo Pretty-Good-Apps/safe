@@ -4382,6 +4382,25 @@ def ownership_effect_for_call(
     return effect
 
 
+def ownership_effect_for_return_expr(
+    expr: dict[str, Any] | None,
+    visible_types: dict[str, TypeInfo],
+) -> str:
+    if expr is None:
+        return "None"
+    returned_type = expr_type(expr, visible_types)
+    if returned_type.kind != "access":
+        return "None"
+    role = type_access_role(returned_type)
+    if role == "Borrow":
+        return "Borrow"
+    if role == "Observe":
+        return "Observe"
+    if role == "Owner":
+        return "Move"
+    return "None"
+
+
 def emit_scope_exit_ops(
     builder: MirBuilder,
     block: dict[str, Any],
@@ -4511,7 +4530,7 @@ def lower_statement_to_mir(
     if tag == "null":
         return current
     if tag == "return":
-        return_effect = "Move" if (statement["expr"] is not None and expr_type(statement["expr"], visible_types).kind == "access") else "None"
+        return_effect = ownership_effect_for_return_expr(statement["expr"], visible_types)
         builder.terminate(
             current,
             {

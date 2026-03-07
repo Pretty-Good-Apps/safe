@@ -1,6 +1,6 @@
 Diagnostics Golden: Lifetime Violation
 Source: tests/negative/neg_own_lifetime.safe
-Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.3.p100a:ba849e66
+Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.4a.p102a:5bc5ab8b
 Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.4a.p102a-a:ae729065
 
 Expected diagnostic output:

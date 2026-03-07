@@ -145,9 +145,21 @@ def validate_graph_v2(graph: dict[str, Any], graph_index: int) -> None:
     where = f"graphs[{graph_index}]"
     scopes = graph.get("scopes")
     require(isinstance(scopes, list) and scopes, f"{where}: mir-v2 graphs must have a non-empty scopes list")
-    valid_scope_ids = {scope.get("id") for scope in scopes if isinstance(scope, dict)}
-    valid_local_ids = {local.get("id") for local in graph["locals"] if isinstance(local, dict)}
-    valid_block_ids = {block.get("id") for block in graph["blocks"] if isinstance(block, dict)}
+    valid_scope_ids = {
+        scope.get("id")
+        for scope in scopes
+        if isinstance(scope, dict) and isinstance(scope.get("id"), str)
+    }
+    valid_local_ids = {
+        local.get("id")
+        for local in graph["locals"]
+        if isinstance(local, dict) and isinstance(local.get("id"), str)
+    }
+    valid_block_ids = {
+        block.get("id")
+        for block in graph["blocks"]
+        if isinstance(block, dict) and isinstance(block.get("id"), str)
+    }
     for index, local in enumerate(graph["locals"]):
         local_where = f"{where}.locals[{index}]"
         require(isinstance(local.get("scope_id"), str), f"{local_where}: mir-v2 locals must have scope_id")
@@ -165,9 +177,13 @@ def validate_graph_v2(graph: dict[str, Any], graph_index: int) -> None:
             if op.get("kind") == "assign":
                 require(isinstance(op.get("declaration_init"), bool), f"{block_where}.ops[{op_index}]: assign missing declaration_init")
             if op.get("kind") == "scope_enter":
-                require(isinstance(op.get("scope_id"), str), f"{block_where}.ops[{op_index}]: scope_enter missing scope_id")
+                scope_id = op.get("scope_id")
+                require(isinstance(scope_id, str), f"{block_where}.ops[{op_index}]: scope_enter missing scope_id")
+                require(scope_id in valid_scope_ids, f"{block_where}.ops[{op_index}]: invalid scope_id")
             if op.get("kind") == "scope_exit":
-                require(isinstance(op.get("scope_id"), str), f"{block_where}.ops[{op_index}]: scope_exit missing scope_id")
+                scope_id = op.get("scope_id")
+                require(isinstance(scope_id, str), f"{block_where}.ops[{op_index}]: scope_exit missing scope_id")
+                require(scope_id in valid_scope_ids, f"{block_where}.ops[{op_index}]: invalid scope_id")
         terminator = block["terminator"]
         require(isinstance(terminator.get("span"), dict), f"{block_where}.terminator: missing span")
         if terminator["kind"] == "return":

@@ -886,6 +886,7 @@
         "stderr": "",
         "stdout": ""
       },
+      "expected_return_effect": null,
       "source": "tests/positive/ownership_borrow.safe",
       "validate": {
         "command": [
@@ -915,6 +916,7 @@
         "stderr": "",
         "stdout": ""
       },
+      "expected_return_effect": null,
       "source": "tests/positive/ownership_observe_access.safe",
       "validate": {
         "command": [
@@ -944,6 +946,7 @@
         "stderr": "",
         "stdout": ""
       },
+      "expected_return_effect": "Move",
       "source": "tests/positive/ownership_return.safe",
       "validate": {
         "command": [
@@ -973,6 +976,7 @@
         "stderr": "",
         "stdout": ""
       },
+      "expected_return_effect": null,
       "source": "tests/positive/ownership_inout.safe",
       "validate": {
         "command": [
