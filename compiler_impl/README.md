@@ -15,6 +15,14 @@ The current frontend implements the sequential Rule 1-4 subset plus the sequenti
 
 Python remains the runtime for `safec ast`, `safec check`, and `safec emit`. MIR validation is Ada-native after PR06.5.
 
+## Dependency Policy
+
+PR06.5 intentionally adopts `GNATCOLL.JSON` for Ada-side JSON parsing in `safec validate-mir`.
+This dependency is accepted for the current compiler workspace because it removes Python from one
+real contract gate without reopening parser/analyzer work. It is not a license decision for the
+entire repository, and any broader reuse or future distribution-policy change should revisit this
+dependency explicitly rather than allowing it to spread by default.
+
 ## Output Formats
 
 `safec lex` currently writes one JSON artifact to stdout:

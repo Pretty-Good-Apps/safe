@@ -166,7 +166,7 @@
         "A recorded decision document states that Python is transitional only and locks the staged Ada replacement order for the frontend runtime.",
         "safec validate-mir exists as an Ada-native MIR contract validator for mir-v1 and mir-v2.",
         "The Ada validator enforces the same structural MIR checks as the prior Python validator for representative fixtures and emitted MIR samples.",
-        "PR05 and PR06 harnesses, CI jobs, and repository docs use safec validate-mir instead of depending on scripts/validate_mir_output.py.",
+        "PR05 and PR06 harnesses, CI jobs, and repository docs use safec validate-mir instead of depending on the legacy Python MIR validator.",
         "A dedicated pr065-ada-mir-validator CI job passes and a committed execution/reports/pr065-ada-mir-validator-report.json artifact is listed in PR06.5 evidence."
       ],
       "evidence": [

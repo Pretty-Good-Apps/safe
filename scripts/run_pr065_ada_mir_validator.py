@@ -42,6 +42,19 @@ HARNESSES = [
     REPO_ROOT / "scripts" / "run_pr06_ownership_harness.py",
 ]
 
+LEGACY_VALIDATOR_NAME = "validate_mir_output.py"
+
+LEGACY_REFERENCE_SCAN_PATHS = [
+    REPO_ROOT / "README.md",
+    REPO_ROOT / "compiler_impl" / "README.md",
+    REPO_ROOT / "execution" / "tracker.json",
+    REPO_ROOT / "execution" / "dashboard.md",
+    REPO_ROOT / ".github" / "workflows" / "ci.yml",
+    REPO_ROOT / "scripts" / "run_pr05_d27_harness.py",
+    REPO_ROOT / "scripts" / "run_pr06_ownership_harness.py",
+    REPO_ROOT / "scripts" / "run_frontend_smoke.py",
+]
+
 
 def normalize_text(text: str, *, temp_root: Path | None = None) -> str:
     result = text
@@ -183,7 +196,7 @@ def check_harness_cutover() -> dict[str, dict[str, bool]]:
         text = harness.read_text(encoding="utf-8")
         results[str(harness.relative_to(REPO_ROOT))] = {
             "uses_validate_mir": '"validate-mir"' in text,
-            "uses_legacy_validator_script": "validate_mir_output.py" in text,
+            "uses_legacy_validator_script": LEGACY_VALIDATOR_NAME in text,
         }
         require(
             results[str(harness.relative_to(REPO_ROOT))]["uses_validate_mir"],
@@ -192,6 +205,19 @@ def check_harness_cutover() -> dict[str, dict[str, bool]]:
         require(
             not results[str(harness.relative_to(REPO_ROOT))]["uses_legacy_validator_script"],
             f"{harness}: legacy Python validator reference still present",
+        )
+    return results
+
+
+def check_legacy_reference_guard() -> dict[str, bool]:
+    results: dict[str, bool] = {}
+    for path in LEGACY_REFERENCE_SCAN_PATHS:
+        text = path.read_text(encoding="utf-8")
+        contains_legacy = LEGACY_VALIDATOR_NAME in text
+        results[str(path.relative_to(REPO_ROOT))] = contains_legacy
+        require(
+            not contains_legacy,
+            f"{path}: legacy validator reference still present",
         )
     return results
 
@@ -216,6 +242,7 @@ def main() -> int:
             "fixtures": validate_fixtures(safec, env),
             "emitted_samples": validate_emitted_samples(safec, env, temp_root),
             "harness_cutover": check_harness_cutover(),
+            "legacy_reference_guard": check_legacy_reference_guard(),
         }
 
     args.report.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

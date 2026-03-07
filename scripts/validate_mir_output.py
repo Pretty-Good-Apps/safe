@@ -29,6 +29,12 @@ def main() -> int:
     parser.add_argument("mir_json", type=Path)
     args = parser.parse_args()
 
+    print(
+        "validate_mir_output.py is deprecated; use `safec validate-mir <file.mir.json>` "
+        "directly. See release/frontend_runtime_decision.md for the staged runtime plan.",
+        file=sys.stderr,
+    )
+
     completed = subprocess.run(
         [find_safec(), "validate-mir", str(args.mir_json)],
         cwd=REPO_ROOT,

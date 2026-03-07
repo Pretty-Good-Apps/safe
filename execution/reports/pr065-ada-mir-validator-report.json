@@ -217,6 +217,16 @@
       "uses_validate_mir": true
     }
   },
+  "legacy_reference_guard": {
+    ".github/workflows/ci.yml": false,
+    "README.md": false,
+    "compiler_impl/README.md": false,
+    "execution/dashboard.md": false,
+    "execution/tracker.json": false,
+    "scripts/run_frontend_smoke.py": false,
+    "scripts/run_pr05_d27_harness.py": false,
+    "scripts/run_pr06_ownership_harness.py": false
+  },
   "tool_versions": {
     "alr": "alr 2.1.0",
     "gprbuild": "GPRBUILD 25.0.0 (2025-05-16) (aarch64-apple-darwin23.6.0)"
