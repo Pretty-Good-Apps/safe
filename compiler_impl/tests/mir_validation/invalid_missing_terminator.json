@@ -1,0 +1,24 @@
+{
+  "format": "mir-v1",
+  "graphs": [
+    {
+      "name": "Fixture.Main",
+      "kind": "procedure",
+      "entry_bb": "bb0",
+      "locals": [],
+      "blocks": [
+        {
+          "id": "bb0",
+          "span": {
+            "start_line": 1,
+            "start_col": 1,
+            "end_line": 1,
+            "end_col": 1
+          },
+          "ops": []
+        }
+      ]
+    }
+  ],
+  "package_name": "Fixture"
+}

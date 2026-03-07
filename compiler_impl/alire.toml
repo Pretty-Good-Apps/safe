@@ -8,3 +8,6 @@ website = "https://github.com/berkeleynerd/safe"
 tags = ["ada", "spark", "compiler", "safe-language"]
 
 executables = ["safec"]
+
+[[depends-on]]
+gnatcoll = "^26.0.0"

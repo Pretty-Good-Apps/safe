@@ -73,6 +73,7 @@ jobs:
       - name: Install Alire
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
+          version: 2.1.0
           toolchain: gnat_native gprbuild
 
       - name: Run frontend smoke checks
@@ -96,6 +97,7 @@ jobs:
       - name: Install Alire
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
+          version: 2.1.0
           toolchain: gnat_native gprbuild
 
       - name: Build compiler frontend
@@ -123,6 +125,7 @@ jobs:
       - name: Install Alire
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
+          version: 2.1.0
           toolchain: gnat_native gprbuild
 
       - name: Build compiler frontend
@@ -132,6 +135,34 @@ jobs:
       - name: Run PR06 ownership harness
         working-directory: .
         run: python3 scripts/run_pr06_ownership_harness.py
+
+  pr065-ada-mir-validator:
+    name: PR06.5 Ada MIR Validator
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: "3.11"
+
+      - name: Install Alire
+        uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
+        with:
+          version: 2.1.0
+          toolchain: gnat_native gprbuild
+
+      - name: Build compiler frontend
+        working-directory: .
+        run: cd compiler_impl && alr build
+
+      - name: Run PR06.5 Ada MIR validator gate
+        working-directory: .
+        run: python3 scripts/run_pr065_ada_mir_validator.py
 
   spark-verify:
     name: Build & Verify SPARK Companion

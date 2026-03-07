@@ -3,8 +3,8 @@
 - **Schema version:** `1`
 - **Frozen spec SHA:** `468cf72332724b04b7c193b4d2a3b02f1584125d`
 - **Active task:** `none`
-- **Next task:** `PR06.5`
-- **Updated at:** `2026-03-07T20:20:00Z`
+- **Next task:** `PR07`
+- **Updated at:** `2026-03-07T21:17:00Z`
 
 ## Repo Facts
 
@@ -26,7 +26,7 @@
 | PR04 | done | PR03 | 5 |
 | PR05 | done | PR04 | 3 |
 | PR06 | done | PR05 | 2 |
-| PR06.5 | planned | PR06 | 0 |
+| PR06.5 | done | PR06 | 3 |
 | PR07 | planned | PR06.5 | 0 |
 | PR08 | planned | PR07 | 0 |
 | PR09 | planned | PR08 | 0 |
@@ -119,7 +119,7 @@
   - scripts/validate_ast_output.py enforces recursive NodeRef validation for implemented sequential nodes.
   - safec emit produces deterministic typed-v1 and mir-v1 outputs on representative sequential Rule 1–4 inputs.
   - All D27 Rule 1–4 analysis runs on mir-v1 only; the statement-walk semantic path is no longer used for Rule 1–4 checking.
-  - scripts/validate_mir_output.py validates representative mir-v1 outputs and the PR05 harness fails on MIR contract violations.
+  - safec validate-mir validates representative mir-v1 outputs and the PR05 harness fails on MIR contract violations.
   - Byte-for-byte stderr match for tests/diagnostics_golden: diag_overflow.txt, diag_index_oob.txt, diag_zero_div.txt, diag_null_deref.txt.
   - All Rule 1–4 semantic failures use the D27 renderer for human stderr, while `safec check --diag-json` provides machine-readable diagnostics for harness and CI.
   - Whole current Rule 1–4 corpus gating: all tests/positive/rule1*..rule4* accept; all tests/negative/neg_rule1*..neg_rule4* reject with expected primary reason mapping.
@@ -139,7 +139,7 @@
   - Full sequential ownership legality on MIR is implemented for spec/02-restrictions.md section 2.3, excluding channel-triggered move forms deferred to later concurrency milestones.
   - Ownership legality covers move assignment, access-valued returns, out/in out access parameter flows, null-before-move, borrow freeze, observe freeze, anonymous-access initialisation-only, and lifetime containment.
   - safec emit produces deterministic typed-v2 and mir-v2 outputs for representative ownership samples.
-  - scripts/validate_mir_output.py validates representative mir-v2 outputs, while remaining compatible with the existing PR05 mir-v1 gate.
+  - safec validate-mir validates representative mir-v2 outputs, while remaining compatible with the existing PR05 mir-v1 gate.
   - All ownership semantic failures use the rich code-frame renderer for human stderr, and `safec check --diag-json` exposes stable ownership reasons.
   - Ownership negative diagnostics match committed goldens byte-for-byte, including diag_double_move.txt and the expanded ownership diagnostics set.
   - Ownership positive and negative corpus gating passes, including the expanded tests for null-before-move, anonymous-access reassignment, spec-aligned observe via .Access, observe freeze, access-valued return moves, and in out access moves.
@@ -148,16 +148,21 @@
   - `execution/reports/pr06-ownership-report.json`
   - `execution/sessions/20260307-1510-pr06.md`
 
-### PR06.5 — Frontend runtime decision: supported Python component vs Ada/SPARK parity port
+### PR06.5 — Frontend runtime decision and Ada MIR validator cutover
 
-- **Status:** `planned`
+- **Status:** `done`
 - **Depends on:** PR06
 - **Blockers:** none
 - **Acceptance:**
-  - The current Python-backed frontend runtime contract is documented, including required python3 availability and supported verification environments.
-  - A recorded decision exists for the post-PR06 execution engine: either keep Python as a supported frontend component through later milestones or begin an Ada/SPARK parity port.
-  - If an Ada/SPARK port is selected, the staged parity order is locked: MIR model and validator first, then MIR analyzer, then D27 renderer, then parser/resolver, with harness-based equivalence checks.
-  - If the Python path is retained temporarily, explicit exit criteria are recorded for revisiting the decision before later Ada/SPARK emission and proof milestones.
+  - A recorded decision document states that Python is transitional only and locks the staged Ada replacement order for the frontend runtime.
+  - safec validate-mir exists as an Ada-native MIR contract validator for mir-v1 and mir-v2.
+  - The Ada validator enforces the same structural MIR checks as the prior Python validator for representative fixtures and emitted MIR samples.
+  - PR05 and PR06 harnesses, CI jobs, and repository docs use safec validate-mir instead of depending on the legacy Python MIR validator.
+  - A dedicated pr065-ada-mir-validator CI job passes and a committed execution/reports/pr065-ada-mir-validator-report.json artifact is listed in PR06.5 evidence.
+- **Evidence:**
+  - `release/frontend_runtime_decision.md`
+  - `execution/reports/pr065-ada-mir-validator-report.json`
+  - `execution/sessions/20260307-1617-pr065.md`
 
 ### PR07 — Rule 5 and discriminant/result safety
 

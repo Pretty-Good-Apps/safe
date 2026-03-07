@@ -1,0 +1,82 @@
+{
+  "format": "mir-v1",
+  "graphs": [
+    {
+      "name": "Fixture.Main",
+      "kind": "procedure",
+      "entry_bb": "bb0",
+      "locals": [
+        {
+          "id": "v0",
+          "name": "X",
+          "span": {
+            "start_line": 1,
+            "start_col": 1,
+            "end_line": 1,
+            "end_col": 1
+          },
+          "type": {
+            "kind": "integer",
+            "name": "Integer"
+          }
+        }
+      ],
+      "blocks": [
+        {
+          "id": "bb0",
+          "span": {
+            "start_line": 1,
+            "start_col": 1,
+            "end_line": 1,
+            "end_col": 1
+          },
+          "ops": [
+            {
+              "kind": "assign",
+              "span": {
+                "start_line": 1,
+                "start_col": 1,
+                "end_line": 1,
+                "end_col": 1
+              },
+              "target": {
+                "kind": "local",
+                "name": "X",
+                "tag": "ident",
+                "type": "Integer",
+                "span": {
+                  "start_line": 1,
+                  "start_col": 1,
+                  "end_line": 1,
+                  "end_col": 1
+                }
+              },
+              "value": {
+                "kind": "int_literal",
+                "tag": "literal",
+                "type": "Integer",
+                "span": {
+                  "start_line": 1,
+                  "start_col": 1,
+                  "end_line": 1,
+                  "end_col": 1
+                }
+              }
+            }
+          ],
+          "terminator": {
+            "kind": "return",
+            "span": {
+              "start_line": 1,
+              "start_col": 1,
+              "end_line": 1,
+              "end_col": 1
+            },
+            "value": null
+          }
+        }
+      ]
+    }
+  ],
+  "package_name": "Fixture"
+}

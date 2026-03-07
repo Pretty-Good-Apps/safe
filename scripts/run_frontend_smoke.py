@@ -110,6 +110,17 @@ def require(condition: bool, message: str) -> None:
         raise RuntimeError(message)
 
 
+def ensure_sdkroot(env: dict[str, str]) -> dict[str, str]:
+    if sys.platform != "darwin" or env.get("SDKROOT"):
+        return env
+    candidate = Path("/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk")
+    if candidate.exists():
+        updated = env.copy()
+        updated["SDKROOT"] = str(candidate)
+        return updated
+    return env
+
+
 def find_subsequence(lexemes: list[str], expected: list[str]) -> int:
     limit = len(lexemes) - len(expected) + 1
     for start in range(max(limit, 0)):
@@ -218,7 +229,7 @@ def main() -> int:
     alr = find_command("alr", Path.home() / "bin" / "alr")
     python = find_command("python3")
 
-    env = os.environ.copy()
+    env = ensure_sdkroot(os.environ.copy())
 
     build_cmd = [alr, "build"]
     build = run(build_cmd, cwd=COMPILER_ROOT, env=env)

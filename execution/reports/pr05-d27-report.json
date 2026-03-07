@@ -1442,14 +1442,14 @@
       "source": "tests/positive/rule2_binary_search.safe",
       "validate": {
         "command": [
-          "python3",
-          "scripts/validate_mir_output.py",
+          "compiler_impl/bin/safec",
+          "validate-mir",
           "$TMPDIR/rule2_binary_search-mir/out/rule2_binary_search.mir.json"
         ],
         "cwd": "$REPO_ROOT",
         "returncode": 0,
         "stderr": "",
-        "stdout": "validate_mir_output: OK ($TMPDIR/rule2_binary_search-mir/out/rule2_binary_search.mir.json)\n"
+        "stdout": "validate-mir: OK ($TMPDIR/rule2_binary_search-mir/out/rule2_binary_search.mir.json)\n"
       }
     },
     {
@@ -1471,14 +1471,14 @@
       "source": "tests/positive/rule3_divide.safe",
       "validate": {
         "command": [
-          "python3",
-          "scripts/validate_mir_output.py",
+          "compiler_impl/bin/safec",
+          "validate-mir",
           "$TMPDIR/rule3_divide-mir/out/rule3_divide.mir.json"
         ],
         "cwd": "$REPO_ROOT",
         "returncode": 0,
         "stderr": "",
-        "stdout": "validate_mir_output: OK ($TMPDIR/rule3_divide-mir/out/rule3_divide.mir.json)\n"
+        "stdout": "validate-mir: OK ($TMPDIR/rule3_divide-mir/out/rule3_divide.mir.json)\n"
       }
     },
     {
@@ -1500,14 +1500,14 @@
       "source": "tests/positive/rule4_conditional.safe",
       "validate": {
         "command": [
-          "python3",
-          "scripts/validate_mir_output.py",
+          "compiler_impl/bin/safec",
+          "validate-mir",
           "$TMPDIR/rule4_conditional-mir/out/rule4_conditional.mir.json"
         ],
         "cwd": "$REPO_ROOT",
         "returncode": 0,
         "stderr": "",
-        "stdout": "validate_mir_output: OK ($TMPDIR/rule4_conditional-mir/out/rule4_conditional.mir.json)\n"
+        "stdout": "validate-mir: OK ($TMPDIR/rule4_conditional-mir/out/rule4_conditional.mir.json)\n"
       }
     },
     {
@@ -1529,14 +1529,14 @@
       "source": "tests/positive/rule4_linked_list.safe",
       "validate": {
         "command": [
-          "python3",
-          "scripts/validate_mir_output.py",
+          "compiler_impl/bin/safec",
+          "validate-mir",
           "$TMPDIR/rule4_linked_list-mir/out/rule4_linked_list.mir.json"
         ],
         "cwd": "$REPO_ROOT",
         "returncode": 0,
         "stderr": "",
-        "stdout": "validate_mir_output: OK ($TMPDIR/rule4_linked_list-mir/out/rule4_linked_list.mir.json)\n"
+        "stdout": "validate-mir: OK ($TMPDIR/rule4_linked_list-mir/out/rule4_linked_list.mir.json)\n"
       }
     }
   ],

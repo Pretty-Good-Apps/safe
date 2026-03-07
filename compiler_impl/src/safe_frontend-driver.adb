@@ -10,6 +10,8 @@ with Safe_Frontend.Ast;
 with Safe_Frontend.Diagnostics;
 with Safe_Frontend.Lexer;
 with Safe_Frontend.Mir;
+with Safe_Frontend.Mir_Model;
+with Safe_Frontend.Mir_Validate;
 with Safe_Frontend.Parser;
 with Safe_Frontend.Semantics;
 with Safe_Frontend.Source;
@@ -260,6 +262,31 @@ package body Safe_Frontend.Driver is
       Ada.Text_IO.Put (FL.To_Json (Result.Tokens));
       return Safe_Frontend.Exit_Success;
    end Run_Lex;
+
+   function Run_Validate_Mir (Path : String) return Integer is
+      Result : constant Safe_Frontend.Mir_Model.Validation_Result :=
+        Safe_Frontend.Mir_Validate.Validate_File (Path);
+   begin
+      if Result.Success then
+         Ada.Text_IO.Put_Line ("validate-mir: OK (" & Path & ")");
+         return Safe_Frontend.Exit_Success;
+      end if;
+
+      Ada.Text_IO.Put_Line
+        (Ada.Text_IO.Current_Error,
+         "validate-mir: ERROR: "
+         & Safe_Frontend.Types.To_String (Result.Message));
+      return Safe_Frontend.Exit_Diagnostics;
+   exception
+      when Error : others =>
+         Ada.Text_IO.Put_Line
+           (Ada.Text_IO.Current_Error,
+            "validate-mir: ERROR: internal failure: "
+            & Ada.Exceptions.Exception_Name (Error)
+            & ": "
+            & Ada.Exceptions.Exception_Message (Error));
+         return Safe_Frontend.Exit_Internal;
+   end Run_Validate_Mir;
 
    function Run_Ast (Path : String) return Integer is
    begin
