@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-03-07T02:26:55Z",
+  "updated_at": "2026-03-07T20:20:00Z",
   "frozen_spec_sha": "468cf72332724b04b7c193b4d2a3b02f1584125d",
   "active_task_id": null,
-  "next_task_id": "PR06",
+  "next_task_id": "PR06.5",
   "repo_facts": {
     "tests": {
-      "positive": 32,
-      "negative": 35,
+      "positive": 35,
+      "negative": 42,
       "golden": 3,
       "concurrency": 5,
-      "diagnostics_golden": 5,
-      "total": 80
+      "diagnostics_golden": 13,
+      "total": 98
     }
   },
   "tasks": [
@@ -137,15 +137,23 @@
     },
     {
       "id": "PR06",
-      "title": "Ownership legality and full diagnostics corpus on MIR",
-      "status": "ready",
+      "title": "Full sequential ownership legality and diagnostics on MIR",
+      "status": "done",
       "depends_on": ["PR05"],
       "acceptance": [
-        "Full ownership legality (including borrow conflicts, observe restrictions, and lifetime rules beyond moved/freed) is implemented on MIR.",
-        "Ownership diagnostics are deterministic and diag_double_move.txt matches byte-for-byte.",
-        "Ownership positive/negative corpus behaves as expected."
+        "Full sequential ownership legality on MIR is implemented for spec/02-restrictions.md section 2.3, excluding channel-triggered move forms deferred to later concurrency milestones.",
+        "Ownership legality covers move assignment, access-valued returns, out/in out access parameter flows, null-before-move, borrow freeze, observe freeze, anonymous-access initialisation-only, and lifetime containment.",
+        "safec emit produces deterministic typed-v2 and mir-v2 outputs for representative ownership samples.",
+        "scripts/validate_mir_output.py validates representative mir-v2 outputs, while remaining compatible with the existing PR05 mir-v1 gate.",
+        "All ownership semantic failures use the rich code-frame renderer for human stderr, and `safec check --diag-json` exposes stable ownership reasons.",
+        "Ownership negative diagnostics match committed goldens byte-for-byte, including diag_double_move.txt and the expanded ownership diagnostics set.",
+        "Ownership positive and negative corpus gating passes, including the expanded tests for null-before-move, anonymous-access reassignment, spec-aligned observe via .Access, observe freeze, access-valued return moves, and in out access moves.",
+        "A dedicated pr06-ownership-harness CI job passes and a committed execution/reports/pr06-ownership-report.json artifact is listed in PR06 evidence."
       ],
-      "evidence": [],
+      "evidence": [
+        "execution/reports/pr06-ownership-report.json",
+        "execution/sessions/20260307-1510-pr06.md"
+      ],
       "blockers": [],
       "unblock_condition": ""
     },

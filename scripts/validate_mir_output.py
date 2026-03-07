@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate emitted mir-v1 structure for the PR05 sequential subset."""
+"""Validate emitted mir-v1/mir-v2 structure for the Safe sequential subset."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from typing import Any
 
 TERMINATORS = {"jump", "branch", "return"}
 FORBIDDEN_OPS = {"if", "while", "for"}
+SUPPORTED_FORMATS = {"mir-v1", "mir-v2"}
 
 
 class ValidationError(Exception):
@@ -116,8 +117,61 @@ def validate_graph(graph: dict[str, Any], graph_index: int) -> None:
         require(isinstance(local.get("name"), str), f"{local_where}: missing local name")
         validate_span(local.get("span"), f"{local_where}.span")
         require(isinstance(local.get("type"), dict), f"{local_where}: missing local type")
+        if "scope_id" in local:
+            require(isinstance(local.get("scope_id"), str), f"{local_where}: invalid scope_id")
     for index, block in enumerate(graph["blocks"]):
         validate_block(block, valid_ids, f"{where}.blocks[{index}]")
+
+
+def validate_scope(scope: dict[str, Any], valid_scope_ids: set[str], valid_local_ids: set[str], valid_block_ids: set[str], where: str) -> None:
+    require(isinstance(scope, dict), f"{where}: scope must be an object")
+    require(isinstance(scope.get("id"), str), f"{where}: missing scope id")
+    parent_scope_id = scope.get("parent_scope_id")
+    require(parent_scope_id is None or parent_scope_id in valid_scope_ids, f"{where}: invalid parent_scope_id")
+    require(isinstance(scope.get("kind"), str), f"{where}: missing scope kind")
+    local_ids = scope.get("local_ids")
+    require(isinstance(local_ids, list), f"{where}: local_ids must be a list")
+    for index, local_id in enumerate(local_ids):
+        require(local_id in valid_local_ids, f"{where}.local_ids[{index}]: invalid local id")
+    entry_block = scope.get("entry_block")
+    require(entry_block == "" or entry_block in valid_block_ids, f"{where}: invalid entry_block")
+    exit_blocks = scope.get("exit_blocks")
+    require(isinstance(exit_blocks, list), f"{where}: exit_blocks must be a list")
+    for index, block_id in enumerate(exit_blocks):
+        require(block_id in valid_block_ids, f"{where}.exit_blocks[{index}]: invalid block id")
+
+
+def validate_graph_v2(graph: dict[str, Any], graph_index: int) -> None:
+    where = f"graphs[{graph_index}]"
+    scopes = graph.get("scopes")
+    require(isinstance(scopes, list) and scopes, f"{where}: mir-v2 graphs must have a non-empty scopes list")
+    valid_scope_ids = {scope.get("id") for scope in scopes if isinstance(scope, dict)}
+    valid_local_ids = {local.get("id") for local in graph["locals"] if isinstance(local, dict)}
+    valid_block_ids = {block.get("id") for block in graph["blocks"] if isinstance(block, dict)}
+    for index, local in enumerate(graph["locals"]):
+        local_where = f"{where}.locals[{index}]"
+        require(isinstance(local.get("scope_id"), str), f"{local_where}: mir-v2 locals must have scope_id")
+        require(local.get("scope_id") in valid_scope_ids, f"{local_where}: unknown scope_id")
+    for index, scope in enumerate(scopes):
+        validate_scope(scope, valid_scope_ids, valid_local_ids, valid_block_ids, f"{where}.scopes[{index}]")
+    for index, block in enumerate(graph["blocks"]):
+        block_where = f"{where}.blocks[{index}]"
+        require(isinstance(block.get("active_scope_id"), str), f"{block_where}: mir-v2 blocks must have active_scope_id")
+        require(block.get("active_scope_id") in valid_scope_ids, f"{block_where}: invalid active_scope_id")
+        for op_index, op in enumerate(block["ops"]):
+            if op.get("kind") in {"assign", "call"}:
+                require(op.get("ownership_effect") in {"Move", "Borrow", "Observe", "None"}, f"{block_where}.ops[{op_index}]: invalid ownership_effect")
+                require(isinstance(op.get("type"), str), f"{block_where}.ops[{op_index}]: missing op type")
+            if op.get("kind") == "assign":
+                require(isinstance(op.get("declaration_init"), bool), f"{block_where}.ops[{op_index}]: assign missing declaration_init")
+            if op.get("kind") == "scope_enter":
+                require(isinstance(op.get("scope_id"), str), f"{block_where}.ops[{op_index}]: scope_enter missing scope_id")
+            if op.get("kind") == "scope_exit":
+                require(isinstance(op.get("scope_id"), str), f"{block_where}.ops[{op_index}]: scope_exit missing scope_id")
+        terminator = block["terminator"]
+        require(isinstance(terminator.get("span"), dict), f"{block_where}.terminator: missing span")
+        if terminator["kind"] == "return":
+            require(terminator.get("ownership_effect") in {"Move", "Borrow", "Observe", "None"}, f"{block_where}.terminator: invalid ownership_effect")
 
 
 def main() -> int:
@@ -126,11 +180,13 @@ def main() -> int:
     args = parser.parse_args()
 
     payload = read_json(args.mir_json)
-    require(payload.get("format") == "mir-v1", f"{args.mir_json}: expected format mir-v1")
+    require(payload.get("format") in SUPPORTED_FORMATS, f"{args.mir_json}: expected format mir-v1 or mir-v2")
     graphs = payload.get("graphs")
     require(isinstance(graphs, list) and graphs, f"{args.mir_json}: graphs must be a non-empty list")
     for index, graph in enumerate(graphs):
         validate_graph(graph, index)
+        if payload.get("format") == "mir-v2":
+            validate_graph_v2(graph, index)
     print(f"validate_mir_output: OK ({args.mir_json})")
     return 0
 

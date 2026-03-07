@@ -1349,15 +1349,15 @@
   "determinism": {
     "tests/positive/rule2_binary_search.safe": {
       "iface/rule2_binary_search.safei.json": "81bfa361bded779e69123cbf766e9d7a889ce628c9d09f4dc282fca40e49b2de",
-      "out/rule2_binary_search.ast.json": "1fb187e77a6914112411afac6b58bddc04263248e0a906cf94e8e274a32002a1",
-      "out/rule2_binary_search.mir.json": "e97e9ccb0f7b0663ea0186b2ff7587232243f8140fea1b89cc84768fec80bbff",
-      "out/rule2_binary_search.typed.json": "abe19e3613ede9c173d45540abada1745e6ddfae7580bb2e56c5b7c636f05d74"
+      "out/rule2_binary_search.ast.json": "6a24a64a145fdb0257fabb4d7c8f27b937191eca4753998e9cfb9c5d8d9041aa",
+      "out/rule2_binary_search.mir.json": "4199c7ed56350a5aeebdec5dd69ee3ce26c5118d1f20400f2a655f5512831d0b",
+      "out/rule2_binary_search.typed.json": "b265b0de2f6a97aadeeb5b68dc5013d92c413ae289ae3d2123ffa0778ae66cbe"
     },
     "tests/positive/rule4_conditional.safe": {
       "iface/rule4_conditional.safei.json": "adc38faa75fa95f5c99b82e09639dcc983da5786303a6fc86773284f38406ecc",
       "out/rule4_conditional.ast.json": "52a2648ebb670a23a20034e894e86e8fe8af6394f7a1084cca204d5f88fc64c5",
-      "out/rule4_conditional.mir.json": "a52b3ff3e21a05e21e338be49d3241e62ee15682493ab34082f19657d0626909",
-      "out/rule4_conditional.typed.json": "4411e4069d80557815bf7a71094322ab0132f3d8b873f44250eab1e52b010e38"
+      "out/rule4_conditional.mir.json": "6f86d8de3dac4155507918e430ee5e2374ed332f55ea4360cf14e5986fe0dcfe",
+      "out/rule4_conditional.typed.json": "f6240c0f09391089d82dcd8e2efc239fbfbfc5af5bf80b194609303307137863"
     }
   },
   "golden_mode": [

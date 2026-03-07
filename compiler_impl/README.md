@@ -1,6 +1,6 @@
 # SafeC Frontend
 
-This workspace hosts the current Safe compiler frontend through PR05.
+This workspace hosts the current Safe compiler frontend through PR06.
 
 ## Scope
 
@@ -10,7 +10,7 @@ This workspace hosts the current Safe compiler frontend through PR05.
 - `safec check --diag-json <file.safe>` keeps human stderr unchanged and also writes machine-readable semantic diagnostics to stdout for CI and harness use.
 - `safec emit <file.safe> --out-dir <dir> --interface-dir <dir>` writes the current frontend artifacts for downstream inspection and regression checks.
 
-The current frontend implements the sequential Rule 1-4 subset used by the existing D27 corpus. It now parses executable bodies, emits schema-true AST for the implemented subset, emits `typed-v1` and `mir-v1`, and checks the current Rule 1-4 corpus through `safec check`. It is still not the concurrency frontend or the Ada/SPARK emitter.
+The current frontend implements the sequential Rule 1-4 subset plus the sequential ownership model used by the current PR06 corpus. It parses executable bodies, emits schema-true AST for the implemented subset, emits `typed-v2` and `mir-v2`, checks the current Rule 1-4 corpus, and checks the sequential ownership corpus through `safec check`. It is still not the concurrency frontend or the Ada/SPARK emitter.
 
 ## Output Formats
 
@@ -29,12 +29,12 @@ The current frontend implements the sequential Rule 1-4 subset used by the exist
   Validation path: `python3 scripts/validate_ast_output.py`.
 
 - `<stem>.typed.json`
-  Format tag: `typed-v1`.
-  Contents: package identity, resolved type inventory, executable summaries, public declarations, and the AST snapshot used to derive lowering and diagnostics.
+  Format tag: `typed-v2`.
+  Contents: package identity, resolved type inventory, executable summaries, public declarations, the AST snapshot used to derive lowering and diagnostics, and ownership-oriented access-role metadata for the sequential ownership model.
 
 - `<stem>.mir.json`
-  Format tag: `mir-v1`.
-  Contents: package-level graph data, deterministic locals tables, blocks, typed ops, and explicit terminators for the implemented sequential subset.
+  Format tag: `mir-v2`.
+  Contents: package-level graph data, deterministic locals tables, `scopes[]`, blocks with `active_scope_id`, typed ops, explicit terminators, and ownership-effect metadata for the implemented sequential subset.
   Validation path: `python3 scripts/validate_mir_output.py`.
   Status: debug and regression artifact for the current sequential platform. Incompatible structural changes require a format-tag bump.
 
@@ -68,4 +68,13 @@ python3 scripts/run_pr05_d27_harness.py
 ```
 
 That harness diffs the four canonical diagnostics goldens byte-for-byte, runs the full current Rule 1-4 corpus gate, verifies deterministic repeated `emit` output on loop and short-circuit samples, and records results in `execution/reports/pr05-d27-report.json`.
-It also validates representative `mir-v1` artifacts and drives corpus reason matching through `safec check --diag-json` rather than parsing human stderr.
+It also validates representative MIR artifacts and drives corpus reason matching through `safec check --diag-json` rather than parsing human stderr.
+
+The PR06 ownership gate is:
+
+```bash
+cd compiler_impl && $HOME/bin/alr build
+python3 scripts/run_pr06_ownership_harness.py
+```
+
+That harness diffs the committed ownership diagnostics goldens byte-for-byte, runs the sequential ownership corpus gate, validates representative `typed-v2`/`mir-v2` outputs, checks deterministic repeated `emit` output on ownership samples, and records results in `execution/reports/pr06-ownership-report.json`.

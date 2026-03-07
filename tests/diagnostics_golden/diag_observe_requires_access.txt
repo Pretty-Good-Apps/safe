@@ -1,0 +1,14 @@
+Diagnostics Golden: Observe Requires Access
+Source: tests/negative/neg_own_observe_requires_access.safe
+Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.4.p101a:ef2d8fd1
+
+Expected diagnostic output:
+------------------------------------------------------------------------
+neg_own_observe_requires_access.safe:16:7: error: observer 'Observer' must be initialized from X.Access
+  |
+  | 16 |       Observer : access constant Config = Owner;  -- ERROR: must use Owner.Access
+  |    |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  |
+  note: local observe uses anonymous access constant and requires an explicit .Access attribute.
+  note: rule: Safe §2.3.4 (local observe must use .Access)
+------------------------------------------------------------------------

@@ -1,0 +1,23 @@
+-- Test: ownership_return
+-- Description: Returning ownership from a local owner.
+-- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.2.p96a:0eaf48aa
+-- Expected: ACCEPT
+
+package Ownership_Return is
+
+   type Payload is range 0 .. 100;
+   type Payload_Ptr is access Payload;
+
+   function Build return Payload_Ptr is
+      Source : Payload_Ptr = new (42 as Payload);
+   begin
+      return Source;
+   end Build;
+
+   procedure Use_Return is
+      Target : Payload_Ptr = null;
+   begin
+      Target = Build ();
+   end Use_Return;
+
+end Ownership_Return;

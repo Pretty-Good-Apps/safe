@@ -5,25 +5,11 @@ Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.2.p96c:0b45de01
 
 Expected diagnostic output:
 ------------------------------------------------------------------------
-neg_own_double_move.safe:22:17: error: use of moved value 'Source'
+neg_own_double_move.safe:22:7: error: use of moved value 'Source'
   |
-  | 20 |       Target1 := Source;
-  |    |                   ~~~~~~ value moved here
-  | 21 |       --  Source is now null (moved).
-  | 22 |       Target2 := Source;  -- ERROR: Source has already been moved
-  |    |                   ^^^^^^ error: Source has been moved
+  | 22 |       Target2 = Source;  -- ERROR: Source has already been moved
+  |    |       ^~~~~~~~~~~~~~~~~
   |
-  note: Source was moved to Target1 at line 20.
-  note: after the move at line 20, Source is null and its ownership
-        state is 'Moved'. It cannot be used in a subsequent move,
-        dereference, or read unless it is first reassigned or verified
-        as non-null.
-  note: rule: Ownership (Move Semantics)
-  note: per spec/02-restrictions.md section 2.3.2 paragraph 96c:
-        "A conforming implementation shall reject any subsequent
-        dereference of the source object unless it has been reassigned
-        or verified as non-null."
-  suggestion: reassign Source before the second move:
-        Source := new Payload'(Value => 99);
-        Target2 := Source;
+  note: the source was already moved earlier on this path.
+  note: rule: Safe §2.3.2 (move semantics)
 ------------------------------------------------------------------------

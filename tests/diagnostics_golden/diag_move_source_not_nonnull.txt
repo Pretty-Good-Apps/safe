@@ -1,0 +1,14 @@
+Diagnostics Golden: Move Source Not NonNull
+Source: tests/negative/neg_own_source_maybe_null.safe
+Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.2.p96a:0eaf48aa
+
+Expected diagnostic output:
+------------------------------------------------------------------------
+neg_own_source_maybe_null.safe:15:7: error: move source 'Source' is not provably non-null
+  |
+  | 15 |       Target = Source;  -- ERROR: source is not provably non-null
+  |    |       ^~~~~~~~~~~~~~~~
+  |
+  note: static analysis determined state 'Null' at this move site.
+  note: rule: Safe §2.3.2 (source of move must be provably non-null)
+------------------------------------------------------------------------

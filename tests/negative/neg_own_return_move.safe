@@ -1,0 +1,17 @@
+-- Test: neg_own_return_move
+-- Description: Returning an owner that is not provably non-null.
+-- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.2.p96a:0eaf48aa
+-- Expected: REJECT move_source_not_nonnull
+
+package Return_Move_Test is
+
+   type Payload is range 0 .. 100;
+   type Payload_Ptr is access Payload;
+
+   function Build return Payload_Ptr is
+      Source : Payload_Ptr = null;
+   begin
+      return Source;  -- ERROR: return move source not provably non-null
+   end Build;
+
+end Return_Move_Test;

@@ -33,6 +33,14 @@ REASON_CODE = {
     "null_dereference": "SC5401",
     "use_after_move": "SC5402",
     "dangling_reference": "SC5403",
+    "double_move": "SC5501",
+    "borrow_conflict": "SC5502",
+    "observe_mutation": "SC5503",
+    "lifetime_violation": "SC5504",
+    "move_target_not_null": "SC5505",
+    "move_source_not_nonnull": "SC5506",
+    "anonymous_access_reassign": "SC5507",
+    "observe_requires_access": "SC5508",
 }
 EXPECTED_REASON_OVERRIDE = {
     "neg_rule1_index_fail.safe": "narrowing_check_failure",
@@ -107,10 +115,11 @@ class Interval:
 @dataclass
 class AccessFact:
     state: str
-    borrow_from: str | None = None
+    lender: str | None = None
+    alias_kind: str | None = None
 
     def copy(self) -> "AccessFact":
-        return AccessFact(self.state, self.borrow_from)
+        return AccessFact(self.state, self.lender, self.alias_kind)
 
 
 @dataclass
@@ -137,6 +146,9 @@ class TypeInfo:
     target: "TypeInfo | None" = None
     not_null: bool = False
     anonymous: bool = False
+    is_constant: bool = False
+    is_all: bool = False
+    access_role: str | None = None
     base: "TypeInfo | None" = None
 
     def range_interval(self) -> Interval:
@@ -187,6 +199,8 @@ class State:
     access: dict[str, AccessFact]
     relations: set[tuple[str, str]]
     div_bounds: dict[tuple[str, str], int]
+    borrow_freeze: dict[str, int]
+    observe_freeze: dict[str, int]
     returned: bool = False
 
     def copy(self) -> "State":
@@ -195,6 +209,8 @@ class State:
             access={name: value.copy() for name, value in self.access.items()},
             relations=set(self.relations),
             div_bounds=dict(self.div_bounds),
+            borrow_freeze=dict(self.borrow_freeze),
+            observe_freeze=dict(self.observe_freeze),
             returned=self.returned,
         )
 
@@ -219,6 +235,18 @@ def format_int(value: int) -> str:
     if value < 0:
         return "-" + result
     return result
+
+
+def classify_access_role(*, anonymous: bool, is_constant: bool, is_all: bool) -> str:
+    if anonymous and is_constant:
+        return "Observe"
+    if anonymous:
+        return "Borrow"
+    if is_all:
+        return "GeneralAccess"
+    if is_constant:
+        return "NamedConstant"
+    return "Owner"
 
 
 def simple_diag(path: str, span: Span, code: str, message: str, note: str = "") -> str:
@@ -451,8 +479,8 @@ class Parser:
             type_def = make_node(
                 "AccessToObjectDefinition",
                 is_not_null=access["not_null"],
-                is_all=False,
-                is_constant=False,
+                is_all=access["is_all"],
+                is_constant=access["is_constant"],
                 subtype_indication=make_node(
                     "SubtypeIndication",
                     is_not_null=False,
@@ -753,8 +781,8 @@ class Parser:
                 "ast": make_node(
                     "AccessDefinition",
                     is_not_null=access["not_null"],
-                    is_all=False,
-                    is_constant=False,
+                    is_all=access["is_all"],
+                    is_constant=access["is_constant"],
                     subtype_mark=name_to_schema(access["target_name"]),
                     span=access["span"].to_json(),
                 ),
@@ -773,14 +801,22 @@ class Parser:
     def parse_access_definition(self, *, type_decl_context: bool) -> dict[str, Any]:
         start = self.current()
         not_null = False
+        is_all = False
+        is_constant = False
         if self.match("not"):
             self.expect("null")
             not_null = True
         self.expect("access")
+        if self.match("all"):
+            is_all = True
+        elif self.match("constant"):
+            is_constant = True
         target_name = self.parse_name_expression()
         return {
             "tag": "access_def",
             "not_null": not_null,
+            "is_all": is_all,
+            "is_constant": is_constant,
             "target_name": target_name,
             "anonymous": not type_decl_context,
             "span": span_between(start.span, target_name["span"]),
@@ -793,8 +829,8 @@ class Parser:
                 "ast": make_node(
                     "AccessDefinition",
                     is_not_null=access["not_null"],
-                    is_all=False,
-                    is_constant=False,
+                    is_all=access["is_all"],
+                    is_constant=access["is_constant"],
                     subtype_mark=name_expr_to_schema(access["target_name"]),
                     span=access["span"].to_json(),
                 ),
@@ -1375,11 +1411,12 @@ def name_expr_to_schema(expr: dict[str, Any]) -> dict[str, Any]:
     if tag == "ident":
         return make_node("DirectName", identifier=expr["name"], span=expr["span"].to_json())
     if tag == "select":
+        resolved_kind = "Attribute" if expr["selector"] in {"Access", "First", "Last"} else None
         return make_node(
             "SelectedComponent",
             prefix=name_expr_to_schema(expr["prefix"]),
             selector=expr["selector"],
-            resolved_kind=None,
+            resolved_kind=resolved_kind,
             span=expr["span"].to_json(),
         )
     if tag == "apply":
@@ -1787,6 +1824,8 @@ class Resolver:
                 self.executables.append(info)
         self.finalize_type_targets()
         self.normalize_executables()
+        globals()["TYPE_ENV_SENTINEL"] = self.type_env
+        globals()["FUNCTION_ENV_SENTINEL"] = self.functions
         typed = self.typed_json()
         interface = self.interface_json()
         mir = self.mir_json()
@@ -1845,7 +1884,20 @@ class Resolver:
         elif type_def["node_type"] == "AccessToObjectDefinition":
             subtype = type_def["subtype_indication"]["subtype_mark"]
             target = self.resolve_name_type(flatten_name_from_schema(subtype))
-            self.type_env[name] = TypeInfo(name, "access", target=target, not_null=type_def["is_not_null"], anonymous=False)
+            self.type_env[name] = TypeInfo(
+                name,
+                "access",
+                target=target,
+                not_null=type_def["is_not_null"],
+                anonymous=False,
+                is_constant=type_def["is_constant"],
+                is_all=type_def["is_all"],
+                access_role=classify_access_role(
+                    anonymous=False,
+                    is_constant=type_def["is_constant"],
+                    is_all=type_def["is_all"],
+                ),
+            )
         else:
             raise BackendError(f"unsupported type declaration for {name}: {type_def['node_type']}")
         if ast["is_public"]:
@@ -1910,7 +1962,20 @@ class Resolver:
             return self.resolve_name_type(node["name"])
         if node["tag"] == "access_def":
             target = self.resolve_name_type(flatten_name(node["target_name"]))
-            return TypeInfo(f"access {target.name}", "access", target=target, not_null=node["not_null"], anonymous=node["anonymous"])
+            return TypeInfo(
+                f"access {target.name}",
+                "access",
+                target=target,
+                not_null=node["not_null"],
+                anonymous=node["anonymous"],
+                is_constant=node.get("is_constant", False),
+                is_all=node.get("is_all", False),
+                access_role=classify_access_role(
+                    anonymous=node["anonymous"],
+                    is_constant=node.get("is_constant", False),
+                    is_all=node.get("is_all", False),
+                ),
+            )
         if node["tag"] == "subtype_name":
             return self.resolve_name_type(node["name"])
         if node["tag"] == "subtype_indication":
@@ -1934,7 +1999,20 @@ class Resolver:
             return self.resolve_name_type(flatten_name_from_schema(ast_node["subtype_mark"]))
         if ast_node["node_type"] == "AccessDefinition":
             target = self.resolve_name_type(flatten_name_from_schema(ast_node["subtype_mark"]))
-            return TypeInfo(f"access {target.name}", "access", target=target, not_null=ast_node["is_not_null"], anonymous=True)
+            return TypeInfo(
+                f"access {target.name}",
+                "access",
+                target=target,
+                not_null=ast_node["is_not_null"],
+                anonymous=True,
+                is_constant=ast_node.get("is_constant", False),
+                is_all=ast_node.get("is_all", False),
+                access_role=classify_access_role(
+                    anonymous=True,
+                    is_constant=ast_node.get("is_constant", False),
+                    is_all=ast_node.get("is_all", False),
+                ),
+            )
         raise BackendError(f"unsupported type spec node: {ast_node['node_type']}")
 
     def type_from_discrete_definition(self, node: dict[str, Any]) -> TypeInfo:
@@ -1955,7 +2033,7 @@ class Resolver:
 
     def typed_json(self) -> dict[str, Any]:
         return {
-            "format": "typed-v1",
+            "format": "typed-v2",
             "package_name": self.parsed["package_name"],
             "package_end_name": self.parsed["end_name"],
             "types": [
@@ -1997,7 +2075,7 @@ class Resolver:
         for info in self.executables:
             graphs.append(lower_subprogram_to_mir_v2(info, self.type_env, self.functions))
         return {
-            "format": "mir-v1",
+            "format": "mir-v2",
             "package_name": self.parsed["package_name"],
             "graphs": graphs,
         }
@@ -2041,6 +2119,9 @@ def type_to_json(info: TypeInfo) -> dict[str, Any]:
     if info.kind == "access":
         result["not_null"] = info.not_null
         result["anonymous"] = info.anonymous
+        result["is_constant"] = info.is_constant
+        result["is_all"] = info.is_all
+        result["access_role"] = info.access_role
     return result
 
 
@@ -2195,7 +2276,7 @@ def debug_range(range_node: dict[str, Any]) -> Any:
 def make_initial_state(info: FunctionInfo, type_env: dict[str, TypeInfo]) -> tuple[State, dict[str, TypeInfo], set[str]]:
     var_types = {symbol.name: symbol.type_info for symbol in info.params}
     owner_vars: set[str] = set()
-    state = State(ranges={}, access={}, relations=set(), div_bounds={})
+    state = State(ranges={}, access={}, relations=set(), div_bounds={}, borrow_freeze={}, observe_freeze={})
     for symbol in info.params:
         initialize_symbol(state, symbol.name, symbol.type_info)
     for decl in info.declarations:
@@ -2214,7 +2295,13 @@ def initialize_symbol(state: State, name: str, typ: TypeInfo) -> None:
     if typ.kind in {"integer", "subtype"}:
         state.ranges[name] = typ.range_interval()
     elif typ.kind == "access":
-        state.access[name] = AccessFact("NonNull" if typ.not_null else "Null")
+        role = type_access_role(typ)
+        if typ.not_null or role in {"Borrow", "Observe"}:
+            state.access[name] = AccessFact("NonNull")
+        elif role == "Owner":
+            state.access[name] = AccessFact("Null")
+        else:
+            state.access[name] = AccessFact("MaybeNull")
 
 
 def resolve_decl_type(decl: dict[str, Any], type_env: dict[str, TypeInfo]) -> TypeInfo:
@@ -2225,7 +2312,20 @@ def resolve_decl_type(decl: dict[str, Any], type_env: dict[str, TypeInfo]) -> Ty
         return type_env[type_spec["name"]]
     if type_spec["tag"] == "access_def":
         target = type_env[flatten_name(type_spec["target_name"])]
-        return TypeInfo(f"access {target.name}", "access", target=target, not_null=type_spec["not_null"], anonymous=True)
+        return TypeInfo(
+            f"access {target.name}",
+            "access",
+            target=target,
+            not_null=type_spec["not_null"],
+            anonymous=True,
+            is_constant=type_spec.get("is_constant", False),
+            is_all=type_spec.get("is_all", False),
+            access_role=classify_access_role(
+                anonymous=True,
+                is_constant=type_spec.get("is_constant", False),
+                is_all=type_spec.get("is_all", False),
+            ),
+        )
     raise BackendError(f"unsupported object declaration type: {type_spec['tag']}")
 
 
@@ -2463,7 +2563,7 @@ def apply_assignment(
             return diag
         if target_type.anonymous and expr["tag"] == "ident":
             source_name = expr["name"]
-            state.access[target_name] = AccessFact(fact.state, borrow_from=source_name)
+            state.access[target_name] = AccessFact(fact.state, lender=source_name, alias_kind=type_access_role(target_type))
         else:
             if expr["tag"] == "ident" and source_name_is_owner(expr["name"], var_types):
                 state.access[target_name] = AccessFact("NonNull" if fact.state == "NonNull" else fact.state)
@@ -2484,7 +2584,200 @@ def apply_assignment(
 
 def source_name_is_owner(name: str, var_types: dict[str, TypeInfo]) -> bool:
     typ = var_types.get(name)
-    return typ is not None and typ.kind == "access" and not typ.anonymous
+    return typ is not None and typ.kind == "access" and typ.access_role == "Owner"
+
+
+def type_access_role(typ: TypeInfo | None) -> str | None:
+    if typ is None or typ.kind != "access":
+        return None
+    return typ.access_role or classify_access_role(
+        anonymous=typ.anonymous,
+        is_constant=typ.is_constant,
+        is_all=typ.is_all,
+    )
+
+
+def root_name(expr: dict[str, Any]) -> str | None:
+    tag = expr["tag"]
+    if tag == "ident":
+        return expr["name"]
+    if tag == "select":
+        return root_name(expr["prefix"])
+    if tag == "resolved_index":
+        return root_name(expr["prefix"])
+    if tag == "conversion":
+        return root_name(expr["expr"])
+    return None
+
+
+def access_fact_for_name(name: str, state: State, var_types: dict[str, TypeInfo]) -> AccessFact:
+    fact = state.access.get(name)
+    if fact is not None:
+        return fact
+    typ = var_types.get(name)
+    if typ is not None and typ.kind == "access":
+        if typ.not_null:
+            return AccessFact("NonNull")
+        return AccessFact("Null" if type_access_role(typ) == "Owner" else "MaybeNull")
+    return AccessFact("MaybeNull")
+
+
+def ownership_note(reason: str) -> str:
+    return {
+        "double_move": "rule: Safe §2.3.2 (move semantics)",
+        "use_after_move": "rule: Safe §2.3.2 (post-move restrictions)",
+        "borrow_conflict": "rule: Safe §2.3.3 (mutable borrow freezes lender)",
+        "observe_mutation": "rule: Safe §2.3.4 (observe is read-only; source frozen for write/move)",
+        "lifetime_violation": "rule: Safe §2.3.3 / §2.3.4a (lifetime containment)",
+        "move_target_not_null": "rule: Safe §2.3.2 (target of move must be provably null)",
+        "move_source_not_nonnull": "rule: Safe §2.3.2 (source of move must be provably non-null)",
+        "anonymous_access_reassign": "rule: Safe §2.3.3 / §2.3.4a (anonymous access is initialization-only)",
+        "observe_requires_access": "rule: Safe §2.3.4 (local observe must use .Access)",
+    }[reason]
+
+
+def ownership_diag(reason: str, span: Span, message: str, *notes: str) -> Diagnostic:
+    return Diagnostic(
+        reason=reason,
+        path="",
+        span=span,
+        highlight_span=span,
+        message=message,
+        notes=[*notes, ownership_note(reason)],
+    )
+
+
+def freeze_count(state: State, name: str, kind: str) -> int:
+    if kind == "borrow":
+        return state.borrow_freeze.get(name, 0)
+    if kind == "observe":
+        return state.observe_freeze.get(name, 0)
+    raise BackendError(f"unknown freeze kind: {kind}")
+
+
+def increment_freeze(state: State, lender: str, alias_kind: str) -> None:
+    if alias_kind == "Borrow":
+        state.borrow_freeze[lender] = state.borrow_freeze.get(lender, 0) + 1
+    elif alias_kind == "Observe":
+        state.observe_freeze[lender] = state.observe_freeze.get(lender, 0) + 1
+
+
+def decrement_freeze(state: State, lender: str, alias_kind: str) -> None:
+    if alias_kind == "Borrow":
+        current = state.borrow_freeze.get(lender, 0)
+        if current <= 1:
+            state.borrow_freeze.pop(lender, None)
+        else:
+            state.borrow_freeze[lender] = current - 1
+    elif alias_kind == "Observe":
+        current = state.observe_freeze.get(lender, 0)
+        if current <= 1:
+            state.observe_freeze.pop(lender, None)
+        else:
+            state.observe_freeze[lender] = current - 1
+
+
+def is_access_attribute(expr: dict[str, Any], attribute: str) -> bool:
+    return expr["tag"] == "select" and expr["selector"] == attribute
+
+
+def observe_lender_name(expr: dict[str, Any]) -> str | None:
+    if is_access_attribute(expr, "Access"):
+        return root_name(expr["prefix"])
+    return None
+
+
+def assignment_lender_name(expr: dict[str, Any]) -> str | None:
+    if expr["tag"] == "ident":
+        return expr["name"]
+    if is_access_attribute(expr, "Access"):
+        return root_name(expr["prefix"])
+    return None
+
+
+def scope_contains(scope_map: dict[str, dict[str, Any]], outer_scope_id: str | None, inner_scope_id: str | None) -> bool:
+    if outer_scope_id is None or inner_scope_id is None:
+        return False
+    current = inner_scope_id
+    while current is not None:
+        if current == outer_scope_id:
+            return True
+        scope = scope_map.get(current)
+        current = scope.get("parent_scope_id") if scope is not None else None
+    return False
+
+
+def owner_write_conflict(name: str, state: State, span: Span) -> Diagnostic | None:
+    if freeze_count(state, name, "borrow") > 0:
+        return ownership_diag(
+            "borrow_conflict",
+            span,
+            f"lender '{name}' is frozen by an active mutable borrow",
+            "reads, writes, and moves of the lender are forbidden while the borrow is active.",
+        )
+    if freeze_count(state, name, "observe") > 0:
+        return ownership_diag(
+            "observe_mutation",
+            span,
+            f"source '{name}' is frozen by an active observe",
+            "writes and moves of the observed source are forbidden while an observer is active.",
+        )
+    return None
+
+
+def owner_read_conflict(name: str, state: State, span: Span) -> Diagnostic | None:
+    if freeze_count(state, name, "borrow") > 0:
+        return ownership_diag(
+            "borrow_conflict",
+            span,
+            f"lender '{name}' is frozen by an active mutable borrow",
+            "reads, writes, and moves of the lender are forbidden while the borrow is active.",
+        )
+    return None
+
+
+def observer_write_conflict(name: str, span: Span) -> Diagnostic:
+    return ownership_diag(
+        "observe_mutation",
+        span,
+        f"observer '{name}' provides read-only access",
+        "writes and moves through an active observer are not permitted.",
+    )
+
+
+def owner_move_precondition(
+    source_name: str,
+    target_name: str,
+    state: State,
+    var_types: dict[str, TypeInfo],
+    span: Span,
+) -> Diagnostic | None:
+    if (diag := owner_write_conflict(source_name, state, span)) is not None:
+        return diag
+    source_fact = access_fact_for_name(source_name, state, var_types)
+    if source_fact.state == "Moved":
+        return ownership_diag(
+            "double_move",
+            span,
+            f"use of moved value '{source_name}'",
+            "the source was already moved earlier on this path.",
+        )
+    if source_fact.state != "NonNull":
+        return ownership_diag(
+            "move_source_not_nonnull",
+            span,
+            f"move source '{source_name}' is not provably non-null",
+            f"static analysis determined state {source_fact.state!r} at this move site.",
+        )
+    target_fact = access_fact_for_name(target_name, state, var_types)
+    if target_fact.state != "Null":
+        return ownership_diag(
+            "move_target_not_null",
+            span,
+            f"move target '{target_name}' is not provably null",
+            f"static analysis determined state {target_fact.state!r} for the move target.",
+        )
+    return None
 
 
 def eval_int_expr_with_diag(
@@ -2893,7 +3186,12 @@ def eval_access_expr(
     if tag == "allocator":
         return AccessFact("NonNull"), None
     if tag == "ident":
-        return state.access.get(expr["name"], AccessFact("MaybeNull")), None
+        name = expr["name"]
+        role = type_access_role(var_types.get(name))
+        if role in {"Owner", "GeneralAccess", "NamedConstant"}:
+            if (diag := owner_read_conflict(name, state, expr["span"])) is not None:
+                return access_fact_for_name(name, state, var_types), diag
+        return access_fact_for_name(name, state, var_types), None
     if tag == "select" and expr["selector"] == "all":
         fact, diag = eval_access_expr(expr["prefix"], state, var_types, owner_vars)
         if diag:
@@ -2933,6 +3231,9 @@ def eval_access_expr(
                 suggestion=null_dereference_suggestions(expr["prefix"], source_text_for_expr(expr)),
             )
         return fact, None
+    if tag == "select" and expr["selector"] == "Access":
+        lender = root_name(expr["prefix"])
+        return AccessFact("NonNull", lender=lender, alias_kind="Observe"), None
     if tag == "select":
         if expr["prefix"]["tag"] == "select" and expr["prefix"]["selector"] == "all":
             base_fact, diag = eval_access_expr(expr["prefix"], state, var_types, owner_vars)
@@ -2945,6 +3246,9 @@ def eval_access_expr(
     if tag == "conversion":
         return eval_access_expr(expr["expr"], state, var_types, owner_vars)
     if tag == "call":
+        call_type = expr_type(expr, var_types)
+        if call_type.kind == "access":
+            return AccessFact("NonNull" if call_type.not_null else "MaybeNull"), None
         return AccessFact("MaybeNull"), None
     return AccessFact("MaybeNull"), None
 
@@ -2961,6 +3265,17 @@ def expr_type(expr: dict[str, Any], var_types: dict[str, TypeInfo]) -> TypeInfo:
     if tag == "select":
         if expr["selector"] == "all":
             return access_target_type(expr["prefix"], var_types)
+        if expr["selector"] == "Access":
+            target = access_target_type(expr["prefix"], var_types)
+            return TypeInfo(
+                f"access constant {target.name}",
+                "access",
+                target=target,
+                not_null=True,
+                anonymous=True,
+                is_constant=True,
+                access_role="Observe",
+            )
         prefix_type = expr_type(expr["prefix"], var_types)
         if prefix_type.kind == "record":
             return prefix_type.fields[expr["selector"]]
@@ -2975,6 +3290,11 @@ def expr_type(expr: dict[str, Any], var_types: dict[str, TypeInfo]) -> TypeInfo:
         return var_types.get(flatten_name(expr["target"]), TypeInfo("Integer", "integer", INT64_LOW, INT64_HIGH))
     if tag == "call":
         callee_name = flatten_name(expr["callee"])
+        function_env = globals().get("FUNCTION_ENV_SENTINEL", {})
+        if callee_name in function_env:
+            function = function_env[callee_name]
+            if function.return_type is not None:
+                return function.return_type
         if callee_name in var_types:
             return var_types[callee_name]
         return TypeInfo("Integer", "integer", INT64_LOW, INT64_HIGH)
@@ -2982,7 +3302,13 @@ def expr_type(expr: dict[str, Any], var_types: dict[str, TypeInfo]) -> TypeInfo:
         value = expr["value"]
         if value["tag"] == "annotated":
             target_name = flatten_name(value["subtype"])
-            return TypeInfo(f"access {target_name}", "access", target=var_types.get(target_name, TypeInfo(target_name, "record")), not_null=True)
+            return TypeInfo(
+                f"access {target_name}",
+                "access",
+                target=var_types.get(target_name, TypeInfo(target_name, "record")),
+                not_null=True,
+                access_role="Owner",
+            )
     if tag == "bool":
         return TypeInfo("Boolean", "integer", 0, 1)
     return TypeInfo("Integer", "integer", INT64_LOW, INT64_HIGH)
@@ -3152,11 +3478,52 @@ def constant_value(expr: dict[str, Any], state: State, var_types: dict[str, Type
 
 
 def check_return_expr(expr: dict[str, Any], return_type: TypeInfo, state: State, var_types: dict[str, TypeInfo], owner_vars: set[str], path: Path) -> Diagnostic | None:
-    if expr["tag"] == "ident" and expr["name"] in var_types and var_types[expr["name"]].name == return_type.name:
+    if (
+        return_type.kind != "access"
+        and expr["tag"] == "ident"
+        and expr["name"] in var_types
+        and var_types[expr["name"]].name == return_type.name
+    ):
         return None
     if return_type.kind == "access":
         fact, diag = eval_access_expr(expr, state, var_types, owner_vars)
-        return diag_with_path(diag, path) if diag else None
+        if diag:
+            return diag_with_path(diag, path)
+        expr_role = type_access_role(expr_type(expr, var_types))
+        lender = fact.lender or assignment_lender_name(expr)
+        if expr_role in {"Borrow", "Observe"} and lender is not None:
+            return diag_with_path(
+                ownership_diag(
+                    "lifetime_violation",
+                    expr["span"],
+                    f"returned {expr_role.lower()} value cannot outlive lender '{lender}'",
+                    "borrowed and observed values must remain within the lender lifetime.",
+                ),
+                path,
+            )
+        source_name = root_name(expr)
+        if expr_role in {"Owner", "GeneralAccess"} and source_name is not None:
+            if fact.state == "Moved":
+                return diag_with_path(
+                    ownership_diag(
+                        "double_move",
+                        expr["span"],
+                        f"use of moved value '{source_name}'",
+                        "the return attempts to move a source that was already moved earlier on this path.",
+                    ),
+                    path,
+                )
+            if fact.state != "NonNull":
+                return diag_with_path(
+                    ownership_diag(
+                        "move_source_not_nonnull",
+                        expr["span"],
+                        f"return source '{source_name}' is not provably non-null",
+                        f"static analysis determined state {fact.state!r} at the return site.",
+                    ),
+                    path,
+                )
+        return None
     interval, diag = eval_int_expr_with_diag(expr, state, var_types, return_type, suppress_index_conversion=False)
     if diag:
         return diag_with_path(diag, path)
@@ -3231,9 +3598,25 @@ def validate_assignment_target_expr(
 ) -> None:
     tag = expr["tag"]
     if tag == "ident":
+        role = type_access_role(var_types.get(expr["name"]))
+        if role in {"Observe", "NamedConstant"}:
+            raise DiagnosticError(observer_write_conflict(expr["name"], expr["span"]))
+        if role in {"Owner", "GeneralAccess"}:
+            if (diag := owner_write_conflict(expr["name"], state, expr["span"])) is not None:
+                raise DiagnosticError(diag)
         return
     if tag == "select":
         validate_assignment_target_expr(expr["prefix"], state, var_types)
+        if expr["selector"] == "Access":
+            raise DiagnosticError(
+                Diagnostic(
+                    "narrowing_check_failure",
+                    "",
+                    expr["span"],
+                    highlight_span=expr["span"],
+                    message="assignment target is not a writable name",
+                )
+            )
         prefix_type = expr_type(expr["prefix"], var_types)
         if expr["selector"] == "all" or prefix_type.kind == "access":
             ensure_access_safe(expr["prefix"], expr["prefix"]["span"], state, var_types)
@@ -3266,6 +3649,8 @@ def analyze_call_expr(expr: dict[str, Any], state: State, var_types: dict[str, T
     if function is None:
         return None
     for actual, formal in zip(resolved["args"], function.params):
+        formal_role = type_access_role(formal.type_info)
+        actual_name = root_name(actual)
         if formal.type_info.kind in {"integer", "subtype"}:
             interval, diag = eval_int_expr_with_diag(actual, state, var_types, formal.type_info, suppress_index_conversion=False)
             if diag:
@@ -3282,6 +3667,49 @@ def analyze_call_expr(expr: dict[str, Any], state: State, var_types: dict[str, T
                         f"actual expression range is {interval.format()}",
                     ],
                 )
+            continue
+        if formal.type_info.kind != "access":
+            continue
+        fact, diag = eval_access_expr(actual, state, var_types, owner_vars)
+        if diag is not None:
+            return diag
+        if formal_role == "Borrow":
+            if actual_name is None:
+                continue
+            if (conflict := owner_write_conflict(actual_name, state, actual["span"])) is not None:
+                return conflict
+            if fact.state != "NonNull":
+                return ownership_diag(
+                    "move_source_not_nonnull",
+                    actual["span"],
+                    f"borrow source '{actual_name}' is not provably non-null",
+                    f"static analysis determined state {fact.state!r} at the borrow site.",
+                )
+            continue
+        if formal_role == "Observe":
+            if actual_name is not None and (conflict := owner_read_conflict(actual_name, state, actual["span"])) is not None:
+                return conflict
+            continue
+        if formal.mode in {"out", "in out"} and formal_role in {"Owner", "GeneralAccess"}:
+            if actual_name is None:
+                continue
+            if (conflict := owner_write_conflict(actual_name, state, actual["span"])) is not None:
+                return conflict
+            if fact.state == "Moved":
+                return ownership_diag(
+                    "double_move",
+                    actual["span"],
+                    f"use of moved value '{actual_name}'",
+                    "the access actual for this call was already moved earlier on this path.",
+                )
+            if fact.state != "NonNull":
+                return ownership_diag(
+                    "move_source_not_nonnull",
+                    actual["span"],
+                    f"call actual '{actual_name}' is not provably non-null",
+                    f"static analysis determined state {fact.state!r} at the call site.",
+                )
+            state.access[actual_name] = AccessFact("Moved")
     return None
 
 
@@ -3295,25 +3723,52 @@ def join_states(states: list[State]) -> State:
                 base.ranges[name] = interval.copy()
         for name, fact in state.access.items():
             if name in base.access:
-                if base.access[name].state != fact.state or base.access[name].borrow_from != fact.borrow_from:
+                if (
+                    base.access[name].state != fact.state
+                    or base.access[name].lender != fact.lender
+                    or base.access[name].alias_kind != fact.alias_kind
+                ):
                     base.access[name] = AccessFact("MaybeNull")
             else:
                 base.access[name] = fact.copy()
         base.relations &= state.relations
         shared = set(base.div_bounds) & set(state.div_bounds)
         base.div_bounds = {key: min(base.div_bounds[key], state.div_bounds[key]) for key in shared}
+        freeze_names = set(base.borrow_freeze) | set(state.borrow_freeze)
+        base.borrow_freeze = {
+            name: max(base.borrow_freeze.get(name, 0), state.borrow_freeze.get(name, 0))
+            for name in freeze_names
+            if max(base.borrow_freeze.get(name, 0), state.borrow_freeze.get(name, 0)) > 0
+        }
+        observe_names = set(base.observe_freeze) | set(state.observe_freeze)
+        base.observe_freeze = {
+            name: max(base.observe_freeze.get(name, 0), state.observe_freeze.get(name, 0))
+            for name in observe_names
+            if max(base.observe_freeze.get(name, 0), state.observe_freeze.get(name, 0)) > 0
+        }
         base.returned = base.returned and state.returned
     return base
 
 
 def states_equal(left: State, right: State) -> bool:
-    return left.ranges == right.ranges and left.access == right.access and left.relations == right.relations and left.div_bounds == right.div_bounds
+    return (
+        left.ranges == right.ranges
+        and left.access == right.access
+        and left.relations == right.relations
+        and left.div_bounds == right.div_bounds
+        and left.borrow_freeze == right.borrow_freeze
+        and left.observe_freeze == right.observe_freeze
+    )
 
 
 def invalidate_scope_exit(state: State, local_names: list[str], owner_vars: set[str]) -> None:
+    for name in local_names:
+        fact = state.access.get(name)
+        if fact is not None and fact.lender is not None and fact.alias_kind is not None:
+            decrement_freeze(state, fact.lender, fact.alias_kind)
     exiting_owners = [name for name in local_names if name in owner_vars]
     for name, fact in list(state.access.items()):
-        if fact.borrow_from in exiting_owners:
+        if fact.lender in exiting_owners:
             state.access[name] = AccessFact("Dangling")
 
 
@@ -3397,7 +3852,7 @@ def is_assignable_target_expr(expr: dict[str, Any]) -> bool:
     if expr["tag"] == "resolved_index":
         return True
     if expr["tag"] == "select":
-        return expr["selector"] not in {"First", "Last", "Length"}
+        return expr["selector"] not in {"First", "Last", "Length", "Access"}
     return False
 
 
@@ -3542,6 +3997,9 @@ def type_from_json(payload: dict[str, Any], type_env: dict[str, TypeInfo]) -> Ty
         high=payload.get("high"),
         not_null=payload.get("not_null", False),
         anonymous=payload.get("anonymous", False),
+        is_constant=payload.get("is_constant", False),
+        is_all=payload.get("is_all", False),
+        access_role=payload.get("access_role"),
     )
     if "target" in payload:
         target_name = payload["target"]
@@ -3566,12 +4024,23 @@ def type_from_json(payload: dict[str, Any], type_env: dict[str, TypeInfo]) -> Ty
     return info
 
 
-def local_entry(name: str, kind: str, mode: str, type_info: TypeInfo, span: Span) -> dict[str, Any]:
+def local_entry(
+    name: str,
+    kind: str,
+    mode: str,
+    type_info: TypeInfo,
+    span: Span,
+    *,
+    scope_id: str,
+    ownership_role: str | None = None,
+) -> dict[str, Any]:
     return {
         "id": "",
         "name": name,
         "kind": kind,
         "mode": mode,
+        "scope_id": scope_id,
+        "ownership_role": ownership_role if ownership_role is not None else type_access_role(type_info),
         "type": type_to_json(type_info),
         "span": span,
     }
@@ -3599,7 +4068,7 @@ def mir_kind_for_expr(expr: dict[str, Any]) -> str:
     if tag == "ident":
         return "use"
     if tag == "select":
-        if expr["selector"] in {"First", "Last"}:
+        if expr["selector"] in {"Access", "First", "Last"}:
             return "attribute"
         if expr["selector"] == "all":
             return "deref"
@@ -3710,7 +4179,7 @@ def static_loop_type(range_node: dict[str, Any], visible_types: dict[str, TypeIn
         and low_type.high is not None
     ):
         return low_type
-    dummy_state = State(ranges={}, access={}, relations=set(), div_bounds={})
+    dummy_state = State(ranges={}, access={}, relations=set(), div_bounds={}, borrow_freeze={}, observe_freeze={})
     low = constant_value(range_node["low"], dummy_state, visible_types)
     high = constant_value(range_node["high"], dummy_state, visible_types)
     if low is None or high is None:
@@ -3727,47 +4196,107 @@ def static_loop_bounds(range_node: dict[str, Any], visible_types: dict[str, Type
     return range_node["low"], range_node["high"], loop_type
 
 
-def collect_statement_locals(
+def append_local_entry(
+    locals_table: list[dict[str, Any]],
+    name: str,
+    kind: str,
+    mode: str,
+    type_info: TypeInfo,
+    span: Span,
+    *,
+    scope_id: str,
+    ownership_role: str | None = None,
+) -> str:
+    entry = local_entry(name, kind, mode, type_info, span, scope_id=scope_id, ownership_role=ownership_role)
+    entry["id"] = f"v{len(locals_table)}"
+    locals_table.append(entry)
+    return entry["id"]
+
+
+def new_scope_record(scope_id: str, parent_scope_id: str | None, kind: str) -> dict[str, Any]:
+    return {
+        "id": scope_id,
+        "parent_scope_id": parent_scope_id,
+        "kind": kind,
+        "local_ids": [],
+        "entry_block": "",
+        "exit_blocks": [],
+    }
+
+
+def collect_statement_scope_metadata(
     statements: list[dict[str, Any]],
     visible_types: dict[str, TypeInfo],
-) -> list[dict[str, Any]]:
-    locals_list: list[dict[str, Any]] = []
+    parent_scope_id: str,
+    scopes: list[dict[str, Any]],
+    locals_table: list[dict[str, Any]],
+) -> None:
     for statement in statements:
         tag = statement["tag"]
         if tag == "block":
+            scope_id = f"scope{len(scopes)}"
+            statement["_scope_id"] = scope_id
             child_visible = dict(visible_types)
+            scope = new_scope_record(scope_id, parent_scope_id, "block")
+            scopes.append(scope)
             for decl in statement["declarations"]:
                 decl_type = resolve_decl_type(decl, child_visible)
                 for name in decl["names"]:
-                    locals_list.append(local_entry(name, "local", "in", decl_type, decl["span"]))
                     child_visible[name] = decl_type
-            locals_list.extend(collect_statement_locals(statement["body"], child_visible))
+                    scope["local_ids"].append(
+                        append_local_entry(
+                            locals_table,
+                            name,
+                            "local",
+                            "in",
+                            decl_type,
+                            decl["span"],
+                            scope_id=scope_id,
+                        )
+                    )
+            collect_statement_scope_metadata(statement["body"], child_visible, scope_id, scopes, locals_table)
         elif tag == "for":
+            scope_id = f"scope{len(scopes)}"
+            statement["_scope_id"] = scope_id
             loop_type = static_loop_type(statement["range"], visible_types)
             child_visible = dict(visible_types)
             child_visible[statement["loop_var"]] = loop_type
-            locals_list.append(local_entry(statement["loop_var"], "local", "in", loop_type, statement["span"]))
-            locals_list.extend(collect_statement_locals(statement["body"], child_visible))
+            scope = new_scope_record(scope_id, parent_scope_id, "loop")
+            scopes.append(scope)
+            scope["local_ids"].append(
+                append_local_entry(
+                    locals_table,
+                    statement["loop_var"],
+                    "local",
+                    "in",
+                    loop_type,
+                    statement["span"],
+                    scope_id=scope_id,
+                )
+            )
+            collect_statement_scope_metadata(statement["body"], child_visible, scope_id, scopes, locals_table)
         elif tag == "if":
-            locals_list.extend(collect_statement_locals(statement["then"], dict(visible_types)))
+            collect_statement_scope_metadata(statement["then"], dict(visible_types), parent_scope_id, scopes, locals_table)
             for part in statement["elsif"]:
-                locals_list.extend(collect_statement_locals(part["body"], dict(visible_types)))
+                collect_statement_scope_metadata(part["body"], dict(visible_types), parent_scope_id, scopes, locals_table)
             if statement["else"] is not None:
-                locals_list.extend(collect_statement_locals(statement["else"], dict(visible_types)))
+                collect_statement_scope_metadata(statement["else"], dict(visible_types), parent_scope_id, scopes, locals_table)
         elif tag == "while":
-            locals_list.extend(collect_statement_locals(statement["body"], dict(visible_types)))
-    return locals_list
+            collect_statement_scope_metadata(statement["body"], dict(visible_types), parent_scope_id, scopes, locals_table)
 
 
 class MirBuilder:
-    def __init__(self) -> None:
+    def __init__(self, scopes: list[dict[str, Any]]) -> None:
         self.blocks: list[dict[str, Any]] = []
         self.next_block_id = 0
+        self.scopes = scopes
+        self.scope_map = {scope["id"]: scope for scope in scopes}
 
-    def new_block(self, span: Span, role: str) -> dict[str, Any]:
+    def new_block(self, span: Span, role: str, active_scope_id: str) -> dict[str, Any]:
         block = {
             "id": f"bb{self.next_block_id}",
             "role": role,
+            "active_scope_id": active_scope_id,
             "ops": [],
             "terminator": None,
             "span": span,
@@ -3784,18 +4313,79 @@ class MirBuilder:
             raise BackendError(f"block {block['id']} already terminated")
         block["terminator"] = terminator
 
+    def register_scope_entry(self, scope_id: str, block_id: str) -> None:
+        scope = self.scope_map[scope_id]
+        if not scope["entry_block"]:
+            scope["entry_block"] = block_id
 
-def emit_scope_exit_ops(builder: MirBuilder, block: dict[str, Any], scopes: list[list[str]], span: Span) -> None:
-    for locals_in_scope in reversed(scopes):
+    def register_scope_exit(self, scope_id: str, block_id: str) -> None:
+        scope = self.scope_map[scope_id]
+        if block_id not in scope["exit_blocks"]:
+            scope["exit_blocks"].append(block_id)
+
+
+def ownership_effect_for_assignment(
+    target: dict[str, Any],
+    value: dict[str, Any],
+    visible_types: dict[str, TypeInfo],
+) -> str:
+    target_type = expr_type(target, visible_types)
+    target_role = type_access_role(target_type)
+    if target_role is None:
+        return "None"
+    if target_role == "Observe":
+        return "Observe"
+    if target_role == "Borrow":
+        return "Borrow"
+    if target_role == "Owner":
+        if value["tag"] == "call":
+            return "Move"
+        if value["tag"] in {"ident", "select"}:
+            value_role = type_access_role(expr_type(value, visible_types))
+            if value_role == "Owner":
+                return "Move"
+    return "None"
+
+
+def ownership_effect_for_call(
+    expr: dict[str, Any],
+    functions: dict[str, FunctionInfo],
+) -> str:
+    if expr["tag"] != "call":
+        return "None"
+    function = functions.get(flatten_name(expr["callee"]))
+    if function is None:
+        return "None"
+    effect = "None"
+    for formal in function.params:
+        role = type_access_role(formal.type_info)
+        if role == "Borrow":
+            effect = "Borrow"
+        elif role == "Observe" and effect == "None":
+            effect = "Observe"
+        elif formal.type_info.kind == "access" and not formal.type_info.anonymous and formal.mode in {"out", "in out"}:
+            effect = "Move"
+    return effect
+
+
+def emit_scope_exit_ops(
+    builder: MirBuilder,
+    block: dict[str, Any],
+    scope_stack: list[tuple[str, list[str]]],
+    span: Span,
+) -> None:
+    for scope_id, locals_in_scope in reversed(scope_stack):
         if locals_in_scope:
             builder.add_op(
                 block,
                 {
                     "kind": "scope_exit",
+                    "scope_id": scope_id,
                     "locals": list(locals_in_scope),
                     "span": span,
                 },
             )
+            builder.register_scope_exit(scope_id, block["id"])
 
 
 def lower_statement_list_mir(
@@ -3803,13 +4393,23 @@ def lower_statement_list_mir(
     current: dict[str, Any] | None,
     statements: list[dict[str, Any]],
     visible_types: dict[str, TypeInfo],
-    scopes: list[list[str]],
+    scope_stack: list[tuple[str, list[str]]],
+    current_scope_id: str,
+    functions: dict[str, FunctionInfo],
 ) -> dict[str, Any] | None:
     block = current
     for statement in statements:
         if block is None:
             return None
-        block = lower_statement_to_mir(builder, block, statement, visible_types, scopes)
+        block = lower_statement_to_mir(
+            builder,
+            block,
+            statement,
+            visible_types,
+            scope_stack,
+            current_scope_id,
+            functions,
+        )
     return block
 
 
@@ -3820,9 +4420,10 @@ def lower_branch_condition(
     visible_types: dict[str, TypeInfo],
     true_target: str,
     false_target: str,
+    current_scope_id: str,
 ) -> None:
     if condition["tag"] == "binary" and condition["op"] == "and then":
-        rhs_block = builder.new_block(condition["right"]["span"], "and_then_rhs")
+        rhs_block = builder.new_block(condition["right"]["span"], "and_then_rhs", current_scope_id)
         builder.terminate(
             current,
             {
@@ -3840,6 +4441,7 @@ def lower_branch_condition(
             visible_types,
             true_target,
             false_target,
+            current_scope_id,
         )
         return
 
@@ -3860,7 +4462,9 @@ def lower_statement_to_mir(
     current: dict[str, Any],
     statement: dict[str, Any],
     visible_types: dict[str, TypeInfo],
-    scopes: list[list[str]],
+    scope_stack: list[tuple[str, list[str]]],
+    current_scope_id: str,
+    functions: dict[str, FunctionInfo],
 ) -> dict[str, Any] | None:
     tag = statement["tag"]
     if tag == "assign":
@@ -3872,6 +4476,8 @@ def lower_statement_to_mir(
                 "target": lower_target_to_mir(statement["target"], visible_types),
                 "value": lower_expr_to_mir(statement["value"], visible_types),
                 "type": target_type.name,
+                "ownership_effect": ownership_effect_for_assignment(statement["target"], statement["value"], visible_types),
+                "declaration_init": False,
                 "span": statement["span"],
             },
         )
@@ -3883,6 +4489,7 @@ def lower_statement_to_mir(
                 "kind": "call",
                 "value": lower_expr_to_mir(statement["call"], visible_types),
                 "type": expr_type(statement["call"], visible_types).name,
+                "ownership_effect": ownership_effect_for_call(statement["call"], functions),
                 "span": statement["span"],
             },
         )
@@ -3890,18 +4497,21 @@ def lower_statement_to_mir(
     if tag == "null":
         return current
     if tag == "return":
-        emit_scope_exit_ops(builder, current, scopes, statement["span"])
+        return_effect = "Move" if (statement["expr"] is not None and expr_type(statement["expr"], visible_types).kind == "access") else "None"
         builder.terminate(
             current,
             {
                 "kind": "return",
                 "value": lower_expr_to_mir(statement["expr"], visible_types) if statement["expr"] is not None else None,
+                "ownership_effect": return_effect,
                 "span": statement["span"],
             },
         )
         return None
     if tag == "block":
-        entry = builder.new_block(statement["span"], "block_entry")
+        scope_id = statement["_scope_id"]
+        entry = builder.new_block(statement["span"], "block_entry", scope_id)
+        builder.register_scope_entry(scope_id, entry["id"])
         builder.terminate(current, {"kind": "jump", "target": entry["id"], "span": statement["span"]})
         local_names: list[str] = []
         child_visible = dict(visible_types)
@@ -3911,7 +4521,7 @@ def lower_statement_to_mir(
                 local_names.append(name)
                 child_visible[name] = decl_type
         if local_names:
-            builder.add_op(entry, {"kind": "scope_enter", "locals": local_names, "span": statement["span"]})
+            builder.add_op(entry, {"kind": "scope_enter", "scope_id": scope_id, "locals": local_names, "span": statement["span"]})
         for decl in statement["declarations"]:
             decl_type = resolve_decl_type(decl, child_visible)
             for name in decl["names"]:
@@ -3923,17 +4533,28 @@ def lower_statement_to_mir(
                             "target": lower_target_to_mir(ident_expr(name, decl["span"]), child_visible),
                             "value": lower_expr_to_mir(decl["initializer"], child_visible),
                             "type": decl_type.name,
+                            "ownership_effect": ownership_effect_for_assignment(ident_expr(name, decl["span"]), decl["initializer"], child_visible),
+                            "declaration_init": True,
                             "span": decl["span"],
                         },
                     )
-        body_end = lower_statement_list_mir(builder, entry, statement["body"], child_visible, scopes + [local_names])
+        body_end = lower_statement_list_mir(
+            builder,
+            entry,
+            statement["body"],
+            child_visible,
+            scope_stack + [(scope_id, local_names)],
+            scope_id,
+            functions,
+        )
         if body_end is not None:
-            builder.add_op(body_end, {"kind": "scope_exit", "locals": local_names, "span": statement["span"]})
+            builder.add_op(body_end, {"kind": "scope_exit", "scope_id": scope_id, "locals": local_names, "span": statement["span"]})
+            builder.register_scope_exit(scope_id, body_end["id"])
         return body_end
     if tag == "if":
-        then_block = builder.new_block(statement["span"], "if_then")
-        else_block = builder.new_block(statement["span"], "if_else")
-        join_block = builder.new_block(statement["span"], "if_join")
+        then_block = builder.new_block(statement["span"], "if_then", current_scope_id)
+        else_block = builder.new_block(statement["span"], "if_else", current_scope_id)
+        join_block = builder.new_block(statement["span"], "if_join", current_scope_id)
         lower_branch_condition(
             builder,
             current,
@@ -3941,8 +4562,9 @@ def lower_statement_to_mir(
             visible_types,
             then_block["id"],
             else_block["id"],
+            current_scope_id,
         )
-        then_end = lower_statement_list_mir(builder, then_block, statement["then"], dict(visible_types), scopes)
+        then_end = lower_statement_list_mir(builder, then_block, statement["then"], dict(visible_types), scope_stack, current_scope_id, functions)
         if statement["elsif"]:
             nested_else = copy.deepcopy(statement)
             first = nested_else["elsif"][0]
@@ -3954,9 +4576,9 @@ def lower_statement_to_mir(
                 "else": nested_else["else"],
                 "span": statement["span"],
             }
-            else_end = lower_statement_to_mir(builder, else_block, nested_else, dict(visible_types), scopes)
+            else_end = lower_statement_to_mir(builder, else_block, nested_else, dict(visible_types), scope_stack, current_scope_id, functions)
         elif statement["else"] is not None:
-            else_end = lower_statement_list_mir(builder, else_block, statement["else"], dict(visible_types), scopes)
+            else_end = lower_statement_list_mir(builder, else_block, statement["else"], dict(visible_types), scope_stack, current_scope_id, functions)
         else:
             else_end = else_block
         reached_join = False
@@ -3969,9 +4591,9 @@ def lower_statement_to_mir(
             return None
         return join_block
     if tag == "while":
-        header = builder.new_block(statement["span"], "while_header")
-        body = builder.new_block(statement["span"], "while_body")
-        exit_block = builder.new_block(statement["span"], "while_exit")
+        header = builder.new_block(statement["span"], "while_header", current_scope_id)
+        body = builder.new_block(statement["span"], "while_body", current_scope_id)
+        exit_block = builder.new_block(statement["span"], "while_exit", current_scope_id)
         builder.terminate(current, {"kind": "jump", "target": header["id"], "span": statement["span"]})
         lower_branch_condition(
             builder,
@@ -3980,22 +4602,25 @@ def lower_statement_to_mir(
             visible_types,
             body["id"],
             exit_block["id"],
+            current_scope_id,
         )
-        body_end = lower_statement_list_mir(builder, body, statement["body"], dict(visible_types), scopes)
+        body_end = lower_statement_list_mir(builder, body, statement["body"], dict(visible_types), scope_stack, current_scope_id, functions)
         if body_end is not None and body_end["terminator"] is None:
             builder.terminate(body_end, {"kind": "jump", "target": header["id"], "span": statement["span"]})
         return exit_block
     if tag == "for":
-        init_block = builder.new_block(statement["span"], "for_init")
-        header = builder.new_block(statement["span"], "for_header")
-        body = builder.new_block(statement["span"], "for_body")
-        latch = builder.new_block(statement["span"], "for_latch")
-        exit_block = builder.new_block(statement["span"], "for_exit")
+        scope_id = statement["_scope_id"]
+        init_block = builder.new_block(statement["span"], "for_init", scope_id)
+        header = builder.new_block(statement["span"], "for_header", scope_id)
+        body = builder.new_block(statement["span"], "for_body", scope_id)
+        latch = builder.new_block(statement["span"], "for_latch", scope_id)
+        exit_block = builder.new_block(statement["span"], "for_exit", current_scope_id)
+        builder.register_scope_entry(scope_id, init_block["id"])
         builder.terminate(current, {"kind": "jump", "target": init_block["id"], "span": statement["span"]})
         low_expr, high_expr, loop_type = static_loop_bounds(statement["range"], visible_types)
         child_visible = dict(visible_types)
         child_visible[statement["loop_var"]] = loop_type
-        builder.add_op(init_block, {"kind": "scope_enter", "locals": [statement["loop_var"]], "span": statement["span"]})
+        builder.add_op(init_block, {"kind": "scope_enter", "scope_id": scope_id, "locals": [statement["loop_var"]], "span": statement["span"]})
         builder.add_op(
             init_block,
             {
@@ -4003,6 +4628,8 @@ def lower_statement_to_mir(
                 "target": lower_target_to_mir(ident_expr(statement["loop_var"], statement["span"]), child_visible),
                 "value": lower_expr_to_mir(low_expr, child_visible),
                 "type": loop_type.name,
+                "ownership_effect": "None",
+                "declaration_init": True,
                 "span": statement["span"],
             },
         )
@@ -4028,7 +4655,15 @@ def lower_statement_to_mir(
             "loop_var": statement["loop_var"],
             "exit_target": exit_block["id"],
         }
-        body_end = lower_statement_list_mir(builder, body, statement["body"], child_visible, scopes + [[statement["loop_var"]]])
+        body_end = lower_statement_list_mir(
+            builder,
+            body,
+            statement["body"],
+            child_visible,
+            scope_stack + [(scope_id, [statement["loop_var"]])],
+            scope_id,
+            functions,
+        )
         if body_end is not None and body_end["terminator"] is None:
             builder.terminate(body_end, {"kind": "jump", "target": latch["id"], "span": statement["span"]})
         increment_expr = binary_expr(
@@ -4044,11 +4679,14 @@ def lower_statement_to_mir(
                 "target": lower_target_to_mir(ident_expr(statement["loop_var"], statement["span"]), child_visible),
                 "value": lower_expr_to_mir(increment_expr, child_visible),
                 "type": loop_type.name,
+                "ownership_effect": "None",
+                "declaration_init": False,
                 "span": statement["span"],
             },
         )
         builder.terminate(latch, {"kind": "jump", "target": header["id"], "span": statement["span"]})
-        builder.add_op(exit_block, {"kind": "scope_exit", "locals": [statement["loop_var"]], "span": statement["span"]})
+        builder.add_op(exit_block, {"kind": "scope_exit", "scope_id": scope_id, "locals": [statement["loop_var"]], "span": statement["span"]})
+        builder.register_scope_exit(scope_id, exit_block["id"])
         return exit_block
     raise BackendError(f"unsupported MIR lowering statement: {tag}")
 
@@ -4060,29 +4698,53 @@ def lower_subprogram_to_mir_v2(
 ) -> dict[str, Any]:
     visible_types = dict(type_env)
     locals_table: list[dict[str, Any]] = []
-    for index, symbol in enumerate(info.params):
-        visible_types[symbol.name] = symbol.type_info
-        entry = local_entry(symbol.name, "param", symbol.mode, symbol.type_info, symbol.span)
-        entry["id"] = f"v{len(locals_table)}"
-        locals_table.append(entry)
+    scopes: list[dict[str, Any]] = [new_scope_record("scope0", None, "subprogram")]
+    root_scope = scopes[0]
+    for symbol in info.params:
+        param_type = copy.deepcopy(symbol.type_info)
+        param_role = type_access_role(symbol.type_info)
+        if symbol.mode == "in" and param_role == "Owner":
+            param_role = "GeneralAccess"
+            param_type.access_role = param_role
+        visible_types[symbol.name] = param_type
+        root_scope["local_ids"].append(
+            append_local_entry(
+                locals_table,
+                symbol.name,
+                "param",
+                symbol.mode,
+                param_type,
+                symbol.span,
+                scope_id="scope0",
+                ownership_role=param_role,
+            )
+        )
     for decl in info.declarations:
         decl_type = resolve_decl_type(decl, visible_types)
         for name in decl["names"]:
             visible_types[name] = decl_type
-            entry = local_entry(name, "local", "in", decl_type, decl["span"])
-            entry["id"] = f"v{len(locals_table)}"
-            locals_table.append(entry)
-    for entry in collect_statement_locals(info.body, dict(visible_types)):
-        entry["id"] = f"v{len(locals_table)}"
-        locals_table.append(entry)
+            root_scope["local_ids"].append(
+                append_local_entry(
+                    locals_table,
+                    name,
+                    "local",
+                    "in",
+                    decl_type,
+                    decl["span"],
+                    scope_id="scope0",
+                )
+            )
+    collect_statement_scope_metadata(info.body, dict(visible_types), "scope0", scopes, locals_table)
 
-    builder = MirBuilder()
-    entry_block = builder.new_block(info.span, "entry")
+    builder = MirBuilder(scopes)
+    entry_block = builder.new_block(info.span, "entry", "scope0")
+    builder.register_scope_entry("scope0", entry_block["id"])
     if info.declarations:
         builder.add_op(
             entry_block,
             {
                 "kind": "scope_enter",
+                "scope_id": "scope0",
                 "locals": [name for decl in info.declarations for name in decl["names"]],
                 "span": info.span,
             },
@@ -4098,20 +4760,36 @@ def lower_subprogram_to_mir_v2(
                         "target": lower_target_to_mir(ident_expr(name, decl["span"]), visible_types),
                         "value": lower_expr_to_mir(decl["initializer"], visible_types),
                         "type": decl_type.name,
+                        "ownership_effect": ownership_effect_for_assignment(ident_expr(name, decl["span"]), decl["initializer"], visible_types),
+                        "declaration_init": True,
                         "span": decl["span"],
                     },
                 )
-    end_block = lower_statement_list_mir(builder, entry_block, info.body, visible_types, [])
+    end_block = lower_statement_list_mir(
+        builder,
+        entry_block,
+        info.body,
+        visible_types,
+        [("scope0", [name for decl in info.declarations for name in decl["names"]])],
+        "scope0",
+        functions,
+    )
     if end_block is not None and end_block["terminator"] is None:
-        builder.terminate(end_block, {"kind": "return", "value": None, "span": info.span})
+        builder.terminate(end_block, {"kind": "return", "value": None, "ownership_effect": "None", "span": info.span})
+        builder.register_scope_exit("scope0", end_block["id"])
     entry_id = entry_block["id"]
     mapping = renumber_blocks(builder.blocks)
+    for scope in scopes:
+        if scope["entry_block"]:
+            scope["entry_block"] = mapping[scope["entry_block"]]
+        scope["exit_blocks"] = [mapping[item] for item in scope["exit_blocks"]]
 
     return {
         "name": info.name,
         "kind": info.kind,
         "entry_bb": mapping[entry_id],
         "locals": locals_table,
+        "scopes": scopes,
         "blocks": builder.blocks,
     }
 
@@ -4119,22 +4797,34 @@ def lower_subprogram_to_mir_v2(
 def graph_var_types(graph: dict[str, Any], type_env: dict[str, TypeInfo]) -> dict[str, TypeInfo]:
     var_types = dict(type_env)
     for local in graph["locals"]:
-        var_types[local["name"]] = type_from_json(local["type"], type_env)
+        info = type_from_json(local["type"], type_env)
+        if local.get("ownership_role") is not None and info.kind == "access":
+            info.access_role = local["ownership_role"]
+        var_types[local["name"]] = info
     return var_types
 
 
-def initialize_graph_entry_state(graph: dict[str, Any], type_env: dict[str, TypeInfo]) -> tuple[State, dict[str, TypeInfo], set[str]]:
+def graph_local_meta(graph: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {local["name"]: local for local in graph["locals"]}
+
+
+def initialize_graph_entry_state(
+    graph: dict[str, Any],
+    type_env: dict[str, TypeInfo],
+) -> tuple[State, dict[str, TypeInfo], set[str], dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
     var_types = graph_var_types(graph, type_env)
+    local_meta = graph_local_meta(graph)
+    scope_map = {scope["id"]: scope for scope in graph.get("scopes", [])}
     owner_vars = {
         name
         for name, typ in var_types.items()
-        if typ.kind == "access" and not typ.anonymous
+        if typ.kind == "access" and type_access_role(typ) == "Owner"
     }
-    state = State(ranges={}, access={}, relations=set(), div_bounds={})
+    state = State(ranges={}, access={}, relations=set(), div_bounds={}, borrow_freeze={}, observe_freeze={})
     for local in graph["locals"]:
         if local["kind"] == "param":
             initialize_symbol(state, local["name"], var_types[local["name"]])
-    return state, var_types, owner_vars
+    return state, var_types, owner_vars, local_meta, scope_map
 
 
 def join_state_into(targets: dict[str, State], block_id: str, candidate: State) -> bool:
@@ -4149,6 +4839,142 @@ def join_state_into(targets: dict[str, State], block_id: str, candidate: State) 
     return False
 
 
+def assign_access_alias(
+    state: State,
+    target_name: str,
+    target_type: TypeInfo,
+    target_meta: dict[str, Any] | None,
+    value: dict[str, Any],
+    value_fact: AccessFact,
+    var_types: dict[str, TypeInfo],
+    scope_map: dict[str, dict[str, Any]],
+    op: dict[str, Any],
+) -> Diagnostic | None:
+    del scope_map, target_meta
+    target_role = type_access_role(target_type)
+    lender = assignment_lender_name(value)
+    if target_role == "Observe":
+        lender = observe_lender_name(value)
+        if lender is None:
+            return ownership_diag(
+                "observe_requires_access",
+                op["span"],
+                f"observer '{target_name}' must be initialized from X.Access",
+                "local observe uses anonymous access constant and requires an explicit .Access attribute.",
+            )
+    if target_role in {"Borrow", "Observe"}:
+        existing_fact = state.access.get(target_name)
+        already_initialized = (
+            existing_fact is not None
+            and (
+                existing_fact.lender is not None
+                or existing_fact.alias_kind is not None
+            )
+        )
+        if not op.get("declaration_init", False) and already_initialized:
+            return ownership_diag(
+                "anonymous_access_reassign",
+                op["span"],
+                f"anonymous access '{target_name}' may only be assigned at its declaration",
+                "borrow and observe locals are initialization-only.",
+            )
+        if lender is None:
+            return None
+        if target_role == "Borrow":
+            if (conflict := owner_write_conflict(lender, state, op["span"])) is not None:
+                return conflict
+        else:
+            if (conflict := owner_read_conflict(lender, state, op["span"])) is not None:
+                return conflict
+        if value_fact.state != "NonNull":
+            return ownership_diag(
+                "move_source_not_nonnull",
+                op["span"],
+                f"{target_role.lower()} source '{lender}' is not provably non-null",
+                f"static analysis determined state {value_fact.state!r} at the alias initialization site.",
+            )
+        return_fact = AccessFact(value_fact.state, lender=lender, alias_kind=target_role)
+        state.access[target_name] = return_fact
+        increment_freeze(state, lender, target_role)
+        return None
+    return None
+
+
+def apply_mir_assignment(
+    op: dict[str, Any],
+    state: State,
+    var_types: dict[str, TypeInfo],
+    owner_vars: set[str],
+    local_meta: dict[str, dict[str, Any]],
+    scope_map: dict[str, dict[str, Any]],
+) -> Diagnostic | None:
+    target_name = base_name(op["target"])
+    target_type = (
+        var_types[target_name]
+        if target_name is not None and target_name in var_types
+        else expr_type(op["target"], var_types)
+    )
+    if target_name is None or target_type.kind != "access":
+        if target_name is None or target_name not in var_types:
+            _, diag = eval_int_expr_with_diag(
+                op["value"],
+                state,
+                var_types,
+                target_type,
+                suppress_index_conversion=False,
+            )
+            return diag
+        interval, diag = eval_int_expr_with_diag(
+            op["value"],
+            state,
+            var_types,
+            target_type,
+            suppress_index_conversion=False,
+        )
+        if diag:
+            return diag
+        if target_type.kind in {"integer", "subtype"}:
+            bounds = target_type.range_interval()
+            state.ranges[target_name] = interval.clamp(low=bounds.low, high=bounds.high)
+        else:
+            state.ranges[target_name] = interval
+        return None
+
+    target_role = type_access_role(target_type)
+    target_meta = local_meta.get(target_name)
+    value_fact, diag = eval_access_expr(op["value"], state, var_types, owner_vars)
+    if diag:
+        return diag
+
+    if target_role in {"Observe", "Borrow"}:
+        return assign_access_alias(state, target_name, target_type, target_meta, op["value"], value_fact, var_types, scope_map, op)
+
+    effect = op.get("ownership_effect", "None")
+    if effect == "Move" and target_role in {"Owner", "GeneralAccess"}:
+        source_name = assignment_lender_name(op["value"])
+        if source_name is None and op["value"]["tag"] == "call":
+            target_fact = access_fact_for_name(target_name, state, var_types)
+            if target_fact.state != "Null":
+                return ownership_diag(
+                    "move_target_not_null",
+                    op["span"],
+                    f"move target '{target_name}' is not provably null",
+                    f"static analysis determined state {target_fact.state!r} for the move target.",
+                )
+            state.access[target_name] = AccessFact(value_fact.state)
+            return None
+        if source_name is not None:
+            precondition = owner_move_precondition(source_name, target_name, state, var_types, op["span"])
+            if precondition is not None:
+                return precondition
+            state.access[target_name] = AccessFact("NonNull")
+            state.access[source_name] = AccessFact("Moved")
+            return None
+
+    state.access[target_name] = value_fact.copy()
+    return None
+
+
 def transfer_mir_op(
     op: dict[str, Any],
     state: State,
@@ -4157,6 +4983,8 @@ def transfer_mir_op(
     var_types: dict[str, TypeInfo],
     owner_vars: set[str],
     functions: dict[str, FunctionInfo],
+    local_meta: dict[str, dict[str, Any]],
+    scope_map: dict[str, dict[str, Any]],
 ) -> None:
     kind = op["kind"]
     if kind == "scope_enter":
@@ -4172,43 +5000,21 @@ def transfer_mir_op(
             state.relations = {pair for pair in state.relations if name not in pair}
         return
     if kind == "assign":
+        target_name = base_name(op["target"])
+        target_type = var_types.get(target_name) if target_name is not None else None
+        allow_init_only = bool(
+            op.get("declaration_init", False)
+            and target_name is not None
+            and target_type is not None
+            and type_access_role(target_type) in {"Borrow", "Observe"}
+        )
         try:
-            validate_assignment_target_expr(op["target"], state, var_types)
+            if not allow_init_only:
+                validate_assignment_target_expr(op["target"], state, var_types)
         except DiagnosticError as error:
             diagnostics.append(diag_with_path(error.diagnostic, path))
             return
-        target_name = base_name(op["target"])
-        target_type = (
-            var_types[target_name]
-            if target_name is not None and target_name in var_types
-            else expr_type(op["target"], var_types)
-        )
-        if target_name is None or target_name not in var_types:
-            if target_type.kind == "access":
-                fact, diag = eval_access_expr(op["value"], state, var_types, owner_vars)
-                if diag:
-                    diagnostics.append(diag_with_path(diag, path))
-            else:
-                _, diag = eval_int_expr_with_diag(
-                    op["value"],
-                    state,
-                    var_types,
-                    target_type,
-                    suppress_index_conversion=False,
-                )
-                if diag:
-                    diagnostics.append(diag_with_path(diag, path))
-            return
-        diag = apply_assignment(
-            state,
-            target_name,
-            op["value"],
-            target_type,
-            var_types,
-            owner_vars,
-            var_types,
-            suppress_index_conversion=False,
-        )
+        diag = apply_mir_assignment(op, state, var_types, owner_vars, local_meta, scope_map)
         if diag:
             diagnostics.append(diag_with_path(diag, path))
         return
@@ -4230,7 +5036,7 @@ def analyze_mir_graph(
     basename: str,
 ) -> Diagnostic | None:
     del source_text
-    entry_state, var_types, owner_vars = initialize_graph_entry_state(graph, type_env)
+    entry_state, var_types, owner_vars, local_meta, scope_map = initialize_graph_entry_state(graph, type_env)
     block_map = {block["id"]: block for block in graph["blocks"]}
     pending: list[str] = [graph["entry_bb"]]
     in_states: dict[str, State] = {graph["entry_bb"]: entry_state}
@@ -4264,7 +5070,7 @@ def analyze_mir_graph(
         block = block_map[block_id]
         state = in_states[block_id].copy()
         for op in block["ops"]:
-            transfer_mir_op(op, state, diagnostics, path, var_types, owner_vars, functions)
+            transfer_mir_op(op, state, diagnostics, path, var_types, owner_vars, functions, local_meta, scope_map)
         term = block["terminator"]
         if term["kind"] == "return":
             if term["value"] is not None and info.return_type is not None:

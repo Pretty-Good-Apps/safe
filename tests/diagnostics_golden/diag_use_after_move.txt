@@ -1,0 +1,14 @@
+Diagnostics Golden: Use After Move
+Source: tests/negative/neg_own_use_after_move.safe
+Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.2.p96c:0b45de01
+
+Expected diagnostic output:
+------------------------------------------------------------------------
+neg_own_use_after_move.safe:25:11: error: dereference of moved access value
+  |
+  | 25 |       V = Source.all.Count;  -- ERROR: dereference of moved variable
+  |    |           ^~~~~~~~~~
+  |
+  note: the access value was moved before this dereference.
+  note: rule: D27 Rule 4 (Not-Null Dereference)
+------------------------------------------------------------------------

@@ -1,0 +1,937 @@
+{
+  "corpus_mode": {
+    "negatives": [
+      {
+        "actual_reason": "double_move",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 23,
+                "end_line": 22,
+                "start_col": 7,
+                "start_line": 22
+              },
+              "message": "use of moved value 'Source'",
+              "notes": [
+                "the source was already moved earlier on this path.",
+                "rule: Safe \u00a72.3.2 (move semantics)"
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_own_double_move.safe",
+              "reason": "double_move",
+              "span": {
+                "end_col": 23,
+                "end_line": 22,
+                "start_col": 7,
+                "start_line": 22
+              },
+              "suggestions": []
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "double_move",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_own_double_move.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "neg_own_double_move.safe:22:7: error: use of moved value 'Source'\n  |\n  | 22 |       Target2 = Source;  -- ERROR: Source has already been moved\n  |    |       ^~~~~~~~~~~~~~~~~\n  |\n  note: the source was already moved earlier on this path.\n  note: rule: Safe \u00a72.3.2 (move semantics)\n",
+          "stdout": "{\n  \"diagnostics\": [\n    {\n      \"highlight_span\": {\n        \"end_col\": 23,\n        \"end_line\": 22,\n        \"start_col\": 7,\n        \"start_line\": 22\n      },\n      \"message\": \"use of moved value 'Source'\",\n      \"notes\": [\n        \"the source was already moved earlier on this path.\",\n        \"rule: Safe \\u00a72.3.2 (move semantics)\"\n      ],\n      \"path\": \"$REPO_ROOT/tests/negative/neg_own_double_move.safe\",\n      \"reason\": \"double_move\",\n      \"span\": {\n        \"end_col\": 23,\n        \"end_line\": 22,\n        \"start_col\": 7,\n        \"start_line\": 22\n      },\n      \"suggestions\": []\n    }\n  ],\n  \"format\": \"diagnostics-v0\"\n}\n"
+        },
+        "source": "tests/negative/neg_own_double_move.safe"
+      },
+      {
+        "actual_reason": "borrow_conflict",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 15,
+                "end_line": 25,
+                "start_col": 11,
+                "start_line": 25
+              },
+              "message": "lender 'Owner' is frozen by an active mutable borrow",
+              "notes": [
+                "reads, writes, and moves of the lender are forbidden while the borrow is active.",
+                "rule: Safe \u00a72.3.3 (mutable borrow freezes lender)"
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_own_borrow_conflict.safe",
+              "reason": "borrow_conflict",
+              "span": {
+                "end_col": 15,
+                "end_line": 25,
+                "start_col": 11,
+                "start_line": 25
+              },
+              "suggestions": []
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "borrow_conflict",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_own_borrow_conflict.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "neg_own_borrow_conflict.safe:25:11: error: lender 'Owner' is frozen by an active mutable borrow\n  |\n  | 25 |       V = Owner.all.Value;  -- ERROR: lender accessed during active borrow\n  |    |           ^~~~~\n  |\n  note: reads, writes, and moves of the lender are forbidden while the borrow is active.\n  note: rule: Safe \u00a72.3.3 (mutable borrow freezes lender)\n",
+          "stdout": "{\n  \"diagnostics\": [\n    {\n      \"highlight_span\": {\n        \"end_col\": 15,\n        \"end_line\": 25,\n        \"start_col\": 11,\n        \"start_line\": 25\n      },\n      \"message\": \"lender 'Owner' is frozen by an active mutable borrow\",\n      \"notes\": [\n        \"reads, writes, and moves of the lender are forbidden while the borrow is active.\",\n        \"rule: Safe \\u00a72.3.3 (mutable borrow freezes lender)\"\n      ],\n      \"path\": \"$REPO_ROOT/tests/negative/neg_own_borrow_conflict.safe\",\n      \"reason\": \"borrow_conflict\",\n      \"span\": {\n        \"end_col\": 15,\n        \"end_line\": 25,\n        \"start_col\": 11,\n        \"start_line\": 25\n      },\n      \"suggestions\": []\n    }\n  ],\n  \"format\": \"diagnostics-v0\"\n}\n"
+        },
+        "source": "tests/negative/neg_own_borrow_conflict.safe"
+      },
+      {
+        "actual_reason": "use_after_move",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 20,
+                "end_line": 25,
+                "start_col": 11,
+                "start_line": 25
+              },
+              "message": "dereference of moved access value",
+              "notes": [
+                "the access value was moved before this dereference.",
+                "rule: D27 Rule 4 (Not-Null Dereference)"
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_own_use_after_move.safe",
+              "reason": "use_after_move",
+              "span": {
+                "end_col": 20,
+                "end_line": 25,
+                "start_col": 11,
+                "start_line": 25
+              },
+              "suggestions": []
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "use_after_move",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_own_use_after_move.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "neg_own_use_after_move.safe:25:11: error: dereference of moved access value\n  |\n  | 25 |       V = Source.all.Count;  -- ERROR: dereference of moved variable\n  |    |           ^~~~~~~~~~\n  |\n  note: the access value was moved before this dereference.\n  note: rule: D27 Rule 4 (Not-Null Dereference)\n",
+          "stdout": "{\n  \"diagnostics\": [\n    {\n      \"highlight_span\": {\n        \"end_col\": 20,\n        \"end_line\": 25,\n        \"start_col\": 11,\n        \"start_line\": 25\n      },\n      \"message\": \"dereference of moved access value\",\n      \"notes\": [\n        \"the access value was moved before this dereference.\",\n        \"rule: D27 Rule 4 (Not-Null Dereference)\"\n      ],\n      \"path\": \"$REPO_ROOT/tests/negative/neg_own_use_after_move.safe\",\n      \"reason\": \"use_after_move\",\n      \"span\": {\n        \"end_col\": 20,\n        \"end_line\": 25,\n        \"start_col\": 11,\n        \"start_line\": 25\n      },\n      \"suggestions\": []\n    }\n  ],\n  \"format\": \"diagnostics-v0\"\n}\n"
+        },
+        "source": "tests/negative/neg_own_use_after_move.safe"
+      },
+      {
+        "actual_reason": "lifetime_violation",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 16,
+                "end_line": 19,
+                "start_col": 14,
+                "start_line": 19
+              },
+              "message": "returned borrow value cannot outlive lender 'Owner'",
+              "notes": [
+                "borrowed and observed values must remain within the lender lifetime.",
+                "rule: Safe \u00a72.3.3 / \u00a72.3.4a (lifetime containment)"
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_own_lifetime.safe",
+              "reason": "lifetime_violation",
+              "span": {
+                "end_col": 16,
+                "end_line": 19,
+                "start_col": 14,
+                "start_line": 19
+              },
+              "suggestions": []
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "lifetime_violation",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_own_lifetime.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "neg_own_lifetime.safe:19:14: error: returned borrow value cannot outlive lender 'Owner'\n  |\n  | 19 |       return Ref;  -- ERROR: borrowed value outlives local owner\n  |    |              ^~~\n  |\n  note: borrowed and observed values must remain within the lender lifetime.\n  note: rule: Safe \u00a72.3.3 / \u00a72.3.4a (lifetime containment)\n",
+          "stdout": "{\n  \"diagnostics\": [\n    {\n      \"highlight_span\": {\n        \"end_col\": 16,\n        \"end_line\": 19,\n        \"start_col\": 14,\n        \"start_line\": 19\n      },\n      \"message\": \"returned borrow value cannot outlive lender 'Owner'\",\n      \"notes\": [\n        \"borrowed and observed values must remain within the lender lifetime.\",\n        \"rule: Safe \\u00a72.3.3 / \\u00a72.3.4a (lifetime containment)\"\n      ],\n      \"path\": \"$REPO_ROOT/tests/negative/neg_own_lifetime.safe\",\n      \"reason\": \"lifetime_violation\",\n      \"span\": {\n        \"end_col\": 16,\n        \"end_line\": 19,\n        \"start_col\": 14,\n        \"start_line\": 19\n      },\n      \"suggestions\": []\n    }\n  ],\n  \"format\": \"diagnostics-v0\"\n}\n"
+        },
+        "source": "tests/negative/neg_own_lifetime.safe"
+      },
+      {
+        "actual_reason": "observe_mutation",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 14,
+                "end_line": 22,
+                "start_col": 7,
+                "start_line": 22
+              },
+              "message": "observer 'Observer' provides read-only access",
+              "notes": [
+                "writes and moves through an active observer are not permitted.",
+                "rule: Safe \u00a72.3.4 (observe is read-only; source frozen for write/move)"
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_own_observe_mutate.safe",
+              "reason": "observe_mutation",
+              "span": {
+                "end_col": 14,
+                "end_line": 22,
+                "start_col": 7,
+                "start_line": 22
+              },
+              "suggestions": []
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "observe_mutation",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_own_observe_mutate.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "neg_own_observe_mutate.safe:22:7: error: observer 'Observer' provides read-only access\n  |\n  | 22 |       Observer.all.Rate = 200;  -- ERROR: mutation through observer\n  |    |       ^~~~~~~~\n  |\n  note: writes and moves through an active observer are not permitted.\n  note: rule: Safe \u00a72.3.4 (observe is read-only; source frozen for write/move)\n",
+          "stdout": "{\n  \"diagnostics\": [\n    {\n      \"highlight_span\": {\n        \"end_col\": 14,\n        \"end_line\": 22,\n        \"start_col\": 7,\n        \"start_line\": 22\n      },\n      \"message\": \"observer 'Observer' provides read-only access\",\n      \"notes\": [\n        \"writes and moves through an active observer are not permitted.\",\n        \"rule: Safe \\u00a72.3.4 (observe is read-only; source frozen for write/move)\"\n      ],\n      \"path\": \"$REPO_ROOT/tests/negative/neg_own_observe_mutate.safe\",\n      \"reason\": \"observe_mutation\",\n      \"span\": {\n        \"end_col\": 14,\n        \"end_line\": 22,\n        \"start_col\": 7,\n        \"start_line\": 22\n      },\n      \"suggestions\": []\n    }\n  ],\n  \"format\": \"diagnostics-v0\"\n}\n"
+        },
+        "source": "tests/negative/neg_own_observe_mutate.safe"
+      },
+      {
+        "actual_reason": "move_target_not_null",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 22,
+                "end_line": 18,
+                "start_col": 7,
+                "start_line": 18
+              },
+              "message": "move target 'Target' is not provably null",
+              "notes": [
+                "static analysis determined state 'NonNull' for the move target.",
+                "rule: Safe \u00a72.3.2 (target of move must be provably null)"
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_own_target_not_null.safe",
+              "reason": "move_target_not_null",
+              "span": {
+                "end_col": 22,
+                "end_line": 18,
+                "start_col": 7,
+                "start_line": 18
+              },
+              "suggestions": []
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "move_target_not_null",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_own_target_not_null.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "neg_own_target_not_null.safe:18:7: error: move target 'Target' is not provably null\n  |\n  | 18 |       Target = Source;  -- ERROR: target is not provably null\n  |    |       ^~~~~~~~~~~~~~~~\n  |\n  note: static analysis determined state 'NonNull' for the move target.\n  note: rule: Safe \u00a72.3.2 (target of move must be provably null)\n",
+          "stdout": "{\n  \"diagnostics\": [\n    {\n      \"highlight_span\": {\n        \"end_col\": 22,\n        \"end_line\": 18,\n        \"start_col\": 7,\n        \"start_line\": 18\n      },\n      \"message\": \"move target 'Target' is not provably null\",\n      \"notes\": [\n        \"static analysis determined state 'NonNull' for the move target.\",\n        \"rule: Safe \\u00a72.3.2 (target of move must be provably null)\"\n      ],\n      \"path\": \"$REPO_ROOT/tests/negative/neg_own_target_not_null.safe\",\n      \"reason\": \"move_target_not_null\",\n      \"span\": {\n        \"end_col\": 22,\n        \"end_line\": 18,\n        \"start_col\": 7,\n        \"start_line\": 18\n      },\n      \"suggestions\": []\n    }\n  ],\n  \"format\": \"diagnostics-v0\"\n}\n"
+        },
+        "source": "tests/negative/neg_own_target_not_null.safe"
+      },
+      {
+        "actual_reason": "move_source_not_nonnull",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 22,
+                "end_line": 15,
+                "start_col": 7,
+                "start_line": 15
+              },
+              "message": "move source 'Source' is not provably non-null",
+              "notes": [
+                "static analysis determined state 'Null' at this move site.",
+                "rule: Safe \u00a72.3.2 (source of move must be provably non-null)"
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_own_source_maybe_null.safe",
+              "reason": "move_source_not_nonnull",
+              "span": {
+                "end_col": 22,
+                "end_line": 15,
+                "start_col": 7,
+                "start_line": 15
+              },
+              "suggestions": []
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "move_source_not_nonnull",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_own_source_maybe_null.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "neg_own_source_maybe_null.safe:15:7: error: move source 'Source' is not provably non-null\n  |\n  | 15 |       Target = Source;  -- ERROR: source is not provably non-null\n  |    |       ^~~~~~~~~~~~~~~~\n  |\n  note: static analysis determined state 'Null' at this move site.\n  note: rule: Safe \u00a72.3.2 (source of move must be provably non-null)\n",
+          "stdout": "{\n  \"diagnostics\": [\n    {\n      \"highlight_span\": {\n        \"end_col\": 22,\n        \"end_line\": 15,\n        \"start_col\": 7,\n        \"start_line\": 15\n      },\n      \"message\": \"move source 'Source' is not provably non-null\",\n      \"notes\": [\n        \"static analysis determined state 'Null' at this move site.\",\n        \"rule: Safe \\u00a72.3.2 (source of move must be provably non-null)\"\n      ],\n      \"path\": \"$REPO_ROOT/tests/negative/neg_own_source_maybe_null.safe\",\n      \"reason\": \"move_source_not_nonnull\",\n      \"span\": {\n        \"end_col\": 22,\n        \"end_line\": 15,\n        \"start_col\": 7,\n        \"start_line\": 15\n      },\n      \"suggestions\": []\n    }\n  ],\n  \"format\": \"diagnostics-v0\"\n}\n"
+        },
+        "source": "tests/negative/neg_own_source_maybe_null.safe"
+      },
+      {
+        "actual_reason": "anonymous_access_reassign",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 18,
+                "end_line": 19,
+                "start_col": 7,
+                "start_line": 19
+              },
+              "message": "anonymous access 'Ref' may only be assigned at its declaration",
+              "notes": [
+                "borrow and observe locals are initialization-only.",
+                "rule: Safe \u00a72.3.3 / \u00a72.3.4a (anonymous access is initialization-only)"
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_own_anon_reassign.safe",
+              "reason": "anonymous_access_reassign",
+              "span": {
+                "end_col": 18,
+                "end_line": 19,
+                "start_col": 7,
+                "start_line": 19
+              },
+              "suggestions": []
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "anonymous_access_reassign",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_own_anon_reassign.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "neg_own_anon_reassign.safe:19:7: error: anonymous access 'Ref' may only be assigned at its declaration\n  |\n  | 19 |       Ref = Other;  -- ERROR: anonymous access reassignment after declaration\n  |    |       ^~~~~~~~~~~~\n  |\n  note: borrow and observe locals are initialization-only.\n  note: rule: Safe \u00a72.3.3 / \u00a72.3.4a (anonymous access is initialization-only)\n",
+          "stdout": "{\n  \"diagnostics\": [\n    {\n      \"highlight_span\": {\n        \"end_col\": 18,\n        \"end_line\": 19,\n        \"start_col\": 7,\n        \"start_line\": 19\n      },\n      \"message\": \"anonymous access 'Ref' may only be assigned at its declaration\",\n      \"notes\": [\n        \"borrow and observe locals are initialization-only.\",\n        \"rule: Safe \\u00a72.3.3 / \\u00a72.3.4a (anonymous access is initialization-only)\"\n      ],\n      \"path\": \"$REPO_ROOT/tests/negative/neg_own_anon_reassign.safe\",\n      \"reason\": \"anonymous_access_reassign\",\n      \"span\": {\n        \"end_col\": 18,\n        \"end_line\": 19,\n        \"start_col\": 7,\n        \"start_line\": 19\n      },\n      \"suggestions\": []\n    }\n  ],\n  \"format\": \"diagnostics-v0\"\n}\n"
+        },
+        "source": "tests/negative/neg_own_anon_reassign.safe"
+      },
+      {
+        "actual_reason": "observe_requires_access",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 48,
+                "end_line": 16,
+                "start_col": 7,
+                "start_line": 16
+              },
+              "message": "observer 'Observer' must be initialized from X.Access",
+              "notes": [
+                "local observe uses anonymous access constant and requires an explicit .Access attribute.",
+                "rule: Safe \u00a72.3.4 (local observe must use .Access)"
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_own_observe_requires_access.safe",
+              "reason": "observe_requires_access",
+              "span": {
+                "end_col": 48,
+                "end_line": 16,
+                "start_col": 7,
+                "start_line": 16
+              },
+              "suggestions": []
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "observe_requires_access",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_own_observe_requires_access.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "neg_own_observe_requires_access.safe:16:7: error: observer 'Observer' must be initialized from X.Access\n  |\n  | 16 |       Observer : access constant Config = Owner;  -- ERROR: must use Owner.Access\n  |    |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n  |\n  note: local observe uses anonymous access constant and requires an explicit .Access attribute.\n  note: rule: Safe \u00a72.3.4 (local observe must use .Access)\n",
+          "stdout": "{\n  \"diagnostics\": [\n    {\n      \"highlight_span\": {\n        \"end_col\": 48,\n        \"end_line\": 16,\n        \"start_col\": 7,\n        \"start_line\": 16\n      },\n      \"message\": \"observer 'Observer' must be initialized from X.Access\",\n      \"notes\": [\n        \"local observe uses anonymous access constant and requires an explicit .Access attribute.\",\n        \"rule: Safe \\u00a72.3.4 (local observe must use .Access)\"\n      ],\n      \"path\": \"$REPO_ROOT/tests/negative/neg_own_observe_requires_access.safe\",\n      \"reason\": \"observe_requires_access\",\n      \"span\": {\n        \"end_col\": 48,\n        \"end_line\": 16,\n        \"start_col\": 7,\n        \"start_line\": 16\n      },\n      \"suggestions\": []\n    }\n  ],\n  \"format\": \"diagnostics-v0\"\n}\n"
+        },
+        "source": "tests/negative/neg_own_observe_requires_access.safe"
+      },
+      {
+        "actual_reason": "observe_mutation",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 21,
+                "end_line": 19,
+                "start_col": 7,
+                "start_line": 19
+              },
+              "message": "source 'Owner' is frozen by an active observe",
+              "notes": [
+                "writes and moves of the observed source are forbidden while an observer is active.",
+                "rule: Safe \u00a72.3.4 (observe is read-only; source frozen for write/move)"
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_own_observe_move.safe",
+              "reason": "observe_mutation",
+              "span": {
+                "end_col": 21,
+                "end_line": 19,
+                "start_col": 7,
+                "start_line": 19
+              },
+              "suggestions": []
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "observe_mutation",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_own_observe_move.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "neg_own_observe_move.safe:19:7: error: source 'Owner' is frozen by an active observe\n  |\n  | 19 |       Target = Owner;  -- ERROR: move while observe is active\n  |    |       ^~~~~~~~~~~~~~~\n  |\n  note: writes and moves of the observed source are forbidden while an observer is active.\n  note: rule: Safe \u00a72.3.4 (observe is read-only; source frozen for write/move)\n",
+          "stdout": "{\n  \"diagnostics\": [\n    {\n      \"highlight_span\": {\n        \"end_col\": 21,\n        \"end_line\": 19,\n        \"start_col\": 7,\n        \"start_line\": 19\n      },\n      \"message\": \"source 'Owner' is frozen by an active observe\",\n      \"notes\": [\n        \"writes and moves of the observed source are forbidden while an observer is active.\",\n        \"rule: Safe \\u00a72.3.4 (observe is read-only; source frozen for write/move)\"\n      ],\n      \"path\": \"$REPO_ROOT/tests/negative/neg_own_observe_move.safe\",\n      \"reason\": \"observe_mutation\",\n      \"span\": {\n        \"end_col\": 21,\n        \"end_line\": 19,\n        \"start_col\": 7,\n        \"start_line\": 19\n      },\n      \"suggestions\": []\n    }\n  ],\n  \"format\": \"diagnostics-v0\"\n}\n"
+        },
+        "source": "tests/negative/neg_own_observe_move.safe"
+      },
+      {
+        "actual_reason": "move_source_not_nonnull",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 19,
+                "end_line": 14,
+                "start_col": 14,
+                "start_line": 14
+              },
+              "message": "return source 'Source' is not provably non-null",
+              "notes": [
+                "static analysis determined state 'Null' at the return site.",
+                "rule: Safe \u00a72.3.2 (source of move must be provably non-null)"
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_own_return_move.safe",
+              "reason": "move_source_not_nonnull",
+              "span": {
+                "end_col": 19,
+                "end_line": 14,
+                "start_col": 14,
+                "start_line": 14
+              },
+              "suggestions": []
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "move_source_not_nonnull",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_own_return_move.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "neg_own_return_move.safe:14:14: error: return source 'Source' is not provably non-null\n  |\n  | 14 |       return Source;  -- ERROR: return move source not provably non-null\n  |    |              ^~~~~~\n  |\n  note: static analysis determined state 'Null' at the return site.\n  note: rule: Safe \u00a72.3.2 (source of move must be provably non-null)\n",
+          "stdout": "{\n  \"diagnostics\": [\n    {\n      \"highlight_span\": {\n        \"end_col\": 19,\n        \"end_line\": 14,\n        \"start_col\": 14,\n        \"start_line\": 14\n      },\n      \"message\": \"return source 'Source' is not provably non-null\",\n      \"notes\": [\n        \"static analysis determined state 'Null' at the return site.\",\n        \"rule: Safe \\u00a72.3.2 (source of move must be provably non-null)\"\n      ],\n      \"path\": \"$REPO_ROOT/tests/negative/neg_own_return_move.safe\",\n      \"reason\": \"move_source_not_nonnull\",\n      \"span\": {\n        \"end_col\": 19,\n        \"end_line\": 14,\n        \"start_col\": 14,\n        \"start_line\": 14\n      },\n      \"suggestions\": []\n    }\n  ],\n  \"format\": \"diagnostics-v0\"\n}\n"
+        },
+        "source": "tests/negative/neg_own_return_move.safe"
+      },
+      {
+        "actual_reason": "double_move",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 20,
+                "end_line": 23,
+                "start_col": 16,
+                "start_line": 23
+              },
+              "message": "use of moved value 'Owner'",
+              "notes": [
+                "the access actual for this call was already moved earlier on this path.",
+                "rule: Safe \u00a72.3.2 (move semantics)"
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_own_inout_move.safe",
+              "reason": "double_move",
+              "span": {
+                "end_col": 20,
+                "end_line": 23,
+                "start_col": 16,
+                "start_line": 23
+              },
+              "suggestions": []
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "double_move",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_own_inout_move.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "neg_own_inout_move.safe:23:16: error: use of moved value 'Owner'\n  |\n  | 23 |       Consume (Owner);  -- ERROR: Owner was already moved by the first call\n  |    |                ^~~~~\n  |\n  note: the access actual for this call was already moved earlier on this path.\n  note: rule: Safe \u00a72.3.2 (move semantics)\n",
+          "stdout": "{\n  \"diagnostics\": [\n    {\n      \"highlight_span\": {\n        \"end_col\": 20,\n        \"end_line\": 23,\n        \"start_col\": 16,\n        \"start_line\": 23\n      },\n      \"message\": \"use of moved value 'Owner'\",\n      \"notes\": [\n        \"the access actual for this call was already moved earlier on this path.\",\n        \"rule: Safe \\u00a72.3.2 (move semantics)\"\n      ],\n      \"path\": \"$REPO_ROOT/tests/negative/neg_own_inout_move.safe\",\n      \"reason\": \"double_move\",\n      \"span\": {\n        \"end_col\": 20,\n        \"end_line\": 23,\n        \"start_col\": 16,\n        \"start_line\": 23\n      },\n      \"suggestions\": []\n    }\n  ],\n  \"format\": \"diagnostics-v0\"\n}\n"
+        },
+        "source": "tests/negative/neg_own_inout_move.safe"
+      }
+    ],
+    "positives": [
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/ownership_move.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\n  \"diagnostics\": [],\n  \"format\": \"diagnostics-v0\"\n}\n"
+        },
+        "source": "tests/positive/ownership_move.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/ownership_borrow.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\n  \"diagnostics\": [],\n  \"format\": \"diagnostics-v0\"\n}\n"
+        },
+        "source": "tests/positive/ownership_borrow.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/ownership_observe.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\n  \"diagnostics\": [],\n  \"format\": \"diagnostics-v0\"\n}\n"
+        },
+        "source": "tests/positive/ownership_observe.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/ownership_observe_access.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\n  \"diagnostics\": [],\n  \"format\": \"diagnostics-v0\"\n}\n"
+        },
+        "source": "tests/positive/ownership_observe_access.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/ownership_return.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\n  \"diagnostics\": [],\n  \"format\": \"diagnostics-v0\"\n}\n"
+        },
+        "source": "tests/positive/ownership_return.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/ownership_inout.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\n  \"diagnostics\": [],\n  \"format\": \"diagnostics-v0\"\n}\n"
+        },
+        "source": "tests/positive/ownership_inout.safe"
+      }
+    ]
+  },
+  "determinism": {
+    "tests/positive/ownership_borrow.safe": {
+      "iface/ownership_borrow.safei.json": "5ba22993324f52d9314720afaafc699fd11a6e2e4d1afd1dbaa8ec06ceb7884a",
+      "out/ownership_borrow.ast.json": "aca1143be14325ea666a0bd03a52fcf5eeff061b736b4bf2f5e54d61711aff57",
+      "out/ownership_borrow.mir.json": "c532afb560a5e295be0dce1e76b31e21a1240a12b64da4704ae1285a73dbfa3d",
+      "out/ownership_borrow.typed.json": "b87411e7ac20b74c23a57832879fc5aae6b5f2fae89670e2f8dfbbeed6f6c578"
+    },
+    "tests/positive/ownership_inout.safe": {
+      "iface/ownership_inout.safei.json": "f1c1fad96087581cb0f41b463e0837994146515ed9158cf3b7c801ed29461a9b",
+      "out/ownership_inout.ast.json": "5d0b7af77d2a64333613f4e93b4c410c3e907b8afe9c7b51e3db0372cabb1e95",
+      "out/ownership_inout.mir.json": "c017329aaa75d14fcfff2685b93deb078e4bccfb965386b6ca9121932a320edf",
+      "out/ownership_inout.typed.json": "d2d13711f8f944e9f07f0db11b5bb5c660fbc464bd38ea4f32071413219ed001"
+    },
+    "tests/positive/ownership_observe_access.safe": {
+      "iface/ownership_observe_access.safei.json": "72a427c7aa5132a9bbe932f8fac650f584d3ded457f3ca9d4094a147a7571ccf",
+      "out/ownership_observe_access.ast.json": "931dc53e5dc1c56753cf704890f89c46f830ce789f487ba1dfbe95e702b0453f",
+      "out/ownership_observe_access.mir.json": "148ba6287f4d4a2b1538d65ee51ccbcbfa1f3c1ac2525019cd19bac3d39a0621",
+      "out/ownership_observe_access.typed.json": "b36e226edb6559a477df90d62055c96d5c16f89b98a565a32630038d3c6c06e0"
+    },
+    "tests/positive/ownership_return.safe": {
+      "iface/ownership_return.safei.json": "2e6e9f06abd4cf7b0bc12ef8bc9755327896e31594a9c3989077e98eb757042a",
+      "out/ownership_return.ast.json": "f49a1650c738fc40964c649e0acc78bff635ca8d4940f3d166c24c2e618fb344",
+      "out/ownership_return.mir.json": "0e08db69f2b2d27a1f1703fe0bb7a7441be8c4f125895f8c435a4df7c62ee376",
+      "out/ownership_return.typed.json": "d35ae3643ee11c69bebf2cd91c9b2e44c795c1f2cb6b3cb151bb952d6acaed13"
+    }
+  },
+  "golden_mode": [
+    {
+      "golden": "tests/diagnostics_golden/diag_double_move.txt",
+      "result": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_own_double_move.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_own_double_move.safe:22:7: error: use of moved value 'Source'\n  |\n  | 22 |       Target2 = Source;  -- ERROR: Source has already been moved\n  |    |       ^~~~~~~~~~~~~~~~~\n  |\n  note: the source was already moved earlier on this path.\n  note: rule: Safe \u00a72.3.2 (move semantics)\n",
+        "stdout": ""
+      },
+      "source": "tests/negative/neg_own_double_move.safe"
+    },
+    {
+      "golden": "tests/diagnostics_golden/diag_borrow_conflict.txt",
+      "result": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_own_borrow_conflict.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_own_borrow_conflict.safe:25:11: error: lender 'Owner' is frozen by an active mutable borrow\n  |\n  | 25 |       V = Owner.all.Value;  -- ERROR: lender accessed during active borrow\n  |    |           ^~~~~\n  |\n  note: reads, writes, and moves of the lender are forbidden while the borrow is active.\n  note: rule: Safe \u00a72.3.3 (mutable borrow freezes lender)\n",
+        "stdout": ""
+      },
+      "source": "tests/negative/neg_own_borrow_conflict.safe"
+    },
+    {
+      "golden": "tests/diagnostics_golden/diag_use_after_move.txt",
+      "result": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_own_use_after_move.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_own_use_after_move.safe:25:11: error: dereference of moved access value\n  |\n  | 25 |       V = Source.all.Count;  -- ERROR: dereference of moved variable\n  |    |           ^~~~~~~~~~\n  |\n  note: the access value was moved before this dereference.\n  note: rule: D27 Rule 4 (Not-Null Dereference)\n",
+        "stdout": ""
+      },
+      "source": "tests/negative/neg_own_use_after_move.safe"
+    },
+    {
+      "golden": "tests/diagnostics_golden/diag_lifetime_violation.txt",
+      "result": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_own_lifetime.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_own_lifetime.safe:19:14: error: returned borrow value cannot outlive lender 'Owner'\n  |\n  | 19 |       return Ref;  -- ERROR: borrowed value outlives local owner\n  |    |              ^~~\n  |\n  note: borrowed and observed values must remain within the lender lifetime.\n  note: rule: Safe \u00a72.3.3 / \u00a72.3.4a (lifetime containment)\n",
+        "stdout": ""
+      },
+      "source": "tests/negative/neg_own_lifetime.safe"
+    },
+    {
+      "golden": "tests/diagnostics_golden/diag_observe_mutation.txt",
+      "result": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_own_observe_mutate.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_own_observe_mutate.safe:22:7: error: observer 'Observer' provides read-only access\n  |\n  | 22 |       Observer.all.Rate = 200;  -- ERROR: mutation through observer\n  |    |       ^~~~~~~~\n  |\n  note: writes and moves through an active observer are not permitted.\n  note: rule: Safe \u00a72.3.4 (observe is read-only; source frozen for write/move)\n",
+        "stdout": ""
+      },
+      "source": "tests/negative/neg_own_observe_mutate.safe"
+    },
+    {
+      "golden": "tests/diagnostics_golden/diag_move_target_not_null.txt",
+      "result": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_own_target_not_null.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_own_target_not_null.safe:18:7: error: move target 'Target' is not provably null\n  |\n  | 18 |       Target = Source;  -- ERROR: target is not provably null\n  |    |       ^~~~~~~~~~~~~~~~\n  |\n  note: static analysis determined state 'NonNull' for the move target.\n  note: rule: Safe \u00a72.3.2 (target of move must be provably null)\n",
+        "stdout": ""
+      },
+      "source": "tests/negative/neg_own_target_not_null.safe"
+    },
+    {
+      "golden": "tests/diagnostics_golden/diag_move_source_not_nonnull.txt",
+      "result": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_own_source_maybe_null.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_own_source_maybe_null.safe:15:7: error: move source 'Source' is not provably non-null\n  |\n  | 15 |       Target = Source;  -- ERROR: source is not provably non-null\n  |    |       ^~~~~~~~~~~~~~~~\n  |\n  note: static analysis determined state 'Null' at this move site.\n  note: rule: Safe \u00a72.3.2 (source of move must be provably non-null)\n",
+        "stdout": ""
+      },
+      "source": "tests/negative/neg_own_source_maybe_null.safe"
+    },
+    {
+      "golden": "tests/diagnostics_golden/diag_anonymous_access_reassign.txt",
+      "result": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_own_anon_reassign.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_own_anon_reassign.safe:19:7: error: anonymous access 'Ref' may only be assigned at its declaration\n  |\n  | 19 |       Ref = Other;  -- ERROR: anonymous access reassignment after declaration\n  |    |       ^~~~~~~~~~~~\n  |\n  note: borrow and observe locals are initialization-only.\n  note: rule: Safe \u00a72.3.3 / \u00a72.3.4a (anonymous access is initialization-only)\n",
+        "stdout": ""
+      },
+      "source": "tests/negative/neg_own_anon_reassign.safe"
+    },
+    {
+      "golden": "tests/diagnostics_golden/diag_observe_requires_access.txt",
+      "result": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_own_observe_requires_access.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_own_observe_requires_access.safe:16:7: error: observer 'Observer' must be initialized from X.Access\n  |\n  | 16 |       Observer : access constant Config = Owner;  -- ERROR: must use Owner.Access\n  |    |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n  |\n  note: local observe uses anonymous access constant and requires an explicit .Access attribute.\n  note: rule: Safe \u00a72.3.4 (local observe must use .Access)\n",
+        "stdout": ""
+      },
+      "source": "tests/negative/neg_own_observe_requires_access.safe"
+    }
+  ],
+  "mir_validation": [
+    {
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/positive/ownership_borrow.safe",
+          "--out-dir",
+          "$TMPDIR/ownership_borrow-mir/out",
+          "--interface-dir",
+          "$TMPDIR/ownership_borrow-mir/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "source": "tests/positive/ownership_borrow.safe",
+      "validate": {
+        "command": [
+          "python3",
+          "scripts/validate_mir_output.py",
+          "$TMPDIR/ownership_borrow-mir/out/ownership_borrow.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "validate_mir_output: OK ($TMPDIR/ownership_borrow-mir/out/ownership_borrow.mir.json)\n"
+      }
+    },
+    {
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/positive/ownership_observe_access.safe",
+          "--out-dir",
+          "$TMPDIR/ownership_observe_access-mir/out",
+          "--interface-dir",
+          "$TMPDIR/ownership_observe_access-mir/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "source": "tests/positive/ownership_observe_access.safe",
+      "validate": {
+        "command": [
+          "python3",
+          "scripts/validate_mir_output.py",
+          "$TMPDIR/ownership_observe_access-mir/out/ownership_observe_access.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "validate_mir_output: OK ($TMPDIR/ownership_observe_access-mir/out/ownership_observe_access.mir.json)\n"
+      }
+    },
+    {
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/positive/ownership_return.safe",
+          "--out-dir",
+          "$TMPDIR/ownership_return-mir/out",
+          "--interface-dir",
+          "$TMPDIR/ownership_return-mir/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "source": "tests/positive/ownership_return.safe",
+      "validate": {
+        "command": [
+          "python3",
+          "scripts/validate_mir_output.py",
+          "$TMPDIR/ownership_return-mir/out/ownership_return.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "validate_mir_output: OK ($TMPDIR/ownership_return-mir/out/ownership_return.mir.json)\n"
+      }
+    },
+    {
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/positive/ownership_inout.safe",
+          "--out-dir",
+          "$TMPDIR/ownership_inout-mir/out",
+          "--interface-dir",
+          "$TMPDIR/ownership_inout-mir/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "source": "tests/positive/ownership_inout.safe",
+      "validate": {
+        "command": [
+          "python3",
+          "scripts/validate_mir_output.py",
+          "$TMPDIR/ownership_inout-mir/out/ownership_inout.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "validate_mir_output: OK ($TMPDIR/ownership_inout-mir/out/ownership_inout.mir.json)\n"
+      }
+    }
+  ],
+  "mode": "all",
+  "tool_versions": {
+    "alr": "alr 2.1.0",
+    "gprbuild": "GPRBUILD 25.0.0 (2025-05-16) (aarch64-apple-darwin23.6.0)",
+    "python3": "Python 3.9.6"
+  }
+}

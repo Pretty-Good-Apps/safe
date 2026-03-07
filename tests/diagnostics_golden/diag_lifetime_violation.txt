@@ -1,0 +1,15 @@
+Diagnostics Golden: Lifetime Violation
+Source: tests/negative/neg_own_lifetime.safe
+Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.3.p100a:ba849e66
+Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.4a.p102a-a:ae729065
+
+Expected diagnostic output:
+------------------------------------------------------------------------
+neg_own_lifetime.safe:19:14: error: returned borrow value cannot outlive lender 'Owner'
+  |
+  | 19 |       return Ref;  -- ERROR: borrowed value outlives local owner
+  |    |              ^~~
+  |
+  note: borrowed and observed values must remain within the lender lifetime.
+  note: rule: Safe §2.3.3 / §2.3.4a (lifetime containment)
+------------------------------------------------------------------------

@@ -3,17 +3,17 @@
 - **Schema version:** `1`
 - **Frozen spec SHA:** `468cf72332724b04b7c193b4d2a3b02f1584125d`
 - **Active task:** `none`
-- **Next task:** `PR06`
-- **Updated at:** `2026-03-07T02:26:55Z`
+- **Next task:** `PR06.5`
+- **Updated at:** `2026-03-07T20:20:00Z`
 
 ## Repo Facts
 
-- `tests/positive`: 32
-- `tests/negative`: 35
+- `tests/positive`: 35
+- `tests/negative`: 42
 - `tests/golden`: 3
 - `tests/concurrency`: 5
-- `tests/diagnostics_golden`: 5
-- **Total test files:** 80
+- `tests/diagnostics_golden`: 13
+- **Total test files:** 98
 
 ## Task Ledger
 
@@ -25,7 +25,7 @@
 | PR03 | done | PR02 | 4 |
 | PR04 | done | PR03 | 5 |
 | PR05 | done | PR04 | 3 |
-| PR06 | ready | PR05 | 0 |
+| PR06 | done | PR05 | 2 |
 | PR06.5 | planned | PR06 | 0 |
 | PR07 | planned | PR06.5 | 0 |
 | PR08 | planned | PR07 | 0 |
@@ -130,15 +130,23 @@
   - `execution/sessions/20260306-1948-pr05.md`
   - `execution/sessions/20260306-2358-pr05-completion.md`
 
-### PR06 — Ownership legality and full diagnostics corpus on MIR
+### PR06 — Full sequential ownership legality and diagnostics on MIR
 
-- **Status:** `ready`
+- **Status:** `done`
 - **Depends on:** PR05
 - **Blockers:** none
 - **Acceptance:**
-  - Full ownership legality (including borrow conflicts, observe restrictions, and lifetime rules beyond moved/freed) is implemented on MIR.
-  - Ownership diagnostics are deterministic and diag_double_move.txt matches byte-for-byte.
-  - Ownership positive/negative corpus behaves as expected.
+  - Full sequential ownership legality on MIR is implemented for spec/02-restrictions.md section 2.3, excluding channel-triggered move forms deferred to later concurrency milestones.
+  - Ownership legality covers move assignment, access-valued returns, out/in out access parameter flows, null-before-move, borrow freeze, observe freeze, anonymous-access initialisation-only, and lifetime containment.
+  - safec emit produces deterministic typed-v2 and mir-v2 outputs for representative ownership samples.
+  - scripts/validate_mir_output.py validates representative mir-v2 outputs, while remaining compatible with the existing PR05 mir-v1 gate.
+  - All ownership semantic failures use the rich code-frame renderer for human stderr, and `safec check --diag-json` exposes stable ownership reasons.
+  - Ownership negative diagnostics match committed goldens byte-for-byte, including diag_double_move.txt and the expanded ownership diagnostics set.
+  - Ownership positive and negative corpus gating passes, including the expanded tests for null-before-move, anonymous-access reassignment, spec-aligned observe via .Access, observe freeze, access-valued return moves, and in out access moves.
+  - A dedicated pr06-ownership-harness CI job passes and a committed execution/reports/pr06-ownership-report.json artifact is listed in PR06 evidence.
+- **Evidence:**
+  - `execution/reports/pr06-ownership-report.json`
+  - `execution/sessions/20260307-1510-pr06.md`
 
 ### PR06.5 — Frontend runtime decision: supported Python component vs Ada/SPARK parity port
 
