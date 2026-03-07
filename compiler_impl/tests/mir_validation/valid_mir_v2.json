@@ -1,0 +1,115 @@
+{
+  "format": "mir-v2",
+  "graphs": [
+    {
+      "name": "Fixture.Main",
+      "kind": "procedure",
+      "entry_bb": "bb0",
+      "locals": [
+        {
+          "id": "v0",
+          "kind": "local",
+          "name": "X",
+          "ownership_role": "Owner",
+          "scope_id": "scope0",
+          "span": {
+            "start_line": 1,
+            "start_col": 1,
+            "end_line": 1,
+            "end_col": 1
+          },
+          "type": {
+            "kind": "access",
+            "name": "Node_Access"
+          }
+        }
+      ],
+      "scopes": [
+        {
+          "id": "scope0",
+          "parent_scope_id": null,
+          "kind": "subprogram",
+          "local_ids": [
+            "v0"
+          ],
+          "entry_block": "bb0",
+          "exit_blocks": []
+        }
+      ],
+      "blocks": [
+        {
+          "id": "bb0",
+          "active_scope_id": "scope0",
+          "span": {
+            "start_line": 1,
+            "start_col": 1,
+            "end_line": 1,
+            "end_col": 1
+          },
+          "ops": [
+            {
+              "kind": "scope_enter",
+              "scope_id": "scope0",
+              "locals": [
+                "X"
+              ],
+              "span": {
+                "start_line": 1,
+                "start_col": 1,
+                "end_line": 1,
+                "end_col": 1
+              }
+            },
+            {
+              "kind": "assign",
+              "ownership_effect": "None",
+              "declaration_init": true,
+              "type": "Node_Access",
+              "span": {
+                "start_line": 1,
+                "start_col": 1,
+                "end_line": 1,
+                "end_col": 1
+              },
+              "target": {
+                "kind": "local",
+                "name": "X",
+                "tag": "ident",
+                "type": "Node_Access",
+                "span": {
+                  "start_line": 1,
+                  "start_col": 1,
+                  "end_line": 1,
+                  "end_col": 1
+                }
+              },
+              "value": {
+                "kind": "null_literal",
+                "tag": "literal",
+                "type": "Node_Access",
+                "span": {
+                  "start_line": 1,
+                  "start_col": 1,
+                  "end_line": 1,
+                  "end_col": 1
+                }
+              }
+            }
+          ],
+          "terminator": {
+            "kind": "return",
+            "ownership_effect": "None",
+            "span": {
+              "start_line": 1,
+              "start_col": 1,
+              "end_line": 1,
+              "end_col": 1
+            },
+            "value": null
+          }
+        }
+      ]
+    }
+  ],
+  "package_name": "Fixture"
+}

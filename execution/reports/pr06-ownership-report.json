@@ -890,14 +890,14 @@
       "source": "tests/positive/ownership_borrow.safe",
       "validate": {
         "command": [
-          "python3",
-          "scripts/validate_mir_output.py",
+          "compiler_impl/bin/safec",
+          "validate-mir",
           "$TMPDIR/ownership_borrow-mir/out/ownership_borrow.mir.json"
         ],
         "cwd": "$REPO_ROOT",
         "returncode": 0,
         "stderr": "",
-        "stdout": "validate_mir_output: OK ($TMPDIR/ownership_borrow-mir/out/ownership_borrow.mir.json)\n"
+        "stdout": "validate-mir: OK ($TMPDIR/ownership_borrow-mir/out/ownership_borrow.mir.json)\n"
       }
     },
     {
@@ -920,14 +920,14 @@
       "source": "tests/positive/ownership_observe_access.safe",
       "validate": {
         "command": [
-          "python3",
-          "scripts/validate_mir_output.py",
+          "compiler_impl/bin/safec",
+          "validate-mir",
           "$TMPDIR/ownership_observe_access-mir/out/ownership_observe_access.mir.json"
         ],
         "cwd": "$REPO_ROOT",
         "returncode": 0,
         "stderr": "",
-        "stdout": "validate_mir_output: OK ($TMPDIR/ownership_observe_access-mir/out/ownership_observe_access.mir.json)\n"
+        "stdout": "validate-mir: OK ($TMPDIR/ownership_observe_access-mir/out/ownership_observe_access.mir.json)\n"
       }
     },
     {
@@ -950,14 +950,14 @@
       "source": "tests/positive/ownership_return.safe",
       "validate": {
         "command": [
-          "python3",
-          "scripts/validate_mir_output.py",
+          "compiler_impl/bin/safec",
+          "validate-mir",
           "$TMPDIR/ownership_return-mir/out/ownership_return.mir.json"
         ],
         "cwd": "$REPO_ROOT",
         "returncode": 0,
         "stderr": "",
-        "stdout": "validate_mir_output: OK ($TMPDIR/ownership_return-mir/out/ownership_return.mir.json)\n"
+        "stdout": "validate-mir: OK ($TMPDIR/ownership_return-mir/out/ownership_return.mir.json)\n"
       }
     },
     {
@@ -980,14 +980,14 @@
       "source": "tests/positive/ownership_inout.safe",
       "validate": {
         "command": [
-          "python3",
-          "scripts/validate_mir_output.py",
+          "compiler_impl/bin/safec",
+          "validate-mir",
           "$TMPDIR/ownership_inout-mir/out/ownership_inout.mir.json"
         ],
         "cwd": "$REPO_ROOT",
         "returncode": 0,
         "stderr": "",
-        "stdout": "validate_mir_output: OK ($TMPDIR/ownership_inout-mir/out/ownership_inout.mir.json)\n"
+        "stdout": "validate-mir: OK ($TMPDIR/ownership_inout-mir/out/ownership_inout.mir.json)\n"
       }
     }
   ],

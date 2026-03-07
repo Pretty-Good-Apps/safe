@@ -47,7 +47,7 @@ The `companion/templates/` directory contains 14 templates (M1–M7 complete) de
 | Companion VCs (flow / proved / justified / unproved) | 29 / 34 / 1 / 0 (64 total) |
 | Template VCs (flow / proved / justified / unproved) | 107 / 217 / 1 / 0 (325 total, 17 units) |
 | Tracked assumptions | 14 (4 critical, 4 major, 5 minor, 1 template) |
-| Test files | 79 |
+| Test files | 100 |
 
 ---
 
@@ -93,7 +93,7 @@ safe/
 ├── compiler_impl/               # Reference compiler workspace (early frontend)
 ├── clauses/                     # 205 clauses + PO mappings
 ├── execution/                   # Execution ledger, dashboard, and session notes
-├── tests/                       # 79 test files (5 categories)
+├── tests/                       # 100 test files (5 categories)
 ├── docs/                        # Technical documentation
 ├── scripts/                     # CI and automation (13 scripts)
 ├── meta/                        # Frozen commit SHA, generator version
@@ -127,13 +127,14 @@ safe/
 
 ## Continuous Integration
 
-Seven CI jobs run on every push and pull request to `main`:
+Eight CI jobs run on every push and pull request to `main`:
 
 - **`execution-guard`** -- Ledger, dashboard, frozen-SHA, and test-distribution checks
 - **`lint-safe-syntax`** -- Surface-syntax guard across the `.safe` corpus
 - **`frontend-smoke`** -- Early frontend build, lexer regression checks, AST validation, and deterministic emit smoke checks
 - **`pr05-d27-harness`** -- Sequential Rule 1-4 golden diffs, corpus gating, and deterministic emit checks
 - **`pr06-ownership-harness`** -- Sequential ownership goldens, ownership corpus gating, and deterministic ownership emit checks
+- **`pr065-ada-mir-validator`** -- Ada-native MIR contract validation over fixtures and representative emitted MIR
 - **`spark-verify`** -- Companion: 64 VCs, 0 unproved
 - **`templates-verify`** -- Templates pipeline: 320 VCs, 0 unproved
 
@@ -152,9 +153,9 @@ See [`release/COMPANION_README.md`](release/COMPANION_README.md) Section 8 for t
 | Generator | spec2spark v0.1.0 |
 | Companion status | All 13 companion tasks complete |
 | Emission templates | 14/14 proved (320 VCs, 0 unproved; M1–M7 complete) |
-| Compiler frontend | `compiler_impl/` PR00–PR06 sequential ownership frontend landed |
+| Compiler frontend | `compiler_impl/` PR00–PR06.5 sequential frontend landed, with Ada-native MIR validation and Python retained only for `ast` / `check` / `emit` |
 
-The repository now includes a sequential compiler frontend under `compiler_impl/`. It can lex `.safe` inputs via `safec lex`, emit schema-true AST for the implemented sequential subset, emit validated `typed-v2` and `mir-v2`, run D27 Rule 1–4 checking over the current sequential corpus, run the sequential ownership corpus and ownership diagnostics goldens, and expose machine-readable semantic diagnostics via `safec check --diag-json`. The translation rules and AST schema in `compiler/` remain the contract the later compiler phases must satisfy.
+The repository now includes a sequential compiler frontend under `compiler_impl/`. It can lex `.safe` inputs via `safec lex`, validate emitted MIR via `safec validate-mir`, emit schema-true AST for the implemented sequential subset, emit validated `typed-v2` and `mir-v2`, run D27 Rule 1–4 checking over the current sequential corpus, run the sequential ownership corpus and ownership diagnostics goldens, and expose machine-readable semantic diagnostics via `safec check --diag-json`. Python remains a transitional runtime for `ast`, `check`, and `emit`; MIR validation is now Ada-native. The translation rules and AST schema in `compiler/` remain the contract the later compiler phases must satisfy.
 
 
 ---

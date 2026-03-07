@@ -5,12 +5,15 @@ This workspace hosts the current Safe compiler frontend through PR06.
 ## Scope
 
 - `safec lex <file.safe>` lexes a Safe source file and writes versioned token JSON to stdout.
+- `safec validate-mir <file.mir.json>` validates emitted `mir-v1` / `mir-v2` structure in Ada and exits nonzero on structural contract failures.
 - `safec ast <file.safe>` lexes and parses a Safe source file and writes AST JSON to stdout.
 - `safec check <file.safe>` runs the early semantic pipeline and exits nonzero if diagnostics are emitted.
 - `safec check --diag-json <file.safe>` keeps human stderr unchanged and also writes machine-readable semantic diagnostics to stdout for CI and harness use.
 - `safec emit <file.safe> --out-dir <dir> --interface-dir <dir>` writes the current frontend artifacts for downstream inspection and regression checks.
 
 The current frontend implements the sequential Rule 1-4 subset plus the sequential ownership model used by the current PR06 corpus. It parses executable bodies, emits schema-true AST for the implemented subset, emits `typed-v2` and `mir-v2`, checks the current Rule 1-4 corpus, and checks the sequential ownership corpus through `safec check`. It is still not the concurrency frontend or the Ada/SPARK emitter.
+
+Python remains the runtime for `safec ast`, `safec check`, and `safec emit`. MIR validation is Ada-native after PR06.5.
 
 ## Output Formats
 
@@ -35,7 +38,7 @@ The current frontend implements the sequential Rule 1-4 subset plus the sequenti
 - `<stem>.mir.json`
   Format tag: `mir-v2`.
   Contents: package-level graph data, deterministic locals tables, `scopes[]`, blocks with `active_scope_id`, typed ops, explicit terminators, and ownership-effect metadata for the implemented sequential subset.
-  Validation path: `python3 scripts/validate_mir_output.py`.
+  Validation path: `safec validate-mir <stem>.mir.json`.
   Status: debug and regression artifact for the current sequential platform. Incompatible structural changes require a format-tag bump.
 
 - `<stem>.safei.json`
@@ -78,3 +81,12 @@ python3 scripts/run_pr06_ownership_harness.py
 ```
 
 That harness diffs the committed ownership diagnostics goldens byte-for-byte, runs the sequential ownership corpus gate, validates representative `typed-v2`/`mir-v2` outputs, checks deterministic repeated `emit` output on ownership samples, and records results in `execution/reports/pr06-ownership-report.json`.
+
+The PR06.5 Ada MIR validation gate is:
+
+```bash
+cd compiler_impl && $HOME/bin/alr build
+python3 scripts/run_pr065_ada_mir_validator.py
+```
+
+That gate validates committed `mir-v1` / `mir-v2` fixtures plus representative emitted MIR from the PR05 and PR06 corpora, and records results in `execution/reports/pr065-ada-mir-validator-report.json`.

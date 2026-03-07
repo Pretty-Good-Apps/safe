@@ -293,7 +293,6 @@ def run_determinism_checks(safec: Path, env: dict[str, str], temp_root: Path) ->
 
 
 def run_mir_validation(safec: Path, env: dict[str, str], temp_root: Path) -> list[dict[str, Any]]:
-    validator = REPO_ROOT / "scripts" / "validate_mir_output.py"
     results: list[dict[str, Any]] = []
     for sample in MIR_VALIDATION_SAMPLES:
         root = temp_root / f"{sample.stem}-mir"
@@ -313,7 +312,7 @@ def run_mir_validation(safec: Path, env: dict[str, str], temp_root: Path) -> lis
         )
         mir_path = root / "out" / f"{sample.stem.lower()}.mir.json"
         validate_result = run(
-            [sys.executable, str(validator), str(mir_path)],
+            [str(safec), "validate-mir", str(mir_path)],
             cwd=REPO_ROOT,
             env=env,
             temp_root=temp_root,
