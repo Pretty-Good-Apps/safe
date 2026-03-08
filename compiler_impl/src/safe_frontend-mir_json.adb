@@ -278,7 +278,8 @@ package body Safe_Frontend.Mir_Json is
    is
       use GNATCOLL.JSON;
       Result : constant GM.Expr_Access := new GM.Expr_Node;
-      Tag    : FT.UString := FT.To_UString ("");
+      Tag       : FT.UString := FT.To_UString ("");
+      Kind_Name : FT.UString := FT.To_UString ("");
 
       procedure Parse_Expr_List
         (Items  : JSON_Array;
@@ -300,8 +301,15 @@ package body Safe_Frontend.Mir_Json is
       if Has_Field (Value, "tag") and then Get (Value, "tag").Kind = JSON_String_Type then
          Tag := FT.To_UString (Get (Value, "tag"));
       end if;
+      if Has_Field (Value, "kind") and then Get (Value, "kind").Kind = JSON_String_Type then
+         Kind_Name := FT.To_UString (Get (Value, "kind"));
+      end if;
 
-      if FT.To_String (Tag) = "int" then
+      if FT.To_String (Tag) = "int"
+        or else
+          (FT.To_String (Tag) = "literal"
+           and then FT.To_String (Kind_Name) = "int_literal")
+      then
          Result.Kind := GM.Expr_Int;
          if Has_Field (Value, "text") and then Get (Value, "text").Kind = JSON_String_Type then
             Result.Text := FT.To_UString (Get (Value, "text"));
@@ -309,12 +317,18 @@ package body Safe_Frontend.Mir_Json is
          if Has_Field (Value, "value") and then Get (Value, "value").Kind = JSON_Int_Type then
             Result.Int_Value := Get (Get (Value, "value"));
          end if;
-      elsif FT.To_String (Tag) = "bool" then
+      elsif FT.To_String (Tag) = "bool"
+        or else
+          (FT.To_String (Tag) = "literal"
+           and then FT.To_String (Kind_Name) = "bool_literal")
+      then
          Result.Kind := GM.Expr_Bool;
          if Has_Field (Value, "value") and then Get (Value, "value").Kind = JSON_Boolean_Type then
             Result.Bool_Value := Get (Get (Value, "value"));
          end if;
-      elsif FT.To_String (Tag) = "null" then
+      elsif FT.To_String (Tag) = "null"
+        or else FT.To_String (Kind_Name) = "null_literal"
+      then
          Result.Kind := GM.Expr_Null;
       elsif FT.To_String (Tag) = "ident" then
          Result.Kind := GM.Expr_Ident;
