@@ -1146,6 +1146,18 @@ package body Safe_Frontend.Check_Parse is
       End_Token := Expect (State, "end");
       End_Name := Parse_Package_Name (State);
       Result.End_Name := FT.To_UString (Name_To_String (End_Name));
+      if FT.Lowercase (FT.To_String (Result.End_Name)) /=
+        FT.Lowercase (FT.To_String (Result.Package_Name))
+      then
+         Raise_Diag
+           (CM.Source_Frontend_Error
+              (Path    => Path_String (State),
+               Span    => CM.Join (End_Token.Span, End_Name.Span),
+               Message => "package end name must match declared package name",
+               Note    =>
+                 "declared `" & FT.To_String (Result.Package_Name)
+                 & "`, found `" & FT.To_String (Result.End_Name) & "`"));
+      end if;
       Ends := Expect (State, ";");
       Result.Span := CM.Join (Start_Token.Span, Ends.Span);
       return (Success => True, Unit => Result);

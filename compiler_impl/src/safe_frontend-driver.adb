@@ -243,7 +243,9 @@ package body Safe_Frontend.Driver is
       Result : MD.Diagnostic_Vectors.Vector;
    begin
       if not Items.Is_Empty then
-         Result.Append (To_Mir_Diagnostic (Items (Items.First_Index), Default_Path));
+         for Index in Items.First_Index .. Items.Last_Index loop
+            Result.Append (To_Mir_Diagnostic (Items (Index), Default_Path));
+         end loop;
       end if;
       return Result;
    end To_Mir_Diagnostics;

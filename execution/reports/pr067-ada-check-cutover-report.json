@@ -213,10 +213,62 @@
     }
   ],
   "python_mask": {
-    "blocked_attempts": [],
-    "blocked_log_path": "$TMPDIR/blocked-check-python.log",
-    "stub_path": "$TMPDIR/python-mask/python3"
+    "direct_blocked_attempts": [],
+    "direct_blocked_log_path": "$TMPDIR/blocked-strict-python.log",
+    "direct_stub_path": "$TMPDIR/python-mask-strict/python3",
+    "harness_blocked_attempts": [],
+    "harness_blocked_log_path": "$TMPDIR/blocked-harness-python.log",
+    "harness_stub_path": "$TMPDIR/python-mask-harness/python3"
   },
+  "source_frontend_rejections": [
+    {
+      "diag_json": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "$TMPDIR/package_end_mismatch.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"package end name must match declared package name\",\"path\":\"$TMPDIR/package_end_mismatch.safe\",\"span\":{\"start_line\":2,\"start_col\":1,\"end_line\":2,\"end_col\":18},\"highlight_span\":null,\"notes\":[\"declared `Package_End_Mismatch`, found `Different_Name`\"],\"suggestions\":[]}]}\n"
+      },
+      "diagnostics": {
+        "diagnostics": [
+          {
+            "highlight_span": null,
+            "message": "package end name must match declared package name",
+            "notes": [
+              "declared `Package_End_Mismatch`, found `Different_Name`"
+            ],
+            "path": "$TMPDIR/package_end_mismatch.safe",
+            "reason": "source_frontend_error",
+            "span": {
+              "end_col": 18,
+              "end_line": 2,
+              "start_col": 1,
+              "start_line": 2
+            },
+            "suggestions": []
+          }
+        ],
+        "format": "diagnostics-v0"
+      },
+      "human": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "$TMPDIR/package_end_mismatch.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "package_end_mismatch.safe:2:1: error: package end name must match declared package name\n  |\n  | 2 | end Different_Name;\n  |   | ^~~~~~~~~~~~~~~~~~\n  |\n  note: declared `Package_End_Mismatch`, found `Different_Name`\n",
+        "stdout": ""
+      },
+      "source": "$TMPDIR/package_end_mismatch.safe"
+    }
+  ],
   "tool_versions": {
     "alr": "alr 2.1.0",
     "gprbuild": "GPRBUILD 25.0.0 (2025-05-16) (aarch64-apple-darwin23.6.0)",

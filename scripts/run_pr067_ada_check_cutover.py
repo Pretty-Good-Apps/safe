@@ -150,22 +150,33 @@ def extract_expected_block(path: Path) -> str:
     return match.group(1).rstrip() + "\n"
 
 
-def make_masked_env(real_python: str, temp_root: Path) -> tuple[dict[str, str], Path, Path]:
-    stub_dir = temp_root / "python-mask"
+def make_masked_env(real_python: str, temp_root: Path, *, mode: str) -> tuple[dict[str, str], Path, Path]:
+    require(mode in {"strict", "harness"}, f"unsupported mask mode: {mode}")
+    stub_dir = temp_root / f"python-mask-{mode}"
     stub_dir.mkdir(parents=True, exist_ok=True)
-    blocked_log = temp_root / "blocked-check-python.log"
+    blocked_log = temp_root / f"blocked-{mode}-python.log"
     stub_path = stub_dir / "python3"
-    stub_path.write_text(
-        "\n".join(
+    script_lines = [
+        "#!/bin/sh",
+        'REAL_PYTHON="$PR067_REAL_PYTHON3"',
+        'BLOCKED_LOG="$PR067_BLOCKED_LOG"',
+        'case "$1" in',
+        '  --version|"")',
+        '    exec "$REAL_PYTHON" "$@"',
+        "    ;;",
+        "esac",
+    ]
+    if mode == "strict":
+        script_lines.extend(
             [
-                "#!/bin/sh",
-                'REAL_PYTHON="$PR067_REAL_PYTHON3"',
-                'BLOCKED_LOG="$PR067_BLOCKED_LOG"',
-                'case "$1" in',
-                '  --version|"")',
-                '    exec "$REAL_PYTHON" "$@"',
-                "    ;;",
-                "esac",
+                'echo "blocked python3 spawn during direct safec check: $*" >> "$BLOCKED_LOG"',
+                'echo "python3 masked for PR06.7 direct safec check" >&2',
+                "exit 97",
+            ]
+        )
+    else:
+        script_lines.extend(
+            [
                 'case "$1" in',
                 '  *pr05_backend.py)',
                 '    if [ "$2" = "check" ]; then',
@@ -176,11 +187,10 @@ def make_masked_env(real_python: str, temp_root: Path) -> tuple[dict[str, str], 
                 "    ;;",
                 "esac",
                 'exec "$REAL_PYTHON" "$@"',
-                "",
             ]
-        ),
-        encoding="utf-8",
-    )
+        )
+    script_lines.append("")
+    stub_path.write_text("\n".join(script_lines), encoding="utf-8")
     stub_path.chmod(0o755)
 
     env = os.environ.copy()
@@ -188,6 +198,55 @@ def make_masked_env(real_python: str, temp_root: Path) -> tuple[dict[str, str], 
     env["PR067_REAL_PYTHON3"] = real_python
     env["PR067_BLOCKED_LOG"] = str(blocked_log)
     return env, stub_path, blocked_log
+
+
+def run_source_frontend_checks(safec: Path, env: dict[str, str], temp_root: Path) -> list[dict[str, Any]]:
+    source = temp_root / "package_end_mismatch.safe"
+    source.write_text(
+        "package Package_End_Mismatch is\n"
+        "end Different_Name;\n",
+        encoding="utf-8",
+    )
+
+    diag_json = run(
+        [str(safec), "check", "--diag-json", str(source)],
+        cwd=REPO_ROOT,
+        env=env,
+        temp_root=temp_root,
+        expected_returncode=1,
+    )
+    payload = read_diag_json(diag_json["stdout"], str(source))
+    require(payload["diagnostics"], f"{source}: expected at least one diagnostic")
+    require(
+        payload["diagnostics"][0]["reason"] == "source_frontend_error",
+        f"{source}: expected source_frontend_error",
+    )
+    require(
+        payload["diagnostics"][0]["path"] == normalize_text(str(source), temp_root=temp_root),
+        f"{source}: expected diagnostics path to preserve CLI path",
+    )
+
+    human = run(
+        [str(safec), "check", str(source)],
+        cwd=REPO_ROOT,
+        env=env,
+        temp_root=temp_root,
+        expected_returncode=1,
+    )
+    require(source.name in human["stderr"], f"{source}: expected basename in stderr")
+    require(
+        "package end name must match declared package name" in human["stderr"],
+        f"{source}: expected package end-name mismatch message",
+    )
+
+    return [
+        {
+            "source": "$TMPDIR/package_end_mismatch.safe",
+            "diag_json": diag_json,
+            "diagnostics": payload,
+            "human": human,
+        }
+    ]
 
 
 def run_direct_checks(safec: Path, env: dict[str, str], temp_root: Path) -> list[dict[str, Any]]:
@@ -319,20 +378,41 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory(prefix="pr067-check-") as temp_root_str:
         temp_root = Path(temp_root_str)
-        masked_env, stub_path, blocked_log = make_masked_env(python, temp_root)
+        direct_env, direct_stub_path, direct_blocked_log = make_masked_env(
+            python, temp_root, mode="strict"
+        )
+        harness_env, harness_stub_path, harness_blocked_log = make_masked_env(
+            python, temp_root, mode="harness"
+        )
         report: dict[str, Any] = {
             "tool_versions": tool_versions(python, alr),
             "python_mask": {
-                "stub_path": normalize_text(str(stub_path), temp_root=temp_root),
-                "blocked_log_path": normalize_text(str(blocked_log), temp_root=temp_root),
+                "direct_stub_path": normalize_text(str(direct_stub_path), temp_root=temp_root),
+                "direct_blocked_log_path": normalize_text(
+                    str(direct_blocked_log), temp_root=temp_root
+                ),
+                "harness_stub_path": normalize_text(str(harness_stub_path), temp_root=temp_root),
+                "harness_blocked_log_path": normalize_text(
+                    str(harness_blocked_log), temp_root=temp_root
+                ),
             },
-            "direct_checks": run_direct_checks(safec, masked_env, temp_root),
-            "unsupported_subset_rejections": run_unsupported_checks(safec, masked_env, temp_root),
-            "masked_harnesses": run_masked_harnesses(masked_env, temp_root),
+            "direct_checks": run_direct_checks(safec, direct_env, temp_root),
+            "unsupported_subset_rejections": run_unsupported_checks(safec, direct_env, temp_root),
+            "source_frontend_rejections": run_source_frontend_checks(safec, direct_env, temp_root),
+            "masked_harnesses": run_masked_harnesses(harness_env, temp_root),
         }
-        blocked_attempts = read_blocked_log(blocked_log, temp_root)
-        require(not blocked_attempts, f"unexpected backend python spawns for check: {blocked_attempts}")
-        report["python_mask"]["blocked_attempts"] = blocked_attempts
+        direct_blocked_attempts = read_blocked_log(direct_blocked_log, temp_root)
+        harness_blocked_attempts = read_blocked_log(harness_blocked_log, temp_root)
+        require(
+            not direct_blocked_attempts,
+            f"unexpected python spawns during direct check: {direct_blocked_attempts}",
+        )
+        require(
+            not harness_blocked_attempts,
+            f"unexpected backend python spawns for check: {harness_blocked_attempts}",
+        )
+        report["python_mask"]["direct_blocked_attempts"] = direct_blocked_attempts
+        report["python_mask"]["harness_blocked_attempts"] = harness_blocked_attempts
 
     args.report.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"pr067 Ada check cutover: OK ({args.report})")
