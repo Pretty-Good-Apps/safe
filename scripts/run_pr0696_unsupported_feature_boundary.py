@@ -167,6 +167,13 @@ def require(condition: bool, message: str) -> None:
         raise RuntimeError(message)
 
 
+def display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
 def require_repo_command(path: Path, name: str) -> Path:
     if path.exists():
         return path
@@ -485,9 +492,10 @@ def main() -> int:
             "unsupported_cases": unsupported_cases,
         }
 
+        args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
-    print(f"wrote {args.report.relative_to(REPO_ROOT)}")
+    print(f"wrote {display_path(args.report)}")
     return 0
 
 
