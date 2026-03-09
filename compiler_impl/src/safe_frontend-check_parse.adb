@@ -1148,6 +1148,12 @@ package body Safe_Frontend.Check_Parse is
          Result.Withs.Append (Clause);
       end loop;
 
+      if Current_Lower (State) = "generic" then
+         Reject_Unsupported
+           (State,
+            "generic units are outside the current PR05/PR06 check subset");
+      end if;
+
       Start_Token := Expect (State, "package");
       Package_Name := Parse_Package_Name (State);
       Result.Package_Name := FT.To_UString (Name_To_String (Package_Name));

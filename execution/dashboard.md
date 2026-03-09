@@ -3,8 +3,8 @@
 - **Schema version:** `1`
 - **Frozen spec SHA:** `468cf72332724b04b7c193b4d2a3b02f1584125d`
 - **Active task:** `none`
-- **Next task:** `PR06.9.6`
-- **Updated at:** `2026-03-09T18:03:18Z`
+- **Next task:** `PR06.9.7`
+- **Updated at:** `2026-03-09T21:02:05Z`
 
 ## Repo Facts
 
@@ -35,7 +35,7 @@
 | PR06.9.3 | done | PR06.9.2 | 1 |
 | PR06.9.4 | done | PR06.9.3 | 1 |
 | PR06.9.5 | done | PR06.9.4 | 1 |
-| PR06.9.6 | planned | PR06.9.5 | 0 |
+| PR06.9.6 | done | PR06.9.5 | 1 |
 | PR06.9.7 | planned | PR06.9.6 | 0 |
 | PR06.9.8 | planned | PR06.9.7 | 0 |
 | PR06.9.9 | planned | PR06.9.8 | 0 |
@@ -285,13 +285,15 @@
 
 ### PR06.9.6 — Unsupported-feature boundary hardening
 
-- **Status:** `planned`
+- **Status:** `done`
 - **Depends on:** PR06.9.5
 - **Blockers:** none
 - **Acceptance:**
   - Out-of-subset constructs reject deterministically as unsupported_source_construct or source_frontend_error according to documented rules.
   - No unsupported construct falls through to partial lowering or an internal failure on representative fixtures.
   - Unsupported-feature coverage is widened across parser, resolver, and emitter entrypoints.
+- **Evidence:**
+  - `execution/reports/pr0696-unsupported-feature-boundary-report.json`
 
 ### PR06.9.7 — Regression coverage and gate quality
 
