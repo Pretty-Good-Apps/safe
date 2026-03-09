@@ -31,3 +31,5 @@ Each later milestone must remove a concrete Python-owned slice. Parity scaffoldi
 ## Immediate Follow-On
 
 With PR06.7 complete, Python remains required only for `ast` and `emit`. Current `PR07` Rule 5 and discriminant/result safety work follows these runtime-reduction milestones.
+
+CI enforcement note: the PR06.7 job still uses Python to run the gate script and harnesses, but that gate masks Python for `safec check` itself and fails if the check path attempts to spawn the Python backend.

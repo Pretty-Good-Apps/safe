@@ -32,6 +32,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
+      # Python is installed only to run the PR06.7 gate script and the unchanged
+      # PR05/PR06 harnesses it invokes. `safec check` itself must not depend on
+      # Python at runtime.
       - name: Set up Python
         uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
@@ -216,6 +219,8 @@ jobs:
         working-directory: .
         run: cd compiler_impl && alr build
 
+      # The gate masks Python for `safec check` invocations and fails if the
+      # check path attempts to spawn the Python backend.
       - name: Run PR06.7 Ada check cutover gate
         working-directory: .
         run: python3 scripts/run_pr067_ada_check_cutover.py

@@ -18,6 +18,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent
 COMPILER_ROOT = REPO_ROOT / "compiler_impl"
 DEFAULT_REPORT = REPO_ROOT / "execution" / "reports" / "pr067-ada-check-cutover-report.json"
+LEGACY_TOKEN_FIXTURE = REPO_ROOT / "compiler_impl" / "tests" / "legacy_two_char_tokens.safe"
 
 DIRECT_CASES = [
     {
@@ -266,6 +267,65 @@ def run_source_frontend_checks(safec: Path, env: dict[str, str], temp_root: Path
     return results
 
 
+def run_legacy_token_check(safec: Path, env: dict[str, str], temp_root: Path) -> dict[str, Any]:
+    fixture_arg = str(LEGACY_TOKEN_FIXTURE.relative_to(REPO_ROOT))
+    expected_messages = [
+        'legacy token ":=" is not allowed',
+        'legacy token "=>" is not allowed',
+        'legacy token "/=" is not allowed',
+    ]
+    diag_json = run(
+        [str(safec), "check", "--diag-json", fixture_arg],
+        cwd=REPO_ROOT,
+        env=env,
+        temp_root=temp_root,
+        expected_returncode=1,
+    )
+    payload = read_diag_json(diag_json["stdout"], str(LEGACY_TOKEN_FIXTURE))
+    require(
+        len(payload["diagnostics"]) == 3,
+        f"{LEGACY_TOKEN_FIXTURE}: expected exactly three diagnostics",
+    )
+    actual_messages = [item["message"] for item in payload["diagnostics"]]
+    require(
+        actual_messages == expected_messages,
+        f"{LEGACY_TOKEN_FIXTURE}: unexpected diagnostic messages {actual_messages}",
+    )
+    for item in payload["diagnostics"]:
+        require(
+            item["reason"] == "source_frontend_error",
+            f"{LEGACY_TOKEN_FIXTURE}: expected source_frontend_error",
+        )
+        require(
+            item["path"] == fixture_arg,
+            f"{LEGACY_TOKEN_FIXTURE}: expected diagnostics path to preserve CLI path",
+        )
+
+    human = run(
+        [str(safec), "check", fixture_arg],
+        cwd=REPO_ROOT,
+        env=env,
+        temp_root=temp_root,
+        expected_returncode=1,
+    )
+    require(human["stdout"] == "", f"{LEGACY_TOKEN_FIXTURE}: expected empty stdout")
+    require(
+        "legacy_two_char_tokens.safe:2:19: error: legacy token \":=\" is not allowed" in human["stderr"],
+        f"{LEGACY_TOKEN_FIXTURE}: expected first diagnostic header in stderr",
+    )
+    require(
+        'legacy token "=>"' not in human["stderr"] and 'legacy token "/="' not in human["stderr"],
+        f"{LEGACY_TOKEN_FIXTURE}: plain check should render only the first diagnostic",
+    )
+
+    return {
+        "source": fixture_arg,
+        "diag_json": diag_json,
+        "diagnostics": payload,
+        "human": human,
+    }
+
+
 def run_direct_checks(safec: Path, env: dict[str, str], temp_root: Path) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for case in DIRECT_CASES:
@@ -416,6 +476,7 @@ def main() -> int:
             "direct_checks": run_direct_checks(safec, direct_env, temp_root),
             "unsupported_subset_rejections": run_unsupported_checks(safec, direct_env, temp_root),
             "source_frontend_rejections": run_source_frontend_checks(safec, direct_env, temp_root),
+            "legacy_token_check": run_legacy_token_check(safec, direct_env, temp_root),
             "masked_harnesses": run_masked_harnesses(harness_env, temp_root),
         }
         direct_blocked_attempts = read_blocked_log(direct_blocked_log, temp_root)

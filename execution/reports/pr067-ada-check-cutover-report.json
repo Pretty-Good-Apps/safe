@@ -178,6 +178,85 @@
       "source": "tests/negative/neg_own_double_move.safe"
     }
   ],
+  "legacy_token_check": {
+    "diag_json": {
+      "command": [
+        "compiler_impl/bin/safec",
+        "check",
+        "--diag-json",
+        "compiler_impl/tests/legacy_two_char_tokens.safe"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 1,
+      "stderr": "",
+      "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"legacy token \\\":=\\\" is not allowed\",\"path\":\"compiler_impl/tests/legacy_two_char_tokens.safe\",\"span\":{\"start_line\":2,\"start_col\":19,\"end_line\":2,\"end_col\":20},\"highlight_span\":null,\"notes\":[],\"suggestions\":[\"Use current Safe syntax (`=` for assignment).\"]},{\"reason\":\"source_frontend_error\",\"message\":\"legacy token \\\"=>\\\" is not allowed\",\"path\":\"compiler_impl/tests/legacy_two_char_tokens.safe\",\"span\":{\"start_line\":3,\"start_col\":20,\"end_line\":3,\"end_col\":21},\"highlight_span\":null,\"notes\":[],\"suggestions\":[\"Use current Safe syntax (`=` for named associations/aggregates and `then` for select arms).\"]},{\"reason\":\"source_frontend_error\",\"message\":\"legacy token \\\"/=\\\" is not allowed\",\"path\":\"compiler_impl/tests/legacy_two_char_tokens.safe\",\"span\":{\"start_line\":4,\"start_col\":19,\"end_line\":4,\"end_col\":20},\"highlight_span\":null,\"notes\":[],\"suggestions\":[\"Use current Safe syntax (`!=` for inequality).\"]}]}\n"
+    },
+    "diagnostics": {
+      "diagnostics": [
+        {
+          "highlight_span": null,
+          "message": "legacy token \":=\" is not allowed",
+          "notes": [],
+          "path": "compiler_impl/tests/legacy_two_char_tokens.safe",
+          "reason": "source_frontend_error",
+          "span": {
+            "end_col": 20,
+            "end_line": 2,
+            "start_col": 19,
+            "start_line": 2
+          },
+          "suggestions": [
+            "Use current Safe syntax (`=` for assignment)."
+          ]
+        },
+        {
+          "highlight_span": null,
+          "message": "legacy token \"=>\" is not allowed",
+          "notes": [],
+          "path": "compiler_impl/tests/legacy_two_char_tokens.safe",
+          "reason": "source_frontend_error",
+          "span": {
+            "end_col": 21,
+            "end_line": 3,
+            "start_col": 20,
+            "start_line": 3
+          },
+          "suggestions": [
+            "Use current Safe syntax (`=` for named associations/aggregates and `then` for select arms)."
+          ]
+        },
+        {
+          "highlight_span": null,
+          "message": "legacy token \"/=\" is not allowed",
+          "notes": [],
+          "path": "compiler_impl/tests/legacy_two_char_tokens.safe",
+          "reason": "source_frontend_error",
+          "span": {
+            "end_col": 20,
+            "end_line": 4,
+            "start_col": 19,
+            "start_line": 4
+          },
+          "suggestions": [
+            "Use current Safe syntax (`!=` for inequality)."
+          ]
+        }
+      ],
+      "format": "diagnostics-v0"
+    },
+    "human": {
+      "command": [
+        "compiler_impl/bin/safec",
+        "check",
+        "compiler_impl/tests/legacy_two_char_tokens.safe"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 1,
+      "stderr": "legacy_two_char_tokens.safe:2:19: error: legacy token \":=\" is not allowed\n  |\n  | 2 | Legacy_Assignment := 1;\n  |   |                   ^~\n  |\n  suggestion: Use current Safe syntax (`=` for assignment).\n",
+      "stdout": ""
+    },
+    "source": "compiler_impl/tests/legacy_two_char_tokens.safe"
+  },
   "masked_harnesses": [
     {
       "harness": "scripts/run_pr05_d27_harness.py",
