@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-03-09T18:03:18Z",
+  "updated_at": "2026-03-09T21:02:05Z",
   "frozen_spec_sha": "468cf72332724b04b7c193b4d2a3b02f1584125d",
   "active_task_id": null,
-  "next_task_id": "PR06.9.6",
+  "next_task_id": "PR06.9.7",
   "repo_facts": {
     "tests": {
       "positive": 35,
@@ -311,14 +311,14 @@
     {
       "id": "PR06.9.6",
       "title": "Unsupported-feature boundary hardening",
-      "status": "planned",
+      "status": "done",
       "depends_on": ["PR06.9.5"],
       "acceptance": [
         "Out-of-subset constructs reject deterministically as unsupported_source_construct or source_frontend_error according to documented rules.",
         "No unsupported construct falls through to partial lowering or an internal failure on representative fixtures.",
         "Unsupported-feature coverage is widened across parser, resolver, and emitter entrypoints."
       ],
-      "evidence": [],
+      "evidence": ["execution/reports/pr0696-unsupported-feature-boundary-report.json"],
       "blockers": [],
       "unblock_condition": ""
     },

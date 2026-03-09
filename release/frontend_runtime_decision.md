@@ -40,3 +40,8 @@ Before `PR07`, the roadmap now inserts a `PR06.9.1` through `PR06.9.13` stabiliz
 CI enforcement note: the PR06.7 and PR06.8 jobs still use Python to run gate scripts and validators, but those gates enforce the runtime boundary through `PATH` masking for direct `safec` invocations. PR06.8 masks both `python` and `python3`, and the jobs fail if `check`, `ast`, or `emit` attempt to spawn a Python backend.
 
 PR06.9.3 extends that policy with a fast static denylist in `scripts/validate_execution_state.py` and a full-CLI masked-runtime gate for `lex`, `ast`, `validate-mir`, `analyze-mir`, `check`, and `emit`. The runtime rule is now explicit: those user-facing `safec` commands are Ada-native surfaces, while Python remains allowed only as glue around the compiler.
+
+PR06.9.6 makes the unsupported-feature boundary explicit across the Ada-native frontend surfaces:
+- `unsupported_source_construct` is reserved for recognized constructs that are outside the current PR05/PR06 subset.
+- `source_frontend_error` remains the reason for genuine frontend failures such as malformed syntax, identifier/package-name mismatches, and oversized literals.
+- `check`, `ast`, and `emit` are all regression-covered so unsupported inputs fail consistently and never leak into partial lowering or emitted artifacts.

@@ -130,6 +130,15 @@ package body Safe_Frontend.Check_Resolve is
          return Type_Env.Element (Name);
       end if;
 
+      if FT.Lowercase (Name) = "exception" then
+         Raise_Diag
+           (CM.Unsupported_Source_Construct
+              (Path    => Path,
+               Span    => Span,
+               Message =>
+                 "exception declarations and handling are outside the current PR05/PR06 check subset"));
+      end if;
+
       Raise_Diag
         (CM.Source_Frontend_Error
            (Path    => Path,
