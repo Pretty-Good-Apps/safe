@@ -250,9 +250,10 @@ def tool_versions(python: str, alr: str) -> dict[str, str]:
     ).stdout.strip()
     gprbuild = shutil.which("gprbuild")
     if gprbuild:
-        versions["gprbuild"] = subprocess.run(
+        banner = subprocess.run(
             [gprbuild, "--version"], text=True, capture_output=True, check=False
         ).stdout.splitlines()[0]
+        versions["gprbuild"] = banner.split(" (", 1)[0]
     return versions
 
 
