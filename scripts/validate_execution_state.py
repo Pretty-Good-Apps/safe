@@ -19,16 +19,46 @@ LEGACY_RUNTIME_BACKEND = REPO_ROOT / "compiler_impl" / "backend" / "pr05_backend
 RUNTIME_BOUNDARY_PATTERNS = [
     (
         "compiler_impl/src/safe_frontend-*.adb",
-        [r"\bRun_Backend\b", r"\bBackend_Script\b", r"\bGNAT\.OS_Lib\b", r"pr05_backend\.py", r"\bpython3\b", r"\bpython\b"],
+        [
+            r"\bRun_Backend\b",
+            r"\bBackend_Script\b",
+            r"\bGNAT\.OS_Lib\b",
+            r"pr05_backend\.py",
+            r"\bpython(?:3(?:\.\d+)?)?\b",
+            r"\bSpawn\b",
+            r"\bNon_Blocking_Spawn\b",
+            r"\bGNAT\.Expect\b",
+        ],
     ),
     (
         "compiler_impl/src/safe_frontend-*.ads",
-        [r"\bRun_Backend\b", r"\bBackend_Script\b", r"\bGNAT\.OS_Lib\b", r"pr05_backend\.py", r"\bpython3\b", r"\bpython\b"],
+        [
+            r"\bRun_Backend\b",
+            r"\bBackend_Script\b",
+            r"\bGNAT\.OS_Lib\b",
+            r"pr05_backend\.py",
+            r"\bpython(?:3(?:\.\d+)?)?\b",
+            r"\bSpawn\b",
+            r"\bNon_Blocking_Spawn\b",
+            r"\bGNAT\.Expect\b",
+        ],
     ),
     (
         "compiler_impl/src/safec.adb",
-        [r"\bRun_Backend\b", r"\bBackend_Script\b", r"pr05_backend\.py", r"\bpython3\b", r"\bpython\b"],
+        [
+            r"\bRun_Backend\b",
+            r"\bBackend_Script\b",
+            r"pr05_backend\.py",
+            r"\bpython(?:3(?:\.\d+)?)?\b",
+            r"\bSpawn\b",
+            r"\bNon_Blocking_Spawn\b",
+            r"\bGNAT\.Expect\b",
+        ],
     ),
+]
+SAFEC_ALLOWED_OS_LIB_USES = [
+    "with GNAT.OS_Lib;",
+    "GNAT.OS_Lib.OS_Exit",
 ]
 
 SHA_CHECKS = [
@@ -168,18 +198,43 @@ def check_dashboard_freshness(tracker: Dict[str, Any]) -> None:
         fail("execution/dashboard.md is stale; run scripts/render_execution_status.py --write")
 
 
-def check_runtime_boundary() -> None:
-    if LEGACY_RUNTIME_BACKEND.exists():
-        fail(f"legacy runtime backend still present: {LEGACY_RUNTIME_BACKEND.relative_to(REPO_ROOT)}")
-
+def runtime_boundary_report() -> Dict[str, Any]:
     violations: List[str] = []
+    scanned_files: List[str] = []
     for pattern, denylist in RUNTIME_BOUNDARY_PATTERNS:
         for path in sorted(REPO_ROOT.glob(pattern)):
+            scanned_files.append(str(path.relative_to(REPO_ROOT)))
             text = path.read_text(encoding="utf-8")
             for token in denylist:
                 if re.search(token, text, flags=re.IGNORECASE):
                     violations.append(f"{path.relative_to(REPO_ROOT)}:{token}")
 
+    safec_path = REPO_ROOT / "compiler_impl" / "src" / "safec.adb"
+    safec_text = safec_path.read_text(encoding="utf-8")
+    safec_remaining = safec_text
+    for allowed in SAFEC_ALLOWED_OS_LIB_USES:
+        safec_remaining = safec_remaining.replace(allowed, "")
+    safec_remaining = re.sub(r"--.*$", "", safec_remaining, flags=re.MULTILINE)
+    if re.search(r"\bGNAT\.OS_Lib\b", safec_remaining):
+        violations.append(
+            f"{safec_path.relative_to(REPO_ROOT)}:unexpected GNAT.OS_Lib use outside OS_Exit"
+        )
+
+    return {
+        "legacy_backend_present": LEGACY_RUNTIME_BACKEND.exists(),
+        "legacy_backend_path": str(LEGACY_RUNTIME_BACKEND.relative_to(REPO_ROOT)),
+        "safec_allowed_os_lib_uses": SAFEC_ALLOWED_OS_LIB_USES,
+        "scanned_files": scanned_files,
+        "violations": violations,
+    }
+
+
+def check_runtime_boundary() -> None:
+    report = runtime_boundary_report()
+    if report["legacy_backend_present"]:
+        fail(f"legacy runtime backend still present: {report['legacy_backend_path']}")
+
+    violations = report["violations"]
     if violations:
         fail(f"runtime boundary violations: {violations}")
 

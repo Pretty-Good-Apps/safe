@@ -1,6 +1,6 @@
 # SafeC Frontend
 
-This workspace hosts the current Safe compiler frontend through PR06.9.1.
+This workspace hosts the current Safe compiler frontend through PR06.9.3.
 
 ## Scope
 
@@ -18,6 +18,7 @@ The current frontend implements the sequential Rule 1-4 subset plus the sequenti
 All current `safec` commands are now Ada-native for the implemented PR05/PR06 subset. Python remains allowed in the repository only as glue around the compiler, such as validation helpers, harness scripts, and CI/report orchestration.
 
 PR06.8 runtime doctrine: Python may be used as glue/orchestration, but it may not own any user-facing compiler command and may not participate in parsing, lowering, semantic decisions, diagnostic selection, or emitted compiler artifacts.
+PR06.9.3 hardens that boundary with a fast static runtime scan in `scripts/validate_execution_state.py` plus a full-CLI masked-runtime gate covering `lex`, `ast`, `validate-mir`, `analyze-mir`, `check`, and `emit`.
 
 ## Dependency Policy
 
@@ -142,3 +143,21 @@ python3 scripts/run_pr0691_semantic_correctness.py
 ```
 
 That gate revalidates range, ownership, return, and call semantics across targeted PR05 / PR06 seam cases, proves representative positive sources stay clean under both `safec check --diag-json` and emitted `safec analyze-mir --diag-json`, preserves primary reasons for representative negative sources, cross-checks committed analyzer fixtures against paired source failures, adds inline package-global semantic regressions, and records results in `execution/reports/pr0691-semantic-correctness-report.json`.
+
+The PR06.9.2 lowering/CFG integrity gate is:
+
+```bash
+cd compiler_impl && $HOME/bin/alr build
+python3 scripts/run_pr0692_lowering_cfg_integrity.py
+```
+
+That gate proves package-global visibility, declaration-init semantics, scope metadata, and CFG termination invariants on emitted MIR beyond schema validity, and records results in `execution/reports/pr0692-lowering-cfg-integrity-report.json`.
+
+The PR06.9.3 runtime-boundary hardening gate is:
+
+```bash
+cd compiler_impl && $HOME/bin/alr build
+python3 scripts/run_pr0693_runtime_boundary.py
+```
+
+That gate masks `python` and `python3` on `PATH` for every direct user-facing `safec` command, proves the CLI still behaves correctly for representative success and failure cases, confirms the blocked-spawn log stays empty, and records results in `execution/reports/pr0693-runtime-boundary-report.json`.
