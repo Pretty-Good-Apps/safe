@@ -3,8 +3,8 @@
 - **Schema version:** `1`
 - **Frozen spec SHA:** `468cf72332724b04b7c193b4d2a3b02f1584125d`
 - **Active task:** `none`
-- **Next task:** `PR06.9.3`
-- **Updated at:** `2026-03-09T12:50:45Z`
+- **Next task:** `PR06.9.4`
+- **Updated at:** `2026-03-09T14:20:40Z`
 
 ## Repo Facts
 
@@ -32,7 +32,7 @@
 | PR06.8 | done | PR06.7 | 2 |
 | PR06.9.1 | done | PR06.8 | 1 |
 | PR06.9.2 | done | PR06.9.1 | 1 |
-| PR06.9.3 | planned | PR06.9.2 | 0 |
+| PR06.9.3 | done | PR06.9.2 | 1 |
 | PR06.9.4 | planned | PR06.9.3 | 0 |
 | PR06.9.5 | planned | PR06.9.4 | 0 |
 | PR06.9.6 | planned | PR06.9.5 | 0 |
@@ -249,13 +249,15 @@
 
 ### PR06.9.3 — Runtime-boundary enforcement hardening
 
-- **Status:** `planned`
+- **Status:** `done`
 - **Depends on:** PR06.9.2
 - **Blockers:** none
 - **Acceptance:**
   - No user-facing safec path can spawn Python or reintroduce removed backend glue.
   - Static and dynamic guardrails catch runtime-boundary regressions early in local verification and CI.
   - Docs and gates clearly distinguish Ada-native runtime surfaces from Python glue.
+- **Evidence:**
+  - `execution/reports/pr0693-runtime-boundary-report.json`
 
 ### PR06.9.4 — Output contract stability hardening
 
