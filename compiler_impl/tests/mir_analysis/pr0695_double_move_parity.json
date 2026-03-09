@@ -1,0 +1,384 @@
+{
+  "format": "mir-v2",
+  "source_path": "tests/negative/neg_own_inout_move.safe",
+  "package_name": "Inout_Move_Test",
+  "types": [
+    {
+      "name": "Payload",
+      "kind": "record",
+      "fields": {
+        "Value": "Integer"
+      }
+    },
+    {
+      "name": "Payload_Ptr",
+      "kind": "access",
+      "target": "Payload",
+      "not_null": false,
+      "anonymous": false,
+      "is_constant": false,
+      "is_all": false,
+      "access_role": "Owner"
+    }
+  ],
+  "graphs": [
+    {
+      "name": "Consume",
+      "kind": "procedure",
+      "entry_bb": "bb0",
+      "span": {
+        "start_line": 14,
+        "start_col": 4,
+        "end_line": 17,
+        "end_col": 17
+      },
+      "return_type": null,
+      "locals": [
+        {
+          "id": "v0",
+          "kind": "param",
+          "mode": "in out",
+          "name": "Ref",
+          "ownership_role": "Owner",
+          "scope_id": "scope0",
+          "span": {
+            "start_line": 14,
+            "start_col": 23,
+            "end_line": 14,
+            "end_col": 44
+          },
+          "type": {
+            "name": "Payload_Ptr",
+            "kind": "access",
+            "target": "Payload",
+            "not_null": false,
+            "anonymous": false,
+            "is_constant": false,
+            "is_all": false,
+            "access_role": "Owner"
+          }
+        }
+      ],
+      "scopes": [
+        {
+          "id": "scope0",
+          "parent_scope_id": null,
+          "kind": "subprogram",
+          "local_ids": [
+            "v0"
+          ],
+          "entry_block": "bb0",
+          "exit_blocks": [
+            "bb0"
+          ]
+        }
+      ],
+      "blocks": [
+        {
+          "id": "bb0",
+          "active_scope_id": "scope0",
+          "role": "entry",
+          "span": {
+            "start_line": 14,
+            "start_col": 4,
+            "end_line": 17,
+            "end_col": 17
+          },
+          "ops": [],
+          "terminator": {
+            "kind": "return",
+            "span": {
+              "start_line": 14,
+              "start_col": 4,
+              "end_line": 17,
+              "end_col": 17
+            },
+            "ownership_effect": "None",
+            "value": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "Use_Inout",
+      "kind": "procedure",
+      "entry_bb": "bb0",
+      "span": {
+        "start_line": 19,
+        "start_col": 4,
+        "end_line": 24,
+        "end_col": 18
+      },
+      "return_type": null,
+      "locals": [
+        {
+          "id": "v0",
+          "kind": "local",
+          "mode": "in",
+          "name": "Owner",
+          "ownership_role": "Owner",
+          "scope_id": "scope0",
+          "span": {
+            "start_line": 20,
+            "start_col": 7,
+            "end_line": 20,
+            "end_col": 48
+          },
+          "type": {
+            "name": "Payload_Ptr",
+            "kind": "access",
+            "target": "Payload",
+            "not_null": false,
+            "anonymous": false,
+            "is_constant": false,
+            "is_all": false,
+            "access_role": "Owner"
+          }
+        }
+      ],
+      "scopes": [
+        {
+          "id": "scope0",
+          "parent_scope_id": null,
+          "kind": "subprogram",
+          "local_ids": [
+            "v0"
+          ],
+          "entry_block": "bb0",
+          "exit_blocks": [
+            "bb0"
+          ]
+        }
+      ],
+      "blocks": [
+        {
+          "id": "bb0",
+          "active_scope_id": "scope0",
+          "role": "entry",
+          "span": {
+            "start_line": 19,
+            "start_col": 4,
+            "end_line": 24,
+            "end_col": 18
+          },
+          "ops": [
+            {
+              "kind": "scope_enter",
+              "span": {
+                "start_line": 19,
+                "start_col": 4,
+                "end_line": 24,
+                "end_col": 18
+              },
+              "locals": [
+                "Owner"
+              ],
+              "scope_id": "scope0"
+            },
+            {
+              "kind": "assign",
+              "span": {
+                "start_line": 20,
+                "start_col": 7,
+                "end_line": 20,
+                "end_col": 48
+              },
+              "ownership_effect": "None",
+              "target": {
+                "tag": "ident",
+                "span": {
+                  "start_line": 20,
+                  "start_col": 7,
+                  "end_line": 20,
+                  "end_col": 11
+                },
+                "type": "Payload_Ptr",
+                "name": "Owner"
+              },
+              "type": "Payload_Ptr",
+              "value": {
+                "tag": "allocator",
+                "span": {
+                  "start_line": 20,
+                  "start_col": 29,
+                  "end_line": 20,
+                  "end_col": 47
+                },
+                "type": "Payload",
+                "value": {
+                  "tag": "annotated",
+                  "span": {
+                    "start_line": 20,
+                    "start_col": 33,
+                    "end_line": 20,
+                    "end_col": 47
+                  },
+                  "type": "Payload",
+                  "subtype": {
+                    "tag": "ident",
+                    "name": "Payload",
+                    "span": {
+                      "start_line": 20,
+                      "start_col": 33,
+                      "end_line": 20,
+                      "end_col": 39
+                    }
+                  },
+                  "expr": {
+                    "tag": "aggregate",
+                    "span": {
+                      "start_line": 20,
+                      "start_col": 41,
+                      "end_line": 20,
+                      "end_col": 47
+                    },
+                    "type": "Payload",
+                    "fields": [
+                      {
+                        "field": "Value",
+                        "expr": {
+                          "tag": "int",
+                          "span": {
+                            "start_line": 20,
+                            "start_col": 47,
+                            "end_line": 20,
+                            "end_col": 47
+                          },
+                          "type": "Integer",
+                          "text": "5",
+                          "value": 5
+                        },
+                        "span": {
+                          "start_line": 20,
+                          "start_col": 41,
+                          "end_line": 20,
+                          "end_col": 47
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "declaration_init": true
+            },
+            {
+              "kind": "call",
+              "span": {
+                "start_line": 22,
+                "start_col": 7,
+                "end_line": 22,
+                "end_col": 22
+              },
+              "ownership_effect": "Move",
+              "target": null,
+              "type": "Integer",
+              "value": {
+                "tag": "call",
+                "span": {
+                  "start_line": 22,
+                  "start_col": 7,
+                  "end_line": 22,
+                  "end_col": 21
+                },
+                "type": "Integer",
+                "callee": {
+                  "tag": "ident",
+                  "span": {
+                    "start_line": 22,
+                    "start_col": 7,
+                    "end_line": 22,
+                    "end_col": 13
+                  },
+                  "type": "Integer",
+                  "name": "Consume"
+                },
+                "args": [
+                  {
+                    "tag": "ident",
+                    "span": {
+                      "start_line": 22,
+                      "start_col": 16,
+                      "end_line": 22,
+                      "end_col": 20
+                    },
+                    "type": "Payload_Ptr",
+                    "name": "Owner"
+                  }
+                ],
+                "call_span": {
+                  "start_line": 22,
+                  "start_col": 15,
+                  "end_line": 22,
+                  "end_col": 21
+                }
+              }
+            },
+            {
+              "kind": "call",
+              "span": {
+                "start_line": 23,
+                "start_col": 7,
+                "end_line": 23,
+                "end_col": 22
+              },
+              "ownership_effect": "Move",
+              "target": null,
+              "type": "Integer",
+              "value": {
+                "tag": "call",
+                "span": {
+                  "start_line": 23,
+                  "start_col": 7,
+                  "end_line": 23,
+                  "end_col": 21
+                },
+                "type": "Integer",
+                "callee": {
+                  "tag": "ident",
+                  "span": {
+                    "start_line": 23,
+                    "start_col": 7,
+                    "end_line": 23,
+                    "end_col": 13
+                  },
+                  "type": "Integer",
+                  "name": "Consume"
+                },
+                "args": [
+                  {
+                    "tag": "ident",
+                    "span": {
+                      "start_line": 23,
+                      "start_col": 16,
+                      "end_line": 23,
+                      "end_col": 20
+                    },
+                    "type": "Payload_Ptr",
+                    "name": "Owner"
+                  }
+                ],
+                "call_span": {
+                  "start_line": 23,
+                  "start_col": 15,
+                  "end_line": 23,
+                  "end_col": 21
+                }
+              }
+            }
+          ],
+          "terminator": {
+            "kind": "return",
+            "span": {
+              "start_line": 19,
+              "start_col": 4,
+              "end_line": 24,
+              "end_col": 18
+            },
+            "ownership_effect": "None",
+            "value": null
+          }
+        }
+      ]
+    }
+  ]
+}

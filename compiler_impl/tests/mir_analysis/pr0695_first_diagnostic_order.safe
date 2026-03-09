@@ -1,0 +1,14 @@
+package First_Diagnostic_Order is
+
+   type Value is range -100 .. 100;
+
+   function Pick (A, B, C : Value) return Integer is
+   begin
+      if A > 0 then
+         return Integer (A) / B;
+      else
+         return Integer (A) / C;
+      end if;
+   end Pick;
+
+end First_Diagnostic_Order;

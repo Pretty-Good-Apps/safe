@@ -3,8 +3,8 @@
 - **Schema version:** `1`
 - **Frozen spec SHA:** `468cf72332724b04b7c193b4d2a3b02f1584125d`
 - **Active task:** `none`
-- **Next task:** `PR06.9.5`
-- **Updated at:** `2026-03-09T14:20:40Z`
+- **Next task:** `PR06.9.6`
+- **Updated at:** `2026-03-09T18:03:18Z`
 
 ## Repo Facts
 
@@ -34,7 +34,7 @@
 | PR06.9.2 | done | PR06.9.1 | 1 |
 | PR06.9.3 | done | PR06.9.2 | 1 |
 | PR06.9.4 | done | PR06.9.3 | 1 |
-| PR06.9.5 | planned | PR06.9.4 | 0 |
+| PR06.9.5 | done | PR06.9.4 | 1 |
 | PR06.9.6 | planned | PR06.9.5 | 0 |
 | PR06.9.7 | planned | PR06.9.6 | 0 |
 | PR06.9.8 | planned | PR06.9.7 | 0 |
@@ -273,13 +273,15 @@
 
 ### PR06.9.5 — Diagnostic stability hardening
 
-- **Status:** `planned`
+- **Status:** `done`
 - **Depends on:** PR06.9.4
 - **Blockers:** none
 - **Acceptance:**
   - Human stderr and diagnostics-v0 remain stable for current goldens and reason mappings.
   - First-diagnostic selection, exit codes, spans, highlight spans, and source_path behavior are regression-covered.
   - Direct check and analyze-mir paths do not diverge in reason selection or payload shape.
+- **Evidence:**
+  - `execution/reports/pr0695-diagnostic-stability-report.json`
 
 ### PR06.9.6 — Unsupported-feature boundary hardening
 
