@@ -169,6 +169,28 @@ class ValidateExecutionStateTests(unittest.TestCase):
                 report["marker_violations"],
             )
 
+    def test_evidence_reproducibility_report_reports_invalid_json_with_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            execution_dir = repo_root / "execution" / "reports"
+            execution_dir.mkdir(parents=True)
+            report_path = execution_dir / "sample.json"
+            report_path.write_text('{"status": "ok"\n', encoding="utf-8")
+            tracker = {
+                "tasks": [
+                    {
+                        "id": "PRX",
+                        "status": "done",
+                        "evidence": ["execution/reports/sample.json"],
+                    }
+                ]
+            }
+            report = evidence_reproducibility_report(tracker=tracker, repo_root=repo_root)
+            self.assertEqual(
+                report["noncanonical_files"],
+                ["execution/reports/sample.json: invalid JSON (Expecting ',' delimiter)"],
+            )
+
     def test_check_evidence_reproducibility_accepts_canonical_json(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             repo_root = Path(temp_dir)

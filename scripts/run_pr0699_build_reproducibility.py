@@ -43,9 +43,22 @@ def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def repo_relative_report_args(paths: list[Path]) -> list[str]:
+    relative_paths: list[str] = []
+    for path in paths:
+        try:
+            relative_paths.append(str(path.relative_to(REPO_ROOT)))
+        except ValueError:
+            continue
+    return relative_paths
+
+
 def current_dirty_report_paths(*, paths: list[Path], env: dict[str, str]) -> list[str]:
+    relative_paths = repo_relative_report_args(paths)
+    if not relative_paths:
+        return []
     result = run(
-        ["git", "status", "--short", "--", *(str(path.relative_to(REPO_ROOT)) for path in paths)],
+        ["git", "status", "--short", "--", *relative_paths],
         cwd=REPO_ROOT,
         env=env,
     )
@@ -177,13 +190,14 @@ def main() -> int:
             f"before={initial_dirty}, after={final_dirty}",
         )
     else:
+        relative_paths = repo_relative_report_args(report_paths)
         run(
             [
                 "git",
                 "diff",
                 "--exit-code",
                 "--",
-                *(str(path.relative_to(REPO_ROOT)) for path in report_paths),
+                *relative_paths,
             ],
             cwd=REPO_ROOT,
             env=env,

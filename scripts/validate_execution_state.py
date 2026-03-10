@@ -287,7 +287,11 @@ def evidence_reproducibility_report(
                 missing_files.append(evidence)
                 continue
             raw = path.read_text(encoding="utf-8")
-            payload = json.loads(raw)
+            try:
+                payload = json.loads(raw)
+            except json.JSONDecodeError as exc:
+                noncanonical_files.append(f"{evidence}: invalid JSON ({exc.msg})")
+                continue
             if raw != serialize_report(payload):
                 noncanonical_files.append(evidence)
             for nested in find_nested_key_paths(payload, "tool_versions"):

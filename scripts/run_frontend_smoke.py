@@ -144,8 +144,16 @@ def emitted_paths(root: Path, sample: Path) -> dict[str, Path]:
 
 def generate_report(*, alr: str, python: str, safec: Path, env: dict[str, str]) -> dict[str, Any]:
     first_build = build_frontend(alr, env)
+    require(
+        safec.exists(),
+        f"frontend build did not produce expected binary: {display_path(safec, repo_root=REPO_ROOT)}",
+    )
     first_binary_sha256 = sha256(safec)
     second_build = build_frontend(alr, env)
+    require(
+        safec.exists(),
+        f"frontend build did not produce expected binary: {display_path(safec, repo_root=REPO_ROOT)}",
+    )
     second_binary_sha256 = sha256(safec)
     require(
         first_binary_sha256 == second_binary_sha256,
