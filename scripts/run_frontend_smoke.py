@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -16,10 +16,13 @@ from _lib.gate_expectations import REPRESENTATIVE_EMIT_SAMPLES
 from _lib.harness_common import (
     display_path,
     ensure_sdkroot,
+    finalize_deterministic_report,
     find_command,
     normalize_text,
     require,
     run,
+    sha256_file,
+    stable_binary_sha256,
     write_report,
 )
 
@@ -33,6 +36,10 @@ EMIT_SAMPLES = [REPO_ROOT / path for path in REPRESENTATIVE_EMIT_SAMPLES]
 EQUALITY_CHECK = REPO_ROOT / "tests" / "positive" / "result_equality_check.safe"
 LEGACY_TOKEN_FIXTURE = REPO_ROOT / "compiler_impl" / "tests" / "legacy_two_char_tokens.safe"
 DIAGNOSTICS_EXIT = 1
+
+
+def repo_arg(path: Path) -> str:
+    return str(path.relative_to(REPO_ROOT))
 
 
 def find_subsequence(lexemes: list[str], expected: list[str]) -> int:
@@ -112,15 +119,16 @@ def assert_legacy_token_diagnostics(result: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while True:
-            chunk = handle.read(65536)
-            if not chunk:
-                break
-            digest.update(chunk)
-    return digest.hexdigest()
+def clean_frontend_build_outputs(safec: Path) -> None:
+    shutil.rmtree(COMPILER_ROOT / "obj", ignore_errors=True)
+    if safec.exists():
+        safec.unlink()
+    safec.parent.mkdir(parents=True, exist_ok=True)
+    (COMPILER_ROOT / "alire" / "tmp").mkdir(parents=True, exist_ok=True)
+
+
+def build_frontend(alr: str, env: dict[str, str]) -> dict[str, Any]:
+    return run([alr, "build"], cwd=COMPILER_ROOT, env=env)
 
 
 def emitted_paths(root: Path, sample: Path) -> dict[str, Path]:
@@ -133,28 +141,31 @@ def emitted_paths(root: Path, sample: Path) -> dict[str, Path]:
     }
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
-    args = parser.parse_args()
-
-    alr = find_command("alr", Path.home() / "bin" / "alr")
-    python = find_command("python3")
-
-    env = ensure_sdkroot(os.environ.copy())
-
-    build_cmd = [alr, "build"]
-    build = run(build_cmd, cwd=COMPILER_ROOT, env=env)
-
-    safec = COMPILER_ROOT / "bin" / "safec"
-    if not safec.exists():
-        raise RuntimeError(f"expected compiled binary at {safec}")
+def generate_report(*, alr: str, python: str, safec: Path, env: dict[str, str]) -> dict[str, Any]:
+    clean_frontend_build_outputs(safec)
+    first_build = build_frontend(alr, env)
+    require(
+        safec.exists(),
+        f"frontend build did not produce expected binary: {display_path(safec, repo_root=REPO_ROOT)}",
+    )
+    first_binary_sha256 = stable_binary_sha256(safec)
+    clean_frontend_build_outputs(safec)
+    second_build = build_frontend(alr, env)
+    require(
+        safec.exists(),
+        f"frontend build did not produce expected binary: {display_path(safec, repo_root=REPO_ROOT)}",
+    )
+    second_binary_sha256 = stable_binary_sha256(safec)
+    require(
+        first_binary_sha256 == second_binary_sha256,
+        "frontend build is non-deterministic: normalized compiler payload drifted across clean rebuilds",
+    )
 
     with tempfile.TemporaryDirectory(prefix="safec-smoke-") as temp_root_str:
         temp_root = Path(temp_root_str)
         ast_path = temp_root / "rule1_accumulate.ast.json"
         ast_run = run(
-            [str(safec), "ast", str(POSITIVE_AST)],
+            [str(safec), "ast", repo_arg(POSITIVE_AST)],
             cwd=REPO_ROOT,
             env=env,
             stdout_path=ast_path,
@@ -167,7 +178,7 @@ def main() -> int:
             temp_root=temp_root,
         )
         equality_lex_run = run(
-            [str(safec), "lex", str(EQUALITY_CHECK)],
+            [str(safec), "lex", repo_arg(EQUALITY_CHECK)],
             cwd=REPO_ROOT,
             env=env,
             temp_root=temp_root,
@@ -175,7 +186,7 @@ def main() -> int:
         equality_assertions = assert_equality_tokens(equality_lex_run)
 
         legacy_lex_run = run(
-            [str(safec), "lex", str(LEGACY_TOKEN_FIXTURE)],
+            [str(safec), "lex", repo_arg(LEGACY_TOKEN_FIXTURE)],
             cwd=REPO_ROOT,
             env=env,
             temp_root=temp_root,
@@ -184,13 +195,13 @@ def main() -> int:
         legacy_assertions = assert_legacy_token_diagnostics(legacy_lex_run)
 
         check_accumulate = run(
-            [str(safec), "check", str(POSITIVE_AST)],
+            [str(safec), "check", repo_arg(POSITIVE_AST)],
             cwd=REPO_ROOT,
             env=env,
             temp_root=temp_root,
         )
         check_sequential = run(
-            [str(safec), "check", str(CHECK_SAMPLE)],
+            [str(safec), "check", repo_arg(CHECK_SAMPLE)],
             cwd=REPO_ROOT,
             env=env,
             temp_root=temp_root,
@@ -205,7 +216,7 @@ def main() -> int:
                     [
                         str(safec),
                         "emit",
-                        str(sample),
+                        repo_arg(sample),
                         "--out-dir",
                         str(root / "out"),
                         "--interface-dir",
@@ -235,11 +246,17 @@ def main() -> int:
                 right_bytes = right.read_bytes()
                 if left_bytes != right_bytes:
                     raise RuntimeError(f"non-deterministic output for {sample.name}::{relative}")
-                file_hashes[relative] = sha256(left)
+                file_hashes[relative] = sha256_file(left)
             deterministic_outputs[str(sample.relative_to(REPO_ROOT))] = file_hashes
 
-        report = {
-            "build": build,
+        return {
+            "build": {
+                "command": first_build["command"],
+                "cwd": first_build["cwd"],
+                "returncodes": [first_build["returncode"], second_build["returncode"]],
+                "binary_path": display_path(safec, repo_root=REPO_ROOT),
+                "binary_deterministic": True,
+            },
             "lex_equality": {
                 **equality_lex_run,
                 "assertions": equality_assertions,
@@ -260,6 +277,23 @@ def main() -> int:
                 "legacy_lex": str(LEGACY_TOKEN_FIXTURE.relative_to(REPO_ROOT)),
             },
         }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
+    args = parser.parse_args()
+
+    alr = find_command("alr", Path.home() / "bin" / "alr")
+    python = find_command("python3")
+
+    env = ensure_sdkroot(os.environ.copy())
+
+    safec = COMPILER_ROOT / "bin" / "safec"
+    report = finalize_deterministic_report(
+        lambda: generate_report(alr=alr, python=python, safec=safec, env=env),
+        label="PR00-PR04 frontend smoke",
+    )
 
     write_report(args.report, report)
     print(f"frontend smoke: OK ({display_path(args.report, repo_root=REPO_ROOT)})")

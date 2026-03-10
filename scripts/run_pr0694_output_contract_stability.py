@@ -15,12 +15,12 @@ from _lib.gate_expectations import REPRESENTATIVE_EMIT_SAMPLES
 from _lib.harness_common import (
     display_path,
     ensure_sdkroot,
+    finalize_deterministic_report,
     find_command,
     normalize_text,
     require,
     require_repo_command,
     run,
-    tool_versions,
     write_report,
 )
 
@@ -264,16 +264,7 @@ def run_emit_case(
     return result
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
-    args = parser.parse_args()
-
-    python = find_command("python3")
-    alr = find_command("alr", Path.home() / "bin" / "alr")
-    safec = require_repo_command(COMPILER_ROOT / "bin" / "safec", "safec")
-    env = ensure_sdkroot(os.environ.copy())
-
+def generate_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="pr0694-contracts-") as temp_root_str:
         temp_root = Path(temp_root_str)
         inline_root = COMPILER_ROOT / "obj" / "pr0694-output-contract-stability"
@@ -300,10 +291,9 @@ def main() -> int:
             temp_root=temp_root,
         )
 
-        report = {
+        return {
             "task": "PR06.9.4",
             "status": "ok",
-            "tool_versions": tool_versions(python=python, alr=alr),
             "inputs": {
                 "corpus_samples": [str(path.relative_to(REPO_ROOT)) for path in CORPUS_SAMPLES],
                 "inline_samples": ["public_interface"],
@@ -313,7 +303,23 @@ def main() -> int:
                 "inline": {"public_interface": inline_result},
             },
         }
-        write_report(args.report, report)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
+    args = parser.parse_args()
+
+    python = find_command("python3")
+    find_command("alr", Path.home() / "bin" / "alr")
+    safec = require_repo_command(COMPILER_ROOT / "bin" / "safec", "safec")
+    env = ensure_sdkroot(os.environ.copy())
+
+    report = finalize_deterministic_report(
+        lambda: generate_report(safec=safec, python=python, env=env),
+        label="PR06.9.4 output contract stability",
+    )
+    write_report(args.report, report)
     print(f"pr0694 output contract stability: OK ({display_path(args.report, repo_root=REPO_ROOT)})")
     return 0
 

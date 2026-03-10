@@ -171,15 +171,10 @@
     }
   },
   "deterministic": true,
-  "repeat_sha256": "2f87b16c07ab222859df9be21299322d23f9e9c79030099fe5891f16c248add0",
-  "report_sha256": "2f87b16c07ab222859df9be21299322d23f9e9c79030099fe5891f16c248add0",
+  "repeat_sha256": "bae201eb49a62cbacfd659126057edde80cd7cd5178e359adcb24c4e9e8b8e14",
+  "report_sha256": "bae201eb49a62cbacfd659126057edde80cd7cd5178e359adcb24c4e9e8b8e14",
   "status": "ok",
   "task": "PR06.9.6",
-  "tool_versions": {
-    "alr": "alr 2.1.0",
-    "gprbuild": "GPRBUILD 25.0.0 (2025-05-16) (aarch64-apple-darwin23.6.0)",
-    "python3": "Python 3.9.6"
-  },
   "unsupported_cases": [
     {
       "ast": {

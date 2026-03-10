@@ -16,12 +16,12 @@ from _lib.gate_expectations import D27_GOLDEN_CASES, PR05_NEGATIVE_CASES, PR05_P
 from _lib.harness_common import (
     display_path,
     extract_expected_block,
+    finalize_deterministic_report,
     find_command,
     read_diag_json,
     read_expected_reason,
     require,
     run,
-    tool_versions,
     write_report,
 )
 
@@ -204,6 +204,21 @@ def run_mir_validation(safec: Path, env: dict[str, str], temp_root: Path) -> lis
     return results
 
 
+def generate_report(*, mode: str, safec: Path, env: dict[str, str]) -> dict[str, Any]:
+    with tempfile.TemporaryDirectory(prefix="pr05-d27-") as temp_root_str:
+        temp_root = Path(temp_root_str)
+        report: dict[str, Any] = {
+            "mode": mode,
+        }
+        if mode in {"all", "golden"}:
+            report["golden_mode"] = run_golden_mode(safec, env, temp_root)
+        if mode in {"all", "corpus"}:
+            report["corpus_mode"] = run_corpus_mode(safec, env, temp_root)
+        report["determinism"] = run_determinism_checks(safec, env, temp_root)
+        report["mir_validation"] = run_mir_validation(safec, env, temp_root)
+        return report
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -215,25 +230,16 @@ def main() -> int:
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     args = parser.parse_args()
 
-    python = find_command("python3")
-    alr = find_command("alr", Path.home() / "bin" / "alr")
+    find_command("python3")
+    find_command("alr", Path.home() / "bin" / "alr")
     safec = COMPILER_ROOT / "bin" / "safec"
     require(safec.exists(), f"expected built compiler at {safec}")
 
     env = os.environ.copy()
-
-    with tempfile.TemporaryDirectory(prefix="pr05-d27-") as temp_root_str:
-        temp_root = Path(temp_root_str)
-        report: dict[str, Any] = {
-            "tool_versions": tool_versions(python=python, alr=alr),
-            "mode": args.mode,
-        }
-        if args.mode in {"all", "golden"}:
-            report["golden_mode"] = run_golden_mode(safec, env, temp_root)
-        if args.mode in {"all", "corpus"}:
-            report["corpus_mode"] = run_corpus_mode(safec, env, temp_root)
-        report["determinism"] = run_determinism_checks(safec, env, temp_root)
-        report["mir_validation"] = run_mir_validation(safec, env, temp_root)
+    report = finalize_deterministic_report(
+        lambda: generate_report(mode=args.mode, safec=safec, env=env),
+        label="PR05",
+    )
 
     write_report(args.report, report)
     print(f"pr05 harness: OK ({display_path(args.report, repo_root=REPO_ROOT)})")

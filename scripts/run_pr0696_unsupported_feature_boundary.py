@@ -12,15 +12,14 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from _lib.harness_common import (
     display_path,
+    finalize_deterministic_report,
     find_command,
     normalize_text,
     read_diag_json,
     require,
     require_repo_command,
     run,
-    serialize_report,
-    sha256_text,
-    tool_versions,
+    write_report,
 )
 
 
@@ -378,8 +377,6 @@ def validate_unsupported_case(
 def generate_report(
     *,
     safec: Path,
-    python: str,
-    alr: str,
     temp_root: Path,
 ) -> Dict[str, Any]:
     control_cases = {
@@ -395,7 +392,6 @@ def generate_report(
     return {
         "task": "PR06.9.6",
         "status": "ok",
-        "tool_versions": tool_versions(python=python, alr=alr),
         "control_cases": control_cases,
         "unsupported_cases": unsupported_cases,
     }
@@ -407,44 +403,22 @@ def main() -> int:
     args = parser.parse_args()
 
     safec = require_repo_command(COMPILER_ROOT / "bin" / "safec", "safec")
-    python = find_command("python3")
-    alr = find_command("alr", Path.home() / "bin" / "alr")
+    find_command("python3")
+    find_command("alr", Path.home() / "bin" / "alr")
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_root = Path(temp_dir)
-        first_run_root = temp_root / "run-a"
-        second_run_root = temp_root / "run-b"
-        first_run_root.mkdir()
-        second_run_root.mkdir()
+    def build_report() -> Dict[str, Any]:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            return generate_report(
+                safec=safec,
+                temp_root=temp_root,
+            )
 
-        report = generate_report(
-            safec=safec,
-            python=python,
-            alr=alr,
-            temp_root=first_run_root,
-        )
-        repeat_report = generate_report(
-            safec=safec,
-            python=python,
-            alr=alr,
-            temp_root=second_run_root,
-        )
-
-        serialized_report = serialize_report(report)
-        repeat_serialized_report = serialize_report(repeat_report)
-        report_sha256 = sha256_text(serialized_report)
-        repeat_sha256 = sha256_text(repeat_serialized_report)
-        require(
-            serialized_report == repeat_serialized_report,
-            "PR06.9.6 report generation is non-deterministic",
-        )
-
-        report["deterministic"] = True
-        report["report_sha256"] = report_sha256
-        report["repeat_sha256"] = repeat_sha256
-
-        args.report.parent.mkdir(parents=True, exist_ok=True)
-        args.report.write_text(serialize_report(report), encoding="utf-8")
+    report = finalize_deterministic_report(
+        build_report,
+        label="PR06.9.6 unsupported-feature boundary",
+    )
+    write_report(args.report, report)
 
     print(f"wrote {display_path(args.report, repo_root=REPO_ROOT)}")
     return 0

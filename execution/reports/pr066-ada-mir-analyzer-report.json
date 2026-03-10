@@ -1,4 +1,5 @@
 {
+  "deterministic": true,
   "emitted_samples": [
     {
       "analyze": {
@@ -243,9 +244,6 @@
       "stderr_substring": "analyze-mir requires mir-v2 input"
     }
   ],
-  "tool_versions": {
-    "alr": "alr 2.1.0",
-    "gprbuild": "GPRBUILD 25.0.0 (2025-05-16) (aarch64-apple-darwin23.6.0)",
-    "python3": "Python 3.9.6"
-  }
+  "repeat_sha256": "ae6e2ca1ed40521086f05b812547e82216e0822c7f53a9e7b5c74a0df8c07c62",
+  "report_sha256": "ae6e2ca1ed40521086f05b812547e82216e0822c7f53a9e7b5c74a0df8c07c62"
 }

@@ -10,12 +10,10 @@ from typing import Any
 
 from _lib.harness_common import (
     display_path,
+    finalize_deterministic_report,
     find_command,
     require,
     run,
-    serialize_report,
-    sha256_text,
-    tool_versions,
     write_report,
 )
 
@@ -96,11 +94,10 @@ def run_invalid_contract_cases(python: str) -> list[dict[str, Any]]:
     return results
 
 
-def generate_report(*, python: str, alr: str | None) -> dict[str, Any]:
+def generate_report(*, python: str) -> dict[str, Any]:
     return {
         "task": "PR06.9.7",
         "status": "ok",
-        "tool_versions": tool_versions(python=python, alr=alr),
         "unit_tests": run_unittest_suite(python),
         "negative_output_contracts": run_invalid_contract_cases(python),
     }
@@ -112,23 +109,10 @@ def main() -> int:
     args = parser.parse_args()
 
     python = find_command("python3")
-    try:
-        alr = find_command("alr", Path.home() / "bin" / "alr")
-    except FileNotFoundError:
-        alr = None
-
-    report = generate_report(python=python, alr=alr)
-    repeat_report = generate_report(python=python, alr=alr)
-
-    serialized = serialize_report(report)
-    repeat_serialized = serialize_report(repeat_report)
-    report_sha256 = sha256_text(serialized)
-    repeat_sha256 = sha256_text(repeat_serialized)
-    require(serialized == repeat_serialized, "PR06.9.7 report generation is non-deterministic")
-
-    report["deterministic"] = True
-    report["report_sha256"] = report_sha256
-    report["repeat_sha256"] = repeat_sha256
+    report = finalize_deterministic_report(
+        lambda: generate_report(python=python),
+        label="PR06.9.7 gate quality",
+    )
 
     write_report(args.report, report)
     print(f"pr0697 gate quality: OK ({display_path(args.report, repo_root=REPO_ROOT)})")

@@ -12,9 +12,11 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 from validate_execution_state import (
     check_dependencies,
+    check_evidence_reproducibility,
     check_status_rules,
     check_test_distribution,
     count_test_files,
+    evidence_reproducibility_report,
     legacy_frontend_cleanup_report,
     runtime_boundary_report,
 )
@@ -127,6 +129,85 @@ class ValidateExecutionStateTests(unittest.TestCase):
                 "compiler_impl/src/safe_frontend-driver.adb:Safe_Frontend.Ast",
                 report["live_runtime_reference_violations"],
             )
+
+    def test_evidence_reproducibility_report_detects_noncanonical_and_markers(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            execution_dir = repo_root / "execution" / "reports"
+            execution_dir.mkdir(parents=True)
+            report_path = execution_dir / "sample.json"
+            report_path.write_text(
+                '{\n  "tool_versions": {"python3": "Python 3.11"},\n  "stdout": "Build finished successfully in 0.10 seconds. /Users/test"\n}\n',
+                encoding="utf-8",
+            )
+            tracker = {
+                "tasks": [
+                    {
+                        "id": "PRX",
+                        "status": "done",
+                        "evidence": ["execution/reports/sample.json"],
+                    }
+                ]
+            }
+            report = evidence_reproducibility_report(tracker=tracker, repo_root=repo_root)
+            self.assertEqual(report["evidence_files"], ["execution/reports/sample.json"])
+            self.assertEqual(report["noncanonical_files"], ["execution/reports/sample.json"])
+            self.assertEqual(
+                report["tool_version_fields"],
+                ["execution/reports/sample.json:tool_versions"],
+            )
+            self.assertIn(
+                "execution/reports/sample.json:Build finished successfully in",
+                report["marker_violations"],
+            )
+            self.assertIn(
+                "execution/reports/sample.json:Python ",
+                report["marker_violations"],
+            )
+            self.assertIn(
+                "execution/reports/sample.json:/Users/",
+                report["marker_violations"],
+            )
+
+    def test_evidence_reproducibility_report_reports_invalid_json_with_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            execution_dir = repo_root / "execution" / "reports"
+            execution_dir.mkdir(parents=True)
+            report_path = execution_dir / "sample.json"
+            report_path.write_text('{"status": "ok"\n', encoding="utf-8")
+            tracker = {
+                "tasks": [
+                    {
+                        "id": "PRX",
+                        "status": "done",
+                        "evidence": ["execution/reports/sample.json"],
+                    }
+                ]
+            }
+            report = evidence_reproducibility_report(tracker=tracker, repo_root=repo_root)
+            self.assertEqual(
+                report["noncanonical_files"],
+                ["execution/reports/sample.json: invalid JSON (Expecting ',' delimiter)"],
+            )
+
+    def test_check_evidence_reproducibility_accepts_canonical_json(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            execution_dir = repo_root / "execution" / "reports"
+            execution_dir.mkdir(parents=True)
+            report_path = execution_dir / "sample.json"
+            report_path.write_text('{\n  "status": "ok"\n}\n', encoding="utf-8")
+            tracker = {
+                "tasks": [
+                    {
+                        "id": "PRX",
+                        "status": "done",
+                        "evidence": ["execution/reports/sample.json"],
+                    }
+                ]
+            }
+            check_evidence_reproducibility(tracker, repo_root=repo_root)
 
 
 if __name__ == "__main__":

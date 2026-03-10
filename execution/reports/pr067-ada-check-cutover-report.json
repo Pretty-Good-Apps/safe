@@ -1,4 +1,5 @@
 {
+  "deterministic": true,
   "direct_checks": [
     {
       "diag_json": {
@@ -299,6 +300,8 @@
     "harness_blocked_log_path": "$TMPDIR/blocked-harness-python.log",
     "harness_stub_path": "$TMPDIR/python-mask-harness/python3"
   },
+  "repeat_sha256": "4258777971dac11a2818e0ea50e860e2dd743fb8a4ccccb10e6d19da85e5db57",
+  "report_sha256": "4258777971dac11a2818e0ea50e860e2dd743fb8a4ccccb10e6d19da85e5db57",
   "source_frontend_rejections": [
     {
       "diag_json": {
@@ -395,11 +398,6 @@
       "source": "$TMPDIR/oversized_integer_literal.safe"
     }
   ],
-  "tool_versions": {
-    "alr": "alr 2.1.0",
-    "gprbuild": "GPRBUILD 25.0.0 (2025-05-16) (aarch64-apple-darwin23.6.0)",
-    "python3": "Python 3.9.6"
-  },
   "unsupported_subset_rejections": [
     {
       "diag_json": {

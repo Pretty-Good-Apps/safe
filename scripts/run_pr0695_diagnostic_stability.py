@@ -16,13 +16,13 @@ from _lib.harness_common import (
     display_path,
     ensure_sdkroot,
     extract_expected_block,
+    finalize_deterministic_report,
     find_command,
     normalize_text,
     read_diag_json,
     require,
     require_repo_command,
     run,
-    tool_versions,
     write_report,
 )
 
@@ -477,22 +477,12 @@ def run_parity_cases(safec: Path, env: dict[str, str], temp_root: Path) -> dict[
     return results
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
-    args = parser.parse_args()
-
-    python = find_command("python3")
-    alr = find_command("alr", Path.home() / "bin" / "alr")
-    safec = require_repo_command(COMPILER_ROOT / "bin" / "safec", "safec")
-    env = ensure_sdkroot(os.environ.copy())
-
+def generate_report(*, safec: Path, env: dict[str, str]) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="pr0695-diagnostics-") as temp_root_str:
         temp_root = Path(temp_root_str)
-        report = {
+        return {
             "task": "PR06.9.5",
             "status": "ok",
-            "tool_versions": tool_versions(python=python, alr=alr),
             "inputs": {
                 "golden_cases": [str(path.relative_to(REPO_ROOT)) for path, _ in GOLDEN_CASES],
                 "source_frontend_cases": [
@@ -516,7 +506,23 @@ def main() -> int:
                 "parity": run_parity_cases(safec, env, temp_root),
             },
         }
-        write_report(args.report, report)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
+    args = parser.parse_args()
+
+    find_command("python3")
+    find_command("alr", Path.home() / "bin" / "alr")
+    safec = require_repo_command(COMPILER_ROOT / "bin" / "safec", "safec")
+    env = ensure_sdkroot(os.environ.copy())
+
+    report = finalize_deterministic_report(
+        lambda: generate_report(safec=safec, env=env),
+        label="PR06.9.5 diagnostic stability",
+    )
+    write_report(args.report, report)
     print(f"pr0695 diagnostic stability: OK ({display_path(args.report, repo_root=REPO_ROOT)})")
     return 0
 

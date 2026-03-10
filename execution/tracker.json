@@ -3,7 +3,7 @@
   "updated_at": "2026-03-09T22:47:56Z",
   "frozen_spec_sha": "468cf72332724b04b7c193b4d2a3b02f1584125d",
   "active_task_id": null,
-  "next_task_id": "PR06.9.9",
+  "next_task_id": "PR06.9.10",
   "repo_facts": {
     "tests": {
       "positive": 35,
@@ -355,14 +355,16 @@
     {
       "id": "PR06.9.9",
       "title": "Build and reproducibility hardening",
-      "status": "planned",
+      "status": "done",
       "depends_on": ["PR06.9.8"],
       "acceptance": [
         "alr build, project wiring, and report generation remain deterministic across repeated local and CI runs.",
         "No milestone evidence depends on transient timing, unordered JSON, or host-specific file layout.",
         "Repeated command runs produce byte-stable outputs where the contract requires determinism."
       ],
-      "evidence": [],
+      "evidence": [
+        "execution/reports/pr0699-build-reproducibility-report.json"
+      ],
       "blockers": [],
       "unblock_condition": ""
     },

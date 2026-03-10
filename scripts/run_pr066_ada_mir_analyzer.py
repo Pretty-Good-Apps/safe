@@ -12,11 +12,11 @@ from typing import Any
 
 from _lib.harness_common import (
     display_path,
+    finalize_deterministic_report,
     find_command,
     read_diag_json,
     require,
     run,
-    tool_versions,
     write_report,
 )
 
@@ -170,27 +170,32 @@ def run_harness_checks(env: dict[str, str], temp_root: Path) -> list[dict[str, A
     return results
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
-    args = parser.parse_args()
-
-    python = find_command("python3")
-    alr = find_command("alr", Path.home() / "bin" / "alr")
-    safec = COMPILER_ROOT / "bin" / "safec"
-    require(safec.exists(), f"expected built compiler at {safec}")
-
-    env = os.environ.copy()
-
+def generate_report(*, safec: Path, env: dict[str, str]) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="pr066-mir-") as temp_root_str:
         temp_root = Path(temp_root_str)
-        report: dict[str, Any] = {
-            "tool_versions": tool_versions(python=python, alr=alr),
+        return {
             "fixtures": run_fixture_checks(safec, env),
             "invalid_inputs": run_invalid_input_checks(safec, env),
             "emitted_samples": run_emitted_sample_checks(safec, env, temp_root),
             "harnesses": run_harness_checks(env, temp_root),
         }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
+    args = parser.parse_args()
+
+    find_command("python3")
+    find_command("alr", Path.home() / "bin" / "alr")
+    safec = COMPILER_ROOT / "bin" / "safec"
+    require(safec.exists(), f"expected built compiler at {safec}")
+
+    env = os.environ.copy()
+    report = finalize_deterministic_report(
+        lambda: generate_report(safec=safec, env=env),
+        label="PR06.6",
+    )
 
     write_report(args.report, report)
     print(f"pr066 MIR analyzer gate: OK ({display_path(args.report, repo_root=REPO_ROOT)})")

@@ -10,7 +10,14 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from _lib.harness_common import display_path, find_command, require, run, tool_versions, write_report
+from _lib.harness_common import (
+    display_path,
+    finalize_deterministic_report,
+    find_command,
+    require,
+    run,
+    write_report,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -146,26 +153,31 @@ def check_legacy_reference_guard() -> dict[str, bool]:
     return results
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
-    args = parser.parse_args()
-
-    alr = find_command("alr", Path.home() / "bin" / "alr")
-    safec = COMPILER_ROOT / "bin" / "safec"
-    require(safec.exists(), f"expected built compiler at {safec}")
-
-    env = os.environ.copy()
-
+def generate_report(*, safec: Path, env: dict[str, str]) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="pr065-mir-") as temp_root_str:
         temp_root = Path(temp_root_str)
-        report: dict[str, Any] = {
-            "tool_versions": tool_versions(alr=alr),
+        return {
             "fixtures": validate_fixtures(safec, env),
             "emitted_samples": validate_emitted_samples(safec, env, temp_root),
             "harness_cutover": check_harness_cutover(),
             "legacy_reference_guard": check_legacy_reference_guard(),
         }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
+    args = parser.parse_args()
+
+    find_command("alr", Path.home() / "bin" / "alr")
+    safec = COMPILER_ROOT / "bin" / "safec"
+    require(safec.exists(), f"expected built compiler at {safec}")
+
+    env = os.environ.copy()
+    report = finalize_deterministic_report(
+        lambda: generate_report(safec=safec, env=env),
+        label="PR06.5",
+    )
 
     write_report(args.report, report)
     print(f"pr06.5 Ada MIR validator: OK ({display_path(args.report, repo_root=REPO_ROOT)})")

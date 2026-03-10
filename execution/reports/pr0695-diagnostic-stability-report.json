@@ -1738,6 +1738,7 @@
       }
     }
   },
+  "deterministic": true,
   "inputs": {
     "analyzer_cases": [
       "tests/negative/neg_own_borrow_conflict.safe",
@@ -1824,11 +1825,8 @@
       "oversized_integer_literal.safe"
     ]
   },
+  "repeat_sha256": "2cb6e3759646dd6e2dbbf6cb84191b922c84e5a337dde4e0a68b366d2af311b9",
+  "report_sha256": "2cb6e3759646dd6e2dbbf6cb84191b922c84e5a337dde4e0a68b366d2af311b9",
   "status": "ok",
-  "task": "PR06.9.5",
-  "tool_versions": {
-    "alr": "alr 2.1.0",
-    "gprbuild": "GPRBUILD 25.0.0 (2025-05-16) (aarch64-apple-darwin23.6.0)",
-    "python3": "Python 3.9.6"
-  }
+  "task": "PR06.9.5"
 }

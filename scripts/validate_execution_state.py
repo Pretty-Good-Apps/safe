@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Sequence, Set
 
+from _lib.harness_common import serialize_report
 from render_execution_status import DASHBOARD_PATH, TRACKER_PATH, load_tracker, render_dashboard
 
 
@@ -108,6 +110,13 @@ SHA_CHECKS = [
         REPO_ROOT / "release" / "COMPANION_README.md",
         r"\*\*Frozen spec commit:\*\* `([0-9a-f]{40})`",
     ),
+]
+EVIDENCE_FORBIDDEN_MARKERS = [
+    "Build finished successfully in",
+    "GPRBUILD ",
+    "Python ",
+    "/Users/",
+    "/home/runner/",
 ]
 
 
@@ -235,6 +244,88 @@ def check_dashboard_freshness(tracker: Dict[str, Any]) -> None:
     existing = DASHBOARD_PATH.read_text(encoding="utf-8")
     if rendered != existing:
         fail("execution/dashboard.md is stale; run scripts/render_execution_status.py --write")
+
+
+def find_nested_key_paths(value: Any, key: str, prefix: str = "") -> List[str]:
+    paths: List[str] = []
+    if isinstance(value, dict):
+        for child_key, child_value in value.items():
+            child_prefix = f"{prefix}.{child_key}" if prefix else child_key
+            if child_key == key:
+                paths.append(child_prefix)
+            paths.extend(find_nested_key_paths(child_value, key, child_prefix))
+    elif isinstance(value, list):
+        for index, child_value in enumerate(value):
+            child_prefix = f"{prefix}[{index}]" if prefix else f"[{index}]"
+            paths.extend(find_nested_key_paths(child_value, key, child_prefix))
+    return paths
+
+
+def evidence_reproducibility_report(
+    *,
+    tracker: Dict[str, Any],
+    repo_root: Path = REPO_ROOT,
+    forbidden_markers: Sequence[str] = EVIDENCE_FORBIDDEN_MARKERS,
+) -> Dict[str, Any]:
+    evidence_files: List[str] = []
+    missing_files: List[str] = []
+    noncanonical_files: List[str] = []
+    tool_version_fields: List[str] = []
+    marker_violations: List[str] = []
+    seen: Set[str] = set()
+
+    for task in tracker.get("tasks", []):
+        if task.get("status") != "done":
+            continue
+        for evidence in task.get("evidence", []):
+            if not evidence.endswith(".json") or evidence in seen:
+                continue
+            seen.add(evidence)
+            evidence_files.append(evidence)
+            path = repo_root / evidence
+            if not path.exists():
+                missing_files.append(evidence)
+                continue
+            raw = path.read_text(encoding="utf-8")
+            try:
+                payload = json.loads(raw)
+            except json.JSONDecodeError as exc:
+                noncanonical_files.append(f"{evidence}: invalid JSON ({exc.msg})")
+                continue
+            if raw != serialize_report(payload):
+                noncanonical_files.append(evidence)
+            for nested in find_nested_key_paths(payload, "tool_versions"):
+                tool_version_fields.append(f"{evidence}:{nested}")
+            for marker in forbidden_markers:
+                if marker in raw:
+                    marker_violations.append(f"{evidence}:{marker}")
+
+    return {
+        "evidence_files": evidence_files,
+        "missing_files": missing_files,
+        "noncanonical_files": noncanonical_files,
+        "tool_version_fields": tool_version_fields,
+        "marker_violations": marker_violations,
+    }
+
+
+def check_evidence_reproducibility(
+    tracker: Dict[str, Any],
+    *,
+    repo_root: Path = REPO_ROOT,
+) -> None:
+    report = evidence_reproducibility_report(tracker=tracker, repo_root=repo_root)
+    if report["missing_files"]:
+        fail(f"missing evidence files: {report['missing_files']}")
+    if report["noncanonical_files"]:
+        fail(f"noncanonical evidence files: {report['noncanonical_files']}")
+    if report["tool_version_fields"]:
+        fail(f"evidence reports still contain tool_versions: {report['tool_version_fields']}")
+    if report["marker_violations"]:
+        fail(
+            "evidence reports contain host-specific or transient markers: "
+            f"{report['marker_violations']}"
+        )
 
 
 def runtime_boundary_report(
@@ -382,6 +473,7 @@ def main() -> int:
     check_documented_sha(meta_sha)
     check_test_distribution(tracker)
     check_dashboard_freshness(tracker)
+    check_evidence_reproducibility(tracker)
     check_runtime_boundary()
     check_legacy_frontend_cleanup()
     print("execution state: OK")

@@ -13,12 +13,12 @@ from typing import Any
 from _lib.harness_common import (
     display_path,
     extract_expected_block,
+    finalize_deterministic_report,
     find_command,
     normalize_text,
     read_diag_json,
     require,
     run,
-    tool_versions,
     write_report,
 )
 
@@ -348,16 +348,7 @@ def read_blocked_log(blocked_log: Path, temp_root: Path) -> list[str]:
     ]
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
-    args = parser.parse_args()
-
-    python = find_command("python3")
-    alr = find_command("alr", Path.home() / "bin" / "alr")
-    safec = COMPILER_ROOT / "bin" / "safec"
-    require(safec.exists(), f"expected built compiler at {safec}")
-
+def generate_report(*, safec: Path, python: str) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="pr067-check-") as temp_root_str:
         temp_root = Path(temp_root_str)
         direct_env, direct_stub_path, direct_blocked_log = make_masked_env(
@@ -367,7 +358,6 @@ def main() -> int:
             python, temp_root, mode="harness"
         )
         report: dict[str, Any] = {
-            "tool_versions": tool_versions(python=python, alr=alr),
             "python_mask": {
                 "direct_stub_path": normalize_text(str(direct_stub_path), temp_root=temp_root),
                 "direct_blocked_log_path": normalize_text(
@@ -396,7 +386,23 @@ def main() -> int:
         )
         report["python_mask"]["direct_blocked_attempts"] = direct_blocked_attempts
         report["python_mask"]["harness_blocked_attempts"] = harness_blocked_attempts
+        return report
 
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
+    args = parser.parse_args()
+
+    python = find_command("python3")
+    find_command("alr", Path.home() / "bin" / "alr")
+    safec = COMPILER_ROOT / "bin" / "safec"
+    require(safec.exists(), f"expected built compiler at {safec}")
+
+    report = finalize_deterministic_report(
+        lambda: generate_report(safec=safec, python=python),
+        label="PR06.7 Ada check cutover",
+    )
     write_report(args.report, report)
     print(f"pr067 Ada check cutover: OK ({display_path(args.report, repo_root=REPO_ROOT)})")
     return 0

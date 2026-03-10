@@ -14,13 +14,13 @@ from typing import Any
 from _lib.harness_common import (
     display_path,
     ensure_sdkroot,
+    finalize_deterministic_report,
     find_command,
     normalize_text,
     read_diag_json,
     require,
     require_repo_command,
     run,
-    tool_versions,
     write_report,
 )
 from validate_execution_state import runtime_boundary_report
@@ -136,16 +136,7 @@ def assert_no_files(root: Path) -> dict[str, Any]:
     return {"exists": True, "files": files}
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
-    args = parser.parse_args()
-
-    python = find_command("python3")
-    alr = find_command("alr", Path.home() / "bin" / "alr")
-    safec = require_repo_command(COMPILER_ROOT / "bin" / "safec", "safec")
-    validation_env = ensure_sdkroot(os.environ.copy())
-
+def generate_report(*, safec: Path, python: str, validation_env: dict[str, str]) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="pr0693-runtime-") as temp_root_str:
         temp_root = Path(temp_root_str)
         masked_env, stub_paths, blocked_log = make_masked_env(temp_root)
@@ -416,8 +407,7 @@ def main() -> int:
             blocked_log, temp_root=temp_root, label="analyze-mir failure"
         )
 
-        report = {
-            "tool_versions": tool_versions(python=python, alr=alr),
+        return {
             "runtime_rule": runtime_rule,
             "python_mask": {
                 "stub_paths": {
@@ -492,6 +482,20 @@ def main() -> int:
             },
         }
 
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
+    args = parser.parse_args()
+
+    python = find_command("python3")
+    find_command("alr", Path.home() / "bin" / "alr")
+    safec = require_repo_command(COMPILER_ROOT / "bin" / "safec", "safec")
+    validation_env = ensure_sdkroot(os.environ.copy())
+    report = finalize_deterministic_report(
+        lambda: generate_report(safec=safec, python=python, validation_env=validation_env),
+        label="PR06.9.3 runtime boundary",
+    )
     write_report(args.report, report)
     print(f"pr0693 runtime-boundary gate: OK ({display_path(args.report, repo_root=REPO_ROOT)})")
     return 0

@@ -8,8 +8,9 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -43,7 +44,7 @@ def normalize_argv(
 def find_command(name: str, fallback: Path | None = None) -> str:
     found = shutil.which(name)
     if found:
-        return found
+        return name
     if fallback and fallback.exists():
         return str(fallback)
     raise FileNotFoundError(f"required command not found: {name}")
@@ -119,26 +120,6 @@ def ensure_sdkroot(
     return env
 
 
-def tool_versions(*, python: str | None = None, alr: str | None = None) -> dict[str, str]:
-    versions: dict[str, str] = {}
-    if python is not None:
-        versions["python3"] = (
-            subprocess.run([python, "--version"], text=True, capture_output=True, check=False).stdout.strip()
-            or subprocess.run([python, "--version"], text=True, capture_output=True, check=False).stderr.strip()
-        )
-    if alr is not None:
-        versions["alr"] = subprocess.run(
-            [alr, "--version"], text=True, capture_output=True, check=False
-        ).stdout.strip()
-    gprbuild = shutil.which("gprbuild")
-    if gprbuild:
-        versions["gprbuild"] = (
-            subprocess.run([gprbuild, "--version"], text=True, capture_output=True, check=False)
-            .stdout.splitlines()[0]
-        )
-    return versions
-
-
 def read_diag_json(stdout: str, label: str) -> dict[str, Any]:
     payload = json.loads(stdout)
     require(payload.get("format") == "diagnostics-v0", f"{label}: unexpected diagnostics format")
@@ -148,6 +129,54 @@ def read_diag_json(stdout: str, label: str) -> dict[str, Any]:
 
 def sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while True:
+            chunk = handle.read(65536)
+            if not chunk:
+                break
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def stable_binary_sha256(path: Path) -> str:
+    with tempfile.TemporaryDirectory(prefix="safec-binary-hash-") as temp_root_str:
+        projected = Path(temp_root_str) / path.name
+        shutil.copy2(path, projected)
+
+        strip = shutil.which("strip")
+        if strip is not None:
+            # Fresh rebuilds can drift in debug/link metadata even when the
+            # executable payload is stable. Compare a stripped copy first so
+            # the gate proves reproducible runtime content rather than host-
+            # specific debug bookkeeping.
+            strip_run = subprocess.run(
+                [strip, "-S", str(projected)],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            require(
+                strip_run.returncode == 0,
+                f"strip -S failed for {path}: {strip_run.stderr.strip()}",
+            )
+
+        if sys.platform == "darwin":
+            # Mach-O links also carry an ad hoc signature that changes when the
+            # stripped copy path changes. Remove it from the comparison copy.
+            codesign = shutil.which("codesign")
+            if codesign is not None:
+                subprocess.run(
+                    [codesign, "--remove-signature", str(projected)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                )
+
+        return sha256_file(projected)
 
 
 def display_path(path: Path, *, repo_root: Path = REPO_ROOT) -> str:
@@ -164,6 +193,25 @@ def serialize_report(report: dict[str, Any]) -> str:
 def write_report(path: Path, report: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(serialize_report(report), encoding="utf-8")
+
+
+def finalize_deterministic_report(
+    generator: Callable[[], dict[str, Any]],
+    *,
+    label: str,
+) -> dict[str, Any]:
+    report = generator()
+    repeat_report = generator()
+    serialized = serialize_report(report)
+    repeat_serialized = serialize_report(repeat_report)
+    report_sha256 = sha256_text(serialized)
+    repeat_sha256 = sha256_text(repeat_serialized)
+    require(serialized == repeat_serialized, f"{label} report generation is non-deterministic")
+    finalized = dict(report)
+    finalized["deterministic"] = True
+    finalized["report_sha256"] = report_sha256
+    finalized["repeat_sha256"] = repeat_sha256
+    return finalized
 
 
 def extract_expected_block(path: Path) -> str:

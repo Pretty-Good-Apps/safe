@@ -17,12 +17,12 @@ from _lib.gate_expectations import REPRESENTATIVE_EMIT_SAMPLES
 from _lib.harness_common import (
     display_path,
     ensure_sdkroot,
+    finalize_deterministic_report,
     find_command,
     normalize_text,
     read_diag_json,
     require,
     run,
-    tool_versions,
     write_report,
 )
 
@@ -470,19 +470,7 @@ def assert_package_global_cases(
     return results
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
-    args = parser.parse_args()
-
-    python = find_command("python3")
-    alr = find_command("alr", Path.home() / "bin" / "alr")
-    env = ensure_sdkroot(os.environ.copy())
-
-    safec = COMPILER_ROOT / "bin" / "safec"
-    if not safec.exists():
-        raise RuntimeError(f"expected compiled binary at {safec}")
-
+def generate_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="safec-pr068-") as temp_root_str:
         temp_root = Path(temp_root_str)
         masked_env, stub_paths, blocked_log = make_masked_env(temp_root)
@@ -640,8 +628,7 @@ def main() -> int:
         )
         require(not blocked_entries, f"unexpected Python spawns during ast/emit gate: {blocked_entries}")
 
-        report = {
-            "tool_versions": tool_versions(python=python, alr=alr),
+        return {
             "runtime_rule": assert_runtime_boundary(),
             "samples": {
                 "ast": str(AST_SAMPLE.relative_to(REPO_ROOT)),
@@ -683,6 +670,24 @@ def main() -> int:
             },
         }
 
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
+    args = parser.parse_args()
+
+    python = find_command("python3")
+    find_command("alr", Path.home() / "bin" / "alr")
+    env = ensure_sdkroot(os.environ.copy())
+
+    safec = COMPILER_ROOT / "bin" / "safec"
+    if not safec.exists():
+        raise RuntimeError(f"expected compiled binary at {safec}")
+
+    report = finalize_deterministic_report(
+        lambda: generate_report(safec=safec, python=python, env=env),
+        label="PR06.8 ast/emit no-Python",
+    )
     write_report(args.report, report)
     print(f"pr068 ast/emit gate: OK ({display_path(args.report, repo_root=REPO_ROOT)})")
     return 0

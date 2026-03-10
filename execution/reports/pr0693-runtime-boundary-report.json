@@ -371,6 +371,7 @@
       }
     }
   },
+  "deterministic": true,
   "python_mask": {
     "blocked_log": "$TMPDIR/blocked-python.log",
     "blocked_spawns": [],
@@ -380,6 +381,8 @@
       "python3.11": "$TMPDIR/python-mask/python3.11"
     }
   },
+  "repeat_sha256": "5ece643becaf3afe1be32dfc485f78c240eaaad4c12cbcbf9d6cb16f7e66a47c",
+  "report_sha256": "5ece643becaf3afe1be32dfc485f78c240eaaad4c12cbcbf9d6cb16f7e66a47c",
   "runtime_rule": {
     "legacy_backend_path": "compiler_impl/backend/pr05_backend.py",
     "legacy_backend_present": false,
@@ -427,10 +430,5 @@
       "compiler_impl/src/safec.adb"
     ],
     "violations": []
-  },
-  "tool_versions": {
-    "alr": "alr 2.1.0",
-    "gprbuild": "GPRBUILD 25.0.0 (2025-05-16) (aarch64-apple-darwin23.6.0)",
-    "python3": "Python 3.9.6"
   }
 }

@@ -1,4 +1,5 @@
 {
+  "deterministic": true,
   "emitted_samples": [
     {
       "emit": {
@@ -241,8 +242,6 @@
     "scripts/run_pr05_d27_harness.py": false,
     "scripts/run_pr06_ownership_harness.py": false
   },
-  "tool_versions": {
-    "alr": "alr 2.1.0",
-    "gprbuild": "GPRBUILD 25.0.0 (2025-05-16) (aarch64-apple-darwin23.6.0)"
-  }
+  "repeat_sha256": "56f1df7aecc8832f5fe8ecbfdbb0ea65232f769b3ed777f2e11a6fe3d6819c35",
+  "report_sha256": "56f1df7aecc8832f5fe8ecbfdbb0ea65232f769b3ed777f2e11a6fe3d6819c35"
 }

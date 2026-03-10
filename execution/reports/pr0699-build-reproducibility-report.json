@@ -1,0 +1,68 @@
+{
+  "build_reproducibility": {
+    "binary_deterministic": true,
+    "binary_path": "compiler_impl/bin/safec",
+    "command": [
+      "alr",
+      "build"
+    ],
+    "cwd": "$REPO_ROOT/compiler_impl",
+    "returncodes": [
+      0,
+      0
+    ]
+  },
+  "delegated_reports": {
+    "frontend_smoke": {
+      "binary_deterministic": true,
+      "repeat_sha256": "d320ddb9970fa6afbe3f5aa7fc63e2aa0fe084c5405192e229f27fd98854b7cf",
+      "report_path": "execution/reports/pr00-pr04-frontend-smoke.json",
+      "report_sha256": "d320ddb9970fa6afbe3f5aa7fc63e2aa0fe084c5405192e229f27fd98854b7cf",
+      "run": {
+        "command": [
+          "python3",
+          "scripts/run_frontend_smoke.py"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "frontend smoke: OK (execution/reports/pr00-pr04-frontend-smoke.json)\n"
+      }
+    },
+    "gate_quality": {
+      "repeat_sha256": "d41fb29d2b023d51df344678d58a03d6d8951a176131d8318f200ed29f9a5fd5",
+      "report_path": "execution/reports/pr0697-gate-quality-report.json",
+      "report_sha256": "d41fb29d2b023d51df344678d58a03d6d8951a176131d8318f200ed29f9a5fd5",
+      "run": {
+        "command": [
+          "python3",
+          "scripts/run_pr0697_gate_quality.py"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "pr0697 gate quality: OK (execution/reports/pr0697-gate-quality-report.json)\n"
+      }
+    },
+    "legacy_package_cleanup": {
+      "repeat_sha256": "1248e3f5d1f76dbaca16f194f2d86bc809f0f3587060179526b8e8ba5a2e2b3c",
+      "report_path": "execution/reports/pr0698-legacy-package-cleanup-report.json",
+      "report_sha256": "1248e3f5d1f76dbaca16f194f2d86bc809f0f3587060179526b8e8ba5a2e2b3c",
+      "run": {
+        "command": [
+          "python3",
+          "scripts/run_pr0698_legacy_package_cleanup.py"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "pr0698 legacy package cleanup: OK (execution/reports/pr0698-legacy-package-cleanup-report.json)\n"
+      }
+    }
+  },
+  "deterministic": true,
+  "repeat_sha256": "bc4f7399d0482a4b5807ec1e265514b652f7a84473612edecfc1a3fef141cbdc",
+  "report_sha256": "bc4f7399d0482a4b5807ec1e265514b652f7a84473612edecfc1a3fef141cbdc",
+  "status": "ok",
+  "task": "PR06.9.9"
+}

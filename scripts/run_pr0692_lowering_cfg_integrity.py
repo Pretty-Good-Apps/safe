@@ -14,13 +14,13 @@ from typing import Any
 from _lib.harness_common import (
     display_path,
     ensure_sdkroot,
+    finalize_deterministic_report,
     find_command,
     normalize_text,
     read_diag_json,
     require,
     require_repo_command,
     run,
-    tool_versions,
     write_report,
 )
 
@@ -637,6 +637,23 @@ def run_corpus_cases(
     return results
 
 
+def generate_report(*, safec: Path, env: dict[str, str]) -> dict[str, Any]:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_root = Path(temp_dir)
+        return {
+            "task": "PR06.9.2",
+            "inputs": {
+                "inline_cases": [f"$TMPDIR/{name}.safe" for name in INLINE_CASES],
+                "corpus_cases": [str(path.relative_to(REPO_ROOT)) for path in CORPUS_CASES],
+            },
+            "results": {
+                "inline_cases": run_inline_cases(safec, env, temp_root),
+                "corpus_cases": run_corpus_cases(safec, env, temp_root),
+            },
+            "status": "ok",
+        }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Run the PR06.9.2 lowering and CFG integrity gate."
@@ -644,29 +661,18 @@ def main() -> int:
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     args = parser.parse_args()
 
-    python = find_command("python3")
-    alr = find_command("alr", Path.home() / "bin" / "alr")
+    find_command("python3")
+    find_command("alr", Path.home() / "bin" / "alr")
     safec = require_repo_command(COMPILER_ROOT / "bin" / "safec", "safec")
 
     env = ensure_sdkroot(os.environ.copy())
 
     try:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_root = Path(temp_dir)
-            report = {
-                "task": "PR06.9.2",
-                "tool_versions": tool_versions(python=python, alr=alr),
-                "inputs": {
-                    "inline_cases": [f"$TMPDIR/{name}.safe" for name in INLINE_CASES],
-                    "corpus_cases": [str(path.relative_to(REPO_ROOT)) for path in CORPUS_CASES],
-                },
-                "results": {
-                    "inline_cases": run_inline_cases(safec, env, temp_root),
-                    "corpus_cases": run_corpus_cases(safec, env, temp_root),
-                },
-                "status": "ok",
-            }
-            write_report(args.report, report)
+        report = finalize_deterministic_report(
+            lambda: generate_report(safec=safec, env=env),
+            label="PR06.9.2 lowering/CFG integrity",
+        )
+        write_report(args.report, report)
     except Exception as exc:
         print(f"PR06.9.2 lowering/CFG integrity gate failed: {exc}", file=sys.stderr)
         return 1

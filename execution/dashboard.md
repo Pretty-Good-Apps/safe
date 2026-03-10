@@ -3,7 +3,7 @@
 - **Schema version:** `1`
 - **Frozen spec SHA:** `468cf72332724b04b7c193b4d2a3b02f1584125d`
 - **Active task:** `none`
-- **Next task:** `PR06.9.9`
+- **Next task:** `PR06.9.10`
 - **Updated at:** `2026-03-09T22:47:56Z`
 
 ## Repo Facts
@@ -38,7 +38,7 @@
 | PR06.9.6 | done | PR06.9.5 | 1 |
 | PR06.9.7 | done | PR06.9.6 | 1 |
 | PR06.9.8 | done | PR06.9.7 | 1 |
-| PR06.9.9 | planned | PR06.9.8 | 0 |
+| PR06.9.9 | done | PR06.9.8 | 1 |
 | PR06.9.10 | planned | PR06.9.9 | 0 |
 | PR06.9.11 | planned | PR06.9.10 | 0 |
 | PR06.9.12 | planned | PR06.9.11 | 0 |
@@ -321,13 +321,15 @@
 
 ### PR06.9.9 — Build and reproducibility hardening
 
-- **Status:** `planned`
+- **Status:** `done`
 - **Depends on:** PR06.9.8
 - **Blockers:** none
 - **Acceptance:**
   - alr build, project wiring, and report generation remain deterministic across repeated local and CI runs.
   - No milestone evidence depends on transient timing, unordered JSON, or host-specific file layout.
   - Repeated command runs produce byte-stable outputs where the contract requires determinism.
+- **Evidence:**
+  - `execution/reports/pr0699-build-reproducibility-report.json`
 
 ### PR06.9.10 — Portability and environment assumptions
 
