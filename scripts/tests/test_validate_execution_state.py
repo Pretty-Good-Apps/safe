@@ -15,6 +15,7 @@ from validate_execution_state import (
     check_status_rules,
     check_test_distribution,
     count_test_files,
+    legacy_frontend_cleanup_report,
     runtime_boundary_report,
 )
 
@@ -87,6 +88,45 @@ class ValidateExecutionStateTests(unittest.TestCase):
             self.assertFalse(report["legacy_backend_present"])
             self.assertEqual(report["scanned_files"], ["compiler_impl/src/safe_frontend-sample.adb", "compiler_impl/src/safec.adb"])
             self.assertIn("compiler_impl/src/safe_frontend-sample.adb:\\bSpawn\\b", report["violations"])
+
+    def test_legacy_frontend_cleanup_report_scans_explicit_repo_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            source_dir = repo_root / "compiler_impl" / "src"
+            source_dir.mkdir(parents=True)
+            (source_dir / "safe_frontend-ast.ads").write_text(
+                "package Safe_Frontend.Ast is end Safe_Frontend.Ast;\n",
+                encoding="utf-8",
+            )
+            (source_dir / "safe_frontend-driver.adb").write_text(
+                "with SAFE_FRONTEND.AST;\npackage body Safe_Frontend.Driver is end Safe_Frontend.Driver;\n",
+                encoding="utf-8",
+            )
+            (source_dir / "safe_frontend-sample.adb").write_text(
+                "with safe_frontend.ast;\nprocedure Sample is begin null; end Sample;\n",
+                encoding="utf-8",
+            )
+            (source_dir / "safec.adb").write_text(
+                "procedure Safec is begin null; end Safec;\n",
+                encoding="utf-8",
+            )
+            report = legacy_frontend_cleanup_report(
+                repo_root=repo_root,
+                package_names=["Safe_Frontend.Ast"],
+                file_names=["safe_frontend-ast.ads", "safe_frontend-ast.adb"],
+                live_root_patterns=["compiler_impl/src/safe_frontend-driver.adb"],
+            )
+            self.assertEqual(report["present_files"], ["compiler_impl/src/safe_frontend-ast.ads"])
+            self.assertEqual(report["missing_files"], ["compiler_impl/src/safe_frontend-ast.adb"])
+            self.assertIn("compiler_impl/src/safe_frontend-ast.ads:Safe_Frontend.Ast", report["forbidden_references"])
+            self.assertIn(
+                "compiler_impl/src/safe_frontend-sample.adb:Safe_Frontend.Ast",
+                report["forbidden_references"],
+            )
+            self.assertIn(
+                "compiler_impl/src/safe_frontend-driver.adb:Safe_Frontend.Ast",
+                report["live_runtime_reference_violations"],
+            )
 
 
 if __name__ == "__main__":

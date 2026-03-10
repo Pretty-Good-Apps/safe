@@ -45,3 +45,5 @@ PR06.9.6 makes the unsupported-feature boundary explicit across the Ada-native f
 - `unsupported_source_construct` is reserved for recognized constructs that are outside the current PR05/PR06 subset.
 - `source_frontend_error` remains the reason for genuine frontend failures such as malformed syntax, identifier/package-name mismatches, and oversized literals.
 - `check`, `ast`, and `emit` are all regression-covered so unsupported inputs fail consistently and never leak into partial lowering or emitted artifacts.
+
+PR06.9.8 removes the old shallow `Safe_Frontend.Ast` / `Parser` / `Semantics` / `Mir` chain from the tree entirely. The only live compiler frontend path is the Ada-native `Check_*` plus `Mir_*` pipeline, and later milestones must extend that live path instead of reintroducing the deleted legacy chain.

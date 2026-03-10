@@ -1,6 +1,6 @@
 # SafeC Frontend
 
-This workspace hosts the current Safe compiler frontend through PR06.9.3.
+This workspace hosts the current Safe compiler frontend through PR06.9.8.
 
 ## Scope
 
@@ -20,6 +20,7 @@ All current `safec` commands are now Ada-native for the implemented PR05/PR06 su
 PR06.8 runtime doctrine: Python may be used as glue/orchestration, but it may not own any user-facing compiler command and may not participate in parsing, lowering, semantic decisions, diagnostic selection, or emitted compiler artifacts.
 PR06.9.3 hardens that boundary with a fast static runtime scan in `scripts/validate_execution_state.py` plus a full-CLI masked-runtime gate covering `lex`, `ast`, `validate-mir`, `analyze-mir`, `check`, and `emit`.
 PR06.9.6 hardens the unsupported-feature boundary across `check`, `ast`, and `emit`.
+PR06.9.8 removes the old shallow `Ast` / `Parser` / `Semantics` / `Mir` chain entirely. The only live frontend path is now the Ada-native `Check_*` plus `Mir_*` pipeline, and later work must extend that path rather than revive the deleted legacy chain.
 
 Unsupported-feature classification rule:
 - `unsupported_source_construct` means the Ada-native frontend recognized a construct that is outside the current PR05/PR06 subset.

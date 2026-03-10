@@ -3,7 +3,7 @@
 - **Schema version:** `1`
 - **Frozen spec SHA:** `468cf72332724b04b7c193b4d2a3b02f1584125d`
 - **Active task:** `none`
-- **Next task:** `PR06.9.8`
+- **Next task:** `PR06.9.9`
 - **Updated at:** `2026-03-09T22:47:56Z`
 
 ## Repo Facts
@@ -37,7 +37,7 @@
 | PR06.9.5 | done | PR06.9.4 | 1 |
 | PR06.9.6 | done | PR06.9.5 | 1 |
 | PR06.9.7 | done | PR06.9.6 | 1 |
-| PR06.9.8 | planned | PR06.9.7 | 0 |
+| PR06.9.8 | done | PR06.9.7 | 1 |
 | PR06.9.9 | planned | PR06.9.8 | 0 |
 | PR06.9.10 | planned | PR06.9.9 | 0 |
 | PR06.9.11 | planned | PR06.9.10 | 0 |
@@ -309,13 +309,15 @@
 
 ### PR06.9.8 — Dormant legacy package cleanup
 
-- **Status:** `planned`
+- **Status:** `done`
 - **Depends on:** PR06.9.7
 - **Blockers:** none
 - **Acceptance:**
   - A reachability audit proves which legacy frontend packages are still on any live safec runtime path.
   - Truly dead legacy packages are removed, and any temporarily retained inactive package is explicitly marked non-runtime.
   - The live safec runtime path no longer references dormant parser, semantics, or MIR packages unnecessarily.
+- **Evidence:**
+  - `execution/reports/pr0698-legacy-package-cleanup-report.json`
 
 ### PR06.9.9 — Build and reproducibility hardening
 
