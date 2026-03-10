@@ -12,7 +12,6 @@ from _lib.harness_common import (
     require,
     serialize_report,
     sha256_text,
-    tool_versions,
     write_report,
 )
 from validate_execution_state import legacy_frontend_cleanup_report
@@ -22,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_REPORT = REPO_ROOT / "execution" / "reports" / "pr0698-legacy-package-cleanup-report.json"
 
 
-def generate_report(*, python: str, alr: str | None) -> dict[str, object]:
+def generate_report() -> dict[str, object]:
     cleanup = legacy_frontend_cleanup_report()
     require(not cleanup["present_files"], f"legacy files still present: {cleanup['present_files']}")
     require(
@@ -41,7 +40,6 @@ def generate_report(*, python: str, alr: str | None) -> dict[str, object]:
     return {
         "task": "PR06.9.8",
         "status": "ok",
-        "tool_versions": tool_versions(python=python, alr=alr),
         "legacy_frontend_cleanup": cleanup,
     }
 
@@ -51,14 +49,10 @@ def main() -> int:
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     args = parser.parse_args()
 
-    python = find_command("python3")
-    try:
-        alr = find_command("alr", Path.home() / "bin" / "alr")
-    except FileNotFoundError:
-        alr = None
+    find_command("python3")
 
-    report = generate_report(python=python, alr=alr)
-    repeat_report = generate_report(python=python, alr=alr)
+    report = generate_report()
+    repeat_report = generate_report()
 
     serialized = serialize_report(report)
     repeat_serialized = serialize_report(repeat_report)

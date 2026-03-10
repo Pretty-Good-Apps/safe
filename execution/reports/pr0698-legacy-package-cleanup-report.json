@@ -110,13 +110,8 @@
       "compiler_impl/src/safe_frontend.ads"
     ]
   },
-  "repeat_sha256": "bf4178a1e04e0978aac9eeb51b2200f94106f31a27a8b281818648e0ec4df707",
-  "report_sha256": "bf4178a1e04e0978aac9eeb51b2200f94106f31a27a8b281818648e0ec4df707",
+  "repeat_sha256": "1248e3f5d1f76dbaca16f194f2d86bc809f0f3587060179526b8e8ba5a2e2b3c",
+  "report_sha256": "1248e3f5d1f76dbaca16f194f2d86bc809f0f3587060179526b8e8ba5a2e2b3c",
   "status": "ok",
-  "task": "PR06.9.8",
-  "tool_versions": {
-    "alr": "alr 2.1.0",
-    "gprbuild": "GPRBUILD 25.0.0 (2025-05-16) (aarch64-apple-darwin23.6.0)",
-    "python3": "Python 3.9.6"
-  }
+  "task": "PR06.9.8"
 }
