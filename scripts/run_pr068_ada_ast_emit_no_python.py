@@ -140,6 +140,10 @@ def emitted_paths(root: Path, sample: Path) -> dict[str, Path]:
     }
 
 
+def repo_cli_path(path: Path) -> str:
+    return str(path.relative_to(REPO_ROOT))
+
+
 def make_masked_env(temp_root: Path) -> tuple[dict[str, str], dict[str, Path], Path]:
     stub_dir = temp_root / "python-mask"
     stub_dir.mkdir(parents=True, exist_ok=True)
@@ -491,7 +495,7 @@ def generate_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[st
 
         ast_path = temp_root / "rule1_accumulate.ast.json"
         ast_run = run(
-            [str(safec), "ast", str(AST_SAMPLE)],
+            [str(safec), "ast", repo_cli_path(AST_SAMPLE)],
             cwd=REPO_ROOT,
             env=masked_env,
             stdout_path=ast_path,
@@ -513,7 +517,7 @@ def generate_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[st
                 [
                     str(safec),
                     "emit",
-                    str(sample),
+                    repo_cli_path(sample),
                     "--out-dir",
                     str(emit_a_root / "out"),
                     "--interface-dir",
@@ -527,7 +531,7 @@ def generate_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[st
                 [
                     str(safec),
                     "emit",
-                    str(sample),
+                    repo_cli_path(sample),
                     "--out-dir",
                     str(emit_b_root / "out"),
                     "--interface-dir",
@@ -620,7 +624,7 @@ def generate_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[st
             [
                 str(safec),
                 "emit",
-                str(NEGATIVE_EMIT_SAMPLE),
+                repo_cli_path(NEGATIVE_EMIT_SAMPLE),
                 "--out-dir",
                 str(negative_root / "out"),
                 "--interface-dir",
