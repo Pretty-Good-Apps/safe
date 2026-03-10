@@ -60,6 +60,43 @@ SAFEC_ALLOWED_OS_LIB_USES = [
     "with GNAT.OS_Lib;",
     "GNAT.OS_Lib.OS_Exit",
 ]
+LEGACY_FRONTEND_PACKAGES = [
+    "Safe_Frontend.Ast",
+    "Safe_Frontend.Parser",
+    "Safe_Frontend.Semantics",
+    "Safe_Frontend.Mir",
+]
+LEGACY_FRONTEND_REFERENCE_PATTERNS = {
+    package: rf"\b{re.escape(package)}\b" for package in LEGACY_FRONTEND_PACKAGES
+}
+LEGACY_FRONTEND_FILE_NAMES = [
+    "safe_frontend-ast.ads",
+    "safe_frontend-ast.adb",
+    "safe_frontend-parser.ads",
+    "safe_frontend-parser.adb",
+    "safe_frontend-semantics.ads",
+    "safe_frontend-semantics.adb",
+    "safe_frontend-mir.ads",
+    "safe_frontend-mir.adb",
+]
+LEGACY_FRONTEND_LIVE_ROOT_PATTERNS = [
+    "compiler_impl/src/safec.adb",
+    "compiler_impl/src/safe_frontend-driver.adb",
+    "compiler_impl/src/safe_frontend-check_*.adb",
+    "compiler_impl/src/safe_frontend-check_*.ads",
+    "compiler_impl/src/safe_frontend-mir_*.adb",
+    "compiler_impl/src/safe_frontend-mir_*.ads",
+    "compiler_impl/src/safe_frontend-lexer.adb",
+    "compiler_impl/src/safe_frontend-lexer.ads",
+    "compiler_impl/src/safe_frontend-source.adb",
+    "compiler_impl/src/safe_frontend-source.ads",
+    "compiler_impl/src/safe_frontend-types.adb",
+    "compiler_impl/src/safe_frontend-types.ads",
+    "compiler_impl/src/safe_frontend-diagnostics.adb",
+    "compiler_impl/src/safe_frontend-diagnostics.ads",
+    "compiler_impl/src/safe_frontend-json.adb",
+    "compiler_impl/src/safe_frontend-json.ads",
+]
 
 SHA_CHECKS = [
     (REPO_ROOT / "README.md", r"\| Frozen spec commit \| `([0-9a-f]{7,40})` \|"),
@@ -250,6 +287,87 @@ def check_runtime_boundary() -> None:
         fail(f"runtime boundary violations: {violations}")
 
 
+def legacy_frontend_cleanup_report(
+    *,
+    repo_root: Path = REPO_ROOT,
+    package_names: Sequence[str] = LEGACY_FRONTEND_PACKAGES,
+    file_names: Sequence[str] = LEGACY_FRONTEND_FILE_NAMES,
+    live_root_patterns: Sequence[str] = LEGACY_FRONTEND_LIVE_ROOT_PATTERNS,
+) -> Dict[str, Any]:
+    source_root = repo_root / "compiler_impl" / "src"
+    expected_files = [source_root / name for name in file_names]
+    present_files = [
+        str(path.relative_to(repo_root))
+        for path in expected_files
+        if path.exists()
+    ]
+    missing_files = [
+        str(path.relative_to(repo_root))
+        for path in expected_files
+        if not path.exists()
+    ]
+
+    package_patterns = {
+        package: LEGACY_FRONTEND_REFERENCE_PATTERNS.get(package, rf"\b{re.escape(package)}\b")
+        for package in package_names
+    }
+
+    scanned_source_files = [
+        path
+        for suffix in ("*.adb", "*.ads")
+        for path in sorted(source_root.glob(suffix))
+    ]
+    forbidden_references: List[str] = []
+    for path in scanned_source_files:
+        text = path.read_text(encoding="utf-8")
+        for package, pattern in package_patterns.items():
+            if re.search(pattern, text):
+                forbidden_references.append(f"{path.relative_to(repo_root)}:{package}")
+
+    live_runtime_roots: List[str] = []
+    live_runtime_reference_violations: List[str] = []
+    live_runtime_files: List[Path] = []
+    seen_live: Set[Path] = set()
+    for pattern in live_root_patterns:
+        for path in sorted(repo_root.glob(pattern)):
+            if path not in seen_live:
+                seen_live.add(path)
+                live_runtime_files.append(path)
+                live_runtime_roots.append(str(path.relative_to(repo_root)))
+    for path in live_runtime_files:
+        text = path.read_text(encoding="utf-8")
+        for package, pattern in package_patterns.items():
+            if re.search(pattern, text):
+                live_runtime_reference_violations.append(
+                    f"{path.relative_to(repo_root)}:{package}"
+                )
+
+    return {
+        "candidate_packages": list(package_names),
+        "expected_files": [str(path.relative_to(repo_root)) for path in expected_files],
+        "present_files": present_files,
+        "missing_files": missing_files,
+        "scanned_source_files": [str(path.relative_to(repo_root)) for path in scanned_source_files],
+        "forbidden_references": forbidden_references,
+        "live_runtime_roots": live_runtime_roots,
+        "live_runtime_reference_violations": live_runtime_reference_violations,
+        "retained_legacy_packages": [],
+    }
+
+
+def check_legacy_frontend_cleanup() -> None:
+    report = legacy_frontend_cleanup_report()
+    if report["present_files"]:
+        fail(f"legacy frontend files still present: {report['present_files']}")
+    if report["forbidden_references"]:
+        fail(f"legacy frontend references still present: {report['forbidden_references']}")
+    if report["live_runtime_reference_violations"]:
+        fail(
+            "live runtime roots still reference legacy frontend packages: "
+            f"{report['live_runtime_reference_violations']}"
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tracker", type=Path, default=TRACKER_PATH)
@@ -265,6 +383,7 @@ def main() -> int:
     check_test_distribution(tracker)
     check_dashboard_freshness(tracker)
     check_runtime_boundary()
+    check_legacy_frontend_cleanup()
     print("execution state: OK")
     return 0
 

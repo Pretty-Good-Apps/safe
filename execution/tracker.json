@@ -3,7 +3,7 @@
   "updated_at": "2026-03-09T22:47:56Z",
   "frozen_spec_sha": "468cf72332724b04b7c193b4d2a3b02f1584125d",
   "active_task_id": null,
-  "next_task_id": "PR06.9.8",
+  "next_task_id": "PR06.9.9",
   "repo_facts": {
     "tests": {
       "positive": 35,
@@ -339,14 +339,16 @@
     {
       "id": "PR06.9.8",
       "title": "Dormant legacy package cleanup",
-      "status": "planned",
+      "status": "done",
       "depends_on": ["PR06.9.7"],
       "acceptance": [
         "A reachability audit proves which legacy frontend packages are still on any live safec runtime path.",
         "Truly dead legacy packages are removed, and any temporarily retained inactive package is explicitly marked non-runtime.",
         "The live safec runtime path no longer references dormant parser, semantics, or MIR packages unnecessarily."
       ],
-      "evidence": [],
+      "evidence": [
+        "execution/reports/pr0698-legacy-package-cleanup-report.json"
+      ],
       "blockers": [],
       "unblock_condition": ""
     },
