@@ -793,6 +793,54 @@ class ValidateExecutionStateTests(unittest.TestCase):
                 ["README.md:PR00–PR06.9.1 sequential frontend landed"],
             )
 
+    def test_documentation_architecture_clarity_required_links_accept_anchors(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            docs_dir = repo_root / "docs"
+            docs_dir.mkdir()
+            (docs_dir / "frontend_architecture_baseline.md").write_text(
+                "PR07 must extend the live path rather than revive deleted legacy packages.\n",
+                encoding="utf-8",
+            )
+            (docs_dir / "frontend_scale_limits.md").write_text(
+                "PR05/PR06 supported subset only\n",
+                encoding="utf-8",
+            )
+            (repo_root / "README.md").write_text(
+                "[Baseline](docs/frontend_architecture_baseline.md#current-boundary)\n",
+                encoding="utf-8",
+            )
+            compiler_dir = repo_root / "compiler_impl"
+            compiler_dir.mkdir()
+            (compiler_dir / "README.md").write_text(
+                "[Baseline](../docs/frontend_architecture_baseline.md#current-boundary)\n",
+                encoding="utf-8",
+            )
+            release_dir = repo_root / "release"
+            release_dir.mkdir()
+            (release_dir / "frontend_runtime_decision.md").write_text(
+                "[Baseline](../docs/frontend_architecture_baseline.md#current-boundary)\n",
+                encoding="utf-8",
+            )
+
+            report = documentation_architecture_clarity_report(
+                repo_root=repo_root,
+                doc_requirements={
+                    "README.md": [],
+                    "compiler_impl/README.md": [],
+                    "release/frontend_runtime_decision.md": [],
+                    "docs/frontend_architecture_baseline.md": [],
+                    "docs/frontend_scale_limits.md": [],
+                },
+                required_links={
+                    "README.md": ["docs/frontend_architecture_baseline.md"],
+                    "compiler_impl/README.md": ["../docs/frontend_architecture_baseline.md"],
+                    "release/frontend_runtime_decision.md": ["../docs/frontend_architecture_baseline.md"],
+                },
+                stale_markers={},
+            )
+            self.assertEqual(report["missing_required_links"], [])
+
     def test_check_documentation_architecture_clarity_accepts_valid_docs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             repo_root = Path(temp_dir)

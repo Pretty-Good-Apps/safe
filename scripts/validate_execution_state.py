@@ -979,7 +979,7 @@ def documentation_architecture_clarity_report(
                 stale_boundary_violations.append(f"{relative_path}:{marker}")
 
         local_links = _local_markdown_links(text)
-        link_targets = set(local_links)
+        link_targets = {target.split("#", 1)[0] for target in local_links}
         for target in required_links.get(relative_path, []):
             if target not in link_targets:
                 missing_required_links.append(f"{relative_path}:{target}")
