@@ -169,6 +169,7 @@ package body Safe_Frontend.Mir_Analyze is
    INT64_LOW  : constant Wide_Integer := -(2 ** 63);
    INT64_HIGH : constant Wide_Integer := (2 ** 63) - 1;
    FLOAT_FINITE_LIMIT : constant Real_Value := 1.0E+308;
+   FLOAT_CONTAINMENT_EPSILON_SCALE : constant Real_Value := 4096.0;
 
    Diagnostic_Failure : exception;
    Raised_Diagnostic  : MD.Diagnostic;
@@ -1058,13 +1059,23 @@ package body Safe_Frontend.Mir_Analyze is
    function Float_Interval_Contains
      (Container : Float_Interval;
       Value     : Float_Interval) return Boolean is
+      Max_Abs : constant Real_Value :=
+        Real_Value'Max
+          (1.0,
+           Real_Value'Max
+             (Real_Value'Max (abs Container.Low, abs Container.High),
+              Real_Value'Max (abs Value.Low, abs Value.High)));
+      Tolerance : constant Real_Value :=
+        Real_Value'Max
+          (1.0E-12,
+           FLOAT_CONTAINMENT_EPSILON_SCALE * Real_Value'Model_Epsilon * Max_Abs);
    begin
       return
         Value.Initialized
         and then not Value.May_Be_NaN
         and then not Value.May_Be_Infinite
-        and then Container.Low <= Value.Low
-        and then Value.High <= Container.High;
+        and then Container.Low - Tolerance <= Value.Low
+        and then Value.High <= Container.High + Tolerance;
    end Float_Interval_Contains;
 
    function Float_May_Contain_Zero
