@@ -3,7 +3,7 @@
 - **Schema version:** `1`
 - **Frozen spec SHA:** `468cf72332724b04b7c193b4d2a3b02f1584125d`
 - **Active task:** `none`
-- **Next task:** `PR06.9.10`
+- **Next task:** `PR06.9.11`
 - **Updated at:** `2026-03-09T22:47:56Z`
 
 ## Repo Facts
@@ -39,7 +39,7 @@
 | PR06.9.7 | done | PR06.9.6 | 1 |
 | PR06.9.8 | done | PR06.9.7 | 1 |
 | PR06.9.9 | done | PR06.9.8 | 1 |
-| PR06.9.10 | planned | PR06.9.9 | 0 |
+| PR06.9.10 | done | PR06.9.9 | 1 |
 | PR06.9.11 | planned | PR06.9.10 | 0 |
 | PR06.9.12 | planned | PR06.9.11 | 0 |
 | PR06.9.13 | planned | PR06.9.12 | 0 |
@@ -333,13 +333,15 @@
 
 ### PR06.9.10 — Portability and environment assumptions
 
-- **Status:** `planned`
+- **Status:** `done`
 - **Depends on:** PR06.9.9
 - **Blockers:** none
 - **Acceptance:**
   - PATH lookup, temp-dir use, SDK or tool discovery, and shell assumptions are explicit and documented.
   - The supported-platform policy for compiler and glue gates is written down and tested where practical.
   - No-Python runtime enforcement covers the documented interpreter names and invocation patterns.
+- **Evidence:**
+  - `execution/reports/pr06910-portability-environment-report.json`
 
 ### PR06.9.11 — Glue-script safety
 

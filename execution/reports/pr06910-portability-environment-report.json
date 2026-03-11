@@ -1,0 +1,143 @@
+{
+  "deterministic": true,
+  "environment_assumptions": {
+    "doc_policy_violations": [],
+    "docs_scanned": [
+      "compiler_impl/README.md",
+      "release/frontend_runtime_decision.md",
+      "docs/macos_alire_toolchain_repair.md"
+    ],
+    "masked_python_interpreters": [
+      "python",
+      "python3",
+      "python3.11"
+    ],
+    "missing_doc_files": [],
+    "path_lookup_violations": [],
+    "portability_module_violations": [],
+    "python_invocation_patterns": [
+      "(?<![A-Za-z0-9_./-])python(?![A-Za-z0-9_.-])",
+      "(?<![A-Za-z0-9_./-])python3(?![A-Za-z0-9_.-])",
+      "(?<![A-Za-z0-9_./-])python3\\.\\d+(?![A-Za-z0-9_.-])",
+      "(?<![A-Za-z0-9_.-])(?:\\.{1,2}/|[^\\\"'\\s]+/)+python(?![A-Za-z0-9_.-])",
+      "(?<![A-Za-z0-9_.-])(?:\\.{1,2}/|[^\\\"'\\s]+/)+python3(?![A-Za-z0-9_.-])",
+      "(?<![A-Za-z0-9_.-])(?:\\.{1,2}/|[^\\\"'\\s]+/)+python3\\.\\d+(?![A-Za-z0-9_.-])"
+    ],
+    "runtime_source_files": [
+      "compiler_impl/src/safe_frontend-check_emit.adb",
+      "compiler_impl/src/safe_frontend-check_lower.adb",
+      "compiler_impl/src/safe_frontend-check_model.adb",
+      "compiler_impl/src/safe_frontend-check_parse.adb",
+      "compiler_impl/src/safe_frontend-check_render.adb",
+      "compiler_impl/src/safe_frontend-check_resolve.adb",
+      "compiler_impl/src/safe_frontend-diagnostics.adb",
+      "compiler_impl/src/safe_frontend-driver.adb",
+      "compiler_impl/src/safe_frontend-json.adb",
+      "compiler_impl/src/safe_frontend-lexer.adb",
+      "compiler_impl/src/safe_frontend-mir_analyze.adb",
+      "compiler_impl/src/safe_frontend-mir_diagnostics.adb",
+      "compiler_impl/src/safe_frontend-mir_json.adb",
+      "compiler_impl/src/safe_frontend-mir_model.adb",
+      "compiler_impl/src/safe_frontend-mir_validate.adb",
+      "compiler_impl/src/safe_frontend-mir_write.adb",
+      "compiler_impl/src/safe_frontend-source.adb",
+      "compiler_impl/src/safe_frontend-types.adb",
+      "compiler_impl/src/safec.adb",
+      "compiler_impl/src/safe_frontend-check_emit.ads",
+      "compiler_impl/src/safe_frontend-check_lower.ads",
+      "compiler_impl/src/safe_frontend-check_model.ads",
+      "compiler_impl/src/safe_frontend-check_parse.ads",
+      "compiler_impl/src/safe_frontend-check_render.ads",
+      "compiler_impl/src/safe_frontend-check_resolve.ads",
+      "compiler_impl/src/safe_frontend-diagnostics.ads",
+      "compiler_impl/src/safe_frontend-driver.ads",
+      "compiler_impl/src/safe_frontend-json.ads",
+      "compiler_impl/src/safe_frontend-lexer.ads",
+      "compiler_impl/src/safe_frontend-mir_analyze.ads",
+      "compiler_impl/src/safe_frontend-mir_diagnostics.ads",
+      "compiler_impl/src/safe_frontend-mir_json.ads",
+      "compiler_impl/src/safe_frontend-mir_model.ads",
+      "compiler_impl/src/safe_frontend-mir_validate.ads",
+      "compiler_impl/src/safe_frontend-mir_write.ads",
+      "compiler_impl/src/safe_frontend-source.ads",
+      "compiler_impl/src/safe_frontend-types.ads",
+      "compiler_impl/src/safe_frontend.ads"
+    ],
+    "runtime_source_violations": [],
+    "scripts_scanned": [
+      "scripts/run_pr068_ada_ast_emit_no_python.py",
+      "scripts/run_pr06910_portability_environment.py",
+      "scripts/run_pr0693_runtime_boundary.py",
+      "scripts/validate_execution_state.py"
+    ],
+    "shell_assumption_violations": [],
+    "supported_platforms": [
+      "linux",
+      "macos"
+    ],
+    "tempdir_convention_violations": [],
+    "unsupported_platforms": [
+      "windows"
+    ]
+  },
+  "monitored_paths": [
+    "compiler_impl/README.md",
+    "release/frontend_runtime_decision.md",
+    "docs/macos_alire_toolchain_repair.md",
+    "execution/reports/pr0693-runtime-boundary-report.json",
+    "execution/reports/pr068-ada-ast-emit-no-python-report.json",
+    "execution/reports/pr06910-portability-environment-report.json"
+  ],
+  "repeat_sha256": "506734f3fd4eeded02c89e36013eaf7aa8867f2c630cc30f2853268ab2f7384b",
+  "report_sha256": "506734f3fd4eeded02c89e36013eaf7aa8867f2c630cc30f2853268ab2f7384b",
+  "reruns": {
+    "ast_emit_no_python": {
+      "command": [
+        "python3",
+        "scripts/run_pr068_ada_ast_emit_no_python.py"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "pr068 ast/emit gate: OK (execution/reports/pr068-ada-ast-emit-no-python-report.json)\n"
+    },
+    "runtime_boundary": {
+      "command": [
+        "python3",
+        "scripts/run_pr0693_runtime_boundary.py"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "pr0693 runtime-boundary gate: OK (execution/reports/pr0693-runtime-boundary-report.json)\n"
+    },
+    "validate_execution_state": {
+      "command": [
+        "python3",
+        "scripts/validate_execution_state.py"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "execution state: OK\n"
+    }
+  },
+  "status": "ok",
+  "task": "PR06.9.10",
+  "unit_tests": {
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts/tests",
+      "-p",
+      "test_*.py"
+    ],
+    "cwd": "$REPO_ROOT",
+    "result": "OK",
+    "returncode": 0,
+    "tests_ran": 27
+  }
+}

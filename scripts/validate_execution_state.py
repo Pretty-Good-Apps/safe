@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import re
 import sys
@@ -11,6 +12,19 @@ from pathlib import Path
 from typing import Any, Dict, List, Sequence, Set
 
 from _lib.harness_common import serialize_report
+from _lib.platform_assumptions import (
+    DOCUMENTED_PYTHON_FORMS,
+    MACOS_SDK_DISCOVERY_FORMS,
+    MASKED_PYTHON_INTERPRETERS,
+    PATH_LOOKUP_POLICY_TEXT,
+    SHELL_POLICY_TEXT,
+    STATIC_PYTHON_INVOCATION_PATTERNS,
+    SUPPORTED_FRONTEND_ENVIRONMENTS,
+    SUPPORTED_PLATFORM_POLICY_TEXT,
+    TEMPDIR_POLICY_TEXT,
+    UNSUPPORTED_FRONTEND_ENVIRONMENTS,
+    UNSUPPORTED_PLATFORM_POLICY_TEXT,
+)
 from render_execution_status import DASHBOARD_PATH, TRACKER_PATH, load_tracker, render_dashboard
 
 
@@ -26,10 +40,10 @@ RUNTIME_BOUNDARY_PATTERNS = [
             r"\bBackend_Script\b",
             r"\bGNAT\.OS_Lib\b",
             r"pr05_backend\.py",
-            r"\bpython(?:3(?:\.\d+)?)?\b",
             r"\bSpawn\b",
             r"\bNon_Blocking_Spawn\b",
             r"\bGNAT\.Expect\b",
+            *STATIC_PYTHON_INVOCATION_PATTERNS,
         ],
     ),
     (
@@ -39,10 +53,10 @@ RUNTIME_BOUNDARY_PATTERNS = [
             r"\bBackend_Script\b",
             r"\bGNAT\.OS_Lib\b",
             r"pr05_backend\.py",
-            r"\bpython(?:3(?:\.\d+)?)?\b",
             r"\bSpawn\b",
             r"\bNon_Blocking_Spawn\b",
             r"\bGNAT\.Expect\b",
+            *STATIC_PYTHON_INVOCATION_PATTERNS,
         ],
     ),
     (
@@ -51,10 +65,10 @@ RUNTIME_BOUNDARY_PATTERNS = [
             r"\bRun_Backend\b",
             r"\bBackend_Script\b",
             r"pr05_backend\.py",
-            r"\bpython(?:3(?:\.\d+)?)?\b",
             r"\bSpawn\b",
             r"\bNon_Blocking_Spawn\b",
             r"\bGNAT\.Expect\b",
+            *STATIC_PYTHON_INVOCATION_PATTERNS,
         ],
     ),
 ]
@@ -118,6 +132,57 @@ EVIDENCE_FORBIDDEN_MARKERS = [
     "/Users/",
     "/home/runner/",
 ]
+ENVIRONMENT_DOC_REQUIREMENTS = {
+    "compiler_impl/README.md": [
+        SUPPORTED_PLATFORM_POLICY_TEXT,
+        UNSUPPORTED_PLATFORM_POLICY_TEXT,
+        PATH_LOOKUP_POLICY_TEXT,
+        TEMPDIR_POLICY_TEXT,
+        SHELL_POLICY_TEXT,
+        *MACOS_SDK_DISCOVERY_FORMS,
+        *DOCUMENTED_PYTHON_FORMS,
+    ],
+    "release/frontend_runtime_decision.md": [
+        SUPPORTED_PLATFORM_POLICY_TEXT,
+        UNSUPPORTED_PLATFORM_POLICY_TEXT,
+        PATH_LOOKUP_POLICY_TEXT,
+        TEMPDIR_POLICY_TEXT,
+        SHELL_POLICY_TEXT,
+        *MACOS_SDK_DISCOVERY_FORMS,
+        *DOCUMENTED_PYTHON_FORMS,
+    ],
+    "docs/macos_alire_toolchain_repair.md": [
+        "developer recovery procedure",
+        "not a compiler runtime dependency",
+        *MACOS_SDK_DISCOVERY_FORMS,
+    ],
+}
+PORTABILITY_MODULE_REQUIREMENTS = {
+    "scripts/run_pr0693_runtime_boundary.py": [
+        "MASKED_PYTHON_INTERPRETERS",
+    ],
+    "scripts/run_pr068_ada_ast_emit_no_python.py": [
+        "MASKED_PYTHON_INTERPRETERS",
+        "STATIC_PYTHON_INVOCATION_PATTERNS",
+    ],
+    "scripts/validate_execution_state.py": [
+        "STATIC_PYTHON_INVOCATION_PATTERNS",
+        "SUPPORTED_PLATFORM_POLICY_TEXT",
+        "UNSUPPORTED_PLATFORM_POLICY_TEXT",
+    ],
+}
+PORTABILITY_TEMPDIR_SCRIPTS = [
+    "scripts/run_pr0693_runtime_boundary.py",
+    "scripts/run_pr068_ada_ast_emit_no_python.py",
+]
+PORTABILITY_PATH_LOOKUP_SCRIPTS = [
+    "scripts/run_pr0693_runtime_boundary.py",
+    "scripts/run_pr068_ada_ast_emit_no_python.py",
+    "scripts/run_pr06910_portability_environment.py",
+]
+PLATFORM_ASSUMPTIONS_IMPORT_PATTERN = (
+    r"^\s*(?:from\s+_lib\.platform_assumptions\s+import\b|import\s+_lib\.platform_assumptions\b)"
+)
 
 
 def fail(message: str) -> None:
@@ -459,6 +524,172 @@ def check_legacy_frontend_cleanup() -> None:
         )
 
 
+def environment_assumptions_report(
+    *,
+    repo_root: Path = REPO_ROOT,
+    doc_requirements: Dict[str, Sequence[str]] = ENVIRONMENT_DOC_REQUIREMENTS,
+    runtime_source_globs: Sequence[str] = (
+        "compiler_impl/src/*.adb",
+        "compiler_impl/src/*.ads",
+    ),
+    python_patterns: Sequence[str] = STATIC_PYTHON_INVOCATION_PATTERNS,
+    module_requirements: Dict[str, Sequence[str]] = PORTABILITY_MODULE_REQUIREMENTS,
+    tempdir_scripts: Sequence[str] = PORTABILITY_TEMPDIR_SCRIPTS,
+    path_lookup_scripts: Sequence[str] = PORTABILITY_PATH_LOOKUP_SCRIPTS,
+) -> Dict[str, Any]:
+    missing_doc_files: List[str] = []
+    doc_policy_violations: List[str] = []
+    docs_scanned: List[str] = []
+    for relative_path, required_markers in doc_requirements.items():
+        docs_scanned.append(relative_path)
+        path = repo_root / relative_path
+        if not path.exists():
+            missing_doc_files.append(relative_path)
+            continue
+        text = path.read_text(encoding="utf-8")
+        for marker in required_markers:
+            if marker not in text:
+                doc_policy_violations.append(f"{relative_path}:{marker}")
+
+    runtime_source_files: List[str] = []
+    runtime_source_violations: List[str] = []
+    seen_sources: Set[Path] = set()
+    for pattern in runtime_source_globs:
+        for path in sorted(repo_root.glob(pattern)):
+            if path in seen_sources:
+                continue
+            seen_sources.add(path)
+            runtime_source_files.append(str(path.relative_to(repo_root)))
+            text = path.read_text(encoding="utf-8")
+            for token in python_patterns:
+                if re.search(token, text, flags=re.IGNORECASE):
+                    runtime_source_violations.append(f"{path.relative_to(repo_root)}:{token}")
+
+    portability_module_violations: List[str] = []
+    scripts_scanned = sorted(set(module_requirements) | set(tempdir_scripts) | set(path_lookup_scripts))
+    for relative_path, required_tokens in module_requirements.items():
+        path = repo_root / relative_path
+        if not path.exists():
+            portability_module_violations.append(f"{relative_path}:missing")
+            continue
+        text = path.read_text(encoding="utf-8")
+        if not re.search(PLATFORM_ASSUMPTIONS_IMPORT_PATTERN, text, flags=re.MULTILINE):
+            portability_module_violations.append(f"{relative_path}:platform_assumptions import missing")
+        for token in required_tokens:
+            if token not in text:
+                portability_module_violations.append(f"{relative_path}:{token}")
+
+    tempdir_convention_violations: List[str] = []
+    for relative_path in tempdir_scripts:
+        path = repo_root / relative_path
+        if not path.exists():
+            tempdir_convention_violations.append(f"{relative_path}:missing")
+            continue
+        text = path.read_text(encoding="utf-8")
+        if "TemporaryDirectory(prefix=" not in text:
+            tempdir_convention_violations.append(relative_path)
+
+    path_lookup_violations: List[str] = []
+    for relative_path in path_lookup_scripts:
+        path = repo_root / relative_path
+        if not path.exists():
+            path_lookup_violations.append(f"{relative_path}:missing")
+            continue
+        text = path.read_text(encoding="utf-8")
+        if "find_command(" not in text:
+            path_lookup_violations.append(relative_path)
+
+    shell_assumption_violations: List[str] = []
+    for relative_path in scripts_scanned:
+        path = repo_root / relative_path
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
+        try:
+            tree = ast.parse(text, filename=str(path))
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                for keyword in node.keywords:
+                    if keyword.arg == "shell" and isinstance(keyword.value, ast.Constant) and keyword.value.value is True:
+                        shell_assumption_violations.append(f"{relative_path}:shell=True")
+                if (
+                    isinstance(node.func, ast.Attribute)
+                    and isinstance(node.func.value, ast.Name)
+                    and node.func.value.id == "os"
+                    and node.func.attr == "system"
+                ):
+                    shell_assumption_violations.append(f"{relative_path}:os.system")
+
+    return {
+        "supported_platforms": list(SUPPORTED_FRONTEND_ENVIRONMENTS),
+        "unsupported_platforms": list(UNSUPPORTED_FRONTEND_ENVIRONMENTS),
+        "masked_python_interpreters": list(MASKED_PYTHON_INTERPRETERS),
+        "python_invocation_patterns": list(python_patterns),
+        "docs_scanned": docs_scanned,
+        "missing_doc_files": missing_doc_files,
+        "doc_policy_violations": doc_policy_violations,
+        "runtime_source_files": runtime_source_files,
+        "runtime_source_violations": runtime_source_violations,
+        "scripts_scanned": scripts_scanned,
+        "portability_module_violations": portability_module_violations,
+        "tempdir_convention_violations": tempdir_convention_violations,
+        "path_lookup_violations": path_lookup_violations,
+        "shell_assumption_violations": shell_assumption_violations,
+    }
+
+
+def check_environment_assumptions(
+    *,
+    repo_root: Path = REPO_ROOT,
+    doc_requirements: Dict[str, Sequence[str]] = ENVIRONMENT_DOC_REQUIREMENTS,
+    runtime_source_globs: Sequence[str] = (
+        "compiler_impl/src/*.adb",
+        "compiler_impl/src/*.ads",
+    ),
+    python_patterns: Sequence[str] = STATIC_PYTHON_INVOCATION_PATTERNS,
+    module_requirements: Dict[str, Sequence[str]] = PORTABILITY_MODULE_REQUIREMENTS,
+    tempdir_scripts: Sequence[str] = PORTABILITY_TEMPDIR_SCRIPTS,
+    path_lookup_scripts: Sequence[str] = PORTABILITY_PATH_LOOKUP_SCRIPTS,
+) -> None:
+    report = environment_assumptions_report(
+        repo_root=repo_root,
+        doc_requirements=doc_requirements,
+        runtime_source_globs=runtime_source_globs,
+        python_patterns=python_patterns,
+        module_requirements=module_requirements,
+        tempdir_scripts=tempdir_scripts,
+        path_lookup_scripts=path_lookup_scripts,
+    )
+    if report["missing_doc_files"]:
+        fail(f"missing portability docs: {report['missing_doc_files']}")
+    if report["doc_policy_violations"]:
+        fail(f"missing portability policy markers: {report['doc_policy_violations']}")
+    if report["runtime_source_violations"]:
+        fail(f"runtime sources still reference Python invocation patterns: {report['runtime_source_violations']}")
+    if report["portability_module_violations"]:
+        fail(
+            "portability-sensitive scripts are not sourced from shared assumptions: "
+            f"{report['portability_module_violations']}"
+        )
+    if report["tempdir_convention_violations"]:
+        fail(
+            "portability-sensitive scripts must use deterministic TemporaryDirectory prefixes: "
+            f"{report['tempdir_convention_violations']}"
+        )
+    if report["path_lookup_violations"]:
+        fail(
+            "portability-sensitive scripts must use PATH-based command discovery: "
+            f"{report['path_lookup_violations']}"
+        )
+    if report["shell_assumption_violations"]:
+        fail(
+            "portability-sensitive scripts must remain shell-free: "
+            f"{report['shell_assumption_violations']}"
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tracker", type=Path, default=TRACKER_PATH)
@@ -475,6 +706,7 @@ def main() -> int:
     check_dashboard_freshness(tracker)
     check_evidence_reproducibility(tracker)
     check_runtime_boundary()
+    check_environment_assumptions()
     check_legacy_frontend_cleanup()
     print("execution state: OK")
     return 0

@@ -17,10 +17,20 @@ The current frontend implements the sequential Rule 1-4 subset plus the sequenti
 
 All current `safec` commands are now Ada-native for the implemented PR05/PR06 subset. Python remains allowed in the repository only as glue around the compiler, such as validation helpers, harness scripts, and CI/report orchestration.
 
+Supported-platform policy for PR06.9.x:
+- Ubuntu/Linux CI and local macOS are the supported environments for the current frontend.
+- Windows is explicitly unsupported for PR06.9.x.
+- On macOS, repo glue assumes an SDK is discoverable through `xcrun --show-sdk-path` or `SDKROOT`.
+- Portability-sensitive repo glue uses PATH-based command discovery instead of hard-coded tool paths.
+- Portability-sensitive gates use deterministic TemporaryDirectory prefixes for stable temp roots and evidence.
+- Portability-sensitive glue scripts remain shell-free and do not rely on `shell=True` or `os.system`.
+- The recovery note in `docs/macos_alire_toolchain_repair.md` is a developer recovery procedure, not a compiler runtime dependency.
+
 PR06.8 runtime doctrine: Python may be used as glue/orchestration, but it may not own any user-facing compiler command and may not participate in parsing, lowering, semantic decisions, diagnostic selection, or emitted compiler artifacts.
 PR06.9.3 hardens that boundary with a fast static runtime scan in `scripts/validate_execution_state.py` plus a full-CLI masked-runtime gate covering `lex`, `ast`, `validate-mir`, `analyze-mir`, `check`, and `emit`.
 PR06.9.6 hardens the unsupported-feature boundary across `check`, `ast`, and `emit`.
 PR06.9.8 removes the old shallow `Ast` / `Parser` / `Semantics` / `Mir` chain entirely. The only live frontend path is now the Ada-native `Check_*` plus `Mir_*` pipeline, and later work must extend that path rather than revive the deleted legacy chain.
+PR06.9.10 hardens portability assumptions around that same live path. No-Python runtime enforcement now documents `python`, `python3`, `python3.11`, `python3.<minor>`, and path-qualified Python invocations, and the repo glue gates share that same source of truth.
 
 Unsupported-feature classification rule:
 - `unsupported_source_construct` means the Ada-native frontend recognized a construct that is outside the current PR05/PR06 subset.

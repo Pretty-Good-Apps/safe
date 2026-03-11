@@ -3,7 +3,7 @@
   "updated_at": "2026-03-09T22:47:56Z",
   "frozen_spec_sha": "468cf72332724b04b7c193b4d2a3b02f1584125d",
   "active_task_id": null,
-  "next_task_id": "PR06.9.10",
+  "next_task_id": "PR06.9.11",
   "repo_facts": {
     "tests": {
       "positive": 35,
@@ -371,14 +371,16 @@
     {
       "id": "PR06.9.10",
       "title": "Portability and environment assumptions",
-      "status": "planned",
+      "status": "done",
       "depends_on": ["PR06.9.9"],
       "acceptance": [
         "PATH lookup, temp-dir use, SDK or tool discovery, and shell assumptions are explicit and documented.",
         "The supported-platform policy for compiler and glue gates is written down and tested where practical.",
         "No-Python runtime enforcement covers the documented interpreter names and invocation patterns."
       ],
-      "evidence": [],
+      "evidence": [
+        "execution/reports/pr06910-portability-environment-report.json"
+      ],
       "blockers": [],
       "unblock_condition": ""
     },

@@ -14,6 +14,7 @@ from typing import Any, Callable
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_MACOS_SDKROOT = Path("/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk")
 
 
 def normalize_text(text: str, *, temp_root: Path | None = None, repo_root: Path = REPO_ROOT) -> str:
@@ -108,14 +109,32 @@ def require(condition: bool, message: str) -> None:
 
 
 def ensure_sdkroot(
-    env: dict[str, str], *, platform_name: str = sys.platform
+    env: dict[str, str],
+    *,
+    platform_name: str = sys.platform,
+    xcrun_runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+    fallback_sdkroot: Path = DEFAULT_MACOS_SDKROOT,
 ) -> dict[str, str]:
     if platform_name != "darwin" or env.get("SDKROOT"):
         return env
-    candidate = Path("/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk")
-    if candidate.exists():
+    try:
+        xcrun = xcrun_runner(
+            ["xcrun", "--show-sdk-path"],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    except OSError:
+        xcrun = None
+    if xcrun is not None and xcrun.returncode == 0:
+        discovered = xcrun.stdout.strip()
+        if discovered:
+            updated = env.copy()
+            updated["SDKROOT"] = discovered
+            return updated
+    if fallback_sdkroot.exists():
         updated = env.copy()
-        updated["SDKROOT"] = str(candidate)
+        updated["SDKROOT"] = str(fallback_sdkroot)
         return updated
     return env
 

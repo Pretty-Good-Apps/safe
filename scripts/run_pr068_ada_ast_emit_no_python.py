@@ -25,6 +25,10 @@ from _lib.harness_common import (
     run,
     write_report,
 )
+from _lib.platform_assumptions import (
+    MASKED_PYTHON_INTERPRETERS,
+    STATIC_PYTHON_INVOCATION_PATTERNS,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -100,9 +104,18 @@ BANNED_DRIVER_TOKENS = [
     "Python3 :",
 ]
 RUNTIME_SOURCE_PATTERNS = [
-    ("compiler_impl/src/safe_frontend-*.adb", [r"\bRun_Backend\b", r"\bBackend_Script\b", r"\bpython3\b", r"\bpython\b", r"pr05_backend\.py", r"\bGNAT\.OS_Lib\b"]),
-    ("compiler_impl/src/safe_frontend-*.ads", [r"\bRun_Backend\b", r"\bBackend_Script\b", r"\bpython3\b", r"\bpython\b", r"pr05_backend\.py", r"\bGNAT\.OS_Lib\b"]),
-    ("compiler_impl/src/safec.adb", [r"\bRun_Backend\b", r"\bBackend_Script\b", r"\bpython3\b", r"\bpython\b", r"pr05_backend\.py"]),
+    (
+        "compiler_impl/src/safe_frontend-*.adb",
+        [r"\bRun_Backend\b", r"\bBackend_Script\b", r"pr05_backend\.py", r"\bGNAT\.OS_Lib\b", *STATIC_PYTHON_INVOCATION_PATTERNS],
+    ),
+    (
+        "compiler_impl/src/safe_frontend-*.ads",
+        [r"\bRun_Backend\b", r"\bBackend_Script\b", r"pr05_backend\.py", r"\bGNAT\.OS_Lib\b", *STATIC_PYTHON_INVOCATION_PATTERNS],
+    ),
+    (
+        "compiler_impl/src/safec.adb",
+        [r"\bRun_Backend\b", r"\bBackend_Script\b", r"pr05_backend\.py", *STATIC_PYTHON_INVOCATION_PATTERNS],
+    ),
 ]
 
 
@@ -127,12 +140,16 @@ def emitted_paths(root: Path, sample: Path) -> dict[str, Path]:
     }
 
 
+def repo_cli_path(path: Path) -> str:
+    return str(path.relative_to(REPO_ROOT))
+
+
 def make_masked_env(temp_root: Path) -> tuple[dict[str, str], dict[str, Path], Path]:
     stub_dir = temp_root / "python-mask"
     stub_dir.mkdir(parents=True, exist_ok=True)
     blocked_log = temp_root / "blocked-python.log"
     stub_paths: dict[str, Path] = {}
-    for interpreter in ("python3", "python"):
+    for interpreter in MASKED_PYTHON_INTERPRETERS:
         stub_path = stub_dir / interpreter
         stub_path.write_text(
             "\n".join(
@@ -478,7 +495,7 @@ def generate_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[st
 
         ast_path = temp_root / "rule1_accumulate.ast.json"
         ast_run = run(
-            [str(safec), "ast", str(AST_SAMPLE)],
+            [str(safec), "ast", repo_cli_path(AST_SAMPLE)],
             cwd=REPO_ROOT,
             env=masked_env,
             stdout_path=ast_path,
@@ -500,7 +517,7 @@ def generate_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[st
                 [
                     str(safec),
                     "emit",
-                    str(sample),
+                    repo_cli_path(sample),
                     "--out-dir",
                     str(emit_a_root / "out"),
                     "--interface-dir",
@@ -514,7 +531,7 @@ def generate_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[st
                 [
                     str(safec),
                     "emit",
-                    str(sample),
+                    repo_cli_path(sample),
                     "--out-dir",
                     str(emit_b_root / "out"),
                     "--interface-dir",
@@ -607,7 +624,7 @@ def generate_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[st
             [
                 str(safec),
                 "emit",
-                str(NEGATIVE_EMIT_SAMPLE),
+                repo_cli_path(NEGATIVE_EMIT_SAMPLE),
                 "--out-dir",
                 str(negative_root / "out"),
                 "--interface-dir",

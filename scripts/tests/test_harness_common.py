@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -111,6 +112,48 @@ class HarnessCommonTests(unittest.TestCase):
 
         with self.assertRaises(RuntimeError):
             hc.finalize_deterministic_report(generator, label="drift")
+
+    def test_ensure_sdkroot_respects_existing_value(self) -> None:
+        env = {"SDKROOT": "/tmp/sdk"}
+        self.assertEqual(hc.ensure_sdkroot(env, platform_name="darwin"), env)
+
+    def test_ensure_sdkroot_prefers_xcrun(self) -> None:
+        def fake_xcrun(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+            return subprocess.CompletedProcess(
+                args=["xcrun", "--show-sdk-path"],
+                returncode=0,
+                stdout="/tmp/detected-sdk\n",
+                stderr="",
+            )
+
+        env = hc.ensure_sdkroot(
+            {},
+            platform_name="darwin",
+            xcrun_runner=fake_xcrun,
+            fallback_sdkroot=Path("/does/not/exist"),
+        )
+        self.assertEqual(env["SDKROOT"], "/tmp/detected-sdk")
+
+    def test_ensure_sdkroot_falls_back_to_generic_sdk(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            fallback_sdkroot = Path(temp_dir) / "MacOSX.sdk"
+            fallback_sdkroot.mkdir()
+
+            def fake_xcrun(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+                return subprocess.CompletedProcess(
+                    args=["xcrun", "--show-sdk-path"],
+                    returncode=1,
+                    stdout="",
+                    stderr="missing",
+                )
+
+            env = hc.ensure_sdkroot(
+                {},
+                platform_name="darwin",
+                xcrun_runner=fake_xcrun,
+                fallback_sdkroot=fallback_sdkroot,
+            )
+            self.assertEqual(env["SDKROOT"], str(fallback_sdkroot))
 
 
 if __name__ == "__main__":
