@@ -428,6 +428,11 @@ package body Safe_Frontend.Mir_Analyze is
       Var_Types  : Type_Maps.Map;
       Type_Env   : Type_Maps.Map;
       Functions  : Function_Maps.Map) return Float_Interval;
+   procedure Check_Float_Narrowing
+     (Expr           : GM.Expr_Access;
+      Interval_Value : Float_Interval;
+      Target_Type    : GM.Type_Descriptor);
+
    function Eval_Float_Expr_With_Diag
      (Expr         : GM.Expr_Access;
       Current      : State;
@@ -2628,7 +2633,16 @@ package body Safe_Frontend.Mir_Analyze is
                return Float_Interval_For (Info);
             end;
          when GM.Expr_Conversion =>
-            return Numeric_As_Float (Expr.Inner);
+            declare
+               Target : constant GM.Type_Descriptor :=
+                 Resolve_Type (UString_Value (Expr.Name), Var_Types, Type_Env);
+            begin
+               Inner := Numeric_As_Float (Expr.Inner);
+               if Is_Float_Type (Target) then
+                  Check_Float_Narrowing (Expr, Inner, Target);
+               end if;
+               return Inner;
+            end;
          when GM.Expr_Call =>
             Name := FT.To_UString (Flatten_Name (Expr.Callee));
             if UString_Value (Name) = "Float" or else UString_Value (Name) = "Long_Float" then
@@ -2678,7 +2692,16 @@ package body Safe_Frontend.Mir_Analyze is
             end if;
             return Float_Interval_For (Resolve_Type ("Long_Float", Type_Env));
          when GM.Expr_Annotated =>
-            return Eval_Float_Expr (Expr.Inner, Current, Var_Types, Type_Env, Functions);
+            declare
+               Target : constant GM.Type_Descriptor :=
+                 Resolve_Type (UString_Value (Expr.Subtype_Name), Var_Types, Type_Env);
+            begin
+               Inner := Eval_Float_Expr (Expr.Inner, Current, Var_Types, Type_Env, Functions);
+               if Is_Float_Type (Target) then
+                  Check_Float_Narrowing (Expr, Inner, Target);
+               end if;
+               return Inner;
+            end;
          when GM.Expr_Unary =>
             Inner := Numeric_As_Float (Expr.Inner);
             if UString_Value (Expr.Operator) = "-" then
@@ -2761,6 +2784,46 @@ package body Safe_Frontend.Mir_Analyze is
       return Float_Interval_For (Resolve_Type ("Long_Float", Type_Env));
    end Eval_Float_Expr;
 
+   procedure Check_Float_Narrowing
+     (Expr           : GM.Expr_Access;
+      Interval_Value : Float_Interval;
+      Target_Type    : GM.Type_Descriptor)
+   is
+      Diagnostic : MD.Diagnostic := Null_Diagnostic;
+   begin
+      if not Interval_Value.Initialized then
+         Diagnostic.Reason := FT.To_UString ("fp_uninitialized_at_narrowing");
+         Diagnostic.Message := FT.To_UString ("floating expression is not provably initialized at narrowing");
+         Diagnostic.Span := Expr.Span;
+         Diagnostic.Has_Highlight_Span := True;
+         Diagnostic.Highlight_Span := Expr.Span;
+         Raise_Diag (Diagnostic);
+      elsif Interval_Value.May_Be_NaN then
+         Diagnostic.Reason := FT.To_UString ("nan_at_narrowing");
+         Diagnostic.Message := FT.To_UString ("floating expression may be NaN at narrowing");
+         Diagnostic.Span := Expr.Span;
+         Diagnostic.Has_Highlight_Span := True;
+         Diagnostic.Highlight_Span := Expr.Span;
+         Raise_Diag (Diagnostic);
+      elsif Interval_Value.May_Be_Infinite then
+         Diagnostic.Reason := FT.To_UString ("infinity_at_narrowing");
+         Diagnostic.Message := FT.To_UString ("floating expression may be infinite at narrowing");
+         Diagnostic.Span := Expr.Span;
+         Diagnostic.Has_Highlight_Span := True;
+         Diagnostic.Highlight_Span := Expr.Span;
+         Raise_Diag (Diagnostic);
+      elsif Is_Float_Type (Target_Type)
+        and then not Float_Interval_Contains (Float_Interval_For (Target_Type), Interval_Value)
+      then
+         Diagnostic.Reason := FT.To_UString ("fp_overflow_at_narrowing");
+         Diagnostic.Message := FT.To_UString ("floating expression is not provably within target range");
+         Diagnostic.Span := Expr.Span;
+         Diagnostic.Has_Highlight_Span := True;
+         Diagnostic.Highlight_Span := Expr.Span;
+         Raise_Diag (Diagnostic);
+      end if;
+   end Check_Float_Narrowing;
+
    function Eval_Float_Expr_With_Diag
      (Expr         : GM.Expr_Access;
       Current      : State;
@@ -2776,37 +2839,7 @@ package body Safe_Frontend.Mir_Analyze is
       Interval_Value := Eval_Float_Expr (Expr, Current, Var_Types, Type_Env, Functions);
       Has_Diag := False;
       Diagnostic := Null_Diagnostic;
-      if not Interval_Value.Initialized then
-         Has_Diag := True;
-         Diagnostic.Reason := FT.To_UString ("fp_uninitialized_at_narrowing");
-         Diagnostic.Message := FT.To_UString ("floating expression is not provably initialized at narrowing");
-         Diagnostic.Span := Expr.Span;
-         Diagnostic.Has_Highlight_Span := True;
-         Diagnostic.Highlight_Span := Expr.Span;
-      elsif Interval_Value.May_Be_NaN then
-         Has_Diag := True;
-         Diagnostic.Reason := FT.To_UString ("nan_at_narrowing");
-         Diagnostic.Message := FT.To_UString ("floating expression may be NaN at narrowing");
-         Diagnostic.Span := Expr.Span;
-         Diagnostic.Has_Highlight_Span := True;
-         Diagnostic.Highlight_Span := Expr.Span;
-      elsif Interval_Value.May_Be_Infinite then
-         Has_Diag := True;
-         Diagnostic.Reason := FT.To_UString ("infinity_at_narrowing");
-         Diagnostic.Message := FT.To_UString ("floating expression may be infinite at narrowing");
-         Diagnostic.Span := Expr.Span;
-         Diagnostic.Has_Highlight_Span := True;
-         Diagnostic.Highlight_Span := Expr.Span;
-      elsif Is_Float_Type (Target_Type)
-        and then not Float_Interval_Contains (Float_Interval_For (Target_Type), Interval_Value)
-      then
-         Has_Diag := True;
-         Diagnostic.Reason := FT.To_UString ("fp_overflow_at_narrowing");
-         Diagnostic.Message := FT.To_UString ("floating expression is not provably within target range");
-         Diagnostic.Span := Expr.Span;
-         Diagnostic.Has_Highlight_Span := True;
-         Diagnostic.Highlight_Span := Expr.Span;
-      end if;
+      Check_Float_Narrowing (Expr, Interval_Value, Target_Type);
       return Interval_Value;
    exception
       when Diagnostic_Failure =>

@@ -81,6 +81,38 @@ end Result_Wrong_Boolean_Flag;
 """,
     },
     {
+        "name": "rule5_conversion_narrowing",
+        "expected_reason": "fp_overflow_at_narrowing",
+        "source": """package Rule5_Conversion_Narrowing is
+
+   type Narrow is digits 6 range -1.0 .. 1.0;
+
+   function Bad return Long_Float is
+      X : Long_Float = 2.0;
+   begin
+      return Narrow (X);
+   end Bad;
+
+end Rule5_Conversion_Narrowing;
+""",
+    },
+    {
+        "name": "rule5_annotation_narrowing",
+        "expected_reason": "fp_overflow_at_narrowing",
+        "source": """package Rule5_Annotation_Narrowing is
+
+   type Narrow is digits 6 range -1.0 .. 1.0;
+
+   function Bad return Long_Float is
+      X : Long_Float = 2.0;
+   begin
+      return (X as Narrow);
+   end Bad;
+
+end Rule5_Annotation_Narrowing;
+""",
+    },
+    {
         "name": "result_partial_guard_join",
         "expected_reason": "discriminant_check_not_established",
         "source": """package Result_Partial_Guard_Join is

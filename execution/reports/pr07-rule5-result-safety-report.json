@@ -356,6 +356,76 @@
           "compiler_impl/bin/safec",
           "check",
           "--diag-json",
+          "$TMPDIR/rule5_conversion_narrowing.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"fp_overflow_at_narrowing\",\"message\":\"floating expression is not provably within target range\",\"path\":\"$TMPDIR/rule5_conversion_narrowing.safe\",\"span\":{\"start_line\":8,\"start_col\":14,\"end_line\":8,\"end_col\":23},\"highlight_span\":{\"start_line\":8,\"start_col\":14,\"end_line\":8,\"end_col\":23},\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "diagnostic": {
+        "highlight_span": {
+          "end_col": 23,
+          "end_line": 8,
+          "start_col": 14,
+          "start_line": 8
+        },
+        "message": "floating expression is not provably within target range",
+        "notes": [],
+        "path": "$TMPDIR/rule5_conversion_narrowing.safe",
+        "reason": "fp_overflow_at_narrowing",
+        "span": {
+          "end_col": 23,
+          "end_line": 8,
+          "start_col": 14,
+          "start_line": 8
+        },
+        "suggestions": []
+      },
+      "expected_reason": "fp_overflow_at_narrowing",
+      "name": "rule5_conversion_narrowing"
+    },
+    {
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "$TMPDIR/rule5_annotation_narrowing.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"fp_overflow_at_narrowing\",\"message\":\"floating expression is not provably within target range\",\"path\":\"$TMPDIR/rule5_annotation_narrowing.safe\",\"span\":{\"start_line\":8,\"start_col\":14,\"end_line\":8,\"end_col\":26},\"highlight_span\":{\"start_line\":8,\"start_col\":14,\"end_line\":8,\"end_col\":26},\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "diagnostic": {
+        "highlight_span": {
+          "end_col": 26,
+          "end_line": 8,
+          "start_col": 14,
+          "start_line": 8
+        },
+        "message": "floating expression is not provably within target range",
+        "notes": [],
+        "path": "$TMPDIR/rule5_annotation_narrowing.safe",
+        "reason": "fp_overflow_at_narrowing",
+        "span": {
+          "end_col": 26,
+          "end_line": 8,
+          "start_col": 14,
+          "start_line": 8
+        },
+        "suggestions": []
+      },
+      "expected_reason": "fp_overflow_at_narrowing",
+      "name": "rule5_annotation_narrowing"
+    },
+    {
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
           "$TMPDIR/result_partial_guard_join.safe"
         ],
         "cwd": "$REPO_ROOT",
@@ -588,8 +658,8 @@
       "source": "tests/negative/neg_result_mutated.safe"
     }
   ],
-  "repeat_sha256": "9249e3c3eb204a8713a9458f0f36bfe375e54e2c3147a99dd1b2cb1734eff80b",
-  "report_sha256": "9249e3c3eb204a8713a9458f0f36bfe375e54e2c3147a99dd1b2cb1734eff80b",
+  "repeat_sha256": "07b317e8d4ff2c89498d64d03ab80912e8f03f015f8389f5ba2b5000b27fbccf",
+  "report_sha256": "07b317e8d4ff2c89498d64d03ab80912e8f03f015f8389f5ba2b5000b27fbccf",
   "source_corpus": {
     "negatives": [
       {
