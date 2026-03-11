@@ -1,0 +1,121 @@
+{
+  "deterministic": true,
+  "documentation_architecture_clarity": {
+    "doc_policy_violations": [],
+    "docs_scanned": [
+      "README.md",
+      "compiler_impl/README.md",
+      "docs/frontend_architecture_baseline.md",
+      "docs/frontend_scale_limits.md",
+      "release/frontend_runtime_decision.md"
+    ],
+    "missing_doc_files": [],
+    "missing_required_links": [],
+    "stale_boundary_violations": [],
+    "unresolved_local_links": []
+  },
+  "monitored_paths": [
+    "README.md",
+    "compiler_impl/README.md",
+    "release/frontend_runtime_decision.md",
+    "docs/frontend_architecture_baseline.md",
+    "docs/frontend_scale_limits.md",
+    "execution/tracker.json",
+    "execution/dashboard.md",
+    "execution/reports/pr06913-documentation-architecture-clarity-report.json"
+  ],
+  "repeat_sha256": "50bf478c1446157ef224a55809970c8082b44ac2aec974911cb79007fa374801",
+  "report_sha256": "50bf478c1446157ef224a55809970c8082b44ac2aec974911cb79007fa374801",
+  "reruns": {
+    "gate_quality": {
+      "repeat_sha256": "4318d5d379732e26bb68556476a494e9d3718de540f6fd7ed57d36028ef2c0da",
+      "report_path": "execution/reports/pr0697-gate-quality-report.json",
+      "report_sha256": "4318d5d379732e26bb68556476a494e9d3718de540f6fd7ed57d36028ef2c0da",
+      "run": {
+        "command": [
+          "python3",
+          "scripts/run_pr0697_gate_quality.py"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      }
+    },
+    "glue_script_safety": {
+      "repeat_sha256": "7dabfcca78be289ab092ff4ca9f2b6f992a6ad64f836080337345f8e2b0b3528",
+      "report_path": "execution/reports/pr06911-glue-script-safety-report.json",
+      "report_sha256": "7dabfcca78be289ab092ff4ca9f2b6f992a6ad64f836080337345f8e2b0b3528",
+      "run": {
+        "command": [
+          "python3",
+          "scripts/run_pr06911_glue_script_safety.py"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      }
+    },
+    "legacy_package_cleanup": {
+      "repeat_sha256": "1248e3f5d1f76dbaca16f194f2d86bc809f0f3587060179526b8e8ba5a2e2b3c",
+      "report_path": "execution/reports/pr0698-legacy-package-cleanup-report.json",
+      "report_sha256": "1248e3f5d1f76dbaca16f194f2d86bc809f0f3587060179526b8e8ba5a2e2b3c",
+      "run": {
+        "command": [
+          "python3",
+          "scripts/run_pr0698_legacy_package_cleanup.py"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      }
+    },
+    "performance_scale_sanity": {
+      "repeat_sha256": "2cb47ec5a31a82e5b0069f41c0d73dcc28811d9c9f593354f6c221a59e26fea7",
+      "report_path": "execution/reports/pr06912-performance-scale-sanity-report.json",
+      "report_sha256": "2cb47ec5a31a82e5b0069f41c0d73dcc28811d9c9f593354f6c221a59e26fea7",
+      "run": {
+        "command": [
+          "python3",
+          "scripts/run_pr06912_performance_scale_sanity.py"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      }
+    },
+    "portability_environment": {
+      "repeat_sha256": "8ff735e5ca1df491bbd4ec9525380d48be284512675203c3fe8ef455d057289d",
+      "report_path": "execution/reports/pr06910-portability-environment-report.json",
+      "report_sha256": "8ff735e5ca1df491bbd4ec9525380d48be284512675203c3fe8ef455d057289d",
+      "run": {
+        "command": [
+          "python3",
+          "scripts/run_pr06910_portability_environment.py"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      }
+    },
+    "runtime_boundary": {
+      "repeat_sha256": "5ece643becaf3afe1be32dfc485f78c240eaaad4c12cbcbf9d6cb16f7e66a47c",
+      "report_path": "execution/reports/pr0693-runtime-boundary-report.json",
+      "report_sha256": "5ece643becaf3afe1be32dfc485f78c240eaaad4c12cbcbf9d6cb16f7e66a47c",
+      "run": {
+        "command": [
+          "python3",
+          "scripts/run_pr0693_runtime_boundary.py"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      }
+    },
+    "validate_execution_state": {
+      "command": [
+        "python3",
+        "scripts/validate_execution_state.py"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "execution state: OK\n"
+    }
+  },
+  "status": "ok",
+  "task": "PR06.9.13"
+}
