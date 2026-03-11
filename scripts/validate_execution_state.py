@@ -269,6 +269,25 @@ def _has_prefix_keyword(node: ast.Call) -> bool:
     return False
 
 
+def _safe_source_binding_name(
+    node: ast.AST,
+    *,
+    imported_path_names: Set[str],
+) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str) and node.value.endswith(".safe"):
+        return node.value
+    if isinstance(node, ast.Call):
+        call_name = _call_name(node.func)
+        if (
+            call_name in imported_path_names
+            or call_name == "pathlib.Path"
+        ) and node.args:
+            first_arg = node.args[0]
+            if isinstance(first_arg, ast.Constant) and isinstance(first_arg.value, str) and first_arg.value.endswith(".safe"):
+                return first_arg.value
+    return None
+
+
 def check_tracker_schema(tracker: Dict[str, Any]) -> None:
     required_top_level = {"schema_version", "updated_at", "frozen_spec_sha", "active_task_id", "next_task_id", "repo_facts", "tasks"}
     missing = required_top_level - set(tracker)
@@ -778,6 +797,7 @@ def glue_script_safety_report(
     path_commands: Sequence[str] = GLUE_SAFETY_PATH_COMMANDS,
     allowed_safe_source_readers: Dict[str, str] = GLUE_SAFETY_ALLOWED_SAFE_SOURCE_READERS,
 ) -> Dict[str, Any]:
+    missing_script_violations: List[str] = []
     subprocess_import_violations: List[str] = []
     subprocess_call_violations: List[str] = []
     shell_assumption_violations: List[str] = []
@@ -790,15 +810,19 @@ def glue_script_safety_report(
     for relative_path in audited_scripts:
         path = repo_root / relative_path
         if not path.exists():
-            report_helper_violations.append(f"{relative_path}:missing")
+            missing_script_violations.append(relative_path)
             continue
 
         text = path.read_text(encoding="utf-8")
         tree = ast.parse(text, filename=str(path))
         imported_subprocess_names: Set[str] = set()
-        imported_tempfile_names: Set[str] = set()
+        imported_tempfile_module_names: Set[str] = set()
+        imported_tempfile_function_names: Dict[str, str] = {}
         imported_harness_names: Set[str] = set()
-        imported_os_names: Set[str] = set()
+        imported_os_module_names: Set[str] = set()
+        imported_os_shell_names: Dict[str, str] = {}
+        imported_path_names: Set[str] = {"Path"}
+        safe_source_bindings: Set[str] = set()
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
@@ -807,9 +831,11 @@ def glue_script_safety_report(
                         subprocess_import_violations.append(f"{relative_path}:subprocess")
                         imported_subprocess_names.add(alias.asname or alias.name)
                     if alias.name == "tempfile":
-                        imported_tempfile_names.add(alias.asname or alias.name)
+                        imported_tempfile_module_names.add(alias.asname or alias.name)
                     if alias.name == "os":
-                        imported_os_names.add(alias.asname or alias.name)
+                        imported_os_module_names.add(alias.asname or alias.name)
+                    if alias.name == "pathlib":
+                        imported_path_names.add(f"{alias.asname or alias.name}.Path")
             elif isinstance(node, ast.ImportFrom):
                 if node.module == "subprocess":
                     for alias in node.names:
@@ -817,13 +843,28 @@ def glue_script_safety_report(
                         imported_subprocess_names.add(alias.asname or alias.name)
                 elif node.module == "tempfile":
                     for alias in node.names:
-                        imported_tempfile_names.add(alias.asname or alias.name)
+                        imported_tempfile_function_names[alias.asname or alias.name] = alias.name
                 elif node.module == "_lib.harness_common":
                     for alias in node.names:
                         imported_harness_names.add(alias.asname or alias.name)
                 elif node.module == "os":
                     for alias in node.names:
-                        imported_os_names.add(alias.asname or alias.name)
+                        name = alias.asname or alias.name
+                        if alias.name in {"system", "popen"}:
+                            imported_os_shell_names[name] = alias.name
+                        else:
+                            imported_os_module_names.add(name)
+                elif node.module == "pathlib":
+                    for alias in node.names:
+                        if alias.name == "Path":
+                            imported_path_names.add(alias.asname or alias.name)
+            elif isinstance(node, ast.Assign):
+                bound_name = _safe_source_binding_name(node.value, imported_path_names=imported_path_names)
+                if bound_name is None:
+                    continue
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        safe_source_bindings.add(target.id)
 
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
@@ -834,6 +875,8 @@ def glue_script_safety_report(
                 continue
 
             base_name = call_name.split(".")[-1]
+            tempfile_name = imported_tempfile_function_names.get(call_name, base_name)
+            os_shell_name = imported_os_shell_names.get(call_name, base_name)
 
             if (
                 call_name.startswith("subprocess.")
@@ -846,34 +889,56 @@ def glue_script_safety_report(
                     shell_assumption_violations.append(f"{relative_path}:shell=True")
 
             if (
-                base_name in {"system", "popen"}
+                os_shell_name in {"system", "popen"}
                 and (
                     call_name in {"os.system", "os.popen"}
                     or (
                         isinstance(node.func, ast.Attribute)
                         and isinstance(node.func.value, ast.Name)
-                        and node.func.value.id in imported_os_names
+                        and node.func.value.id in imported_os_module_names
+                    )
+                    or (
+                        isinstance(node.func, ast.Name)
+                        and node.func.id in imported_os_shell_names
                     )
                 )
             ):
-                shell_assumption_violations.append(f"{relative_path}:os.{base_name}")
+                shell_assumption_violations.append(f"{relative_path}:os.{os_shell_name}")
 
-            if base_name == "TemporaryDirectory":
+            if tempfile_name == "TemporaryDirectory":
                 imported = (
                     call_name == "tempfile.TemporaryDirectory"
-                    or call_name in imported_tempfile_names
+                    or (
+                        isinstance(node.func, ast.Attribute)
+                        and isinstance(node.func.value, ast.Name)
+                        and node.func.value.id in imported_tempfile_module_names
+                    )
+                    or call_name in imported_tempfile_function_names
                 )
                 if imported and not _has_prefix_keyword(node):
                     tempdir_violations.append(f"{relative_path}:TemporaryDirectory")
-            elif base_name == "NamedTemporaryFile":
+            elif tempfile_name == "NamedTemporaryFile":
                 imported = (
                     call_name == "tempfile.NamedTemporaryFile"
-                    or call_name in imported_tempfile_names
+                    or (
+                        isinstance(node.func, ast.Attribute)
+                        and isinstance(node.func.value, ast.Name)
+                        and node.func.value.id in imported_tempfile_module_names
+                    )
+                    or call_name in imported_tempfile_function_names
                 )
                 if imported and not _has_prefix_keyword(node):
                     tempdir_violations.append(f"{relative_path}:NamedTemporaryFile")
-            elif base_name == "mkdtemp":
-                imported = call_name == "tempfile.mkdtemp" or call_name in imported_tempfile_names
+            elif tempfile_name == "mkdtemp":
+                imported = (
+                    call_name == "tempfile.mkdtemp"
+                    or (
+                        isinstance(node.func, ast.Attribute)
+                        and isinstance(node.func.value, ast.Name)
+                        and node.func.value.id in imported_tempfile_module_names
+                    )
+                    or call_name in imported_tempfile_function_names
+                )
                 if imported and not _has_prefix_keyword(node):
                     tempdir_violations.append(f"{relative_path}:mkdtemp")
 
@@ -885,6 +950,34 @@ def glue_script_safety_report(
                         command = head.value
                         if command in path_commands and f'find_command("{command}")' not in text and f"find_command('{command}')" not in text:
                             command_lookup_violations.append(f"{relative_path}:{command}")
+
+            if relative_path not in allowed_safe_source_readers:
+                safe_reader_violation = False
+                if (
+                    isinstance(node.func, ast.Name)
+                    and node.func.id == "open"
+                    and node.args
+                ):
+                    first_arg = node.args[0]
+                    if (
+                        isinstance(first_arg, ast.Constant)
+                        and isinstance(first_arg.value, str)
+                        and first_arg.value.endswith(".safe")
+                    ) or (
+                        isinstance(first_arg, ast.Name) and first_arg.id in safe_source_bindings
+                    ):
+                        safe_reader_violation = True
+                elif (
+                    isinstance(node.func, ast.Attribute)
+                    and node.func.attr in {"read_text", "open"}
+                ):
+                    target = node.func.value
+                    if isinstance(target, ast.Name) and target.id in safe_source_bindings:
+                        safe_reader_violation = True
+                    elif _safe_source_binding_name(target, imported_path_names=imported_path_names) is not None:
+                        safe_reader_violation = True
+                if safe_reader_violation:
+                    unauthorized_safe_source_readers.append(f"{relative_path}:{node.func.attr if isinstance(node.func, ast.Attribute) else 'open'}")
 
         if relative_path in report_scripts:
             has_finalize = any(
@@ -914,11 +1007,6 @@ def glue_script_safety_report(
                 }
             )
 
-        if relative_path not in allowed_safe_source_readers:
-            for pattern in GLUE_SAFETY_DIRECT_SAFE_READ_PATTERNS:
-                if re.search(pattern, text):
-                    unauthorized_safe_source_readers.append(f"{relative_path}:{pattern}")
-
         if (
             relative_path not in allowed_safe_source_readers
             and "read_expected_reason(" in text
@@ -931,6 +1019,7 @@ def glue_script_safety_report(
         "report_scripts": list(report_scripts),
         "path_command_policy": list(path_commands),
         "safe_source_readers": safe_source_readers,
+        "missing_script_violations": missing_script_violations,
         "subprocess_import_violations": subprocess_import_violations,
         "subprocess_call_violations": subprocess_call_violations,
         "shell_assumption_violations": shell_assumption_violations,
@@ -956,6 +1045,8 @@ def check_glue_script_safety(
         path_commands=path_commands,
         allowed_safe_source_readers=allowed_safe_source_readers,
     )
+    if report["missing_script_violations"]:
+        fail(f"glue safety audit is missing expected scripts: {report['missing_script_violations']}")
     if report["subprocess_import_violations"]:
         fail(f"glue scripts import subprocess directly: {report['subprocess_import_violations']}")
     if report["subprocess_call_violations"]:

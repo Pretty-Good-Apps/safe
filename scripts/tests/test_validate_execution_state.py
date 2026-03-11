@@ -455,6 +455,23 @@ class ValidateExecutionStateTests(unittest.TestCase):
             self.assertIn("scripts/runtime_gate.py:shell=True", report["shell_assumption_violations"])
             self.assertIn("scripts/runtime_gate.py:os.system", report["shell_assumption_violations"])
 
+    def test_glue_script_safety_report_detects_aliased_os_shell_calls(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            scripts_dir = repo_root / "scripts"
+            scripts_dir.mkdir()
+            (scripts_dir / "runtime_gate.py").write_text(
+                "from os import system as sh\n"
+                "sh('echo hi')\n",
+                encoding="utf-8",
+            )
+            report = glue_script_safety_report(
+                repo_root=repo_root,
+                audited_scripts=("scripts/runtime_gate.py",),
+                report_scripts=(),
+            )
+            self.assertIn("scripts/runtime_gate.py:os.system", report["shell_assumption_violations"])
+
     def test_glue_script_safety_report_detects_missing_prefix_and_lookup(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             repo_root = Path(temp_dir)
@@ -484,6 +501,24 @@ class ValidateExecutionStateTests(unittest.TestCase):
             self.assertIn("scripts/runtime_gate.py:git", report["command_lookup_violations"])
             self.assertIn("scripts/runtime_gate.py:safec", report["command_lookup_violations"])
 
+    def test_glue_script_safety_report_detects_aliased_tempfile_usage(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            scripts_dir = repo_root / "scripts"
+            scripts_dir.mkdir()
+            (scripts_dir / "runtime_gate.py").write_text(
+                "import tempfile as tf\n"
+                "with tf.TemporaryDirectory() as temp_dir:\n"
+                "    pass\n",
+                encoding="utf-8",
+            )
+            report = glue_script_safety_report(
+                repo_root=repo_root,
+                audited_scripts=("scripts/runtime_gate.py",),
+                report_scripts=(),
+            )
+            self.assertIn("scripts/runtime_gate.py:TemporaryDirectory", report["tempdir_violations"])
+
     def test_glue_script_safety_report_detects_missing_report_helpers(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             repo_root = Path(temp_dir)
@@ -508,6 +543,16 @@ class ValidateExecutionStateTests(unittest.TestCase):
                 report["report_helper_violations"],
             )
 
+    def test_glue_script_safety_report_reports_missing_scripts_clearly(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            report = glue_script_safety_report(
+                repo_root=repo_root,
+                audited_scripts=("scripts/missing_gate.py",),
+                report_scripts=(),
+            )
+            self.assertEqual(report["missing_script_violations"], ["scripts/missing_gate.py"])
+
     def test_glue_script_safety_report_detects_unauthorized_safe_reader(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             repo_root = Path(temp_dir)
@@ -524,6 +569,24 @@ class ValidateExecutionStateTests(unittest.TestCase):
                 report_scripts=(),
             )
             self.assertTrue(report["unauthorized_safe_source_readers"])
+
+    def test_glue_script_safety_report_detects_safe_reader_via_bound_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            scripts_dir = repo_root / "scripts"
+            scripts_dir.mkdir()
+            (scripts_dir / "runtime_gate.py").write_text(
+                "from pathlib import Path\n"
+                "fixture = Path('case.safe')\n"
+                "text = fixture.read_text(encoding='utf-8')\n",
+                encoding="utf-8",
+            )
+            report = glue_script_safety_report(
+                repo_root=repo_root,
+                audited_scripts=("scripts/runtime_gate.py",),
+                report_scripts=(),
+            )
+            self.assertIn("scripts/runtime_gate.py:read_text", report["unauthorized_safe_source_readers"])
 
 
 if __name__ == "__main__":

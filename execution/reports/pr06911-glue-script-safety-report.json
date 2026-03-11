@@ -26,6 +26,7 @@
       "scripts/render_execution_status.py"
     ],
     "command_lookup_violations": [],
+    "missing_script_violations": [],
     "path_command_policy": [
       "python3",
       "alr",
@@ -80,13 +81,13 @@
     "execution/reports/pr06910-portability-environment-report.json",
     "execution/reports/pr06911-glue-script-safety-report.json"
   ],
-  "repeat_sha256": "6656f85c3f0cc6cb69d0f196640cb8f223b68e975622b2bc6279e358d7a67dab",
-  "report_sha256": "6656f85c3f0cc6cb69d0f196640cb8f223b68e975622b2bc6279e358d7a67dab",
+  "repeat_sha256": "5ce9eb7ade370a59e216fb3828beb9c921ff7523f0b62fed67f85792df2be2e0",
+  "report_sha256": "5ce9eb7ade370a59e216fb3828beb9c921ff7523f0b62fed67f85792df2be2e0",
   "reruns": {
     "build_reproducibility": {
-      "repeat_sha256": "d28ddc8455d84fed96851391b47b6463f195aeea5918f0485379687dbe428c24",
+      "repeat_sha256": "f88cd4a937c3e09013c107990e67fcf57ccbe9ac302125dbe4dc88fcd5f2d0cd",
       "report_path": "execution/reports/pr0699-build-reproducibility-report.json",
-      "report_sha256": "d28ddc8455d84fed96851391b47b6463f195aeea5918f0485379687dbe428c24",
+      "report_sha256": "f88cd4a937c3e09013c107990e67fcf57ccbe9ac302125dbe4dc88fcd5f2d0cd",
       "run": {
         "command": [
           "python3",
@@ -114,9 +115,9 @@
       }
     },
     "gate_quality": {
-      "repeat_sha256": "9a02e404efd3c38445824519844c3eb4af70c78407f7adccecb68688df1e8703",
+      "repeat_sha256": "0f32b3cf68bbc5429553c50a249c858899bd36e170ebdd405dc7a86f6319a42d",
       "report_path": "execution/reports/pr0697-gate-quality-report.json",
-      "report_sha256": "9a02e404efd3c38445824519844c3eb4af70c78407f7adccecb68688df1e8703",
+      "report_sha256": "0f32b3cf68bbc5429553c50a249c858899bd36e170ebdd405dc7a86f6319a42d",
       "run": {
         "command": [
           "python3",
@@ -129,9 +130,9 @@
       }
     },
     "portability_environment": {
-      "repeat_sha256": "82d2b2d02404abe09bc8576e3bbac65aab397ea754f8bc7a8375e5d6f2b04744",
+      "repeat_sha256": "10c1018625ad3489d8212554a6f04f30603a85c3bfab61db0166af12ab97b3ac",
       "report_path": "execution/reports/pr06910-portability-environment-report.json",
-      "report_sha256": "82d2b2d02404abe09bc8576e3bbac65aab397ea754f8bc7a8375e5d6f2b04744",
+      "report_sha256": "10c1018625ad3489d8212554a6f04f30603a85c3bfab61db0166af12ab97b3ac",
       "run": {
         "command": [
           "python3",
@@ -185,6 +186,6 @@
     "cwd": "$REPO_ROOT",
     "result": "OK",
     "returncode": 0,
-    "tests_ran": 32
+    "tests_ran": 36
   }
 }

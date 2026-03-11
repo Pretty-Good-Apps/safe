@@ -84,7 +84,7 @@ def current_dirty_diff(*, git: str, paths: list[Path], env: dict[str, str]) -> s
 
 
 def summarize_unittest_run(result: dict[str, Any]) -> dict[str, Any]:
-    match = re.search(r"Ran (\d+) tests in [0-9.]+s", result["stderr"])
+    match = re.search(r"Ran (\d+) tests? in [0-9.]+s", result["stderr"])
     require(match is not None, "PR06.9.11 unittest run: missing test summary")
     return {
         "command": result["command"],
