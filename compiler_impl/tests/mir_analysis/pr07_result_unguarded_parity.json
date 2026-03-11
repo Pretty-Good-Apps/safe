@@ -1,0 +1,265 @@
+{
+  "format": "mir-v2",
+  "graphs": [
+    {
+      "blocks": [
+        {
+          "active_scope_id": "scope0",
+          "id": "bb0",
+          "ops": [
+            {
+              "kind": "scope_enter",
+              "locals": [
+                "R"
+              ],
+              "scope_id": "scope0",
+              "span": {
+                "end_col": 23,
+                "end_line": 35,
+                "start_col": 4,
+                "start_line": 31
+              }
+            },
+            {
+              "declaration_init": true,
+              "kind": "assign",
+              "ownership_effect": "None",
+              "span": {
+                "end_col": 40,
+                "end_line": 32,
+                "start_col": 7,
+                "start_line": 32
+              },
+              "target": {
+                "name": "R",
+                "span": {
+                  "end_col": 7,
+                  "end_line": 32,
+                  "start_col": 7,
+                  "start_line": 32
+                },
+                "tag": "ident",
+                "type": "Parse_Result"
+              },
+              "type": "Parse_Result",
+              "value": {
+                "fields": [
+                  {
+                    "expr": {
+                      "span": {
+                        "end_col": 34,
+                        "end_line": 32,
+                        "start_col": 31,
+                        "start_line": 32
+                      },
+                      "tag": "bool",
+                      "text": "True",
+                      "type": "Boolean",
+                      "value": true
+                    },
+                    "field": "OK",
+                    "span": {
+                      "end_col": 34,
+                      "end_line": 32,
+                      "start_col": 25,
+                      "start_line": 32
+                    }
+                  },
+                  {
+                    "expr": {
+                      "name": "Input",
+                      "span": {
+                        "end_col": 47,
+                        "end_line": 32,
+                        "start_col": 43,
+                        "start_line": 32
+                      },
+                      "tag": "ident",
+                      "type": "Integer"
+                    },
+                    "field": "Value",
+                    "span": {
+                      "end_col": 47,
+                      "end_line": 32,
+                      "start_col": 36,
+                      "start_line": 32
+                    }
+                  }
+                ],
+                "span": {
+                  "end_col": 40,
+                  "end_line": 32,
+                  "start_col": 25,
+                  "start_line": 32
+                },
+                "tag": "aggregate",
+                "type": "Parse_Result"
+              }
+            }
+          ],
+          "role": "entry",
+          "span": {
+            "end_col": 23,
+            "end_line": 35,
+            "start_col": 4,
+            "start_line": 31
+          },
+          "terminator": {
+            "kind": "return",
+            "ownership_effect": "None",
+            "span": {
+              "end_col": 20,
+              "end_line": 34,
+              "start_col": 7,
+              "start_line": 34
+            },
+            "value": {
+              "prefix": {
+                "name": "R",
+                "span": {
+                  "end_col": 14,
+                  "end_line": 34,
+                  "start_col": 14,
+                  "start_line": 34
+                },
+                "tag": "ident",
+                "type": "Parse_Result"
+              },
+              "selector": "Value",
+              "span": {
+                "end_col": 20,
+                "end_line": 34,
+                "start_col": 14,
+                "start_line": 34
+              },
+              "tag": "select",
+              "type": "Integer"
+            }
+          }
+        }
+      ],
+      "entry_bb": "bb0",
+      "kind": "function",
+      "locals": [
+        {
+          "id": "v0",
+          "kind": "param",
+          "mode": "in",
+          "name": "Input",
+          "ownership_role": "",
+          "scope_id": "scope0",
+          "span": {
+            "end_col": 42,
+            "end_line": 31,
+            "start_col": 28,
+            "start_line": 31
+          },
+          "type": {
+            "high": 9223372036854775807,
+            "kind": "integer",
+            "low": -9223372036854775808,
+            "name": "Integer"
+          }
+        },
+        {
+          "id": "v1",
+          "kind": "local",
+          "mode": "in",
+          "name": "R",
+          "ownership_role": "",
+          "scope_id": "scope0",
+          "span": {
+            "end_col": 40,
+            "end_line": 32,
+            "start_col": 7,
+            "start_line": 32
+          },
+          "type": {
+            "discriminant_default": false,
+            "discriminant_name": "OK",
+            "discriminant_type": "Boolean",
+            "fields": {
+              "Error": "Error_Code",
+              "Value": "Integer"
+            },
+            "kind": "record",
+            "name": "Parse_Result",
+            "variant_fields": [
+              {
+                "name": "Value",
+                "type": "Integer",
+                "when": true
+              },
+              {
+                "name": "Error",
+                "type": "Error_Code",
+                "when": false
+              }
+            ]
+          }
+        }
+      ],
+      "name": "Unsafe_Access",
+      "return_type": {
+        "high": 9223372036854775807,
+        "kind": "integer",
+        "low": -9223372036854775808,
+        "name": "Integer"
+      },
+      "scopes": [
+        {
+          "entry_block": "bb0",
+          "exit_blocks": [
+            "bb0"
+          ],
+          "id": "scope0",
+          "kind": "subprogram",
+          "local_ids": [
+            "v0",
+            "v1"
+          ],
+          "parent_scope_id": null
+        }
+      ],
+      "span": {
+        "end_col": 23,
+        "end_line": 35,
+        "start_col": 4,
+        "start_line": 31
+      }
+    }
+  ],
+  "package_name": "Neg_Result_Unguarded",
+  "source_path": "tests/negative/neg_result_unguarded.safe",
+  "types": [
+    {
+      "high": 255,
+      "kind": "integer",
+      "low": 0,
+      "name": "Error_Code"
+    },
+    {
+      "discriminant_default": false,
+      "discriminant_name": "OK",
+      "discriminant_type": "Boolean",
+      "fields": {
+        "Error": "Error_Code",
+        "Value": "Integer"
+      },
+      "kind": "record",
+      "name": "Parse_Result",
+      "variant_fields": [
+        {
+          "name": "Value",
+          "type": "Integer",
+          "when": true
+        },
+        {
+          "name": "Error",
+          "type": "Error_Code",
+          "when": false
+        }
+      ]
+    }
+  ]
+}

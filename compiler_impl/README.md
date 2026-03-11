@@ -1,6 +1,6 @@
 # SafeC Frontend
 
-This workspace hosts the current pre-PR07 Safe compiler frontend baseline established by PR06.9.1 through PR06.9.13.
+This workspace hosts the current Safe compiler frontend baseline established by PR07 on top of the PR06.9.x hardening series.
 
 ## Current Boundary
 
@@ -9,20 +9,20 @@ This workspace hosts the current pre-PR07 Safe compiler frontend baseline establ
 - `safec validate-mir <file.mir.json>` validates emitted `mir-v1` / `mir-v2` structure in Ada and exits nonzero on structural contract failures.
 - `safec analyze-mir <file.mir.json>` validates analyzable `mir-v2` input and exits nonzero if MIR-level diagnostics are emitted.
 - `safec analyze-mir --diag-json <file.mir.json>` writes `diagnostics-v0` JSON for a `mir-v2` input.
-- `safec check <file.safe>` runs the Ada-native PR05/PR06 check pipeline and exits nonzero if diagnostics are emitted.
-- `safec check --diag-json <file.safe>` writes `diagnostics-v0` JSON for the Ada-native PR05/PR06 check pipeline.
+- `safec check <file.safe>` runs the Ada-native check pipeline for the currently supported subset and exits nonzero if diagnostics are emitted.
+- `safec check --diag-json <file.safe>` writes `diagnostics-v0` JSON for the Ada-native check pipeline.
 - `safec emit <file.safe> --out-dir <dir> --interface-dir <dir>` writes the current frontend artifacts for downstream inspection and regression checks.
 
-The current frontend supports PR05/PR06 sequential Rule 1-4 plus sequential ownership only.
+The current frontend supports the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern.
 
 That current boundary includes:
 
 - schema-true AST emission for the implemented subset
 - `typed-v2`, self-sufficient `mir-v2`, and `safei-v0` emission for that subset
 - Ada-native MIR validation and MIR analysis for that subset
-- Ada-native `check` over the PR05 Rule 1-4 corpus and the PR06 sequential ownership corpus
+- Ada-native `check` over the exact current Rule 5 fixture corpus, the sequential ownership corpus, and the current boolean result-record discriminant pattern
 
-All current user-facing `safec` commands are Ada-native for that subset. Python remains glue/orchestration only around the compiler.
+All current user-facing `safec` commands are Ada-native for that supported surface. Python remains glue/orchestration only around the compiler.
 
 PR06.9.12 is a cliff-detection gate, not a benchmark commitment, for that current frontend subset.
 
@@ -45,10 +45,10 @@ The old shallow `Ast` / `Parser` / `Semantics` / `Mir` chain was deleted in PR06
 
 The only live frontend path is now the Ada-native `Check_*` plus `Mir_*` pipeline, with `Lexer`, `Source`, `Types`, `Diagnostics`, and `Json` supporting that path.
 
-PR07 must extend the live `Check_*` + `Mir_*` pipeline.
+PR08 must extend the live `Check_*` + `Mir_*` pipeline.
 
 Unsupported-feature classification rule:
-- `unsupported_source_construct` means the Ada-native frontend recognized a construct that is outside the current PR05/PR06 subset.
+- `unsupported_source_construct` means the Ada-native frontend recognized a construct that is outside the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern.
 - `source_frontend_error` means a true frontend failure inside the current subset boundary, such as malformed syntax, bad package end names, missing identifiers, or oversized integer literals.
 - The PR06.9.6 gate proves those classifications and also proves unsupported `emit` calls do not write partial artifacts.
 

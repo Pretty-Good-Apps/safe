@@ -288,7 +288,9 @@ package body Safe_Frontend.Check_Emit is
       return
         "{""node_type"":""NumericLiteral"",""text"":"
         & JS.Quote (Text)
-        & ",""is_based"":false,""is_real"":false,""resolved_value"":"
+        & ",""is_based"":false,""is_real"":"
+        & JS.Bool_Literal (Expr /= null and then Expr.Kind = CM.Expr_Real)
+        & ",""resolved_value"":"
         & JS.Quote (Text)
         & ",""span"":"
         & JS.Span_Object (Expr.Span)
@@ -594,6 +596,144 @@ package body Safe_Frontend.Check_Emit is
         & "}";
    end Record_Aggregate_Node;
 
+   function Real_Range_Constraint_Node (Decl : CM.Type_Decl) return String is
+   begin
+      return
+        "{""node_type"":""RealRangeConstraint"",""low_bound"":"
+        & Expression_Node (Decl.Low_Expr)
+        & ",""high_bound"":"
+        & Expression_Node (Decl.High_Expr)
+        & ",""span"":"
+        & JS.Span_Object (Decl.Span)
+        & "}";
+   end Real_Range_Constraint_Node;
+
+   function Discriminant_Part_Node (Decl : CM.Type_Decl) return String is
+   begin
+      if not Decl.Has_Discriminant then
+         return "null";
+      end if;
+
+      return
+        "{""node_type"":""KnownDiscriminantPart"",""discriminants"":[{""node_type"":""DiscriminantSpecification"",""names"":["
+        & JS.Quote (Decl.Discriminant.Name)
+        & "],""subtype_mark"":"
+        & Type_Spec_Name (Decl.Discriminant.Disc_Type)
+        & ",""default_expression"":"
+        & (if Decl.Discriminant.Has_Default then Expression_Node (Decl.Discriminant.Default_Expr) else "null")
+        & ",""span"":"
+        & JS.Span_Object (Decl.Discriminant.Span)
+        & "}],""span"":"
+        & JS.Span_Object (Decl.Discriminant.Span)
+        & "}";
+   end Discriminant_Part_Node;
+
+   function Bool_Choice_Expression
+     (Value : Boolean;
+      Span  : FT.Source_Span) return String
+   is
+      Expr : constant CM.Expr_Access := new CM.Expr_Node'
+        (Kind       => CM.Expr_Bool,
+         Span       => Span,
+         Type_Name  => FT.To_UString ("Boolean"),
+         Text       => FT.To_UString (""),
+         Int_Value  => 0,
+         Bool_Value => Value,
+         others     => <>);
+   begin
+      return Expression_Node (Expr);
+   end Bool_Choice_Expression;
+
+   function Variant_Part_Node (Decl : CM.Type_Decl) return String is
+      Variants   : String_Vectors.Vector;
+      Components : String_Vectors.Vector;
+   begin
+      if Decl.Variants.Is_Empty then
+         return "null";
+      end if;
+
+      for Alternative of Decl.Variants loop
+         Components.Clear;
+         if not Alternative.Components.Is_Empty then
+            for Component of Alternative.Components loop
+               Components.Append
+                 ("{""node_type"":""ComponentItem"",""kind"":""ComponentDeclaration"",""item"":{""node_type"":""ComponentDeclaration"",""names"":"
+                  & Quoted_Names (Component.Names)
+                  & ",""component_definition"":{""node_type"":""ComponentDefinition"",""is_aliased"":false,""type_spec"":"
+                  & Object_Type_Node (Component.Field_Type)
+                  & ",""span"":"
+                  & JS.Span_Object (Component.Field_Type.Span)
+                  & "},""default_expression"":null,""span"":"
+                  & JS.Span_Object (Component.Span)
+                  & "},""span"":"
+                  & JS.Span_Object (Component.Span)
+                  & "}");
+            end loop;
+         end if;
+
+         Variants.Append
+           ("{""node_type"":""Variant"",""choices"":{""node_type"":""DiscreteChoiceList"",""choices"":[{""node_type"":""DiscreteChoice"",""kind"":""ChoiceExpression"",""value"":"
+            & Bool_Choice_Expression (Alternative.When_Value, Alternative.Span)
+            & ",""span"":"
+            & JS.Span_Object (Alternative.Span)
+            & "}],""span"":"
+            & JS.Span_Object (Alternative.Span)
+            & "},""component_list"":{""node_type"":""ComponentList"",""components"":"
+            & Json_List (Components)
+            & ",""variant_part"":null,""is_null"":"
+            & JS.Bool_Literal (Components.Is_Empty)
+            & ",""span"":"
+            & JS.Span_Object (Alternative.Span)
+            & "},""span"":"
+            & JS.Span_Object (Alternative.Span)
+            & "}");
+      end loop;
+
+      return
+        "{""node_type"":""VariantPart"",""discriminant_name"":"
+        & JS.Quote (Decl.Discriminant.Name)
+        & ",""variants"":"
+        & Json_List (Variants)
+        & ",""span"":"
+        & JS.Span_Object (Decl.Span)
+        & "}";
+   end Variant_Part_Node;
+
+   function Component_List_Node (Decl : CM.Type_Decl) return String is
+      Components : String_Vectors.Vector;
+      Variant    : constant String := Variant_Part_Node (Decl);
+   begin
+      for Component of Decl.Components loop
+         Components.Append
+           ("{""node_type"":""ComponentItem"",""kind"":""ComponentDeclaration"",""item"":{""node_type"":""ComponentDeclaration"",""names"":"
+            & Quoted_Names (Component.Names)
+            & ",""component_definition"":{""node_type"":""ComponentDefinition"",""is_aliased"":false,""type_spec"":"
+            & Object_Type_Node (Component.Field_Type)
+            & ",""span"":"
+            & JS.Span_Object (Component.Field_Type.Span)
+            & "},""default_expression"":null,""span"":"
+            & JS.Span_Object (Component.Span)
+            & "},""span"":"
+            & JS.Span_Object (Component.Span)
+            & "}");
+      end loop;
+
+      if Components.Is_Empty and then Variant = "null" then
+         return "null";
+      end if;
+
+      return
+        "{""node_type"":""ComponentList"",""components"":"
+        & Json_List (Components)
+        & ",""variant_part"":"
+        & Variant
+        & ",""is_null"":"
+        & JS.Bool_Literal (Components.Is_Empty and then Variant = "null")
+        & ",""span"":"
+        & JS.Span_Object (Decl.Span)
+        & "}";
+   end Component_List_Node;
+
    function Primary_Node (Expr : CM.Expr_Access) return String is
       Null_Span : constant FT.Source_Span :=
         (if Expr = null then FT.Null_Span else Expr.Span);
@@ -608,7 +748,7 @@ package body Safe_Frontend.Check_Emit is
       end if;
 
       case Expr.Kind is
-         when CM.Expr_Int =>
+         when CM.Expr_Int | CM.Expr_Real =>
             return
               "{""node_type"":""Primary"",""kind"":""Literal"",""value"":"
               & Numeric_Literal_Node (Expr)
@@ -642,6 +782,17 @@ package body Safe_Frontend.Check_Emit is
               "{""node_type"":""Primary"",""kind"":""Aggregate"",""value"":"
               & Record_Aggregate_Node (Expr)
               & ",""span"":"
+              & JS.Span_Object (Expr.Span)
+              & "}";
+         when CM.Expr_Annotated =>
+            return
+              "{""node_type"":""Primary"",""kind"":""AnnotatedExpr"",""value"":{""node_type"":""AnnotatedExpression"",""expression"":"
+              & Expression_Node (Expr.Inner)
+              & ",""subtype_mark"":"
+              & Name_Node (Expr.Target)
+              & ",""span"":"
+              & JS.Span_Object (Expr.Span)
+              & "},""span"":"
               & JS.Span_Object (Expr.Span)
               & "}";
          when CM.Expr_Ident
@@ -717,10 +868,29 @@ package body Safe_Frontend.Check_Emit is
               & JS.Bool_Literal (Decl.Is_Public)
               & ",""name"":"
               & JS.Quote (Decl.Name)
-              & ",""discriminant_part"":null,""type_definition"":{""node_type"":""SignedIntegerTypeDefinition"",""low_bound"":"
+              & ",""discriminant_part"":"
+              & Discriminant_Part_Node (Decl)
+              & ",""type_definition"":{""node_type"":""SignedIntegerTypeDefinition"",""low_bound"":"
               & Expression_Node (Decl.Low_Expr)
               & ",""high_bound"":"
               & Expression_Node (Decl.High_Expr)
+              & ",""span"":"
+              & JS.Span_Object (Decl.Span)
+              & "},""span"":"
+              & JS.Span_Object (Decl.Span)
+              & "}";
+         when CM.Type_Decl_Float =>
+            return
+              "{""node_type"":""TypeDeclaration"",""is_public"":"
+              & JS.Bool_Literal (Decl.Is_Public)
+              & ",""name"":"
+              & JS.Quote (Decl.Name)
+              & ",""discriminant_part"":"
+              & Discriminant_Part_Node (Decl)
+              & ",""type_definition"":{""node_type"":""FloatingPointDefinition"",""digits_expr"":"
+              & Expression_Node (Decl.Digits_Expr)
+              & ",""range_constraint"":"
+              & Real_Range_Constraint_Node (Decl)
               & ",""span"":"
               & JS.Span_Object (Decl.Span)
               & "},""span"":"
@@ -742,7 +912,9 @@ package body Safe_Frontend.Check_Emit is
               & JS.Bool_Literal (Decl.Is_Public)
               & ",""name"":"
               & JS.Quote (Decl.Name)
-              & ",""discriminant_part"":null,""type_definition"":{""node_type"":""ConstrainedArrayDefinition"",""index_ranges"":"
+              & ",""discriminant_part"":"
+              & Discriminant_Part_Node (Decl)
+              & ",""type_definition"":{""node_type"":""ConstrainedArrayDefinition"",""index_ranges"":"
               & Json_List (Indexes)
               & ",""component_definition"":{""node_type"":""ComponentDefinition"",""is_aliased"":false,""type_spec"":"
               & Object_Type_Node (Decl.Component_Type)
@@ -767,7 +939,9 @@ package body Safe_Frontend.Check_Emit is
               & JS.Bool_Literal (Decl.Is_Public)
               & ",""name"":"
               & JS.Quote (Decl.Name)
-              & ",""discriminant_part"":null,""type_definition"":{""node_type"":""UnconstrainedArrayDefinition"",""index_subtypes"":"
+              & ",""discriminant_part"":"
+              & Discriminant_Part_Node (Decl)
+              & ",""type_definition"":{""node_type"":""UnconstrainedArrayDefinition"",""index_subtypes"":"
               & Json_List (Indexes)
               & ",""component_definition"":{""node_type"":""ComponentDefinition"",""is_aliased"":false,""type_spec"":"
               & Object_Type_Node (Decl.Component_Type)
@@ -779,34 +953,20 @@ package body Safe_Frontend.Check_Emit is
               & JS.Span_Object (Decl.Span)
               & "}";
          when CM.Type_Decl_Record =>
-            for Component of Decl.Components loop
-               Components.Append
-                 ("{""node_type"":""ComponentItem"",""kind"":""ComponentDeclaration"",""item"":{""node_type"":""ComponentDeclaration"",""names"":"
-                  & Quoted_Names (Component.Names)
-                  & ",""component_definition"":{""node_type"":""ComponentDefinition"",""is_aliased"":false,""type_spec"":"
-                  & Object_Type_Node (Component.Field_Type)
-                  & ",""span"":"
-                  & JS.Span_Object (Component.Field_Type.Span)
-                  & "},""default_expression"":null,""span"":"
-                  & JS.Span_Object (Component.Span)
-                  & "},""span"":"
-                  & JS.Span_Object (Component.Span)
-                  & "}");
-            end loop;
+            declare
+               Component_List : constant String := Component_List_Node (Decl);
+            begin
             return
               "{""node_type"":""TypeDeclaration"",""is_public"":"
               & JS.Bool_Literal (Decl.Is_Public)
               & ",""name"":"
               & JS.Quote (Decl.Name)
-              & ",""discriminant_part"":null,""type_definition"":{""node_type"":""RecordTypeDefinition"",""is_limited"":false,""is_private"":false,""record_definition"":{""node_type"":""RecordDefinition"",""is_null_record"":"
-              & JS.Bool_Literal (Components.Is_Empty)
+              & ",""discriminant_part"":"
+              & Discriminant_Part_Node (Decl)
+              & ",""type_definition"":{""node_type"":""RecordTypeDefinition"",""is_limited"":false,""is_private"":false,""record_definition"":{""node_type"":""RecordDefinition"",""is_null_record"":"
+              & JS.Bool_Literal (Component_List = "null")
               & ",""component_list"":"
-              & (if Components.Is_Empty then "null"
-                 else "{""node_type"":""ComponentList"",""components"":"
-                   & Json_List (Components)
-                   & ",""variant_part"":null,""is_null"":false,""span"":"
-                   & JS.Span_Object (Decl.Span)
-                   & "}")
+              & Component_List
               & ",""span"":"
               & JS.Span_Object (Decl.Span)
               & "},""span"":"
@@ -814,13 +974,16 @@ package body Safe_Frontend.Check_Emit is
               & "},""span"":"
               & JS.Span_Object (Decl.Span)
               & "}";
+            end;
          when CM.Type_Decl_Access =>
             return
               "{""node_type"":""TypeDeclaration"",""is_public"":"
               & JS.Bool_Literal (Decl.Is_Public)
               & ",""name"":"
               & JS.Quote (Decl.Name)
-              & ",""discriminant_part"":null,""type_definition"":"
+              & ",""discriminant_part"":"
+              & Discriminant_Part_Node (Decl)
+              & ",""type_definition"":"
               & Access_To_Object_Node (Decl.Access_Type)
               & ",""span"":"
               & JS.Span_Object (Decl.Span)
@@ -831,7 +994,9 @@ package body Safe_Frontend.Check_Emit is
               & JS.Bool_Literal (Decl.Is_Public)
               & ",""name"":"
               & JS.Quote (Decl.Name)
-              & ",""discriminant_part"":null,""type_definition"":{""node_type"":""SignedIntegerTypeDefinition"",""low_bound"":"
+              & ",""discriminant_part"":"
+              & Discriminant_Part_Node (Decl)
+              & ",""type_definition"":{""node_type"":""SignedIntegerTypeDefinition"",""low_bound"":"
               & Expression_Node (Decl.Low_Expr)
               & ",""high_bound"":"
               & Expression_Node (Decl.High_Expr)
@@ -1390,6 +1555,15 @@ package body Safe_Frontend.Check_Emit is
       if Info.Has_Base then
          Items.Append ("""base"":" & JS.Quote (Info.Base));
       end if;
+      if Info.Has_Digits_Text then
+         Items.Append ("""digits_text"":" & JS.Quote (Info.Digits_Text));
+      end if;
+      if Info.Has_Float_Low_Text then
+         Items.Append ("""float_low_text"":" & JS.Quote (Info.Float_Low_Text));
+      end if;
+      if Info.Has_Float_High_Text then
+         Items.Append ("""float_high_text"":" & JS.Quote (Info.Float_High_Text));
+      end if;
       if not Info.Index_Types.Is_Empty then
          declare
             Indexes : String_Vectors.Vector;
@@ -1414,6 +1588,31 @@ package body Safe_Frontend.Check_Emit is
       end if;
       if Info.Has_Target then
          Items.Append ("""target"":" & JS.Quote (Info.Target));
+      end if;
+      if Info.Has_Discriminant then
+         Items.Append ("""discriminant_name"":" & JS.Quote (Info.Discriminant_Name));
+         Items.Append ("""discriminant_type"":" & JS.Quote (Info.Discriminant_Type));
+         if Info.Has_Discriminant_Default then
+            Items.Append
+              ("""discriminant_default"":" & JS.Bool_Literal (Info.Discriminant_Default_Bool));
+         end if;
+      end if;
+      if not Info.Variant_Fields.Is_Empty then
+         declare
+            Variants : String_Vectors.Vector;
+         begin
+            for Variant_Field of Info.Variant_Fields loop
+               Variants.Append
+                 ("{""name"":"
+                  & JS.Quote (Variant_Field.Name)
+                  & ",""type"":"
+                  & JS.Quote (Variant_Field.Type_Name)
+                  & ",""when"":"
+                  & JS.Bool_Literal (Variant_Field.When_True)
+                  & "}");
+            end loop;
+            Items.Append ("""variant_fields"":" & Json_List (Variants));
+         end;
       end if;
       if FT.To_String (Info.Kind) = "access" then
          Items.Append ("""not_null"":" & JS.Bool_Literal (Info.Not_Null));

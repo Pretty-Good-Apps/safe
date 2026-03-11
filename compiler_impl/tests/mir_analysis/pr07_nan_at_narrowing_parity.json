@@ -1,0 +1,247 @@
+{
+  "format": "mir-v2",
+  "graphs": [
+    {
+      "blocks": [
+        {
+          "active_scope_id": "scope0",
+          "id": "bb0",
+          "ops": [
+            {
+              "kind": "scope_enter",
+              "locals": [
+                "X",
+                "Y"
+              ],
+              "scope_id": "scope0",
+              "span": {
+                "end_col": 21,
+                "end_line": 21,
+                "start_col": 4,
+                "start_line": 16
+              }
+            },
+            {
+              "declaration_init": true,
+              "kind": "assign",
+              "ownership_effect": "None",
+              "span": {
+                "end_col": 25,
+                "end_line": 17,
+                "start_col": 7,
+                "start_line": 17
+              },
+              "target": {
+                "name": "X",
+                "span": {
+                  "end_col": 7,
+                  "end_line": 17,
+                  "start_col": 7,
+                  "start_line": 17
+                },
+                "tag": "ident",
+                "type": "Long_Float"
+              },
+              "type": "Long_Float",
+              "value": {
+                "span": {
+                  "end_col": 26,
+                  "end_line": 17,
+                  "start_col": 24,
+                  "start_line": 17
+                },
+                "tag": "real",
+                "text": "0.0",
+                "type": "Long_Float"
+              }
+            },
+            {
+              "declaration_init": true,
+              "kind": "assign",
+              "ownership_effect": "None",
+              "span": {
+                "end_col": 25,
+                "end_line": 18,
+                "start_col": 7,
+                "start_line": 18
+              },
+              "target": {
+                "name": "Y",
+                "span": {
+                  "end_col": 7,
+                  "end_line": 18,
+                  "start_col": 7,
+                  "start_line": 18
+                },
+                "tag": "ident",
+                "type": "Long_Float"
+              },
+              "type": "Long_Float",
+              "value": {
+                "span": {
+                  "end_col": 26,
+                  "end_line": 18,
+                  "start_col": 24,
+                  "start_line": 18
+                },
+                "tag": "real",
+                "text": "0.0",
+                "type": "Long_Float"
+              }
+            }
+          ],
+          "role": "entry",
+          "span": {
+            "end_col": 21,
+            "end_line": 21,
+            "start_col": 4,
+            "start_line": 16
+          },
+          "terminator": {
+            "kind": "return",
+            "ownership_effect": "None",
+            "span": {
+              "end_col": 25,
+              "end_line": 20,
+              "start_col": 7,
+              "start_line": 20
+            },
+            "value": {
+              "expr": {
+                "left": {
+                  "name": "X",
+                  "span": {
+                    "end_col": 22,
+                    "end_line": 20,
+                    "start_col": 22,
+                    "start_line": 20
+                  },
+                  "tag": "ident",
+                  "type": "Long_Float"
+                },
+                "op": "/",
+                "right": {
+                  "name": "Y",
+                  "span": {
+                    "end_col": 24,
+                    "end_line": 20,
+                    "start_col": 24,
+                    "start_line": 20
+                  },
+                  "tag": "ident",
+                  "type": "Long_Float"
+                },
+                "span": {
+                  "end_col": 24,
+                  "end_line": 20,
+                  "start_col": 22,
+                  "start_line": 20
+                },
+                "tag": "binary",
+                "type": "Long_Float"
+              },
+              "span": {
+                "end_col": 25,
+                "end_line": 20,
+                "start_col": 14,
+                "start_line": 20
+              },
+              "tag": "conversion",
+              "target": {
+                "name": "Temp",
+                "span": {
+                  "end_col": 17,
+                  "end_line": 20,
+                  "start_col": 14,
+                  "start_line": 20
+                },
+                "tag": "ident"
+              },
+              "type": "Temp"
+            }
+          }
+        }
+      ],
+      "entry_bb": "bb0",
+      "kind": "function",
+      "locals": [
+        {
+          "id": "v0",
+          "kind": "local",
+          "mode": "in",
+          "name": "X",
+          "ownership_role": "",
+          "scope_id": "scope0",
+          "span": {
+            "end_col": 24,
+            "end_line": 17,
+            "start_col": 7,
+            "start_line": 17
+          },
+          "type": {
+            "kind": "float",
+            "name": "Long_Float"
+          }
+        },
+        {
+          "id": "v1",
+          "kind": "local",
+          "mode": "in",
+          "name": "Y",
+          "ownership_role": "",
+          "scope_id": "scope0",
+          "span": {
+            "end_col": 24,
+            "end_line": 18,
+            "start_col": 7,
+            "start_line": 18
+          },
+          "type": {
+            "kind": "float",
+            "name": "Long_Float"
+          }
+        }
+      ],
+      "name": "Produce_NaN",
+      "return_type": {
+        "digits_text": "6",
+        "float_high_text": "100.0",
+        "float_low_text": "-100.0",
+        "kind": "float",
+        "name": "Temp"
+      },
+      "scopes": [
+        {
+          "entry_block": "bb0",
+          "exit_blocks": [
+            "bb0"
+          ],
+          "id": "scope0",
+          "kind": "subprogram",
+          "local_ids": [
+            "v0",
+            "v1"
+          ],
+          "parent_scope_id": null
+        }
+      ],
+      "span": {
+        "end_col": 21,
+        "end_line": 21,
+        "start_col": 4,
+        "start_line": 16
+      }
+    }
+  ],
+  "package_name": "NaN_Test",
+  "source_path": "tests/negative/neg_rule5_nan.safe",
+  "types": [
+    {
+      "digits_text": "6",
+      "float_high_text": "100.0",
+      "float_low_text": "-100.0",
+      "kind": "float",
+      "name": "Temp"
+    }
+  ]
+}

@@ -14,6 +14,7 @@ package body Safe_Frontend.Mir_Analyze is
    package US renames Ada.Strings.Unbounded;
 
    subtype Wide_Integer is Long_Long_Long_Integer;
+   subtype Real_Value is Long_Long_Float;
 
    package String_Sets is new Ada.Containers.Indefinite_Hashed_Sets
      (Element_Type        => String,
@@ -39,6 +40,33 @@ package body Safe_Frontend.Mir_Analyze is
    package Range_Maps is new Ada.Containers.Indefinite_Hashed_Maps
      (Key_Type        => String,
       Element_Type    => Interval,
+      Hash            => Ada.Strings.Hash,
+      Equivalent_Keys => "=");
+
+   type Float_Interval is record
+      Low             : Real_Value := 0.0;
+      High            : Real_Value := 0.0;
+      Initialized     : Boolean := True;
+      May_Be_NaN      : Boolean := False;
+      May_Be_Infinite : Boolean := False;
+      Excludes_Zero   : Boolean := False;
+   end record;
+
+   package Float_Maps is new Ada.Containers.Indefinite_Hashed_Maps
+     (Key_Type        => String,
+      Element_Type    => Float_Interval,
+      Hash            => Ada.Strings.Hash,
+      Equivalent_Keys => "=");
+
+   type Discriminant_Fact is record
+      Known       : Boolean := False;
+      Value       : Boolean := False;
+      Invalidated : Boolean := False;
+   end record;
+
+   package Discriminant_Maps is new Ada.Containers.Indefinite_Hashed_Maps
+     (Key_Type        => String,
+      Element_Type    => Discriminant_Fact,
       Hash            => Ada.Strings.Hash,
       Equivalent_Keys => "=");
 
@@ -122,7 +150,9 @@ package body Safe_Frontend.Mir_Analyze is
 
    type State is record
       Ranges         : Range_Maps.Map;
+      Float_Facts    : Float_Maps.Map;
       Access_Facts   : Access_Maps.Map;
+      Discriminants  : Discriminant_Maps.Map;
       Relations      : String_Sets.Set;
       Div_Bounds     : Interval_Maps.Map;
       Borrow_Freeze  : Natural_Maps.Map;
@@ -138,6 +168,8 @@ package body Safe_Frontend.Mir_Analyze is
 
    INT64_LOW  : constant Wide_Integer := -(2 ** 63);
    INT64_HIGH : constant Wide_Integer := (2 ** 63) - 1;
+   FLOAT_FINITE_LIMIT : constant Real_Value := 1.0E+308;
+   FLOAT_CONTAINMENT_EPSILON_SCALE : constant Real_Value := 4096.0;
 
    Diagnostic_Failure : exception;
    Raised_Diagnostic  : MD.Diagnostic;
@@ -196,6 +228,8 @@ package body Safe_Frontend.Mir_Analyze is
      (Name : String;
       Low  : Wide_Integer;
       High : Wide_Integer) return GM.Type_Descriptor;
+   function Make_Builtin_Float
+     (Name : String) return GM.Type_Descriptor;
    procedure Add_Builtins (Type_Env : in out Type_Maps.Map);
    function Resolve_Type
      (Name     : String;
@@ -207,6 +241,8 @@ package body Safe_Frontend.Mir_Analyze is
    function Range_Interval
      (Info : GM.Type_Descriptor) return Interval;
    function Is_Integer_Type
+     (Info : GM.Type_Descriptor) return Boolean;
+   function Is_Float_Type
      (Info : GM.Type_Descriptor) return Boolean;
    function Type_Access_Role
      (Info : GM.Type_Descriptor) return Access_Role_Kind;
@@ -234,6 +270,23 @@ package body Safe_Frontend.Mir_Analyze is
    function Interval_Display
      (Value : Interval;
       Info  : GM.Type_Descriptor) return String;
+   function Normalize_Real_Text
+     (Text : String) return String;
+   function Parse_Real
+     (Text : String) return Real_Value;
+   function Float_Interval_For
+     (Info : GM.Type_Descriptor) return Float_Interval;
+   function Float_Interval_Join
+     (Left, Right : Float_Interval) return Float_Interval;
+   function Float_Interval_Contains
+     (Container : Float_Interval;
+      Value     : Float_Interval) return Boolean;
+   function Float_May_Contain_Zero
+     (Value : Float_Interval) return Boolean;
+   function Float_Max_Abs
+     (Value : Float_Interval) return Real_Value;
+   function Float_Min_Abs
+     (Value : Float_Interval) return Real_Value;
 
    function Access_Fact_For_Name
      (Name      : String;
@@ -277,6 +330,16 @@ package body Safe_Frontend.Mir_Analyze is
       Var_Types : Type_Maps.Map;
       Type_Env  : Type_Maps.Map) return Wide_Integer;
    function Has_Constant_Value
+     (Expr      : GM.Expr_Access;
+      Current   : State;
+      Var_Types : Type_Maps.Map;
+      Type_Env  : Type_Maps.Map) return Boolean;
+   function Constant_Real_Value
+     (Expr      : GM.Expr_Access;
+      Current   : State;
+      Var_Types : Type_Maps.Map;
+      Type_Env  : Type_Maps.Map) return Real_Value;
+   function Has_Real_Constant
      (Expr      : GM.Expr_Access;
       Current   : State;
       Var_Types : Type_Maps.Map;
@@ -359,6 +422,26 @@ package body Safe_Frontend.Mir_Analyze is
       Var_Types  : Type_Maps.Map;
       Type_Env   : Type_Maps.Map;
       Functions  : Function_Maps.Map) return Interval;
+   function Eval_Float_Expr
+     (Expr       : GM.Expr_Access;
+      Current    : State;
+      Var_Types  : Type_Maps.Map;
+      Type_Env   : Type_Maps.Map;
+      Functions  : Function_Maps.Map) return Float_Interval;
+   procedure Check_Float_Narrowing
+     (Expr           : GM.Expr_Access;
+      Interval_Value : Float_Interval;
+      Target_Type    : GM.Type_Descriptor);
+
+   function Eval_Float_Expr_With_Diag
+     (Expr         : GM.Expr_Access;
+      Current      : State;
+      Var_Types    : Type_Maps.Map;
+      Type_Env     : Type_Maps.Map;
+      Functions    : Function_Maps.Map;
+      Target_Type  : GM.Type_Descriptor;
+      Has_Diag     : out Boolean;
+      Diagnostic   : out MD.Diagnostic) return Float_Interval;
    function Eval_Int_Expr
      (Expr       : GM.Expr_Access;
       Current    : State;
@@ -398,6 +481,12 @@ package body Safe_Frontend.Mir_Analyze is
       Truthy    : Boolean;
       Var_Types : Type_Maps.Map;
       Type_Env  : Type_Maps.Map);
+   procedure Apply_Discriminant_Refinement
+     (Current   : in out State;
+      Expr      : GM.Expr_Access;
+      Var_Types : Type_Maps.Map;
+      Truthy    : Boolean;
+      Type_Env : Type_Maps.Map);
    function Refine_Condition
      (Current   : State;
       Expr      : GM.Expr_Access;
@@ -409,6 +498,9 @@ package body Safe_Frontend.Mir_Analyze is
      (Current : in out State;
       Name    : String;
       Info    : GM.Type_Descriptor);
+   procedure Invalidate_Discriminant_Fact
+     (Current : in out State;
+      Name    : String);
    function Graph_Var_Types
      (Graph    : GM.Graph_Entry;
       Type_Env : Type_Maps.Map) return Type_Maps.Map;
@@ -438,6 +530,12 @@ package body Safe_Frontend.Mir_Analyze is
       Candidate : State) return Boolean;
 
    procedure Validate_Assignment_Target
+     (Expr      : GM.Expr_Access;
+      Current   : State;
+      Var_Types : Type_Maps.Map;
+      Type_Env  : Type_Maps.Map;
+      Functions : Function_Maps.Map);
+   procedure Ensure_Discriminant_Safe
      (Expr      : GM.Expr_Access;
       Current   : State;
       Var_Types : Type_Maps.Map;
@@ -645,11 +743,30 @@ package body Safe_Frontend.Mir_Analyze is
       return Result;
    end Make_Builtin;
 
+   function Make_Builtin_Float
+     (Name : String) return GM.Type_Descriptor
+   is
+      Result : GM.Type_Descriptor;
+   begin
+      Result.Name := FT.To_UString (Name);
+      Result.Kind := FT.To_UString ("float");
+      Result.Has_Digits_Text := True;
+      Result.Digits_Text :=
+        FT.To_UString ((if Name = "Float" then "6" else "15"));
+      Result.Has_Float_Low_Text := True;
+      Result.Float_Low_Text := FT.To_UString ("-1.0E+308");
+      Result.Has_Float_High_Text := True;
+      Result.Float_High_Text := FT.To_UString ("1.0E+308");
+      return Result;
+   end Make_Builtin_Float;
+
    procedure Add_Builtins (Type_Env : in out Type_Maps.Map) is
    begin
       Type_Env.Include ("Integer", Make_Builtin ("Integer", INT64_LOW, INT64_HIGH));
       Type_Env.Include ("Natural", Make_Builtin ("Natural", 0, INT64_HIGH));
       Type_Env.Include ("Boolean", Make_Builtin ("Boolean", 0, 1));
+      Type_Env.Include ("Float", Make_Builtin_Float ("Float"));
+      Type_Env.Include ("Long_Float", Make_Builtin_Float ("Long_Float"));
    end Add_Builtins;
 
    function Parse_Anonymous_Access
@@ -694,7 +811,12 @@ package body Safe_Frontend.Mir_Analyze is
          return Type_Env.Element ("Integer");
       elsif Type_Env.Contains (Name) then
          return Type_Env.Element (Name);
-      elsif Name = "Integer" or else Name = "Natural" or else Name = "Boolean" then
+      elsif Name = "Integer"
+        or else Name = "Natural"
+        or else Name = "Boolean"
+        or else Name = "Float"
+        or else Name = "Long_Float"
+      then
          return Type_Env.Element (Name);
       elsif Name'Length >= 7 and then Name (Name'First .. Name'First + 6) = "access " then
          return Parse_Anonymous_Access (Name);
@@ -744,6 +866,12 @@ package body Safe_Frontend.Mir_Analyze is
    begin
       return Kind = "integer" or else Kind = "subtype";
    end Is_Integer_Type;
+
+   function Is_Float_Type
+     (Info : GM.Type_Descriptor) return Boolean is
+   begin
+      return Lower (UString_Value (Info.Kind)) = "float";
+   end Is_Float_Type;
 
    function Type_Access_Role
      (Info : GM.Type_Descriptor) return Access_Role_Kind
@@ -801,6 +929,9 @@ package body Safe_Frontend.Mir_Analyze is
          Base := Access_Target_Type (Base, Type_Env);
       end if;
       if Lower (UString_Value (Base.Kind)) = "record" then
+         if Base.Has_Discriminant and then UString_Value (Base.Discriminant_Name) = Field_Name then
+            return Resolve_Type (UString_Value (Base.Discriminant_Type), Type_Env);
+         end if;
          for Field of Base.Fields loop
             if UString_Value (Field.Name) = Field_Name then
                return Resolve_Type (UString_Value (Field.Type_Name), Type_Env);
@@ -868,6 +999,114 @@ package body Safe_Frontend.Mir_Analyze is
       end if;
       return Interval_Format (Value);
    end Interval_Display;
+
+   function Normalize_Real_Text
+     (Text : String) return String
+   is
+      Result : US.Unbounded_String := US.Null_Unbounded_String;
+   begin
+      for Ch of Text loop
+         if Ch /= '_' then
+            US.Append (Result, Ch);
+         end if;
+      end loop;
+      return US.To_String (Result);
+   end Normalize_Real_Text;
+
+   function Parse_Real
+     (Text : String) return Real_Value is
+      Normalized : constant String := Normalize_Real_Text (Text);
+   begin
+      return Real_Value'Value (Normalized);
+   exception
+      when others =>
+         raise Constraint_Error with "invalid real text: " & Normalized;
+   end Parse_Real;
+
+   function Float_Interval_For
+     (Info : GM.Type_Descriptor) return Float_Interval
+   is
+      Low_Value  : Real_Value := -FLOAT_FINITE_LIMIT;
+      High_Value : Real_Value := FLOAT_FINITE_LIMIT;
+   begin
+      if Is_Float_Type (Info) then
+         if Info.Has_Float_Low_Text then
+            Low_Value := Parse_Real (UString_Value (Info.Float_Low_Text));
+         end if;
+         if Info.Has_Float_High_Text then
+            High_Value := Parse_Real (UString_Value (Info.Float_High_Text));
+         end if;
+      end if;
+      return
+        (Low             => Low_Value,
+         High            => High_Value,
+         Initialized     => True,
+         May_Be_NaN      => False,
+         May_Be_Infinite => False,
+         Excludes_Zero   => Low_Value > 0.0 or else High_Value < 0.0);
+   end Float_Interval_For;
+
+   function Float_Interval_Join
+     (Left, Right : Float_Interval) return Float_Interval is
+   begin
+      return
+        (Low             => Real_Value'Min (Left.Low, Right.Low),
+         High            => Real_Value'Max (Left.High, Right.High),
+         Initialized     => Left.Initialized and then Right.Initialized,
+         May_Be_NaN      => Left.May_Be_NaN or else Right.May_Be_NaN,
+         May_Be_Infinite => Left.May_Be_Infinite or else Right.May_Be_Infinite,
+         Excludes_Zero   =>
+           Left.Excludes_Zero
+           and then Right.Excludes_Zero
+           and then not
+             (Real_Value'Min (Left.Low, Right.Low) <= 0.0
+              and then 0.0 <= Real_Value'Max (Left.High, Right.High)));
+   end Float_Interval_Join;
+
+   function Float_Interval_Contains
+     (Container : Float_Interval;
+      Value     : Float_Interval) return Boolean is
+      Max_Abs : constant Real_Value :=
+        Real_Value'Max
+          (1.0,
+           Real_Value'Max
+             (Real_Value'Max (abs Container.Low, abs Container.High),
+              Real_Value'Max (abs Value.Low, abs Value.High)));
+      Tolerance : constant Real_Value :=
+        Real_Value'Max
+          (1.0E-12,
+           FLOAT_CONTAINMENT_EPSILON_SCALE * Real_Value'Model_Epsilon * Max_Abs);
+   begin
+      return
+        Value.Initialized
+        and then not Value.May_Be_NaN
+        and then not Value.May_Be_Infinite
+        and then Container.Low - Tolerance <= Value.Low
+        and then Value.High <= Container.High + Tolerance;
+   end Float_Interval_Contains;
+
+   function Float_May_Contain_Zero
+     (Value : Float_Interval) return Boolean is
+   begin
+      return not Value.Excludes_Zero and then Value.Low <= 0.0 and then 0.0 <= Value.High;
+   end Float_May_Contain_Zero;
+
+   function Float_Max_Abs
+     (Value : Float_Interval) return Real_Value is
+   begin
+      return Real_Value'Max (abs Value.Low, abs Value.High);
+   end Float_Max_Abs;
+
+   function Float_Min_Abs
+     (Value : Float_Interval) return Real_Value is
+      Low_Abs  : constant Real_Value := abs Value.Low;
+      High_Abs : constant Real_Value := abs Value.High;
+   begin
+      if Float_May_Contain_Zero (Value) then
+         return 0.0;
+      end if;
+      return Real_Value'Min (Low_Abs, High_Abs);
+   end Float_Min_Abs;
 
    function Access_Fact_For_Name
      (Name      : String;
@@ -975,6 +1214,8 @@ package body Safe_Frontend.Mir_Analyze is
          when GM.Expr_Ident =>
             return UString_Value (Expr.Name);
          when GM.Expr_Int =>
+            return UString_Value (Expr.Text);
+         when GM.Expr_Real =>
             return UString_Value (Expr.Text);
          when GM.Expr_Bool =>
             if Expr.Bool_Value then
@@ -1117,6 +1358,11 @@ package body Safe_Frontend.Mir_Analyze is
             elsif Type_Env.Contains (UString_Value (Expr.Name)) then
                return Type_Env.Element (UString_Value (Expr.Name));
             end if;
+         when GM.Expr_Real =>
+            if Has_Text (Expr.Type_Name) then
+               return Resolve_Type (UString_Value (Expr.Type_Name), Var_Types, Type_Env);
+            end if;
+            return Resolve_Type ("Long_Float", Type_Env);
          when GM.Expr_Select =>
             if UString_Value (Expr.Selector) = "all" then
                return Access_Target_Type (Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions), Type_Env);
@@ -1158,6 +1404,8 @@ package body Safe_Frontend.Mir_Analyze is
                end;
             elsif Var_Types.Contains (UString_Value (Callee_Name)) then
                return Var_Types.Element (UString_Value (Callee_Name));
+            elsif UString_Value (Callee_Name) = "Long_Float.Copy_Sign" then
+               return Resolve_Type ("Long_Float", Type_Env);
             end if;
          when GM.Expr_Allocator =>
             if Expr.Value /= null and then Expr.Value.Kind = GM.Expr_Annotated then
@@ -1248,6 +1496,132 @@ package body Safe_Frontend.Mir_Analyze is
       end if;
       raise Constraint_Error with "no constant";
    end Constant_Value;
+
+   function Constant_Real_Value
+     (Expr      : GM.Expr_Access;
+      Current   : State;
+      Var_Types : Type_Maps.Map;
+      Type_Env  : Type_Maps.Map) return Real_Value
+   is
+   begin
+      if Expr = null then
+         raise Constraint_Error with "no real constant";
+      end if;
+      case Expr.Kind is
+         when GM.Expr_Real =>
+            return Parse_Real (UString_Value (Expr.Text));
+         when GM.Expr_Int =>
+            return Real_Value (Expr.Int_Value);
+         when GM.Expr_Conversion =>
+            return Constant_Real_Value (Expr.Inner, Current, Var_Types, Type_Env);
+         when GM.Expr_Unary =>
+            if UString_Value (Expr.Operator) = "-" then
+               return -Constant_Real_Value (Expr.Inner, Current, Var_Types, Type_Env);
+            end if;
+         when GM.Expr_Ident =>
+            if Current.Float_Facts.Contains (UString_Value (Expr.Name)) then
+               declare
+                  Value : constant Float_Interval := Current.Float_Facts.Element (UString_Value (Expr.Name));
+               begin
+                  if Value.Initialized
+                    and then not Value.May_Be_NaN
+                    and then not Value.May_Be_Infinite
+                    and then Value.Low = Value.High
+                  then
+                     return Value.Low;
+                  end if;
+               end;
+            end if;
+            if Current.Ranges.Contains (UString_Value (Expr.Name)) then
+               declare
+                  Value : constant Interval := Current.Ranges.Element (UString_Value (Expr.Name));
+               begin
+                  if Value.Low = Value.High then
+                     return Real_Value (Value.Low);
+                  end if;
+               end;
+            end if;
+         when others =>
+            null;
+      end case;
+      raise Constraint_Error with "no real constant";
+   end Constant_Real_Value;
+
+   function Has_Real_Constant
+     (Expr      : GM.Expr_Access;
+      Current   : State;
+      Var_Types : Type_Maps.Map;
+      Type_Env  : Type_Maps.Map) return Boolean
+   is
+      Dummy : Real_Value := 0.0;
+   begin
+      Dummy := Constant_Real_Value (Expr, Current, Var_Types, Type_Env);
+      return True;
+   exception
+      when others =>
+         return False;
+   end Has_Real_Constant;
+
+   procedure Ensure_Discriminant_Safe
+     (Expr      : GM.Expr_Access;
+      Current   : State;
+      Var_Types : Type_Maps.Map;
+      Type_Env  : Type_Maps.Map;
+      Functions : Function_Maps.Map)
+   is
+      Prefix_Type : GM.Type_Descriptor;
+      Base_Name_Text : constant String := Root_Name (Expr.Prefix);
+      Expected    : Boolean := False;
+      Found       : Boolean := False;
+      Fact        : Discriminant_Fact;
+      Diag        : MD.Diagnostic := Null_Diagnostic;
+   begin
+      if Expr = null or else Expr.Kind /= GM.Expr_Select or else Base_Name_Text = "" then
+         return;
+      end if;
+      Prefix_Type := Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions);
+      if Lower (UString_Value (Prefix_Type.Kind)) = "access" then
+         Prefix_Type := Access_Target_Type (Prefix_Type, Type_Env);
+      end if;
+      if not Prefix_Type.Has_Discriminant or else Prefix_Type.Variant_Fields.Is_Empty then
+         return;
+      end if;
+      for Field of Prefix_Type.Variant_Fields loop
+         if UString_Value (Field.Name) = UString_Value (Expr.Selector) then
+            Expected := Field.When_True;
+            Found := True;
+            exit;
+         end if;
+      end loop;
+      if not Found then
+         return;
+      end if;
+      if Current.Discriminants.Contains (Base_Name_Text) then
+         Fact := Current.Discriminants.Element (Base_Name_Text);
+      end if;
+      if not Fact.Known or else Fact.Value /= Expected then
+         Diag.Reason := FT.To_UString ("discriminant_check_not_established");
+         Diag.Message :=
+           FT.To_UString
+             ("access to variant field '" & UString_Value (Expr.Selector)
+              & "' requires established discriminant '" & UString_Value (Prefix_Type.Discriminant_Name) & "'");
+         Diag.Span := Expr.Span;
+         Diag.Has_Highlight_Span := True;
+         Diag.Highlight_Span := Expr.Span;
+         if Fact.Invalidated then
+            Diag.Notes.Append
+              (FT.To_UString
+                 ("the discriminant fact for '" & Base_Name_Text
+                  & "' was invalidated by assignment or an out/in out call."));
+         else
+            Diag.Notes.Append
+              (FT.To_UString
+                 ("the discriminant '" & UString_Value (Prefix_Type.Discriminant_Name)
+                  & "' was not established on all paths before this access."));
+         end if;
+         Raise_Diag (Diag);
+      end if;
+   end Ensure_Discriminant_Safe;
 
    function Ownership_Note (Reason : String) return String is
    begin
@@ -1934,6 +2308,546 @@ package body Safe_Frontend.Mir_Analyze is
       return (Low => INT64_LOW, High => INT64_HIGH, Excludes_Zero => False);
    end Eval_Index_Expr;
 
+   function Eval_Float_Expr
+     (Expr       : GM.Expr_Access;
+      Current    : State;
+      Var_Types  : Type_Maps.Map;
+      Type_Env   : Type_Maps.Map;
+      Functions  : Function_Maps.Map) return Float_Interval
+   is
+      function Numeric_As_Float
+        (Item : GM.Expr_Access) return Float_Interval;
+
+      function Is_Zero
+        (Value : Float_Interval) return Boolean is
+      begin
+         return
+           Value.Initialized
+           and then not Value.May_Be_NaN
+           and then not Value.May_Be_Infinite
+           and then Value.Low = 0.0
+           and then Value.High = 0.0;
+      end Is_Zero;
+
+      function Bounds_Only
+        (Info : GM.Type_Descriptor) return Float_Interval is
+         Result : Float_Interval := Float_Interval_For (Info);
+      begin
+         Result.Initialized := True;
+         return Result;
+      end Bounds_Only;
+
+      function Multiply_Intervals
+        (Left, Right : Float_Interval) return Float_Interval
+      is
+         Values : array (1 .. 4) of Real_Value;
+         Result : Float_Interval;
+      begin
+         Values (1) := Left.Low * Right.Low;
+         Values (2) := Left.Low * Right.High;
+         Values (3) := Left.High * Right.Low;
+         Values (4) := Left.High * Right.High;
+         Result.Low := Real_Value'Min (Real_Value'Min (Values (1), Values (2)), Real_Value'Min (Values (3), Values (4)));
+         Result.High := Real_Value'Max (Real_Value'Max (Values (1), Values (2)), Real_Value'Max (Values (3), Values (4)));
+         Result.Initialized := Left.Initialized and then Right.Initialized;
+         Result.May_Be_NaN := Left.May_Be_NaN or else Right.May_Be_NaN;
+         Result.May_Be_Infinite :=
+           Left.May_Be_Infinite
+           or else Right.May_Be_Infinite
+           or else Float_Max_Abs (Left) * Float_Max_Abs (Right) > FLOAT_FINITE_LIMIT;
+         Result.Excludes_Zero := Left.Excludes_Zero and then Right.Excludes_Zero;
+         return Result;
+      end Multiply_Intervals;
+
+      function Divide_Intervals
+        (Item : GM.Expr_Access;
+         Left, Right : Float_Interval) return Float_Interval
+      is
+         Values : array (1 .. 4) of Real_Value;
+         Result : Float_Interval;
+         Min_Divisor : constant Real_Value := Float_Min_Abs (Right);
+         Overflow_Possible : constant Boolean :=
+           Min_Divisor > 0.0
+           and then Min_Divisor < 1.0
+           and then Float_Max_Abs (Left) > FLOAT_FINITE_LIMIT * Min_Divisor;
+         Diag : MD.Diagnostic := Null_Diagnostic;
+      begin
+         if Float_May_Contain_Zero (Right) then
+            if Is_Zero (Left) and then Is_Zero (Right) then
+               return
+                 (Low             => 0.0,
+                  High            => 0.0,
+                  Initialized     => Left.Initialized and then Right.Initialized,
+                  May_Be_NaN      => True,
+                  May_Be_Infinite => False,
+                  Excludes_Zero   => False);
+            end if;
+            Diag.Reason := FT.To_UString ("fp_division_by_zero");
+            Diag.Message := FT.To_UString ("floating divisor is not provably nonzero");
+            Diag.Span := Highlight_Span (Item);
+            Diag.Has_Highlight_Span := True;
+            Diag.Highlight_Span := Item.Right.Span;
+            Diag.Notes.Append (FT.To_UString ("division by a value that may be 0.0 can produce infinity or NaN."));
+            Raise_Diag (Diag);
+         end if;
+         if Overflow_Possible then
+            return
+              (Low             => -FLOAT_FINITE_LIMIT,
+               High            => FLOAT_FINITE_LIMIT,
+               Initialized     => Left.Initialized and then Right.Initialized,
+               May_Be_NaN      => Left.May_Be_NaN or else Right.May_Be_NaN,
+               May_Be_Infinite => True,
+               Excludes_Zero   => Left.Excludes_Zero);
+         end if;
+         Values (1) := Left.Low / Right.Low;
+         Values (2) := Left.Low / Right.High;
+         Values (3) := Left.High / Right.Low;
+         Values (4) := Left.High / Right.High;
+         Result.Low := Real_Value'Min (Real_Value'Min (Values (1), Values (2)), Real_Value'Min (Values (3), Values (4)));
+         Result.High := Real_Value'Max (Real_Value'Max (Values (1), Values (2)), Real_Value'Max (Values (3), Values (4)));
+         Result.Initialized := Left.Initialized and then Right.Initialized;
+         Result.May_Be_NaN := Left.May_Be_NaN or else Right.May_Be_NaN;
+         Result.May_Be_Infinite :=
+           Left.May_Be_Infinite
+           or else Right.May_Be_Infinite
+           or else Overflow_Possible;
+         Result.Excludes_Zero := Left.Excludes_Zero;
+         return Result;
+      end Divide_Intervals;
+
+      function Try_Convex_Combination
+        (Item    : GM.Expr_Access;
+         Result  : out Float_Interval) return Boolean
+      is
+         function Complement_Of
+           (Candidate, Weight : GM.Expr_Access) return Boolean is
+         begin
+            return
+              Candidate /= null
+              and then Candidate.Kind = GM.Expr_Binary
+              and then UString_Value (Candidate.Operator) = "-"
+              and then Candidate.Left /= null
+              and then Has_Real_Constant (Candidate.Left, Current, Var_Types, Type_Env)
+              and then Constant_Real_Value (Candidate.Left, Current, Var_Types, Type_Env) = 1.0
+              and then Source_Text_For_Expr (Candidate.Right) = Source_Text_For_Expr (Weight);
+         end Complement_Of;
+
+         function Extract_Product
+           (Term      : GM.Expr_Access;
+            Weight    : out GM.Expr_Access;
+            Component : out GM.Expr_Access) return Boolean
+         is
+            Left_Float  : Float_Interval;
+            Right_Float : Float_Interval;
+         begin
+            if Term = null or else Term.Kind /= GM.Expr_Binary or else UString_Value (Term.Operator) /= "*" then
+               return False;
+            end if;
+            Left_Float := Numeric_As_Float (Term.Left);
+            if Left_Float.Initialized
+              and then not Left_Float.May_Be_NaN
+              and then not Left_Float.May_Be_Infinite
+              and then 0.0 <= Left_Float.Low
+              and then Left_Float.High <= 1.0
+            then
+               Weight := Term.Left;
+               Component := Term.Right;
+               return True;
+            end if;
+            Right_Float := Numeric_As_Float (Term.Right);
+            if Right_Float.Initialized
+              and then not Right_Float.May_Be_NaN
+              and then not Right_Float.May_Be_Infinite
+              and then 0.0 <= Right_Float.Low
+              and then Right_Float.High <= 1.0
+            then
+               Weight := Term.Right;
+               Component := Term.Left;
+               return True;
+            end if;
+            return False;
+         end Extract_Product;
+
+         W1, W2 : GM.Expr_Access := null;
+         V1, V2 : GM.Expr_Access := null;
+         I1, I2 : Float_Interval;
+      begin
+         if Item = null or else Item.Kind /= GM.Expr_Binary or else UString_Value (Item.Operator) /= "+" then
+            return False;
+         end if;
+         if not Extract_Product (Item.Left, W1, V1)
+           or else not Extract_Product (Item.Right, W2, V2)
+         then
+            return False;
+         end if;
+         if not (Complement_Of (W1, W2) or else Complement_Of (W2, W1)) then
+            return False;
+         end if;
+         I1 := Numeric_As_Float (V1);
+         I2 := Numeric_As_Float (V2);
+         Result :=
+           (Low             => Real_Value'Min (I1.Low, I2.Low),
+            High            => Real_Value'Max (I1.High, I2.High),
+            Initialized     => I1.Initialized and then I2.Initialized,
+            May_Be_NaN      => I1.May_Be_NaN or else I2.May_Be_NaN,
+            May_Be_Infinite => I1.May_Be_Infinite or else I2.May_Be_Infinite,
+            Excludes_Zero   => I1.Excludes_Zero and then I2.Excludes_Zero);
+         return True;
+      end Try_Convex_Combination;
+
+      function Try_Interpolation
+        (Item   : GM.Expr_Access;
+         Result : out Float_Interval) return Boolean
+      is
+         T_Expr   : GM.Expr_Access := null;
+         A_Expr   : GM.Expr_Access := null;
+         B_Expr   : GM.Expr_Access := null;
+         Weight   : Float_Interval;
+         A_Int    : Float_Interval;
+         B_Int    : Float_Interval;
+      begin
+         if Item = null or else Item.Kind /= GM.Expr_Binary or else UString_Value (Item.Operator) /= "+" then
+            return False;
+         end if;
+         if Item.Right /= null
+           and then Item.Right.Kind = GM.Expr_Binary
+           and then UString_Value (Item.Right.Operator) = "*"
+           and then Item.Right.Right /= null
+           and then Item.Right.Right.Kind = GM.Expr_Binary
+           and then UString_Value (Item.Right.Right.Operator) = "-"
+           and then Source_Text_For_Expr (Item.Left) = Source_Text_For_Expr (Item.Right.Right.Right)
+         then
+            A_Expr := Item.Left;
+            T_Expr := Item.Right.Left;
+            B_Expr := Item.Right.Right.Left;
+         else
+            return False;
+         end if;
+         Weight := Numeric_As_Float (T_Expr);
+         if Weight.May_Be_NaN or else Weight.May_Be_Infinite or else Weight.Low < 0.0 or else Weight.High > 1.0 then
+            return False;
+         end if;
+         A_Int := Numeric_As_Float (A_Expr);
+         B_Int := Numeric_As_Float (B_Expr);
+         Result :=
+           (Low             => Real_Value'Min (A_Int.Low, B_Int.Low),
+            High            => Real_Value'Max (A_Int.High, B_Int.High),
+            Initialized     => A_Int.Initialized and then B_Int.Initialized,
+            May_Be_NaN      => A_Int.May_Be_NaN or else B_Int.May_Be_NaN,
+            May_Be_Infinite => A_Int.May_Be_Infinite or else B_Int.May_Be_Infinite,
+            Excludes_Zero   => A_Int.Excludes_Zero and then B_Int.Excludes_Zero);
+         return True;
+      end Try_Interpolation;
+
+      function Numeric_As_Float
+        (Item : GM.Expr_Access) return Float_Interval
+      is
+         Info : constant GM.Type_Descriptor := Expr_Type (Item, Var_Types, Type_Env, Functions);
+      begin
+         if Is_Float_Type (Info) then
+            return Eval_Float_Expr (Item, Current, Var_Types, Type_Env, Functions);
+         end if;
+         declare
+            Int_Value : constant Interval := Eval_Int_Expr (Item, Current, Var_Types, Type_Env, Functions);
+         begin
+            return
+              (Low             => Real_Value (Int_Value.Low),
+               High            => Real_Value (Int_Value.High),
+               Initialized     => True,
+               May_Be_NaN      => False,
+               May_Be_Infinite => False,
+               Excludes_Zero   => Int_Value.Excludes_Zero);
+         end;
+      end Numeric_As_Float;
+
+      Left   : Float_Interval;
+      Right  : Float_Interval;
+      Inner  : Float_Interval;
+      Name   : FT.UString := FT.To_UString ("");
+      Prefix : GM.Type_Descriptor;
+      Result : Float_Interval;
+   begin
+      if Expr = null then
+         declare
+            Diag : MD.Diagnostic := Null_Diagnostic;
+         begin
+            Diag.Reason := FT.To_UString ("fp_overflow_at_narrowing");
+            Diag.Message := FT.To_UString ("missing floating expression");
+            Raise_Diag (Diag);
+         end;
+      end if;
+
+      case Expr.Kind is
+         when GM.Expr_Real =>
+            declare
+               Value : constant Real_Value := Parse_Real (UString_Value (Expr.Text));
+            begin
+               return
+                 (Low             => Value,
+                  High            => Value,
+                  Initialized     => True,
+                  May_Be_NaN      => False,
+                  May_Be_Infinite => False,
+                  Excludes_Zero   => Value /= 0.0);
+            end;
+         when GM.Expr_Int =>
+            return
+              (Low             => Real_Value (Expr.Int_Value),
+               High            => Real_Value (Expr.Int_Value),
+               Initialized     => True,
+               May_Be_NaN      => False,
+               May_Be_Infinite => False,
+               Excludes_Zero   => Expr.Int_Value /= 0);
+         when GM.Expr_Bool =>
+            return
+              (Low             => (if Expr.Bool_Value then 1.0 else 0.0),
+               High            => (if Expr.Bool_Value then 1.0 else 0.0),
+               Initialized     => True,
+               May_Be_NaN      => False,
+               May_Be_Infinite => False,
+               Excludes_Zero   => Expr.Bool_Value);
+         when GM.Expr_Ident =>
+            Name := Expr.Name;
+            if Current.Float_Facts.Contains (UString_Value (Name)) then
+               return Current.Float_Facts.Element (UString_Value (Name));
+            elsif Var_Types.Contains (UString_Value (Name)) then
+               return Bounds_Only (Var_Types.Element (UString_Value (Name)));
+            end if;
+         when GM.Expr_Select =>
+            if UString_Value (Expr.Selector) = "all" then
+               Ensure_Access_Safe (Expr.Prefix, Expr.Span, Current, Var_Types, Type_Env, Functions);
+               return Float_Interval_For (Access_Target_Type (Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions), Type_Env));
+            elsif UString_Value (Expr.Selector) = "First" or else UString_Value (Expr.Selector) = "Last" then
+               Prefix := Resolve_Type (Flatten_Name (Expr.Prefix), Var_Types, Type_Env);
+               return Float_Interval_For (Prefix);
+            end if;
+            Ensure_Discriminant_Safe (Expr, Current, Var_Types, Type_Env, Functions);
+            Prefix := Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions);
+            return Float_Interval_For (Field_Type (Prefix, UString_Value (Expr.Selector), Type_Env));
+         when GM.Expr_Resolved_Index =>
+            declare
+               Value : constant Interval := Eval_Index_Expr (Expr, Current, Var_Types, Type_Env, Functions);
+               pragma Unreferenced (Value);
+               Info  : constant GM.Type_Descriptor := Expr_Type (Expr, Var_Types, Type_Env, Functions);
+            begin
+               return Float_Interval_For (Info);
+            end;
+         when GM.Expr_Conversion =>
+            declare
+               Target : constant GM.Type_Descriptor :=
+                 Resolve_Type (UString_Value (Expr.Name), Var_Types, Type_Env);
+            begin
+               Inner := Numeric_As_Float (Expr.Inner);
+               if Is_Float_Type (Target) then
+                  Check_Float_Narrowing (Expr, Inner, Target);
+               end if;
+               return Inner;
+            end;
+         when GM.Expr_Call =>
+            Name := FT.To_UString (Flatten_Name (Expr.Callee));
+            if UString_Value (Name) = "Float" or else UString_Value (Name) = "Long_Float" then
+               return Numeric_As_Float (Expr.Args (Expr.Args.First_Index));
+            elsif UString_Value (Name) = "Long_Float.Copy_Sign"
+              and then Expr.Args.Length = 2
+            then
+               declare
+                  Magnitude : constant Float_Interval := Numeric_As_Float (Expr.Args (Expr.Args.First_Index));
+                  Sign_Arg  : constant Float_Interval := Numeric_As_Float (Expr.Args (Expr.Args.First_Index + 1));
+                  Min_Mag   : constant Real_Value := Float_Min_Abs (Magnitude);
+                  Max_Mag   : constant Real_Value := Float_Max_Abs (Magnitude);
+               begin
+                  if Sign_Arg.Excludes_Zero and then Sign_Arg.Low > 0.0 then
+                     return
+                       (Low             => Min_Mag,
+                        High            => Max_Mag,
+                        Initialized     => Magnitude.Initialized and then Sign_Arg.Initialized,
+                        May_Be_NaN      => Magnitude.May_Be_NaN or else Sign_Arg.May_Be_NaN,
+                        May_Be_Infinite => Magnitude.May_Be_Infinite or else Sign_Arg.May_Be_Infinite,
+                        Excludes_Zero   => Min_Mag > 0.0);
+                  elsif Sign_Arg.Excludes_Zero and then Sign_Arg.High < 0.0 then
+                     return
+                       (Low             => -Max_Mag,
+                        High            => -Min_Mag,
+                        Initialized     => Magnitude.Initialized and then Sign_Arg.Initialized,
+                        May_Be_NaN      => Magnitude.May_Be_NaN or else Sign_Arg.May_Be_NaN,
+                        May_Be_Infinite => Magnitude.May_Be_Infinite or else Sign_Arg.May_Be_Infinite,
+                        Excludes_Zero   => Min_Mag > 0.0);
+                  end if;
+                  return
+                    (Low             => -Max_Mag,
+                     High            => Max_Mag,
+                     Initialized     => Magnitude.Initialized and then Sign_Arg.Initialized,
+                     May_Be_NaN      => Magnitude.May_Be_NaN or else Sign_Arg.May_Be_NaN,
+                     May_Be_Infinite => Magnitude.May_Be_Infinite or else Sign_Arg.May_Be_Infinite,
+                     Excludes_Zero   => Min_Mag > 0.0 and then Sign_Arg.Excludes_Zero);
+               end;
+            elsif Functions.Contains (UString_Value (Name)) then
+               declare
+                  Info : constant Function_Info := Functions.Element (UString_Value (Name));
+               begin
+                  if Info.Has_Return_Type then
+                     return Float_Interval_For (Info.Return_Type);
+                  end if;
+               end;
+            end if;
+            return Float_Interval_For (Resolve_Type ("Long_Float", Type_Env));
+         when GM.Expr_Annotated =>
+            declare
+               Target : constant GM.Type_Descriptor :=
+                 Resolve_Type (UString_Value (Expr.Subtype_Name), Var_Types, Type_Env);
+            begin
+               Inner := Eval_Float_Expr (Expr.Inner, Current, Var_Types, Type_Env, Functions);
+               if Is_Float_Type (Target) then
+                  Check_Float_Narrowing (Expr, Inner, Target);
+               end if;
+               return Inner;
+            end;
+         when GM.Expr_Unary =>
+            Inner := Numeric_As_Float (Expr.Inner);
+            if UString_Value (Expr.Operator) = "-" then
+               return
+                 (Low             => -Inner.High,
+                  High            => -Inner.Low,
+                  Initialized     => Inner.Initialized,
+                  May_Be_NaN      => Inner.May_Be_NaN,
+                  May_Be_Infinite => Inner.May_Be_Infinite,
+                  Excludes_Zero   => Inner.Excludes_Zero);
+            end if;
+            return Inner;
+         when GM.Expr_Binary =>
+            if UString_Value (Expr.Operator) = "and then" then
+               return
+                 (Low             => 0.0,
+                  High            => 1.0,
+                  Initialized     => True,
+                  May_Be_NaN      => False,
+                  May_Be_Infinite => False,
+                  Excludes_Zero   => False);
+            elsif Try_Convex_Combination (Expr, Result) or else Try_Interpolation (Expr, Result) then
+               return Result;
+            end if;
+            Left := Numeric_As_Float (Expr.Left);
+            Right := Numeric_As_Float (Expr.Right);
+            if UString_Value (Expr.Operator) = "+" then
+               return
+                 (Low             => Left.Low + Right.Low,
+                  High            => Left.High + Right.High,
+                  Initialized     => Left.Initialized and then Right.Initialized,
+                  May_Be_NaN      => Left.May_Be_NaN or else Right.May_Be_NaN,
+                  May_Be_Infinite =>
+                    Left.May_Be_Infinite
+                    or else Right.May_Be_Infinite
+                    or else Float_Max_Abs (Left) + Float_Max_Abs (Right) > FLOAT_FINITE_LIMIT,
+                  Excludes_Zero   => Left.Excludes_Zero and then Right.Excludes_Zero);
+            elsif UString_Value (Expr.Operator) = "-" then
+               return
+                 (Low             => Left.Low - Right.High,
+                  High            => Left.High - Right.Low,
+                  Initialized     => Left.Initialized and then Right.Initialized,
+                  May_Be_NaN      => Left.May_Be_NaN or else Right.May_Be_NaN,
+                  May_Be_Infinite =>
+                    Left.May_Be_Infinite
+                    or else Right.May_Be_Infinite
+                    or else Float_Max_Abs (Left) + Float_Max_Abs (Right) > FLOAT_FINITE_LIMIT,
+                  Excludes_Zero   => False);
+            elsif UString_Value (Expr.Operator) = "*" then
+               return Multiply_Intervals (Left, Right);
+            elsif UString_Value (Expr.Operator) = "/" then
+               return Divide_Intervals (Expr, Left, Right);
+            elsif UString_Value (Expr.Operator) = "=="
+              or else UString_Value (Expr.Operator) = "!="
+              or else UString_Value (Expr.Operator) = "<"
+              or else UString_Value (Expr.Operator) = "<="
+              or else UString_Value (Expr.Operator) = ">"
+              or else UString_Value (Expr.Operator) = ">="
+            then
+               return
+                 (Low             => 0.0,
+                  High            => 1.0,
+                  Initialized     => True,
+                  May_Be_NaN      => False,
+                  May_Be_Infinite => False,
+                  Excludes_Zero   => False);
+            end if;
+         when others =>
+            null;
+      end case;
+
+      declare
+         Diag : MD.Diagnostic := Null_Diagnostic;
+      begin
+         Diag.Reason := FT.To_UString ("fp_overflow_at_narrowing");
+         Diag.Message := FT.To_UString ("unsupported floating expression " & GM.Image (Expr.Kind));
+         Diag.Span := Expr.Span;
+         Raise_Diag (Diag);
+      end;
+      return Float_Interval_For (Resolve_Type ("Long_Float", Type_Env));
+   end Eval_Float_Expr;
+
+   procedure Check_Float_Narrowing
+     (Expr           : GM.Expr_Access;
+      Interval_Value : Float_Interval;
+      Target_Type    : GM.Type_Descriptor)
+   is
+      Diagnostic : MD.Diagnostic := Null_Diagnostic;
+   begin
+      if not Interval_Value.Initialized then
+         Diagnostic.Reason := FT.To_UString ("fp_uninitialized_at_narrowing");
+         Diagnostic.Message := FT.To_UString ("floating expression is not provably initialized at narrowing");
+         Diagnostic.Span := Expr.Span;
+         Diagnostic.Has_Highlight_Span := True;
+         Diagnostic.Highlight_Span := Expr.Span;
+         Raise_Diag (Diagnostic);
+      elsif Interval_Value.May_Be_NaN then
+         Diagnostic.Reason := FT.To_UString ("nan_at_narrowing");
+         Diagnostic.Message := FT.To_UString ("floating expression may be NaN at narrowing");
+         Diagnostic.Span := Expr.Span;
+         Diagnostic.Has_Highlight_Span := True;
+         Diagnostic.Highlight_Span := Expr.Span;
+         Raise_Diag (Diagnostic);
+      elsif Interval_Value.May_Be_Infinite then
+         Diagnostic.Reason := FT.To_UString ("infinity_at_narrowing");
+         Diagnostic.Message := FT.To_UString ("floating expression may be infinite at narrowing");
+         Diagnostic.Span := Expr.Span;
+         Diagnostic.Has_Highlight_Span := True;
+         Diagnostic.Highlight_Span := Expr.Span;
+         Raise_Diag (Diagnostic);
+      elsif Is_Float_Type (Target_Type)
+        and then not Float_Interval_Contains (Float_Interval_For (Target_Type), Interval_Value)
+      then
+         Diagnostic.Reason := FT.To_UString ("fp_overflow_at_narrowing");
+         Diagnostic.Message := FT.To_UString ("floating expression is not provably within target range");
+         Diagnostic.Span := Expr.Span;
+         Diagnostic.Has_Highlight_Span := True;
+         Diagnostic.Highlight_Span := Expr.Span;
+         Raise_Diag (Diagnostic);
+      end if;
+   end Check_Float_Narrowing;
+
+   function Eval_Float_Expr_With_Diag
+     (Expr         : GM.Expr_Access;
+      Current      : State;
+      Var_Types    : Type_Maps.Map;
+      Type_Env     : Type_Maps.Map;
+      Functions    : Function_Maps.Map;
+      Target_Type  : GM.Type_Descriptor;
+      Has_Diag     : out Boolean;
+      Diagnostic   : out MD.Diagnostic) return Float_Interval
+   is
+      Interval_Value : Float_Interval;
+   begin
+      Interval_Value := Eval_Float_Expr (Expr, Current, Var_Types, Type_Env, Functions);
+      Has_Diag := False;
+      Diagnostic := Null_Diagnostic;
+      Check_Float_Narrowing (Expr, Interval_Value, Target_Type);
+      return Interval_Value;
+   exception
+      when Diagnostic_Failure =>
+         Has_Diag := True;
+         Diagnostic := Raised_Diagnostic;
+         return Float_Interval_For (Resolve_Type ("Long_Float", Type_Env));
+   end Eval_Float_Expr_With_Diag;
+
    function Numerator_Factor
      (Expr : GM.Expr_Access;
       Name : out FT.UString) return Wide_Integer is
@@ -2130,10 +3044,12 @@ package body Safe_Frontend.Mir_Analyze is
             end if;
             Prefix := Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions);
             if Lower (UString_Value (Prefix.Kind)) = "record" then
+               Ensure_Discriminant_Safe (Expr, Current, Var_Types, Type_Env, Functions);
                return Range_Interval (Field_Type (Prefix, UString_Value (Expr.Selector), Type_Env));
             elsif Lower (UString_Value (Prefix.Kind)) = "access" then
                Fact := Eval_Access_Expr (Expr.Prefix, Current, Var_Types, Type_Env, Functions);
                pragma Unreferenced (Fact);
+               Ensure_Discriminant_Safe (Expr, Current, Var_Types, Type_Env, Functions);
                return Range_Interval (Field_Type (Access_Target_Type (Prefix, Type_Env), UString_Value (Expr.Selector), Type_Env));
             end if;
             declare
@@ -2314,12 +3230,77 @@ package body Safe_Frontend.Mir_Analyze is
       Left_Name  : constant String := Direct_Name (Expr.Left);
       Right_Name : constant String := Direct_Name (Expr.Right);
       Current_Interval : Interval;
+      Current_Float    : Float_Interval;
       Right_Const : Wide_Integer;
       Left_Const  : Wide_Integer;
+      Right_Real  : Real_Value;
       Op          : constant String := UString_Value (Expr.Operator);
       Have_Right_Const : Boolean := Has_Constant_Value (Expr.Right, Current, Var_Types, Type_Env);
       Have_Left_Const  : Boolean := Has_Constant_Value (Expr.Left, Current, Var_Types, Type_Env);
+      Have_Right_Real  : Boolean := Has_Real_Constant (Expr.Right, Current, Var_Types, Type_Env);
    begin
+      if Left_Name /= ""
+        and then Var_Types.Contains (Left_Name)
+        and then Is_Float_Type (Var_Types.Element (Left_Name))
+        and then Have_Right_Real
+      then
+         Right_Real := Constant_Real_Value (Expr.Right, Current, Var_Types, Type_Env);
+         if Current.Float_Facts.Contains (Left_Name) then
+            Current_Float := Current.Float_Facts.Element (Left_Name);
+         else
+            Current_Float := Float_Interval_For (Var_Types.Element (Left_Name));
+         end if;
+         if Op = "!=" and then Truthy and then Right_Real = 0.0 then
+            Current_Float.Excludes_Zero := True;
+            Current.Float_Facts.Include (Left_Name, Current_Float);
+            return;
+         elsif Op = "==" and then Truthy then
+            Current.Float_Facts.Include
+              (Left_Name,
+               (Low             => Right_Real,
+                High            => Right_Real,
+                Initialized     => True,
+                May_Be_NaN      => False,
+                May_Be_Infinite => False,
+                Excludes_Zero   => Right_Real /= 0.0));
+            return;
+         elsif Op = "==" and then not Truthy and then Right_Real = 0.0 then
+            Current_Float.Excludes_Zero := True;
+            Current.Float_Facts.Include (Left_Name, Current_Float);
+            return;
+         elsif Op = "<" or else Op = "<=" or else Op = ">" or else Op = ">=" then
+            if Truthy then
+               if Op = "<" then
+                  Current_Float.High := Real_Value'Min (Current_Float.High, Right_Real);
+               elsif Op = "<=" then
+                  Current_Float.High := Real_Value'Min (Current_Float.High, Right_Real);
+               elsif Op = ">" then
+                  Current_Float.Low := Real_Value'Max (Current_Float.Low, Right_Real);
+                  if Right_Real = 0.0 then
+                     Current_Float.Excludes_Zero := True;
+                  end if;
+               else
+                  Current_Float.Low := Real_Value'Max (Current_Float.Low, Right_Real);
+               end if;
+            else
+               if Op = "<" then
+                  Current_Float.Low := Real_Value'Max (Current_Float.Low, Right_Real);
+               elsif Op = "<=" then
+                  Current_Float.Low := Real_Value'Max (Current_Float.Low, Right_Real);
+                  if Right_Real = 0.0 then
+                     Current_Float.Excludes_Zero := True;
+                  end if;
+               elsif Op = ">" then
+                  Current_Float.High := Real_Value'Min (Current_Float.High, Right_Real);
+               else
+                  Current_Float.High := Real_Value'Min (Current_Float.High, Right_Real);
+               end if;
+            end if;
+            Current.Float_Facts.Include (Left_Name, Current_Float);
+            return;
+         end if;
+      end if;
+
       if Left_Name /= "" and then Have_Right_Const then
          Right_Const := Constant_Value (Expr.Right, Current, Var_Types, Type_Env);
          if Current.Ranges.Contains (Left_Name) then
@@ -2404,6 +3385,36 @@ package body Safe_Frontend.Mir_Analyze is
       pragma Unreferenced (Have_Left_Const, Left_Const);
    end Apply_Comparison_Refinement;
 
+   procedure Apply_Discriminant_Refinement
+     (Current  : in out State;
+      Expr     : GM.Expr_Access;
+      Var_Types : Type_Maps.Map;
+      Truthy   : Boolean;
+      Type_Env : Type_Maps.Map)
+   is
+      Base_Name_Text : constant String := Root_Name (Expr);
+      Prefix_Type    : GM.Type_Descriptor;
+   begin
+      if Expr = null
+        or else Expr.Kind /= GM.Expr_Select
+        or else Expr.Prefix = null
+        or else Base_Name_Text = ""
+      then
+         return;
+      end if;
+      Prefix_Type := Expr_Type (Expr.Prefix, Var_Types, Type_Env, Function_Maps.Empty_Map);
+      if not Prefix_Type.Has_Discriminant
+        or else UString_Value (Prefix_Type.Discriminant_Name) /= UString_Value (Expr.Selector)
+      then
+         return;
+      end if;
+      Current.Discriminants.Include
+        (Base_Name_Text,
+         (Known       => True,
+          Value       => Truthy,
+          Invalidated => False));
+   end Apply_Discriminant_Refinement;
+
    function Refine_Condition
      (Current   : State;
       Expr      : GM.Expr_Access;
@@ -2417,7 +3428,11 @@ package body Safe_Frontend.Mir_Analyze is
       if Expr = null then
          return Result;
       end if;
-      if Expr.Kind = GM.Expr_Binary then
+      if Expr.Kind = GM.Expr_Unary and then UString_Value (Expr.Operator) = "not" then
+         return Refine_Condition (Result, Expr.Inner, not Truthy, Var_Types, Type_Env);
+      elsif Expr.Kind = GM.Expr_Select then
+         Apply_Discriminant_Refinement (Result, Expr, Var_Types, Truthy, Type_Env);
+      elsif Expr.Kind = GM.Expr_Binary then
          Op := Expr.Operator;
          if UString_Value (Op) = "and then" then
             if Truthy then
@@ -2445,6 +3460,8 @@ package body Safe_Frontend.Mir_Analyze is
    begin
       if Is_Integer_Type (Info) then
          Current.Ranges.Include (Name, Range_Interval (Info));
+      elsif Is_Float_Type (Info) then
+         Current.Float_Facts.Include (Name, Float_Interval_For (Info));
       elsif Lower (UString_Value (Info.Kind)) = "access" then
          if Info.Not_Null or else Role = Role_Borrow or else Role = Role_Observe then
             Current.Access_Facts.Include (Name, (State => Access_NonNull, others => <>));
@@ -2455,6 +3472,17 @@ package body Safe_Frontend.Mir_Analyze is
          end if;
       end if;
    end Initialize_Symbol;
+
+   procedure Invalidate_Discriminant_Fact
+     (Current : in out State;
+      Name    : String) is
+   begin
+      Current.Discriminants.Include
+        (Name,
+         (Known       => False,
+          Value       => False,
+          Invalidated => True));
+   end Invalidate_Discriminant_Fact;
 
    function Graph_Var_Types
      (Graph    : GM.Graph_Entry;
@@ -2507,6 +3535,18 @@ package body Safe_Frontend.Mir_Analyze is
            and then Type_Access_Role (Var_Types.Element (UString_Value (Local.Name))) = Role_Owner
          then
             Owner_Vars.Include (UString_Value (Local.Name));
+         end if;
+         if Is_Float_Type (Var_Types.Element (UString_Value (Local.Name)))
+           and then not (UString_Value (Local.Kind) = "param" or else UString_Value (Local.Kind) = "global")
+         then
+            declare
+               Fact : Float_Interval := Float_Interval_For (Var_Types.Element (UString_Value (Local.Name)));
+            begin
+               Fact.Initialized := False;
+               Fact.May_Be_NaN := True;
+               Fact.May_Be_Infinite := True;
+               Entry_State.Float_Facts.Include (UString_Value (Local.Name), Fact);
+            end;
          end if;
          if UString_Value (Local.Kind) = "param"
            or else UString_Value (Local.Kind) = "global"
@@ -2565,7 +3605,9 @@ package body Safe_Frontend.Mir_Analyze is
    is
       Result : State := Left;
       Cursor : Range_Maps.Cursor;
+      Float_Cursor : Float_Maps.Cursor;
       Access_Cursor : Access_Maps.Cursor;
+      Discriminant_Cursor : Discriminant_Maps.Cursor;
       Freeze_Cursor : Natural_Maps.Cursor;
       Div_Cursor    : Interval_Maps.Cursor;
       New_Fact      : Access_Fact;
@@ -2582,6 +3624,23 @@ package body Safe_Frontend.Mir_Analyze is
                Result.Ranges.Include (Name, Item);
             end if;
             Range_Maps.Next (Cursor);
+         end;
+      end loop;
+
+      Float_Cursor := Right.Float_Facts.First;
+      while Float_Maps.Has_Element (Float_Cursor) loop
+         declare
+            Name : constant String := Float_Maps.Key (Float_Cursor);
+            Item : constant Float_Interval := Float_Maps.Element (Float_Cursor);
+         begin
+            if Result.Float_Facts.Contains (Name) then
+               Result.Float_Facts.Include
+                 (Name,
+                  Float_Interval_Join (Result.Float_Facts.Element (Name), Item));
+            else
+               Result.Float_Facts.Include (Name, Item);
+            end if;
+            Float_Maps.Next (Float_Cursor);
          end;
       end loop;
 
@@ -2613,6 +3672,60 @@ package body Safe_Frontend.Mir_Analyze is
                Result.Access_Facts.Include (Name, Item);
             end if;
             Access_Maps.Next (Access_Cursor);
+         end;
+      end loop;
+
+      Result.Discriminants.Clear;
+      Discriminant_Cursor := Left.Discriminants.First;
+      while Discriminant_Maps.Has_Element (Discriminant_Cursor) loop
+         declare
+            Name   : constant String := Discriminant_Maps.Key (Discriminant_Cursor);
+            L_Item : constant Discriminant_Fact := Discriminant_Maps.Element (Discriminant_Cursor);
+            Merged : Discriminant_Fact;
+         begin
+            if Right.Discriminants.Contains (Name) then
+               declare
+                  R_Item : constant Discriminant_Fact := Right.Discriminants.Element (Name);
+               begin
+                  if L_Item.Known
+                    and then R_Item.Known
+                    and then L_Item.Value = R_Item.Value
+                    and then not L_Item.Invalidated
+                    and then not R_Item.Invalidated
+                  then
+                     Merged := L_Item;
+                  else
+                     Merged :=
+                       (Known       => False,
+                        Value       => False,
+                        Invalidated => L_Item.Invalidated or else R_Item.Invalidated);
+                  end if;
+               end;
+            else
+               Merged :=
+                 (Known       => False,
+                  Value       => False,
+                  Invalidated => L_Item.Invalidated);
+            end if;
+            Result.Discriminants.Include (Name, Merged);
+            Discriminant_Maps.Next (Discriminant_Cursor);
+         end;
+      end loop;
+
+      Discriminant_Cursor := Right.Discriminants.First;
+      while Discriminant_Maps.Has_Element (Discriminant_Cursor) loop
+         declare
+            Name : constant String := Discriminant_Maps.Key (Discriminant_Cursor);
+            Item : constant Discriminant_Fact := Discriminant_Maps.Element (Discriminant_Cursor);
+         begin
+            if not Left.Discriminants.Contains (Name) then
+               Result.Discriminants.Include
+                 (Name,
+                  (Known       => False,
+                   Value       => False,
+                   Invalidated => Item.Invalidated));
+            end if;
+            Discriminant_Maps.Next (Discriminant_Cursor);
          end;
       end loop;
 
@@ -2889,13 +4002,40 @@ package body Safe_Frontend.Mir_Analyze is
       Has_Diag    : Boolean;
       Diag        : MD.Diagnostic := Null_Diagnostic;
       Interval_Value : Interval;
+      Float_Value : Float_Interval;
       Value_Fact  : Access_Fact;
       Source_Name : FT.UString := FT.To_UString ("");
       Target_Role : Access_Role_Kind;
       Target_Fact : Access_Fact;
    begin
       pragma Unreferenced (Owner_Vars);
+      if Target_Name /= ""
+        and then Target_Type.Has_Discriminant
+        and then not Op.Declaration_Init
+      then
+         Invalidate_Discriminant_Fact (Current, Target_Name);
+      end if;
       if Target_Name = "" or else Lower (UString_Value (Target_Type.Kind)) /= "access" then
+         if Is_Float_Type (Target_Type) then
+            Float_Value :=
+              Eval_Float_Expr_With_Diag
+                (Op.Value,
+                 Current,
+                 Var_Types,
+                 Type_Env,
+                 Functions,
+                 Target_Type,
+                 Has_Diag,
+                 Diag);
+            if Has_Diag then
+               return Diag;
+            elsif Target_Name /= "" then
+               Current.Float_Facts.Include (Target_Name, Float_Value);
+            end if;
+            return Null_Diagnostic;
+         elsif Lower (UString_Value (Target_Type.Kind)) = "record" then
+            return Null_Diagnostic;
+         end if;
          Interval_Value :=
            Eval_Int_Expr_With_Diag
              (Op.Value,
@@ -2983,6 +4123,7 @@ package body Safe_Frontend.Mir_Analyze is
       Diag        : MD.Diagnostic := Null_Diagnostic;
       Has_Diag    : Boolean;
       Interval_Value : Interval;
+      Float_Value : Float_Interval;
    begin
       if Expr = null or else Expr.Kind /= GM.Expr_Call or else not Functions.Contains (Name) then
          return Null_Diagnostic;
@@ -3023,6 +4164,28 @@ package body Safe_Frontend.Mir_Analyze is
                   Diag.Notes.Append
                     (FT.To_UString ("actual expression range is " & Interval_Format (Interval_Value)));
                   return Diag;
+               end if;
+               goto Continue;
+            elsif Is_Float_Type (Formal.Type_Info) then
+               Float_Value :=
+                 Eval_Float_Expr_With_Diag
+                   (Actual,
+                    Current,
+                    Var_Types,
+                    Type_Env,
+                    Functions,
+                    Formal.Type_Info,
+                    Has_Diag,
+                    Diag);
+               if Has_Diag then
+                  return Diag;
+               end if;
+               goto Continue;
+            elsif (UString_Value (Formal.Mode) = "out" or else UString_Value (Formal.Mode) = "in out")
+              and then Formal.Type_Info.Has_Discriminant
+            then
+               if Has_Text (Actual_Name) then
+                  Invalidate_Discriminant_Fact (Current, UString_Value (Actual_Name));
                end if;
                goto Continue;
             elsif Lower (UString_Value (Formal.Type_Info.Kind)) /= "access" then
@@ -3106,6 +4269,7 @@ package body Safe_Frontend.Mir_Analyze is
       Lender        : FT.UString := FT.To_UString ("");
       Source_Name   : FT.UString := FT.To_UString ("");
       Interval_Value : Interval;
+      Float_Value    : Float_Interval;
       Diag          : MD.Diagnostic := Null_Diagnostic;
       Has_Diag      : Boolean;
    begin
@@ -3152,6 +4316,21 @@ package body Safe_Frontend.Mir_Analyze is
                     "return source '" & UString_Value (Source_Name) & "' is not provably non-null",
                     "static analysis determined state '" & Image (Fact.State) & "' at the return site.");
             end if;
+         end if;
+         return Null_Diagnostic;
+      elsif Is_Float_Type (Return_Type) then
+         Float_Value :=
+           Eval_Float_Expr_With_Diag
+             (Expr,
+              Current,
+              Var_Types,
+              Type_Env,
+              Functions,
+              Return_Type,
+              Has_Diag,
+              Diag);
+         if Has_Diag then
+            return Diag;
          end if;
          return Null_Diagnostic;
       end if;
@@ -3201,10 +4380,21 @@ package body Safe_Frontend.Mir_Analyze is
       Diag        : MD.Diagnostic := Null_Diagnostic;
    begin
       case Op.Kind is
-         when GM.Op_Scope_Enter =>
+        when GM.Op_Scope_Enter =>
             for Name of Op.Locals loop
                if Var_Types.Contains (UString_Value (Name)) then
-                  Initialize_Symbol (Current, UString_Value (Name), Var_Types.Element (UString_Value (Name)));
+                  if Is_Float_Type (Var_Types.Element (UString_Value (Name))) then
+                     declare
+                        Fact : Float_Interval := Float_Interval_For (Var_Types.Element (UString_Value (Name)));
+                     begin
+                        Fact.Initialized := False;
+                        Fact.May_Be_NaN := True;
+                        Fact.May_Be_Infinite := True;
+                        Current.Float_Facts.Include (UString_Value (Name), Fact);
+                     end;
+                  else
+                     Initialize_Symbol (Current, UString_Value (Name), Var_Types.Element (UString_Value (Name)));
+                  end if;
                end if;
             end loop;
          when GM.Op_Scope_Exit =>

@@ -13,6 +13,7 @@ package Safe_Frontend.Check_Model is
    type Expr_Kind is
      (Expr_Unknown,
       Expr_Int,
+      Expr_Real,
       Expr_Bool,
       Expr_Null,
       Expr_Ident,
@@ -134,6 +135,24 @@ package Safe_Frontend.Check_Model is
      (Index_Type   => Positive,
       Element_Type => Component_Decl);
 
+   type Discriminant_Spec is record
+      Name         : FT.UString := FT.To_UString ("");
+      Disc_Type    : Type_Spec;
+      Has_Default  : Boolean := False;
+      Default_Expr : Expr_Access := null;
+      Span         : FT.Source_Span := FT.Null_Span;
+   end record;
+
+   type Variant_Alternative is record
+      When_Value : Boolean := False;
+      Components : Component_Decl_Vectors.Vector;
+      Span       : FT.Source_Span := FT.Null_Span;
+   end record;
+
+   package Variant_Alternative_Vectors is new Ada.Containers.Indefinite_Vectors
+     (Index_Type   => Positive,
+      Element_Type => Variant_Alternative);
+
    type Array_Index_Kind is (Array_Index_Unknown, Array_Index_Subtype, Array_Index_Range);
 
    type Array_Index is record
@@ -152,6 +171,7 @@ package Safe_Frontend.Check_Model is
      (Type_Decl_Unknown,
       Type_Decl_Incomplete,
       Type_Decl_Integer,
+      Type_Decl_Float,
       Type_Decl_Constrained_Array,
       Type_Decl_Unconstrained_Array,
       Type_Decl_Record,
@@ -162,11 +182,15 @@ package Safe_Frontend.Check_Model is
       Name           : FT.UString := FT.To_UString ("");
       Kind           : Type_Decl_Kind := Type_Decl_Unknown;
       Span           : FT.Source_Span := FT.Null_Span;
+      Digits_Expr    : Expr_Access := null;
       Low_Expr       : Expr_Access := null;
       High_Expr      : Expr_Access := null;
       Indexes        : Array_Index_Vectors.Vector;
       Component_Type : Type_Spec;
       Components     : Component_Decl_Vectors.Vector;
+      Has_Discriminant : Boolean := False;
+      Discriminant     : Discriminant_Spec;
+      Variants         : Variant_Alternative_Vectors.Vector;
       Access_Type    : Type_Spec;
    end record;
 

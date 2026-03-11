@@ -32,6 +32,8 @@ package body Safe_Frontend.Mir_Model is
             return "<unknown>";
          when Expr_Int =>
             return "int";
+         when Expr_Real =>
+            return "real";
          when Expr_Bool =>
             return "bool";
          when Expr_Null =>

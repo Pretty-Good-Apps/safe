@@ -3,21 +3,21 @@
     "full_mir": {
       "budget_ms": 10000.0,
       "budget_pass": true,
-      "count": 23,
+      "count": 27,
       "largest_sample": {
-        "bytes": 11351,
-        "lines": 402,
-        "path": "compiler_impl/tests/mir_analysis/pr0695_anonymous_access_reassign_parity.json"
+        "bytes": 11894,
+        "lines": 443,
+        "path": "compiler_impl/tests/mir_analysis/pr07_result_mutated_parity.json"
       }
     },
     "supported_positive_check": {
       "budget_ms": 15000.0,
       "budget_pass": true,
-      "count": 26,
+      "count": 32,
       "largest_sample": {
-        "bytes": 1781,
-        "lines": 51,
-        "path": "tests/positive/rule2_binary_search.safe"
+        "bytes": 1822,
+        "lines": 48,
+        "path": "tests/positive/rule5_normalize.safe"
       }
     }
   },
@@ -67,7 +67,7 @@
     ],
     "missing_doc_files": []
   },
-  "repeat_sha256": "2cb47ec5a31a82e5b0069f41c0d73dcc28811d9c9f593354f6c221a59e26fea7",
+  "repeat_sha256": "ae1cb334b890aba7b12068d0573a8f1f055bd70b93583e8da2bc2c3ba45e3d1c",
   "repeated_scenarios": {
     "analyze_mir": [
       {
@@ -216,7 +216,7 @@
     "check": 5,
     "emit": 3
   },
-  "report_sha256": "2cb47ec5a31a82e5b0069f41c0d73dcc28811d9c9f593354f6c221a59e26fea7",
+  "report_sha256": "ae1cb334b890aba7b12068d0573a8f1f055bd70b93583e8da2bc2c3ba45e3d1c",
   "status": "ok",
   "task": "PR06.9.12"
 }

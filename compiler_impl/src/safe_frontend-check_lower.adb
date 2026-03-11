@@ -83,11 +83,21 @@ package body Safe_Frontend.Check_Lower is
       return Result;
    end Make_Builtin;
 
+   function Make_Float_Builtin (Name : String) return GM.Type_Descriptor is
+      Result : GM.Type_Descriptor;
+   begin
+      Result.Name := FT.To_UString (Name);
+      Result.Kind := FT.To_UString ("float");
+      return Result;
+   end Make_Float_Builtin;
+
    procedure Add_Builtins (Type_Env : in out Type_Maps.Map) is
    begin
       Type_Env.Include ("Integer", Make_Builtin ("Integer", INT64_LOW, INT64_HIGH));
       Type_Env.Include ("Natural", Make_Builtin ("Natural", 0, INT64_HIGH));
       Type_Env.Include ("Boolean", Make_Builtin ("Boolean", 0, 1));
+      Type_Env.Include ("Float", Make_Float_Builtin ("Float"));
+      Type_Env.Include ("Long_Float", Make_Float_Builtin ("Long_Float"));
    end Add_Builtins;
 
    function Resolve_Type
@@ -141,6 +151,11 @@ package body Safe_Frontend.Check_Lower is
    begin
       if Expr = null then
          return Make_Builtin ("Integer", INT64_LOW, INT64_HIGH);
+      elsif Expr.Kind = CM.Expr_Real then
+         if Name'Length > 0 and then Type_Env.Contains (Name) then
+            return Type_Env.Element (Name);
+         end if;
+         return Make_Float_Builtin ("Long_Float");
       elsif Expr.Kind = CM.Expr_Ident then
          return Resolve_Type (UString_Value (Expr.Name), Var_Types, Type_Env);
       elsif Name'Length > 0 and then Type_Env.Contains (Name) then
@@ -160,6 +175,8 @@ package body Safe_Frontend.Check_Lower is
       case Expr.Kind is
          when CM.Expr_Int =>
             return GM.Expr_Int;
+         when CM.Expr_Real =>
+            return GM.Expr_Real;
          when CM.Expr_Bool =>
             return GM.Expr_Bool;
          when CM.Expr_Null =>
@@ -210,6 +227,8 @@ package body Safe_Frontend.Check_Lower is
          when CM.Expr_Int =>
             Result.Text := Expr.Text;
             Result.Int_Value := Long_Long_Integer (Expr.Int_Value);
+         when CM.Expr_Real =>
+            Result.Text := Expr.Text;
          when CM.Expr_Bool =>
             Result.Bool_Value := Expr.Bool_Value;
          when CM.Expr_Ident =>

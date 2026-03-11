@@ -150,6 +150,24 @@ package body Safe_Frontend.Mir_Json is
          Result.Has_Base := True;
          Result.Base := FT.To_UString (Get (Value, "base"));
       end if;
+      if Has_Field (Value, "digits_text")
+        and then Get (Value, "digits_text").Kind = JSON_String_Type
+      then
+         Result.Has_Digits_Text := True;
+         Result.Digits_Text := FT.To_UString (Get (Value, "digits_text"));
+      end if;
+      if Has_Field (Value, "float_low_text")
+        and then Get (Value, "float_low_text").Kind = JSON_String_Type
+      then
+         Result.Has_Float_Low_Text := True;
+         Result.Float_Low_Text := FT.To_UString (Get (Value, "float_low_text"));
+      end if;
+      if Has_Field (Value, "float_high_text")
+        and then Get (Value, "float_high_text").Kind = JSON_String_Type
+      then
+         Result.Has_Float_High_Text := True;
+         Result.Float_High_Text := FT.To_UString (Get (Value, "float_high_text"));
+      end if;
       if Has_Field (Value, "component_type")
         and then Get (Value, "component_type").Kind = JSON_String_Type
       then
@@ -161,6 +179,24 @@ package body Safe_Frontend.Mir_Json is
       then
          Result.Has_Target := True;
          Result.Target := FT.To_UString (Get (Value, "target"));
+      end if;
+      if Has_Field (Value, "discriminant_name")
+        and then Get (Value, "discriminant_name").Kind = JSON_String_Type
+      then
+         Result.Has_Discriminant := True;
+         Result.Discriminant_Name := FT.To_UString (Get (Value, "discriminant_name"));
+      end if;
+      if Has_Field (Value, "discriminant_type")
+        and then Get (Value, "discriminant_type").Kind = JSON_String_Type
+      then
+         Result.Has_Discriminant := True;
+         Result.Discriminant_Type := FT.To_UString (Get (Value, "discriminant_type"));
+      end if;
+      if Has_Field (Value, "discriminant_default")
+        and then Get (Value, "discriminant_default").Kind = JSON_Boolean_Type
+      then
+         Result.Has_Discriminant_Default := True;
+         Result.Discriminant_Default_Bool := Get (Get (Value, "discriminant_default"));
       end if;
       if Has_Field (Value, "access_role")
         and then Get (Value, "access_role").Kind = JSON_String_Type
@@ -213,6 +249,35 @@ package body Safe_Frontend.Mir_Json is
       then
          Map_JSON_Object (Get (Value, "fields"), Append_Field'Access);
       end if;
+      declare
+         Variants : constant JSON_Array := Json_Array_Or_Empty (Value, "variant_fields");
+      begin
+         for Index in 1 .. Length (Variants) loop
+            declare
+               Item : constant JSON_Value := Get (Variants, Index);
+               Variant_Field : GM.Variant_Field;
+            begin
+               if Item.Kind = JSON_Object_Type then
+                  if Has_Field (Item, "name")
+                    and then Get (Item, "name").Kind = JSON_String_Type
+                  then
+                     Variant_Field.Name := FT.To_UString (Get (Item, "name"));
+                  end if;
+                  if Has_Field (Item, "type")
+                    and then Get (Item, "type").Kind = JSON_String_Type
+                  then
+                     Variant_Field.Type_Name := FT.To_UString (Get (Item, "type"));
+                  end if;
+                  if Has_Field (Item, "when")
+                    and then Get (Item, "when").Kind = JSON_Boolean_Type
+                  then
+                     Variant_Field.When_True := Get (Get (Item, "when"));
+                  end if;
+                  Result.Variant_Fields.Append (Variant_Field);
+               end if;
+            end;
+         end loop;
+      end;
 
       return Result;
    end Parse_Type;
@@ -316,6 +381,15 @@ package body Safe_Frontend.Mir_Json is
          end if;
          if Has_Field (Value, "value") and then Get (Value, "value").Kind = JSON_Int_Type then
             Result.Int_Value := Get (Get (Value, "value"));
+         end if;
+      elsif FT.To_String (Tag) = "real"
+        or else
+          (FT.To_String (Tag) = "literal"
+           and then FT.To_String (Kind_Name) = "real_literal")
+      then
+         Result.Kind := GM.Expr_Real;
+         if Has_Field (Value, "text") and then Get (Value, "text").Kind = JSON_String_Type then
+            Result.Text := FT.To_UString (Get (Value, "text"));
          end if;
       elsif FT.To_String (Tag) = "bool"
         or else

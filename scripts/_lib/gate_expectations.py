@@ -8,6 +8,7 @@ D27_GOLDEN_CASES = [
     ("tests/negative/neg_rule2_oob.safe", "tests/diagnostics_golden/diag_index_oob.txt"),
     ("tests/negative/neg_rule3_zero_div.safe", "tests/diagnostics_golden/diag_zero_div.txt"),
     ("tests/negative/neg_rule4_null_deref.safe", "tests/diagnostics_golden/diag_null_deref.txt"),
+    ("tests/negative/neg_rule5_nan.safe", "tests/diagnostics_golden/diag_rule5_nan.txt"),
 ]
 
 OWNERSHIP_GOLDEN_CASES = [
@@ -29,7 +30,12 @@ OWNERSHIP_GOLDEN_CASES = [
     ),
 ]
 
-ALL_DIAGNOSTIC_GOLDEN_CASES = [*OWNERSHIP_GOLDEN_CASES, *D27_GOLDEN_CASES]
+RESULT_GOLDEN_CASES = [
+    ("tests/negative/neg_result_unguarded.safe", "tests/diagnostics_golden/diag_result_unguarded.txt"),
+    ("tests/negative/neg_result_mutated.safe", "tests/diagnostics_golden/diag_result_mutated.txt"),
+]
+
+ALL_DIAGNOSTIC_GOLDEN_CASES = [*OWNERSHIP_GOLDEN_CASES, *D27_GOLDEN_CASES, *RESULT_GOLDEN_CASES]
 
 PR05_POSITIVE_CASES = [
     "tests/positive/rule1_accumulate.safe",
@@ -100,6 +106,37 @@ PR06_NEGATIVE_CASES = [
     "tests/negative/neg_own_observe_move.safe",
     "tests/negative/neg_own_return_move.safe",
     "tests/negative/neg_own_inout_move.safe",
+]
+
+PR07_RULE5_POSITIVE_CASES = [
+    "tests/positive/rule5_filter.safe",
+    "tests/positive/rule5_interpolate.safe",
+    "tests/positive/rule5_normalize.safe",
+    "tests/positive/rule5_statistics.safe",
+    "tests/positive/rule5_temperature.safe",
+]
+
+PR07_RULE5_NEGATIVE_CASES = [
+    "tests/negative/neg_rule5_div_zero.safe",
+    "tests/negative/neg_rule5_infinity.safe",
+    "tests/negative/neg_rule5_nan.safe",
+    "tests/negative/neg_rule5_overflow.safe",
+    "tests/negative/neg_rule5_uninitialized.safe",
+]
+
+PR07_RESULT_CASES = [
+    "tests/positive/result_guarded_access.safe",
+    "tests/negative/neg_result_unguarded.safe",
+    "tests/negative/neg_result_mutated.safe",
+]
+
+PR07_RESULT_POSITIVE_CASES = [
+    "tests/positive/result_guarded_access.safe",
+]
+
+PR07_RESULT_NEGATIVE_CASES = [
+    "tests/negative/neg_result_unguarded.safe",
+    "tests/negative/neg_result_mutated.safe",
 ]
 
 REPRESENTATIVE_EMIT_SAMPLES = [

@@ -1,6 +1,6 @@
 # Frontend Architecture Baseline
 
-This document is the canonical prose baseline for the Safe compiler frontend at the end of the PR06.9.x hardening series.
+This document is the canonical prose baseline for the Safe compiler frontend after PR07.
 
 ## Live Ada-Native Commands
 
@@ -17,19 +17,22 @@ All of those commands are Ada-native runtime surfaces for the current implemente
 
 ## Current Supported Subset
 
-The current frontend supports PR05/PR06 sequential Rule 1-4 plus sequential ownership only.
+The current frontend supports the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern.
 
 That means the current frontend baseline covers:
 
-- sequential Rule 1-4 checking
+- the frozen Rule 5 floating-point corpus
 - sequential ownership checking
+- the current boolean result-record discriminant pattern
 - AST, `typed-v2`, `mir-v2`, and `safei-v0` emission for that same subset
 - MIR validation and MIR analysis for the same subset
 
 The following surfaces remain explicitly out of scope for the current frontend baseline:
 
-- Rule 5
-- result/discriminant safety
+- fixed-point Rule 5 work
+- general discriminants
+- discriminant constraints
+- access discriminants
 - tasks/channels/concurrency
 - broader Ada/SPARK emission work
 
@@ -57,8 +60,8 @@ The old shallow `Ast` / `Parser` / `Semantics` / `Mir` chain was deleted in PR06
 
 The current frontend baseline therefore lives only on the Ada-native `Check_*` plus `Mir_*` pipeline, with `Lexer`, `Source`, `Types`, `Diagnostics`, and `Json` supporting that path.
 
-## PR07 Starting Point
+## PR08 Starting Point
 
-PR07 must extend the live path rather than revive deleted legacy packages.
+PR08 must extend the live path rather than revive deleted legacy packages.
 
-The current pre-PR07 scope and scale limits are summarized in [frontend_scale_limits.md](frontend_scale_limits.md).
+The current PR07 scope and scale limits are summarized in [frontend_scale_limits.md](frontend_scale_limits.md).

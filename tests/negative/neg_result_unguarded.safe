@@ -4,7 +4,7 @@
 --   discriminant-check safety rule. The compiler must reject this.
 -- Clause: SAFE@468cf72:spec/02-restrictions.md#2.12.p148
 -- Clause: SAFE@468cf72:spec/02-restrictions.md#2.8.6.p139f
--- Expected: REJECT
+-- Expected: REJECT discriminant_check_not_established
 
 package Neg_Result_Unguarded is
 

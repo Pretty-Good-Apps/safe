@@ -598,7 +598,7 @@ class ValidateExecutionStateTests(unittest.TestCase):
             docs_dir = repo_root / "docs"
             docs_dir.mkdir()
             (docs_dir / "frontend_scale_limits.md").write_text(
-                "PR05/PR06 supported subset only\n",
+                "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern\n",
                 encoding="utf-8",
             )
             compiler_dir = repo_root / "compiler_impl"
@@ -634,16 +634,16 @@ class ValidateExecutionStateTests(unittest.TestCase):
             docs_dir = repo_root / "docs"
             docs_dir.mkdir()
             (docs_dir / "frontend_scale_limits.md").write_text(
-                "PR05/PR06 supported subset only\n"
+                "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern\n"
                 "cliff-detection gate, not a benchmark commitment\n"
                 "raw timings are intentionally kept out of committed evidence\n"
-                "Rule 5, result safety, channels/tasks/concurrency, and other unsupported surfaces are out of scope\n",
+                "Fixed-point Rule 5 work, general discriminants, channels/tasks/concurrency, and other unsupported surfaces are out of scope\n",
                 encoding="utf-8",
             )
             compiler_dir = repo_root / "compiler_impl"
             compiler_dir.mkdir()
             (compiler_dir / "README.md").write_text(
-                "PR05/PR06 sequential Rule 1-4 plus sequential ownership only\n"
+                "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern\n"
                 "docs/frontend_scale_limits.md\n"
                 "cliff-detection gate, not a benchmark commitment\n",
                 encoding="utf-8",
@@ -651,9 +651,9 @@ class ValidateExecutionStateTests(unittest.TestCase):
             release_dir = repo_root / "release"
             release_dir.mkdir()
             (release_dir / "frontend_runtime_decision.md").write_text(
-                "PR05/PR06 sequential Rule 1-4 plus sequential ownership only\n"
+                "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern\n"
                 "docs/frontend_scale_limits.md\n"
-                "PR07 starts from this cleaned baseline and must extend the live path rather than revive deleted legacy packages.\n",
+                "PR08 starts from this cleaned PR07 baseline and must extend the live path rather than revive deleted legacy packages.\n",
                 encoding="utf-8",
             )
 
@@ -705,7 +705,7 @@ class ValidateExecutionStateTests(unittest.TestCase):
             docs_dir = repo_root / "docs"
             docs_dir.mkdir()
             (docs_dir / "frontend_architecture_baseline.md").write_text(
-                "PR05/PR06 sequential Rule 1-4 plus sequential ownership only\n",
+                "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern\n",
                 encoding="utf-8",
             )
             (docs_dir / "frontend_scale_limits.md").write_text(
@@ -732,11 +732,13 @@ class ValidateExecutionStateTests(unittest.TestCase):
             report = documentation_architecture_clarity_report(
                 repo_root=repo_root,
                 doc_requirements={
-                    "README.md": ["PR07 starts from the cleaned PR06.9.x frontend baseline."],
-                    "compiler_impl/README.md": ["PR07 must extend the live `Check_*` + `Mir_*` pipeline."],
+                    "README.md": ["PR07 is the milestone that establishes this expanded baseline before PR08."],
+                    "compiler_impl/README.md": ["PR08 must extend the live `Check_*` + `Mir_*` pipeline."],
                     "release/frontend_runtime_decision.md": ["Python is glue/orchestration only."],
-                    "docs/frontend_architecture_baseline.md": ["PR07 must extend the live path rather than revive deleted legacy packages."],
-                    "docs/frontend_scale_limits.md": ["PR05/PR06 supported subset only"],
+                    "docs/frontend_architecture_baseline.md": ["PR08 must extend the live path rather than revive deleted legacy packages."],
+                    "docs/frontend_scale_limits.md": [
+                        "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern"
+                    ],
                 },
                 required_links={
                     "README.md": ["docs/frontend_architecture_baseline.md"],
@@ -746,7 +748,7 @@ class ValidateExecutionStateTests(unittest.TestCase):
                 stale_markers={},
             )
             self.assertIn(
-                "README.md:PR07 starts from the cleaned PR06.9.x frontend baseline.",
+                "README.md:PR07 is the milestone that establishes this expanded baseline before PR08.",
                 report["doc_policy_violations"],
             )
             self.assertIn(
@@ -799,11 +801,11 @@ class ValidateExecutionStateTests(unittest.TestCase):
             docs_dir = repo_root / "docs"
             docs_dir.mkdir()
             (docs_dir / "frontend_architecture_baseline.md").write_text(
-                "PR07 must extend the live path rather than revive deleted legacy packages.\n",
+                "PR08 must extend the live path rather than revive deleted legacy packages.\n",
                 encoding="utf-8",
             )
             (docs_dir / "frontend_scale_limits.md").write_text(
-                "PR05/PR06 supported subset only\n",
+                "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern\n",
                 encoding="utf-8",
             )
             (repo_root / "README.md").write_text(
@@ -847,7 +849,7 @@ class ValidateExecutionStateTests(unittest.TestCase):
             docs_dir = repo_root / "docs"
             docs_dir.mkdir()
             (docs_dir / "frontend_architecture_baseline.md").write_text(
-                "PR05/PR06 sequential Rule 1-4 plus sequential ownership only\n"
+                "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern\n"
                 "Python is glue/orchestration only.\n"
                 "No user-facing `safec` command depends on Python at runtime.\n"
                 "`Check_*`\n"
@@ -858,22 +860,23 @@ class ValidateExecutionStateTests(unittest.TestCase):
                 "`Diagnostics`\n"
                 "`Json`\n"
                 "The old shallow `Ast` / `Parser` / `Semantics` / `Mir` chain was deleted in PR06.9.8.\n"
-                "PR07 must extend the live path rather than revive deleted legacy packages.\n"
+                "PR08 must extend the live path rather than revive deleted legacy packages.\n"
                 "`safec lex`\n`ast`\n`safec validate-mir`\n`safec analyze-mir`\n`safec check`\n`safec emit`\n",
                 encoding="utf-8",
             )
             (docs_dir / "frontend_scale_limits.md").write_text(
-                "[Baseline](frontend_architecture_baseline.md)\nPR05/PR06 supported subset only\n",
+                "[Baseline](frontend_architecture_baseline.md)\n"
+                "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern\n",
                 encoding="utf-8",
             )
             (repo_root / "README.md").write_text(
                 "[Baseline](docs/frontend_architecture_baseline.md)\n"
                 "[Scale](docs/frontend_scale_limits.md)\n"
                 "[Compiler](compiler_impl/README.md)\n"
-                "PR05/PR06 sequential Rule 1-4 plus sequential ownership only\n"
+                "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern\n"
                 "Ada-native `safec lex` / `ast` / `validate-mir` / `analyze-mir` / `check` / `emit`\n"
                 "Python remains glue/orchestration only around the compiler.\n"
-                "PR07 starts from the cleaned PR06.9.x frontend baseline.\n",
+                "PR07 is the milestone that establishes this expanded baseline before PR08.\n",
                 encoding="utf-8",
             )
             compiler_dir = repo_root / "compiler_impl"
@@ -881,23 +884,23 @@ class ValidateExecutionStateTests(unittest.TestCase):
             (compiler_dir / "README.md").write_text(
                 "[Baseline](../docs/frontend_architecture_baseline.md)\n"
                 "[Scale](../docs/frontend_scale_limits.md)\n"
-                "PR05/PR06 sequential Rule 1-4 plus sequential ownership only\n"
-                "All current user-facing `safec` commands are Ada-native for that subset.\n"
+                "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern\n"
+                "All current user-facing `safec` commands are Ada-native for that supported surface.\n"
                 "Python remains glue/orchestration only around the compiler.\n"
                 "The old shallow `Ast` / `Parser` / `Semantics` / `Mir` chain was deleted in PR06.9.8.\n"
-                "PR07 must extend the live `Check_*` + `Mir_*` pipeline.\n",
+                "PR08 must extend the live `Check_*` + `Mir_*` pipeline.\n",
                 encoding="utf-8",
             )
             release_dir = repo_root / "release"
             release_dir.mkdir()
             (release_dir / "frontend_runtime_decision.md").write_text(
                 "[Baseline](../docs/frontend_architecture_baseline.md)\n"
-                "PR05/PR06 sequential Rule 1-4 plus sequential ownership only\n"
+                "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern\n"
                 "Ada-native runtime commands:\n"
                 "Python is glue/orchestration only.\n"
                 "The old shallow `Ast` / `Parser` / `Semantics` / `Mir` chain was deleted in PR06.9.8.\n"
-                "PR06.9.1 through PR06.9.13 established the pre-PR07 frontend baseline.\n"
-                "PR07 starts from this cleaned baseline and must extend the live path rather than revive deleted legacy packages.\n",
+                "PR06.9.1 through PR06.9.13 established the hardened pre-PR07 baseline, and PR07 extends that same live path.\n"
+                "PR08 starts from this cleaned PR07 baseline and must extend the live path rather than revive deleted legacy packages.\n",
                 encoding="utf-8",
             )
 
@@ -905,20 +908,20 @@ class ValidateExecutionStateTests(unittest.TestCase):
                 repo_root=repo_root,
                 doc_requirements={
                     "README.md": [
-                        "PR05/PR06 sequential Rule 1-4 plus sequential ownership only",
-                        "PR07 starts from the cleaned PR06.9.x frontend baseline.",
+                        "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern",
+                        "PR07 is the milestone that establishes this expanded baseline before PR08.",
                     ],
                     "compiler_impl/README.md": [
-                        "PR07 must extend the live `Check_*` + `Mir_*` pipeline.",
+                        "PR08 must extend the live `Check_*` + `Mir_*` pipeline.",
                     ],
                     "release/frontend_runtime_decision.md": [
-                        "PR06.9.1 through PR06.9.13 established the pre-PR07 frontend baseline.",
+                        "PR06.9.1 through PR06.9.13 established the hardened pre-PR07 baseline, and PR07 extends that same live path.",
                     ],
                     "docs/frontend_architecture_baseline.md": [
-                        "PR07 must extend the live path rather than revive deleted legacy packages.",
+                        "PR08 must extend the live path rather than revive deleted legacy packages.",
                     ],
                     "docs/frontend_scale_limits.md": [
-                        "PR05/PR06 supported subset only",
+                        "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern",
                     ],
                 },
                 required_links={

@@ -45,6 +45,7 @@ ABSTRACT_TARGETS = {
     },
     "TypeDefinition": {
         "SignedIntegerTypeDefinition",
+        "FloatingPointDefinition",
         "UnconstrainedArrayDefinition",
         "ConstrainedArrayDefinition",
         "RecordTypeDefinition",

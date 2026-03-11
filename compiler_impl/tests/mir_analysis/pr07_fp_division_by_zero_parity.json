@@ -1,0 +1,210 @@
+{
+  "format": "mir-v2",
+  "graphs": [
+    {
+      "blocks": [
+        {
+          "active_scope_id": "scope0",
+          "id": "bb0",
+          "ops": [],
+          "role": "entry",
+          "span": {
+            "end_col": 21,
+            "end_line": 21,
+            "start_col": 4,
+            "start_line": 16
+          },
+          "terminator": {
+            "kind": "return",
+            "ownership_effect": "None",
+            "span": {
+              "end_col": 65,
+              "end_line": 19,
+              "start_col": 7,
+              "start_line": 19
+            },
+            "value": {
+              "expr": {
+                "left": {
+                  "expr": {
+                    "name": "Value",
+                    "span": {
+                      "end_col": 44,
+                      "end_line": 19,
+                      "start_col": 39,
+                      "start_line": 19
+                    },
+                    "tag": "ident",
+                    "type": "Measurement"
+                  },
+                  "span": {
+                    "end_col": 44,
+                    "end_line": 19,
+                    "start_col": 27,
+                    "start_line": 19
+                  },
+                  "tag": "conversion",
+                  "target": {
+                    "name": "Long_Float",
+                    "span": {
+                      "end_col": 36,
+                      "end_line": 19,
+                      "start_col": 27,
+                      "start_line": 19
+                    },
+                    "tag": "ident"
+                  },
+                  "type": "Long_Float"
+                },
+                "op": "/",
+                "right": {
+                  "expr": {
+                    "name": "Scale",
+                    "span": {
+                      "end_col": 65,
+                      "end_line": 19,
+                      "start_col": 60,
+                      "start_line": 19
+                    },
+                    "tag": "ident",
+                    "type": "Measurement"
+                  },
+                  "span": {
+                    "end_col": 65,
+                    "end_line": 19,
+                    "start_col": 48,
+                    "start_line": 19
+                  },
+                  "tag": "conversion",
+                  "target": {
+                    "name": "Long_Float",
+                    "span": {
+                      "end_col": 57,
+                      "end_line": 19,
+                      "start_col": 48,
+                      "start_line": 19
+                    },
+                    "tag": "ident"
+                  },
+                  "type": "Long_Float"
+                },
+                "span": {
+                  "end_col": 57,
+                  "end_line": 19,
+                  "start_col": 39,
+                  "start_line": 19
+                },
+                "tag": "binary",
+                "type": "Long_Float"
+              },
+              "span": {
+                "end_col": 58,
+                "end_line": 19,
+                "start_col": 14,
+                "start_line": 19
+              },
+              "tag": "conversion",
+              "target": {
+                "name": "Measurement",
+                "span": {
+                  "end_col": 24,
+                  "end_line": 19,
+                  "start_col": 14,
+                  "start_line": 19
+                },
+                "tag": "ident"
+              },
+              "type": "Measurement"
+            }
+          }
+        }
+      ],
+      "entry_bb": "bb0",
+      "kind": "function",
+      "locals": [
+        {
+          "id": "v0",
+          "kind": "param",
+          "mode": "in",
+          "name": "Value",
+          "ownership_role": "",
+          "scope_id": "scope0",
+          "span": {
+            "end_col": 41,
+            "end_line": 15,
+            "start_col": 24,
+            "start_line": 15
+          },
+          "type": {
+            "digits_text": "6",
+            "float_high_text": "1000.0",
+            "float_low_text": "-1000.0",
+            "kind": "float",
+            "name": "Measurement"
+          }
+        },
+        {
+          "id": "v1",
+          "kind": "param",
+          "mode": "in",
+          "name": "Scale",
+          "ownership_role": "",
+          "scope_id": "scope0",
+          "span": {
+            "end_col": 41,
+            "end_line": 16,
+            "start_col": 24,
+            "start_line": 16
+          },
+          "type": {
+            "digits_text": "6",
+            "float_high_text": "1000.0",
+            "float_low_text": "-1000.0",
+            "kind": "float",
+            "name": "Measurement"
+          }
+        }
+      ],
+      "name": "Normalize",
+      "return_type": {
+        "digits_text": "6",
+        "float_high_text": "1000.0",
+        "float_low_text": "-1000.0",
+        "kind": "float",
+        "name": "Measurement"
+      },
+      "scopes": [
+        {
+          "entry_block": "bb0",
+          "exit_blocks": [
+            "bb0"
+          ],
+          "id": "scope0",
+          "kind": "subprogram",
+          "local_ids": [
+            "v0",
+            "v1"
+          ],
+          "parent_scope_id": null
+        }
+      ],
+      "span": {
+        "end_col": 21,
+        "end_line": 21,
+        "start_col": 4,
+        "start_line": 16
+      }
+    }
+  ],
+  "package_name": "FP_Div_Zero_Test",
+  "source_path": "tests/negative/neg_rule5_div_zero.safe",
+  "types": [
+    {
+      "digits_text": "6",
+      "float_high_text": "1000.0",
+      "float_low_text": "-1000.0",
+      "kind": "float",
+      "name": "Measurement"
+    }
+  ]
+}

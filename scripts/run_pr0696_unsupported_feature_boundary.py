@@ -78,28 +78,12 @@ CONTROL_INLINE_CASES = [
 
 UNSUPPORTED_CASES = [
     {
-        "name": "rule5_normalize",
-        "source": REPO_ROOT / "tests" / "positive" / "rule5_normalize.safe",
-        "expected_reason": "unsupported_source_construct",
-    },
-    {
-        "name": "neg_rule5_nan",
-        "source": REPO_ROOT / "tests" / "negative" / "neg_rule5_nan.safe",
-        "expected_reason": "unsupported_source_construct",
-    },
-    {
-        "name": "float_literal.safe",
-        "text": "package Float_Literal is\n   Value : Integer = 1.5;\nend Float_Literal;\n",
-        "expected_reason": "unsupported_source_construct",
-    },
-    {
-        "name": "result_guarded_access",
-        "source": REPO_ROOT / "tests" / "positive" / "result_guarded_access.safe",
-        "expected_reason": "unsupported_source_construct",
-    },
-    {
-        "name": "neg_result_mutated",
-        "source": REPO_ROOT / "tests" / "negative" / "neg_result_mutated.safe",
+        "name": "fixed_point.safe",
+        "text": (
+            "package Fixed_Point is\n"
+            "   type Money is delta 0.01 range -100.00 .. 100.00;\n"
+            "end Fixed_Point;\n"
+        ),
         "expected_reason": "unsupported_source_construct",
     },
     {

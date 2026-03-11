@@ -15,9 +15,9 @@
   "delegated_reports": {
     "frontend_smoke": {
       "binary_deterministic": true,
-      "repeat_sha256": "d320ddb9970fa6afbe3f5aa7fc63e2aa0fe084c5405192e229f27fd98854b7cf",
+      "repeat_sha256": "9d99f32c9402c477a3eb335ad9edb897155de324a6fb68949677e162611ebc4c",
       "report_path": "execution/reports/pr00-pr04-frontend-smoke.json",
-      "report_sha256": "d320ddb9970fa6afbe3f5aa7fc63e2aa0fe084c5405192e229f27fd98854b7cf",
+      "report_sha256": "9d99f32c9402c477a3eb335ad9edb897155de324a6fb68949677e162611ebc4c",
       "run": {
         "command": [
           "python3",
@@ -61,8 +61,8 @@
     }
   },
   "deterministic": true,
-  "repeat_sha256": "5e59f6560a428dba647a50f112ed51c6133963115bc0c92ef981c34a1623fd68",
-  "report_sha256": "5e59f6560a428dba647a50f112ed51c6133963115bc0c92ef981c34a1623fd68",
+  "repeat_sha256": "a4c10078a30be8d2047a395719ced71b06f133bf38a55192c88e439e1586a094",
+  "report_sha256": "a4c10078a30be8d2047a395719ced71b06f133bf38a55192c88e439e1586a094",
   "status": "ok",
   "task": "PR06.9.9"
 }

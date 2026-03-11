@@ -114,6 +114,15 @@ package body Safe_Frontend.Mir_Write is
       if Info.Has_Base then
          Items.Append ("""base"":" & JS.Quote (Info.Base));
       end if;
+      if Info.Has_Digits_Text then
+         Items.Append ("""digits_text"":" & JS.Quote (Info.Digits_Text));
+      end if;
+      if Info.Has_Float_Low_Text then
+         Items.Append ("""float_low_text"":" & JS.Quote (Info.Float_Low_Text));
+      end if;
+      if Info.Has_Float_High_Text then
+         Items.Append ("""float_high_text"":" & JS.Quote (Info.Float_High_Text));
+      end if;
       if not Info.Index_Types.Is_Empty then
          declare
             Values : String_Vectors.Vector;
@@ -138,6 +147,31 @@ package body Safe_Frontend.Mir_Write is
       end if;
       if Info.Has_Target then
          Items.Append ("""target"":" & JS.Quote (Info.Target));
+      end if;
+      if Info.Has_Discriminant then
+         Items.Append ("""discriminant_name"":" & JS.Quote (Info.Discriminant_Name));
+         Items.Append ("""discriminant_type"":" & JS.Quote (Info.Discriminant_Type));
+         if Info.Has_Discriminant_Default then
+            Items.Append
+              ("""discriminant_default"":" & JS.Bool_Literal (Info.Discriminant_Default_Bool));
+         end if;
+      end if;
+      if not Info.Variant_Fields.Is_Empty then
+         declare
+            Variants : String_Vectors.Vector;
+         begin
+            for Variant_Field of Info.Variant_Fields loop
+               Variants.Append
+                 ("{""name"":"
+                  & JS.Quote (Variant_Field.Name)
+                  & ",""type"":"
+                  & JS.Quote (Variant_Field.Type_Name)
+                  & ",""when"":"
+                  & JS.Bool_Literal (Variant_Field.When_True)
+                  & "}");
+            end loop;
+            Items.Append ("""variant_fields"":" & Json_List (Variants));
+         end;
       end if;
       if FT.To_String (Info.Kind) = "access" then
          Items.Append ("""not_null"":" & JS.Bool_Literal (Info.Not_Null));
@@ -172,6 +206,8 @@ package body Safe_Frontend.Mir_Write is
                Items.Append ("""text"":" & JS.Quote (Expr.Text));
             end if;
             Items.Append ("""value"":" & Long_Long_Integer'Image (Expr.Int_Value));
+         when GM.Expr_Real =>
+            Items.Append ("""text"":" & JS.Quote (Expr.Text));
          when GM.Expr_Bool =>
             Items.Append ("""value"":" & JS.Bool_Literal (Expr.Bool_Value));
          when GM.Expr_Null =>

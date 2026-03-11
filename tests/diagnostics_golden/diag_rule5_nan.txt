@@ -1,0 +1,11 @@
+Diagnostics Golden: Rule 5 NaN
+Source: tests/negative/neg_rule5_nan.safe
+
+Expected diagnostic output:
+------------------------------------------------------------------------
+neg_rule5_nan.safe:20:14: error: floating expression may be NaN at narrowing
+  |
+  | 20 |       return Temp (X / Y);  -- ERROR: 0.0/0.0 = NaN, cannot narrow
+  |    |              ^~~~~~~~~~~~
+  |
+------------------------------------------------------------------------

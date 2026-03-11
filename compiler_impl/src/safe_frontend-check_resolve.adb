@@ -62,11 +62,21 @@ package body Safe_Frontend.Check_Resolve is
       return Result;
    end Make_Builtin;
 
+   function Make_Float_Builtin (Name : String) return GM.Type_Descriptor is
+      Result : GM.Type_Descriptor;
+   begin
+      Result.Name := FT.To_UString (Name);
+      Result.Kind := FT.To_UString ("float");
+      return Result;
+   end Make_Float_Builtin;
+
    procedure Add_Builtins (Type_Env : in out Type_Maps.Map) is
    begin
       Type_Env.Include ("Integer", Make_Builtin ("Integer", -(2 ** 63), (2 ** 63) - 1));
       Type_Env.Include ("Natural", Make_Builtin ("Natural", 0, (2 ** 63) - 1));
       Type_Env.Include ("Boolean", Make_Builtin ("Boolean", 0, 1));
+      Type_Env.Include ("Float", Make_Float_Builtin ("Float"));
+      Type_Env.Include ("Long_Float", Make_Float_Builtin ("Long_Float"));
    end Add_Builtins;
 
    procedure Raise_Diag (Item : CM.MD.Diagnostic) is
@@ -84,6 +94,11 @@ package body Safe_Frontend.Check_Resolve is
    begin
       return Make_Builtin ("Boolean", 0, 1);
    end Default_Boolean;
+
+   function Default_Float return GM.Type_Descriptor is
+   begin
+      return Make_Float_Builtin ("Long_Float");
+   end Default_Float;
 
    function Classify_Access_Role
      (Anonymous   : Boolean;
@@ -104,8 +119,55 @@ package body Safe_Frontend.Check_Resolve is
 
    function Is_Builtin_Name (Name : String) return Boolean is
    begin
-      return Name in "Integer" | "Natural" | "Boolean";
+      return Name in "Integer" | "Natural" | "Boolean" | "Float" | "Long_Float";
    end Is_Builtin_Name;
+
+   function Expr_Text (Expr : CM.Expr_Access) return String;
+
+   function Expr_Text (Expr : CM.Expr_Access) return String is
+   begin
+      if Expr = null then
+         return "";
+      end if;
+
+      case Expr.Kind is
+         when CM.Expr_Int | CM.Expr_Real =>
+            if UString_Value (Expr.Text)'Length > 0 then
+               return UString_Value (Expr.Text);
+            end if;
+         when CM.Expr_Bool =>
+            return (if Expr.Bool_Value then "True" else "False");
+         when CM.Expr_Ident =>
+            return UString_Value (Expr.Name);
+         when CM.Expr_Select =>
+            return Expr_Text (Expr.Prefix) & "." & UString_Value (Expr.Selector);
+         when CM.Expr_Unary =>
+            return UString_Value (Expr.Operator) & Expr_Text (Expr.Inner);
+         when CM.Expr_Binary =>
+            return Expr_Text (Expr.Left) & " " & UString_Value (Expr.Operator) & " " & Expr_Text (Expr.Right);
+         when others =>
+            null;
+      end case;
+
+      return CM.Flatten_Name (Expr);
+   end Expr_Text;
+
+   function Bool_Literal_Value
+     (Expr : CM.Expr_Access;
+      Path : String) return Boolean
+   is
+   begin
+      if Expr /= null and then Expr.Kind = CM.Expr_Bool then
+         return Expr.Bool_Value;
+      end if;
+
+      Raise_Diag
+        (CM.Source_Frontend_Error
+           (Path    => Path,
+            Span    => (if Expr = null then FT.Null_Span else Expr.Span),
+            Message => "boolean discriminant defaults must be boolean literals"));
+      return False;
+   end Bool_Literal_Value;
 
    function Flatten_Name (Expr : CM.Expr_Access) return String is
    begin
@@ -227,6 +289,9 @@ package body Safe_Frontend.Check_Resolve is
    is
    begin
       if UString_Value (Info.Kind) = "record" then
+         if Info.Has_Discriminant and then UString_Value (Info.Discriminant_Name) = Field_Name then
+            return Resolve_Type (UString_Value (Info.Discriminant_Type), Type_Env, "", FT.Null_Span);
+         end if;
          for Field of Info.Fields loop
             if UString_Value (Field.Name) = Field_Name then
                return Resolve_Type (UString_Value (Field.Type_Name), Type_Env, "", FT.Null_Span);
@@ -256,6 +321,11 @@ package body Safe_Frontend.Check_Resolve is
       end if;
 
       case Expr.Kind is
+         when CM.Expr_Real =>
+            if UString_Value (Expr.Type_Name)'Length > 0 and then Type_Env.Contains (UString_Value (Expr.Type_Name)) then
+               return Type_Env.Element (UString_Value (Expr.Type_Name));
+            end if;
+            return Default_Float;
          when CM.Expr_Ident =>
             Name := Expr.Name;
             if Var_Types.Contains (UString_Value (Name)) then
@@ -315,6 +385,8 @@ package body Safe_Frontend.Check_Resolve is
                      return Info.Return_Type;
                   end if;
                end;
+            elsif UString_Value (Name) = "Long_Float.Copy_Sign" then
+               return Resolve_Type ("Long_Float", Type_Env, "", FT.Null_Span);
             elsif Var_Types.Contains (UString_Value (Name)) then
                return Var_Types.Element (UString_Value (Name));
             end if;
@@ -342,6 +414,26 @@ package body Safe_Frontend.Check_Resolve is
             end if;
          when CM.Expr_Bool =>
             return Default_Boolean;
+         when CM.Expr_Unary =>
+            if UString_Value (Expr.Operator) = "not" then
+               return Default_Boolean;
+            end if;
+            return Expr_Type (Expr.Inner, Var_Types, Functions, Type_Env);
+         when CM.Expr_Binary =>
+            if UString_Value (Expr.Operator) in "==" | "!=" | "<" | "<=" | ">" | ">=" | "and then" then
+               return Default_Boolean;
+            end if;
+            declare
+               Left_Type  : constant GM.Type_Descriptor := Expr_Type (Expr.Left, Var_Types, Functions, Type_Env);
+               Right_Type : constant GM.Type_Descriptor := Expr_Type (Expr.Right, Var_Types, Functions, Type_Env);
+            begin
+               if UString_Value (Left_Type.Kind) = "float" or else UString_Value (Right_Type.Kind) = "float" then
+                  if UString_Value (Left_Type.Kind) = "float" then
+                     return Left_Type;
+                  end if;
+                  return Right_Type;
+               end if;
+            end;
          when others =>
             null;
       end case;
@@ -388,13 +480,13 @@ package body Safe_Frontend.Check_Resolve is
          elsif Var_Types.Contains (UString_Value (Callee_Name))
            and then UString_Value
              (Var_Types.Element (UString_Value (Callee_Name)).Kind)
-                    in "integer" | "subtype" | "record"
+                    in "integer" | "subtype" | "record" | "float"
            and then Natural (Expr.Args.Length) = 1
          then
             Result.Kind := CM.Expr_Conversion;
             Result.Target := Expr.Callee;
             Result.Inner := Expr.Args (Expr.Args.First_Index);
-         elsif UString_Value (Callee_Name) in "Integer" | "Natural"
+         elsif UString_Value (Callee_Name) in "Integer" | "Natural" | "Float" | "Long_Float"
            and then Natural (Expr.Args.Length) = 1
          then
             Result.Kind := CM.Expr_Conversion;
@@ -696,6 +788,14 @@ package body Safe_Frontend.Check_Resolve is
             Result.Low := Long_Long_Integer (Literal_Value (Decl.Low_Expr, Path));
             Result.Has_High := True;
             Result.High := Long_Long_Integer (Literal_Value (Decl.High_Expr, Path));
+         when CM.Type_Decl_Float =>
+            Result.Kind := FT.To_UString ("float");
+            Result.Has_Digits_Text := True;
+            Result.Digits_Text := FT.To_UString (Expr_Text (Decl.Digits_Expr));
+            Result.Has_Float_Low_Text := True;
+            Result.Float_Low_Text := FT.To_UString (Expr_Text (Decl.Low_Expr));
+            Result.Has_Float_High_Text := True;
+            Result.Float_High_Text := FT.To_UString (Expr_Text (Decl.High_Expr));
          when CM.Type_Decl_Constrained_Array | CM.Type_Decl_Unconstrained_Array =>
             Result.Kind := FT.To_UString ("array");
             for Index_Item of Decl.Indexes loop
@@ -710,6 +810,17 @@ package body Safe_Frontend.Check_Resolve is
             Result.Unconstrained := Decl.Kind = CM.Type_Decl_Unconstrained_Array;
          when CM.Type_Decl_Record =>
             Result.Kind := FT.To_UString ("record");
+            if Decl.Has_Discriminant then
+               Result.Has_Discriminant := True;
+               Result.Discriminant_Name := Decl.Discriminant.Name;
+               Result.Discriminant_Type :=
+                 Resolve_Type_Spec (Decl.Discriminant.Disc_Type, Type_Env, Path).Name;
+               if Decl.Discriminant.Has_Default then
+                  Result.Has_Discriminant_Default := True;
+                  Result.Discriminant_Default_Bool :=
+                    Bool_Literal_Value (Decl.Discriminant.Default_Expr, Path);
+               end if;
+            end if;
             for Field_Decl of Decl.Components loop
                for Name of Field_Decl.Names loop
                   Item.Name := Name;
@@ -717,6 +828,25 @@ package body Safe_Frontend.Check_Resolve is
                   Result.Fields.Append (Item);
                end loop;
             end loop;
+            if not Decl.Variants.Is_Empty then
+               for Alternative of Decl.Variants loop
+                  for Field_Decl of Alternative.Components loop
+                     for Name of Field_Decl.Names loop
+                        Item.Name := Name;
+                        Item.Type_Name := Resolve_Type_Spec (Field_Decl.Field_Type, Type_Env, Path).Name;
+                        Result.Fields.Append (Item);
+                        declare
+                           Variant_Field : GM.Variant_Field;
+                        begin
+                           Variant_Field.Name := Name;
+                           Variant_Field.Type_Name := Item.Type_Name;
+                           Variant_Field.When_True := Alternative.When_Value;
+                           Result.Variant_Fields.Append (Variant_Field);
+                        end;
+                     end loop;
+                  end loop;
+               end loop;
+            end if;
          when CM.Type_Decl_Access =>
             Result.Kind := FT.To_UString ("access");
             Result.Has_Target := True;

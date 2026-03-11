@@ -345,6 +345,51 @@
         },
         "golden": "tests/diagnostics_golden/diag_null_deref.txt",
         "source": "tests/negative/neg_rule4_null_deref.safe"
+      },
+      {
+        "check": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "tests/negative/neg_rule5_nan.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "neg_rule5_nan.safe:20:14: error: floating expression may be NaN at narrowing\n  |\n  | 20 |       return Temp (X / Y);  -- ERROR: 0.0/0.0 = NaN, cannot narrow\n  |    |              ^~~~~~~~~~~~\n  |\n",
+          "stdout": ""
+        },
+        "golden": "tests/diagnostics_golden/diag_rule5_nan.txt",
+        "source": "tests/negative/neg_rule5_nan.safe"
+      },
+      {
+        "check": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "tests/negative/neg_result_unguarded.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "neg_result_unguarded.safe:34:14: error: access to variant field 'Value' requires established discriminant 'OK'\n  |\n  | 34 |       return R.Value;  -- REJECTED: R.OK not established\n  |    |              ^~~~~~~\n  |\n  note: the discriminant 'OK' was not established on all paths before this access.\n",
+          "stdout": ""
+        },
+        "golden": "tests/diagnostics_golden/diag_result_unguarded.txt",
+        "source": "tests/negative/neg_result_unguarded.safe"
+      },
+      {
+        "check": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "tests/negative/neg_result_mutated.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "neg_result_mutated.safe:39:17: error: access to variant field 'Value' requires established discriminant 'OK'\n  |\n  | 39 |          return R.Value;          -- REJECTED: R.OK no longer established\n  |    |                 ^~~~~~~\n  |\n  note: the discriminant fact for 'R' was invalidated by assignment or an out/in out call.\n",
+          "stdout": ""
+        },
+        "golden": "tests/diagnostics_golden/diag_result_mutated.txt",
+        "source": "tests/negative/neg_result_mutated.safe"
       }
     ],
     "parity": {
@@ -1759,7 +1804,10 @@
       "tests/negative/neg_rule1_overflow.safe",
       "tests/negative/neg_rule2_oob.safe",
       "tests/negative/neg_rule3_zero_div.safe",
-      "tests/negative/neg_rule4_null_deref.safe"
+      "tests/negative/neg_rule4_null_deref.safe",
+      "tests/negative/neg_rule5_nan.safe",
+      "tests/negative/neg_result_unguarded.safe",
+      "tests/negative/neg_result_mutated.safe"
     ],
     "parity_cases": [
       {
@@ -1825,8 +1873,8 @@
       "oversized_integer_literal.safe"
     ]
   },
-  "repeat_sha256": "2cb6e3759646dd6e2dbbf6cb84191b922c84e5a337dde4e0a68b366d2af311b9",
-  "report_sha256": "2cb6e3759646dd6e2dbbf6cb84191b922c84e5a337dde4e0a68b366d2af311b9",
+  "repeat_sha256": "972d9632f98d1e73f42cbe844b8b27af6c9ac3bd85027d518641fe15209b06d2",
+  "report_sha256": "972d9632f98d1e73f42cbe844b8b27af6c9ac3bd85027d518641fe15209b06d2",
   "status": "ok",
   "task": "PR06.9.5"
 }

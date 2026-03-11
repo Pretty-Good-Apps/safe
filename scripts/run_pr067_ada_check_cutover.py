@@ -57,8 +57,6 @@ DIRECT_CASES = [
 ]
 
 UNSUPPORTED_CASES = [
-    REPO_ROOT / "tests" / "positive" / "rule5_normalize.safe",
-    REPO_ROOT / "tests" / "positive" / "result_guarded_access.safe",
     REPO_ROOT / "tests" / "positive" / "channel_pingpong.safe",
 ]
 

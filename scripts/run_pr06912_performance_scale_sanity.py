@@ -11,7 +11,12 @@ import time
 from pathlib import Path
 from typing import Any
 
-from _lib.gate_expectations import PR05_POSITIVE_CASES, PR06_POSITIVE_CASES
+from _lib.gate_expectations import (
+    PR05_POSITIVE_CASES,
+    PR06_POSITIVE_CASES,
+    PR07_RESULT_POSITIVE_CASES,
+    PR07_RULE5_POSITIVE_CASES,
+)
 from _lib.harness_common import (
     display_path,
     ensure_sdkroot,
@@ -294,7 +299,15 @@ def enforce_growth_caps(
 
 
 def run_supported_positive_check_sweep(*, safec: Path, env: dict[str, str]) -> dict[str, Any]:
-    cases = [REPO_ROOT / path for path in [*PR05_POSITIVE_CASES, *PR06_POSITIVE_CASES]]
+    cases = [
+        REPO_ROOT / path
+        for path in [
+            *PR05_POSITIVE_CASES,
+            *PR06_POSITIVE_CASES,
+            *PR07_RULE5_POSITIVE_CASES,
+            *PR07_RESULT_POSITIVE_CASES,
+        ]
+    ]
     total_ms = 0.0
     for sample in cases:
         start = time.perf_counter()

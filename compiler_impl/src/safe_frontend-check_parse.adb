@@ -306,30 +306,116 @@ package body Safe_Frontend.Check_Parse is
       return Result;
    end Parse_Array_Type;
 
+   function Parse_Component_Decl
+     (State : in out Parser_State) return CM.Component_Decl
+   is
+      First : constant FL.Token := Expect_Identifier (State);
+      Names : FT.UString_Vectors.Vector;
+      Decl  : CM.Component_Decl;
+      Semi  : FL.Token;
+   begin
+      Names.Append (First.Lexeme);
+      while Match (State, ",") loop
+         Names.Append (Expect_Identifier (State).Lexeme);
+      end loop;
+      Require (State, ":");
+      Decl.Names := Names;
+      Decl.Field_Type := Parse_Object_Type (State);
+      Semi := Expect (State, ";");
+      Decl.Span := CM.Join (First.Span, Semi.Span);
+      return Decl;
+   end Parse_Component_Decl;
+
+   function Parse_Discriminant_Spec
+     (State : in out Parser_State) return CM.Discriminant_Spec
+   is
+      Start  : constant FL.Token := Expect (State, "(");
+      Name   : constant FL.Token := Expect_Identifier (State);
+      Result : CM.Discriminant_Spec;
+      Ender  : FL.Token;
+   begin
+      Result.Name := Name.Lexeme;
+      if Match (State, ",") then
+         Reject_Unsupported
+           (State,
+            "multiple discriminants are outside the current PR07 result-record subset");
+      end if;
+      Require (State, ":");
+      Result.Disc_Type := Parse_Object_Type (State);
+      if Match (State, "=") then
+         Result.Has_Default := True;
+         Result.Default_Expr := Parse_Expression (State);
+      end if;
+      Ender := Expect (State, ")");
+      Result.Span := CM.Join (Start.Span, Ender.Span);
+      return Result;
+   end Parse_Discriminant_Spec;
+
    function Parse_Record_Type
      (State : in out Parser_State;
-      Start : FL.Token) return CM.Type_Decl
+      Start : FL.Token;
+      Seed  : CM.Type_Decl) return CM.Type_Decl
    is
-      Result    : CM.Type_Decl;
-      Names     : FT.UString_Vectors.Vector;
-      First     : FL.Token;
-      Decl      : CM.Component_Decl;
-      Semi      : FL.Token;
+      Result       : CM.Type_Decl := Seed;
+      Semi         : FL.Token;
+      Variant_Semi : FL.Token;
    begin
       loop
          exit when Current_Lower (State) = "end";
-         First := Expect_Identifier (State);
-         Names.Clear;
-         Names.Append (First.Lexeme);
-         while Match (State, ",") loop
-            Names.Append (Expect_Identifier (State).Lexeme);
-         end loop;
-         Require (State, ":");
-         Decl.Names := Names;
-         Decl.Field_Type := Parse_Object_Type (State);
-         Semi := Expect (State, ";");
-         Decl.Span := CM.Join (First.Span, Semi.Span);
-         Result.Components.Append (Decl);
+         if Current_Lower (State) = "case" then
+            declare
+               Case_Token  : constant FL.Token := Expect (State, "case");
+               Name_Expr   : constant CM.Expr_Access := Parse_Name_Expression (State);
+            begin
+               if not Result.Has_Discriminant then
+                  Reject_Unsupported
+                    (State,
+                     "variant records are outside the current PR07 result-record subset without a matching boolean discriminant");
+               end if;
+               if Name_To_String (Name_Expr) /= FT.To_String (Result.Discriminant.Name) then
+                  Reject_Unsupported
+                    (State,
+                     "only variant parts keyed by the declared boolean discriminant are supported in the current PR07 subset");
+               end if;
+               Require (State, "is");
+               loop
+                  declare
+                     Variant_Start : constant FL.Token := Expect (State, "when");
+                     Alternative   : CM.Variant_Alternative;
+                  begin
+                     if Current_Lower (State) = "true" then
+                        Alternative.When_Value := True;
+                        Advance (State);
+                     elsif Current_Lower (State) = "false" then
+                        Alternative.When_Value := False;
+                        Advance (State);
+                     else
+                        Reject_Unsupported
+                          (State,
+                           "only boolean variant choices are supported in the current PR07 result-record subset");
+                     end if;
+                     Require (State, "then");
+                     while Current_Lower (State) not in "when" | "end" loop
+                        Alternative.Components.Append (Parse_Component_Decl (State));
+                     end loop;
+                     Alternative.Span := CM.Join (Variant_Start.Span, Current (State).Span);
+                     Result.Variants.Append (Alternative);
+                     exit when Current_Lower (State) = "end";
+                  end;
+               end loop;
+               Require (State, "end");
+               Require (State, "case");
+               Variant_Semi := Expect (State, ";");
+               if Result.Variants.Is_Empty then
+                  Reject_Unsupported
+                    (State,
+                     "variant part must contain at least one boolean alternative");
+               end if;
+               Result.Span := CM.Join (Case_Token.Span, Variant_Semi.Span);
+            end;
+         else
+            Result.Components.Append (Parse_Component_Decl (State));
+         end if;
       end loop;
       Require (State, "end");
       Require (State, "record");
@@ -351,13 +437,14 @@ package body Safe_Frontend.Check_Parse is
       Item.Is_Public := Is_Public;
       Item.Name := Name.Lexeme;
 
+      if Current (State).Lexeme = FT.To_UString ("(") then
+         Item.Has_Discriminant := True;
+         Item.Discriminant := Parse_Discriminant_Spec (State);
+      end if;
+
       if Match (State, ";") then
          Item.Kind := CM.Type_Decl_Incomplete;
          Item.Span := CM.Join (Start.Span, Name.Span);
-      elsif Current (State).Lexeme = FT.To_UString ("(") then
-         Reject_Unsupported
-           (State,
-            "type discriminants are outside the current PR05/PR06 check subset");
       else
          Require (State, "is");
          if Current_Lower (State) = "range" then
@@ -367,15 +454,29 @@ package body Safe_Frontend.Check_Parse is
             Item.High_Expr := Parse_Expression (State);
             Item.Kind := CM.Type_Decl_Integer;
             Item.Span := CM.Join (Start.Span, Expect (State, ";").Span);
+         elsif Current_Lower (State) = "digits" then
+            Advance (State);
+            Item.Digits_Expr := Parse_Expression (State);
+            Require (State, "range");
+            Item.Low_Expr := Parse_Expression (State);
+            Require (State, "..");
+            Item.High_Expr := Parse_Expression (State);
+            Item.Kind := CM.Type_Decl_Float;
+            Item.Span := CM.Join (Start.Span, Expect (State, ";").Span);
          elsif Current_Lower (State) = "array" then
             Item := Parse_Array_Type (State, Start);
             Item.Is_Public := Is_Public;
             Item.Name := Name.Lexeme;
+            Item.Has_Discriminant := False;
          elsif Current_Lower (State) = "record" then
             Advance (State);
-            Item := Parse_Record_Type (State, Start);
-            Item.Is_Public := Is_Public;
-            Item.Name := Name.Lexeme;
+            declare
+               Parsed_Record : CM.Type_Decl := Parse_Record_Type (State, Start, Item);
+            begin
+               Parsed_Record.Is_Public := Is_Public;
+               Parsed_Record.Name := Name.Lexeme;
+               Item := Parsed_Record;
+            end;
          elsif Current_Lower (State) in "access" | "not" then
             Item.Access_Type := Parse_Access_Definition (State, Type_Decl_Context => True);
             Item.Kind := CM.Type_Decl_Access;
@@ -838,9 +939,11 @@ package body Safe_Frontend.Check_Parse is
          Result.Span := Token.Span;
          return Result;
       elsif Token.Kind = FL.Real_Literal then
-         Reject_Unsupported
-           (State,
-            "floating-point literals are outside the current PR05/PR06 check subset");
+         Advance (State);
+         Result.Kind := CM.Expr_Real;
+         Result.Text := Token.Lexeme;
+         Result.Span := Token.Span;
+         return Result;
       elsif Token.Kind = FL.String_Literal or else Token.Kind = FL.Character_Literal then
          Reject_Unsupported
            (State,

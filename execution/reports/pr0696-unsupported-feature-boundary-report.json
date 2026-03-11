@@ -171,8 +171,8 @@
     }
   },
   "deterministic": true,
-  "repeat_sha256": "bae201eb49a62cbacfd659126057edde80cd7cd5178e359adcb24c4e9e8b8e14",
-  "report_sha256": "bae201eb49a62cbacfd659126057edde80cd7cd5178e359adcb24c4e9e8b8e14",
+  "repeat_sha256": "ef83f0a8df917e046b1d6bb2bc7af633732415b2fba955cb9ac57c9415846580",
+  "report_sha256": "ef83f0a8df917e046b1d6bb2bc7af633732415b2fba955cb9ac57c9415846580",
   "status": "ok",
   "task": "PR06.9.6",
   "unsupported_cases": [
@@ -181,22 +181,22 @@
         "command": [
           "compiler_impl/bin/safec",
           "ast",
-          "tests/positive/rule5_normalize.safe"
+          "$TMPDIR/fixed_point.safe"
         ],
         "cwd": "$REPO_ROOT",
         "returncode": 1,
-        "stderr": "rule5_normalize.safe:12:22: error: unsupported type definition in current PR05/PR06 check subset\n  |\n  | 12 |    type Component is digits 15 range -1.0E+10 .. 1.0E+10;\n  |    |                      ^~~~~~\n  |\n",
+        "stderr": "fixed_point.safe:2:18: error: unsupported type definition in current PR05/PR06 check subset\n  |\n  | 2 |    type Money is delta 0.01 range -100.00 .. 100.00;\n  |   |                  ^~~~~\n  |\n",
         "stdout": ""
       },
       "check": {
         "command": [
           "compiler_impl/bin/safec",
           "check",
-          "tests/positive/rule5_normalize.safe"
+          "$TMPDIR/fixed_point.safe"
         ],
         "cwd": "$REPO_ROOT",
         "returncode": 1,
-        "stderr": "rule5_normalize.safe:12:22: error: unsupported type definition in current PR05/PR06 check subset\n  |\n  | 12 |    type Component is digits 15 range -1.0E+10 .. 1.0E+10;\n  |    |                      ^~~~~~\n  |\n",
+        "stderr": "fixed_point.safe:2:18: error: unsupported type definition in current PR05/PR06 check subset\n  |\n  | 2 |    type Money is delta 0.01 range -100.00 .. 100.00;\n  |   |                  ^~~~~\n  |\n",
         "stdout": ""
       },
       "check_diag_json": {
@@ -204,170 +204,24 @@
           "compiler_impl/bin/safec",
           "check",
           "--diag-json",
-          "tests/positive/rule5_normalize.safe"
+          "$TMPDIR/fixed_point.safe"
         ],
         "cwd": "$REPO_ROOT",
         "returncode": 1,
         "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"unsupported_source_construct\",\"message\":\"unsupported type definition in current PR05/PR06 check subset\",\"path\":\"tests/positive/rule5_normalize.safe\",\"span\":{\"start_line\":12,\"start_col\":22,\"end_line\":12,\"end_col\":27},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"unsupported_source_construct\",\"message\":\"unsupported type definition in current PR05/PR06 check subset\",\"path\":\"$TMPDIR/fixed_point.safe\",\"span\":{\"start_line\":2,\"start_col\":18,\"end_line\":2,\"end_col\":22},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
       },
       "diagnostics": [
         {
           "highlight_span": null,
           "message": "unsupported type definition in current PR05/PR06 check subset",
           "notes": [],
-          "path": "tests/positive/rule5_normalize.safe",
-          "reason": "unsupported_source_construct",
-          "span": {
-            "end_col": 27,
-            "end_line": 12,
-            "start_col": 22,
-            "start_line": 12
-          },
-          "suggestions": []
-        }
-      ],
-      "emit": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "emit",
-          "tests/positive/rule5_normalize.safe",
-          "--out-dir",
-          "$TMPDIR/rule5_normalize-out",
-          "--interface-dir",
-          "$TMPDIR/rule5_normalize-iface"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 1,
-        "stderr": "rule5_normalize.safe:12:22: error: unsupported type definition in current PR05/PR06 check subset\n  |\n  | 12 |    type Component is digits 15 range -1.0E+10 .. 1.0E+10;\n  |    |                      ^~~~~~\n  |\n",
-        "stdout": ""
-      },
-      "emit_artifacts": {
-        "iface_files": [],
-        "out_files": []
-      },
-      "name": "rule5_normalize",
-      "source": "tests/positive/rule5_normalize.safe"
-    },
-    {
-      "ast": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "ast",
-          "tests/negative/neg_rule5_nan.safe"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 1,
-        "stderr": "neg_rule5_nan.safe:12:17: error: unsupported type definition in current PR05/PR06 check subset\n  |\n  | 12 |    type Temp is digits 6 range -100.0 .. 100.0;\n  |    |                 ^~~~~~\n  |\n",
-        "stdout": ""
-      },
-      "check": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "check",
-          "tests/negative/neg_rule5_nan.safe"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 1,
-        "stderr": "neg_rule5_nan.safe:12:17: error: unsupported type definition in current PR05/PR06 check subset\n  |\n  | 12 |    type Temp is digits 6 range -100.0 .. 100.0;\n  |    |                 ^~~~~~\n  |\n",
-        "stdout": ""
-      },
-      "check_diag_json": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "check",
-          "--diag-json",
-          "tests/negative/neg_rule5_nan.safe"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 1,
-        "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"unsupported_source_construct\",\"message\":\"unsupported type definition in current PR05/PR06 check subset\",\"path\":\"tests/negative/neg_rule5_nan.safe\",\"span\":{\"start_line\":12,\"start_col\":17,\"end_line\":12,\"end_col\":22},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
-      },
-      "diagnostics": [
-        {
-          "highlight_span": null,
-          "message": "unsupported type definition in current PR05/PR06 check subset",
-          "notes": [],
-          "path": "tests/negative/neg_rule5_nan.safe",
+          "path": "$TMPDIR/fixed_point.safe",
           "reason": "unsupported_source_construct",
           "span": {
             "end_col": 22,
-            "end_line": 12,
-            "start_col": 17,
-            "start_line": 12
-          },
-          "suggestions": []
-        }
-      ],
-      "emit": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "emit",
-          "tests/negative/neg_rule5_nan.safe",
-          "--out-dir",
-          "$TMPDIR/neg_rule5_nan-out",
-          "--interface-dir",
-          "$TMPDIR/neg_rule5_nan-iface"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 1,
-        "stderr": "neg_rule5_nan.safe:12:17: error: unsupported type definition in current PR05/PR06 check subset\n  |\n  | 12 |    type Temp is digits 6 range -100.0 .. 100.0;\n  |    |                 ^~~~~~\n  |\n",
-        "stdout": ""
-      },
-      "emit_artifacts": {
-        "iface_files": [],
-        "out_files": []
-      },
-      "name": "neg_rule5_nan",
-      "source": "tests/negative/neg_rule5_nan.safe"
-    },
-    {
-      "ast": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "ast",
-          "$TMPDIR/float_literal.safe"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 1,
-        "stderr": "float_literal.safe:2:22: error: floating-point literals are outside the current PR05/PR06 check subset\n  |\n  | 2 |    Value : Integer = 1.5;\n  |   |                      ^~~\n  |\n",
-        "stdout": ""
-      },
-      "check": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "check",
-          "$TMPDIR/float_literal.safe"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 1,
-        "stderr": "float_literal.safe:2:22: error: floating-point literals are outside the current PR05/PR06 check subset\n  |\n  | 2 |    Value : Integer = 1.5;\n  |   |                      ^~~\n  |\n",
-        "stdout": ""
-      },
-      "check_diag_json": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "check",
-          "--diag-json",
-          "$TMPDIR/float_literal.safe"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 1,
-        "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"unsupported_source_construct\",\"message\":\"floating-point literals are outside the current PR05/PR06 check subset\",\"path\":\"$TMPDIR/float_literal.safe\",\"span\":{\"start_line\":2,\"start_col\":22,\"end_line\":2,\"end_col\":24},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
-      },
-      "diagnostics": [
-        {
-          "highlight_span": null,
-          "message": "floating-point literals are outside the current PR05/PR06 check subset",
-          "notes": [],
-          "path": "$TMPDIR/float_literal.safe",
-          "reason": "unsupported_source_construct",
-          "span": {
-            "end_col": 24,
             "end_line": 2,
-            "start_col": 22,
+            "start_col": 18,
             "start_line": 2
           },
           "suggestions": []
@@ -377,169 +231,23 @@
         "command": [
           "compiler_impl/bin/safec",
           "emit",
-          "$TMPDIR/float_literal.safe",
+          "$TMPDIR/fixed_point.safe",
           "--out-dir",
-          "$TMPDIR/float_literal-out",
+          "$TMPDIR/fixed_point-out",
           "--interface-dir",
-          "$TMPDIR/float_literal-iface"
+          "$TMPDIR/fixed_point-iface"
         ],
         "cwd": "$REPO_ROOT",
         "returncode": 1,
-        "stderr": "float_literal.safe:2:22: error: floating-point literals are outside the current PR05/PR06 check subset\n  |\n  | 2 |    Value : Integer = 1.5;\n  |   |                      ^~~\n  |\n",
+        "stderr": "fixed_point.safe:2:18: error: unsupported type definition in current PR05/PR06 check subset\n  |\n  | 2 |    type Money is delta 0.01 range -100.00 .. 100.00;\n  |   |                  ^~~~~\n  |\n",
         "stdout": ""
       },
       "emit_artifacts": {
         "iface_files": [],
         "out_files": []
       },
-      "name": "float_literal.safe",
-      "source": "$TMPDIR/float_literal.safe"
-    },
-    {
-      "ast": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "ast",
-          "tests/positive/result_guarded_access.safe"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 1,
-        "stderr": "result_guarded_access.safe:13:22: error: type discriminants are outside the current PR05/PR06 check subset\n  |\n  | 13 |    type Parse_Result (OK : Boolean = False) is record\n  |    |                      ^\n  |\n",
-        "stdout": ""
-      },
-      "check": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "check",
-          "tests/positive/result_guarded_access.safe"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 1,
-        "stderr": "result_guarded_access.safe:13:22: error: type discriminants are outside the current PR05/PR06 check subset\n  |\n  | 13 |    type Parse_Result (OK : Boolean = False) is record\n  |    |                      ^\n  |\n",
-        "stdout": ""
-      },
-      "check_diag_json": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "check",
-          "--diag-json",
-          "tests/positive/result_guarded_access.safe"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 1,
-        "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"unsupported_source_construct\",\"message\":\"type discriminants are outside the current PR05/PR06 check subset\",\"path\":\"tests/positive/result_guarded_access.safe\",\"span\":{\"start_line\":13,\"start_col\":22,\"end_line\":13,\"end_col\":22},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
-      },
-      "diagnostics": [
-        {
-          "highlight_span": null,
-          "message": "type discriminants are outside the current PR05/PR06 check subset",
-          "notes": [],
-          "path": "tests/positive/result_guarded_access.safe",
-          "reason": "unsupported_source_construct",
-          "span": {
-            "end_col": 22,
-            "end_line": 13,
-            "start_col": 22,
-            "start_line": 13
-          },
-          "suggestions": []
-        }
-      ],
-      "emit": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "emit",
-          "tests/positive/result_guarded_access.safe",
-          "--out-dir",
-          "$TMPDIR/result_guarded_access-out",
-          "--interface-dir",
-          "$TMPDIR/result_guarded_access-iface"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 1,
-        "stderr": "result_guarded_access.safe:13:22: error: type discriminants are outside the current PR05/PR06 check subset\n  |\n  | 13 |    type Parse_Result (OK : Boolean = False) is record\n  |    |                      ^\n  |\n",
-        "stdout": ""
-      },
-      "emit_artifacts": {
-        "iface_files": [],
-        "out_files": []
-      },
-      "name": "result_guarded_access",
-      "source": "tests/positive/result_guarded_access.safe"
-    },
-    {
-      "ast": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "ast",
-          "tests/negative/neg_result_mutated.safe"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 1,
-        "stderr": "neg_result_mutated.safe:14:22: error: type discriminants are outside the current PR05/PR06 check subset\n  |\n  | 14 |    type Parse_Result (OK : Boolean = False) is record\n  |    |                      ^\n  |\n",
-        "stdout": ""
-      },
-      "check": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "check",
-          "tests/negative/neg_result_mutated.safe"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 1,
-        "stderr": "neg_result_mutated.safe:14:22: error: type discriminants are outside the current PR05/PR06 check subset\n  |\n  | 14 |    type Parse_Result (OK : Boolean = False) is record\n  |    |                      ^\n  |\n",
-        "stdout": ""
-      },
-      "check_diag_json": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "check",
-          "--diag-json",
-          "tests/negative/neg_result_mutated.safe"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 1,
-        "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"unsupported_source_construct\",\"message\":\"type discriminants are outside the current PR05/PR06 check subset\",\"path\":\"tests/negative/neg_result_mutated.safe\",\"span\":{\"start_line\":14,\"start_col\":22,\"end_line\":14,\"end_col\":22},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
-      },
-      "diagnostics": [
-        {
-          "highlight_span": null,
-          "message": "type discriminants are outside the current PR05/PR06 check subset",
-          "notes": [],
-          "path": "tests/negative/neg_result_mutated.safe",
-          "reason": "unsupported_source_construct",
-          "span": {
-            "end_col": 22,
-            "end_line": 14,
-            "start_col": 22,
-            "start_line": 14
-          },
-          "suggestions": []
-        }
-      ],
-      "emit": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "emit",
-          "tests/negative/neg_result_mutated.safe",
-          "--out-dir",
-          "$TMPDIR/neg_result_mutated-out",
-          "--interface-dir",
-          "$TMPDIR/neg_result_mutated-iface"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 1,
-        "stderr": "neg_result_mutated.safe:14:22: error: type discriminants are outside the current PR05/PR06 check subset\n  |\n  | 14 |    type Parse_Result (OK : Boolean = False) is record\n  |    |                      ^\n  |\n",
-        "stdout": ""
-      },
-      "emit_artifacts": {
-        "iface_files": [],
-        "out_files": []
-      },
-      "name": "neg_result_mutated",
-      "source": "tests/negative/neg_result_mutated.safe"
+      "name": "fixed_point.safe",
+      "source": "$TMPDIR/fixed_point.safe"
     },
     {
       "ast": {

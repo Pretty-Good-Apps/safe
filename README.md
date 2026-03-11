@@ -47,7 +47,7 @@ The `companion/templates/` directory contains 14 templates (M1–M7 complete) de
 | Companion VCs (flow / proved / justified / unproved) | 29 / 34 / 1 / 0 (64 total) |
 | Template VCs (flow / proved / justified / unproved) | 107 / 217 / 1 / 0 (325 total, 17 units) |
 | Tracked assumptions | 14 (4 critical, 4 major, 5 minor, 1 template) |
-| Test files | 100 |
+| Test files | 103 |
 
 ---
 
@@ -93,7 +93,7 @@ safe/
 ├── compiler_impl/               # Reference compiler workspace (early frontend)
 ├── clauses/                     # 205 clauses + PO mappings
 ├── execution/                   # Execution ledger, dashboard, and session notes
-├── tests/                       # 100 test files (5 categories)
+├── tests/                       # 103 test files (5 categories)
 ├── docs/                        # Technical documentation
 ├── scripts/                     # CI, validation, and automation helpers
 ├── meta/                        # Frozen commit SHA, generator version
@@ -132,7 +132,7 @@ CI runs a matrix of execution-guard checks, frontend smoke and regression/harden
 The frontend matrix now enforces:
 
 - Ada-native `safec lex` / `ast` / `validate-mir` / `analyze-mir` / `check` / `emit`
-- the current PR05/PR06 sequential Rule 1-4 plus sequential ownership only subset
+- the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern
 - Python as glue/orchestration only around the compiler
 - deterministic committed evidence for the PR06.9.x hardening series
 
@@ -149,9 +149,9 @@ See [`.github/workflows/ci.yml`](.github/workflows/ci.yml) for the current workf
 | Generator | spec2spark v0.1.0 |
 | Companion status | All 13 companion tasks complete |
 | Emission templates | 14/14 proved (320 VCs, 0 unproved; M1–M7 complete) |
-| Compiler frontend | `compiler_impl/` current baseline: PR05/PR06 sequential Rule 1-4 plus sequential ownership only, with Ada-native `safec lex` / `ast` / `validate-mir` / `analyze-mir` / `check` / `emit` |
+| Compiler frontend | `compiler_impl/` current baseline: the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern, with Ada-native `safec lex` / `ast` / `validate-mir` / `analyze-mir` / `check` / `emit` |
 
-The repository now includes a sequential compiler frontend under `compiler_impl/`. The current compiler frontend supports PR05/PR06 sequential Rule 1-4 plus sequential ownership only. It provides Ada-native `safec lex`, `ast`, `validate-mir`, `analyze-mir`, `check`, and `emit` for that subset, while Python remains glue/orchestration only around the compiler. The old shallow legacy frontend chain is gone. PR07 starts from the cleaned PR06.9.x frontend baseline.
+The repository now includes a sequential compiler frontend under `compiler_impl/`. The current compiler frontend supports the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern. It provides Ada-native `safec lex`, `ast`, `validate-mir`, `analyze-mir`, `check`, and `emit` for that supported surface, while Python remains glue/orchestration only around the compiler. The old shallow legacy frontend chain is gone, and PR07 is the milestone that establishes this expanded baseline before PR08.
 
 See [`docs/frontend_architecture_baseline.md`](docs/frontend_architecture_baseline.md) for the current compiler boundary, [`docs/frontend_scale_limits.md`](docs/frontend_scale_limits.md) for the current scale policy, and [`compiler_impl/README.md`](compiler_impl/README.md) for the workspace-level output and verification details.
 

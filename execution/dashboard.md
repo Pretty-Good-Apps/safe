@@ -3,7 +3,7 @@
 - **Schema version:** `1`
 - **Frozen spec SHA:** `468cf72332724b04b7c193b4d2a3b02f1584125d`
 - **Active task:** `none`
-- **Next task:** `PR07`
+- **Next task:** `PR08`
 - **Updated at:** `2026-03-09T22:47:56Z`
 
 ## Repo Facts
@@ -12,8 +12,8 @@
 - `tests/negative`: 43
 - `tests/golden`: 3
 - `tests/concurrency`: 5
-- `tests/diagnostics_golden`: 14
-- **Total test files:** 100
+- `tests/diagnostics_golden`: 17
+- **Total test files:** 103
 
 ## Task Ledger
 
@@ -43,7 +43,7 @@
 | PR06.9.11 | done | PR06.9.10 | 1 |
 | PR06.9.12 | done | PR06.9.11 | 1 |
 | PR06.9.13 | done | PR06.9.12 | 1 |
-| PR07 | planned | PR06.9.13 | 0 |
+| PR07 | done | PR06.9.13 | 1 |
 | PR08 | planned | PR07 | 0 |
 | PR09 | planned | PR08 | 0 |
 | PR10 | planned | PR09 | 0 |
@@ -381,11 +381,20 @@
 
 ### PR07 — Rule 5 and discriminant/result safety
 
-- **Status:** `planned`
+- **Status:** `done`
 - **Depends on:** PR06.9.13
 - **Blockers:** none
 - **Acceptance:**
-  - A canonical Rule 5 diagnostic golden exists and matches byte-for-byte.
+  - The supported frontend subset is the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern.
+  - All frozen Rule 5 positives accept, and all frozen Rule 5 negatives reject with their current expected reasons.
+  - result_guarded_access.safe accepts, while neg_result_unguarded.safe and neg_result_mutated.safe reject with discriminant_check_not_established.
+  - Representative check --diag-json and analyze-mir --diag-json cases match exactly on normalized first-diagnostic reason, message, span, highlight_span, notes, suggestions, and path.
+  - Representative Rule 5 and result-record emitted AST, typed, MIR, and safei outputs remain valid under validate_ast_output.py, validate_output_contracts.py, and safec validate-mir, with additive-only float and discriminant metadata.
+  - Only the newly supported floating-point Rule 5 cases and the current boolean result-record cases are removed from the unsupported boundary; fixed-point remains unsupported.
+  - Canonical Rule 5 and result/discriminant goldens match byte-for-byte and are wired into the canonical golden map.
+  - Tracker, dashboard, and frontend docs agree on the frozen PR07 subset and advance next_task_id to PR08.
+- **Evidence:**
+  - `execution/reports/pr07-rule5-result-safety-report.json`
 
 ### PR08 — Concurrency legality and Bronze summaries
 

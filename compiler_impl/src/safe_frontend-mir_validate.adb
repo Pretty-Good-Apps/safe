@@ -161,6 +161,33 @@ package body Safe_Frontend.Mir_Validate is
       if Value.Has_Base then
          Require (Has_Text (Value.Base), Where & ": missing base");
       end if;
+      if Value.Has_Digits_Text then
+         Require (Has_Text (Value.Digits_Text), Where & ": missing digits_text");
+      end if;
+      if Value.Has_Float_Low_Text then
+         Require (Has_Text (Value.Float_Low_Text), Where & ": missing float_low_text");
+      end if;
+      if Value.Has_Float_High_Text then
+         Require (Has_Text (Value.Float_High_Text), Where & ": missing float_high_text");
+      end if;
+      if Value.Has_Discriminant then
+         Require (Has_Text (Value.Discriminant_Name), Where & ": missing discriminant_name");
+         Require (Has_Text (Value.Discriminant_Type), Where & ": missing discriminant_type");
+      end if;
+      if not Value.Variant_Fields.Is_Empty then
+         for Index in Value.Variant_Fields.First_Index .. Value.Variant_Fields.Last_Index loop
+            declare
+               Variant_Field : constant GM.Variant_Field := Value.Variant_Fields (Index);
+            begin
+               Require
+                 (Has_Text (Variant_Field.Name),
+                  Where & ".variant_fields[" & Image (Index - 1) & "]: missing field name");
+               Require
+                 (Has_Text (Variant_Field.Type_Name),
+                  Where & ".variant_fields[" & Image (Index - 1) & "]: missing field type");
+            end;
+         end loop;
+      end if;
       if Value.Has_Access_Role then
          Require (Has_Text (Value.Access_Role), Where & ": invalid access_role");
       end if;
@@ -175,7 +202,7 @@ package body Safe_Frontend.Mir_Validate is
       Require (Value.Kind /= GM.Expr_Unknown, Where & ": unsupported expression");
 
       case Value.Kind is
-         when GM.Expr_Int | GM.Expr_Bool | GM.Expr_Null =>
+         when GM.Expr_Int | GM.Expr_Real | GM.Expr_Bool | GM.Expr_Null =>
             null;
          when GM.Expr_Ident =>
             Require (Has_Text (Value.Name), Where & ": missing identifier name");

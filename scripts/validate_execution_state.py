@@ -134,20 +134,20 @@ EVIDENCE_FORBIDDEN_MARKERS = [
 ]
 PERFORMANCE_DOC_REQUIREMENTS = {
     "docs/frontend_scale_limits.md": [
-        "PR05/PR06 supported subset only",
+        "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern",
         "cliff-detection gate, not a benchmark commitment",
         "raw timings are intentionally kept out of committed evidence",
-        "Rule 5, result safety, channels/tasks/concurrency, and other unsupported surfaces are out of scope",
+        "Fixed-point Rule 5 work, general discriminants, channels/tasks/concurrency, and other unsupported surfaces are out of scope",
     ],
     "compiler_impl/README.md": [
         "docs/frontend_scale_limits.md",
         "cliff-detection gate, not a benchmark commitment",
-        "PR05/PR06 sequential Rule 1-4 plus sequential ownership only",
+        "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern",
     ],
     "release/frontend_runtime_decision.md": [
         "docs/frontend_scale_limits.md",
-        "PR05/PR06 sequential Rule 1-4 plus sequential ownership only",
-        "PR07 starts from this cleaned baseline and must extend the live path rather than revive deleted legacy packages.",
+        "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern",
+        "PR08 starts from this cleaned PR07 baseline and must extend the live path rather than revive deleted legacy packages.",
     ],
 }
 DOCUMENTATION_ARCHITECTURE_DOC_REQUIREMENTS = {
@@ -155,28 +155,28 @@ DOCUMENTATION_ARCHITECTURE_DOC_REQUIREMENTS = {
         "docs/frontend_architecture_baseline.md",
         "docs/frontend_scale_limits.md",
         "compiler_impl/README.md",
-        "PR05/PR06 sequential Rule 1-4 plus sequential ownership only",
+        "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern",
         "Ada-native `safec lex` / `ast` / `validate-mir` / `analyze-mir` / `check` / `emit`",
         "Python remains glue/orchestration only around the compiler.",
-        "PR07 starts from the cleaned PR06.9.x frontend baseline.",
+        "PR07 is the milestone that establishes this expanded baseline before PR08.",
     ],
     "compiler_impl/README.md": [
         "../docs/frontend_architecture_baseline.md",
         "../docs/frontend_scale_limits.md",
-        "PR05/PR06 sequential Rule 1-4 plus sequential ownership only",
-        "All current user-facing `safec` commands are Ada-native for that subset.",
+        "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern",
+        "All current user-facing `safec` commands are Ada-native for that supported surface.",
         "Python remains glue/orchestration only around the compiler.",
         "The old shallow `Ast` / `Parser` / `Semantics` / `Mir` chain was deleted in PR06.9.8.",
-        "PR07 must extend the live `Check_*` + `Mir_*` pipeline.",
+        "PR08 must extend the live `Check_*` + `Mir_*` pipeline.",
     ],
     "release/frontend_runtime_decision.md": [
         "../docs/frontend_architecture_baseline.md",
-        "PR05/PR06 sequential Rule 1-4 plus sequential ownership only",
+        "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern",
         "Ada-native runtime commands:",
         "Python is glue/orchestration only.",
         "The old shallow `Ast` / `Parser` / `Semantics` / `Mir` chain was deleted in PR06.9.8.",
-        "PR06.9.1 through PR06.9.13 established the pre-PR07 frontend baseline.",
-        "PR07 starts from this cleaned baseline and must extend the live path rather than revive deleted legacy packages.",
+        "PR06.9.1 through PR06.9.13 established the hardened pre-PR07 baseline, and PR07 extends that same live path.",
+        "PR08 starts from this cleaned PR07 baseline and must extend the live path rather than revive deleted legacy packages.",
     ],
     "docs/frontend_architecture_baseline.md": [
         "`safec lex`",
@@ -185,7 +185,6 @@ DOCUMENTATION_ARCHITECTURE_DOC_REQUIREMENTS = {
         "`safec analyze-mir`",
         "`safec check`",
         "`safec emit`",
-        "PR05/PR06 sequential Rule 1-4 plus sequential ownership only",
         "Python is glue/orchestration only.",
         "No user-facing `safec` command depends on Python at runtime.",
         "`Check_*`",
@@ -196,11 +195,12 @@ DOCUMENTATION_ARCHITECTURE_DOC_REQUIREMENTS = {
         "`Diagnostics`",
         "`Json`",
         "The old shallow `Ast` / `Parser` / `Semantics` / `Mir` chain was deleted in PR06.9.8.",
-        "PR07 must extend the live path rather than revive deleted legacy packages.",
+        "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern",
+        "PR08 must extend the live path rather than revive deleted legacy packages.",
     ],
     "docs/frontend_scale_limits.md": [
         "frontend_architecture_baseline.md",
-        "PR05/PR06 supported subset only",
+        "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern",
     ],
 }
 DOCUMENTATION_ARCHITECTURE_REQUIRED_LINKS = {
@@ -225,6 +225,7 @@ DOCUMENTATION_ARCHITECTURE_STALE_MARKERS = {
         "PR00–PR06.9.1 sequential frontend landed",
         "EXEC_SUMMARY.md",
         "CHANGELOG.md",
+        "PR07 starts from the cleaned PR06.9.x frontend baseline.",
     ],
     "compiler_impl/README.md": [
         "through PR06.9.8",
@@ -232,11 +233,13 @@ DOCUMENTATION_ARCHITECTURE_STALE_MARKERS = {
         "PR06.8 runtime doctrine:",
         "PR06.9.3 hardens that boundary",
         "PR06.9.10 hardens portability assumptions",
+        "PR07 must extend the live `Check_*` + `Mir_*` pipeline.",
     ],
     "release/frontend_runtime_decision.md": [
         "PR06.5 and PR06.6 removed the MIR validator and MIR analyzer",
         "PR06.8 cuts `safec ast` and `safec emit` over",
         "Before `PR07`, the roadmap now inserts a `PR06.9.1` through `PR06.9.13` stabilization series",
+        "PR07 starts from this cleaned baseline and must extend the live path rather than revive deleted legacy packages.",
     ],
 }
 ENVIRONMENT_DOC_REQUIREMENTS = {

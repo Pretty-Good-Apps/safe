@@ -1350,13 +1350,13 @@
     "tests/positive/rule2_binary_search.safe": {
       "iface/rule2_binary_search.safei.json": "dcdbb73b47e906727c47aa2cc65545d240295d139780f76e37079f66603e2dd0",
       "out/rule2_binary_search.ast.json": "2ad9a390149c6f97832bc851c9b629c25d0edc3fb8f41a2c351c25b18f8b3bcd",
-      "out/rule2_binary_search.mir.json": "a34fdf29af41c5b5b438775e81b3023a91e43626490d8bda0e2dd188b1267ae1",
+      "out/rule2_binary_search.mir.json": "34674533f53fcf378e2ace34ea735ac15e0cb894aa7d7ce9734813bf634275bd",
       "out/rule2_binary_search.typed.json": "918e37b64ee7ffd5e34a1eb1208710ec485f5712c98e4d964c0edc486a35054a"
     },
     "tests/positive/rule4_conditional.safe": {
       "iface/rule4_conditional.safei.json": "714df4ba3b1d7d9bc0573f6ff780ffc2642d3b284cc0e08468ef5d71ea29e7ee",
       "out/rule4_conditional.ast.json": "03c0e4a5b7a2a576a4f9651ef9edb475a5ecbc17a8c403e5e461304fe8c3cd8c",
-      "out/rule4_conditional.mir.json": "b05ef81c0e8afeabaaac457748bd8af9a00cea5cd1f2e09b3e427adf25079795",
+      "out/rule4_conditional.mir.json": "59288cfb1faf25a461bd5f906c513d51c10f905f4fd89c38299834fb8b774941",
       "out/rule4_conditional.typed.json": "ba99ea65794db085c505d7dd6d9aaa6ebceed47b2206cbc71e9e1cc2ab0f5704"
     }
   },
@@ -1421,6 +1421,21 @@
         "stdout": ""
       },
       "source": "tests/negative/neg_rule4_null_deref.safe"
+    },
+    {
+      "golden": "tests/diagnostics_golden/diag_rule5_nan.txt",
+      "result": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_rule5_nan.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_rule5_nan.safe:20:14: error: floating expression may be NaN at narrowing\n  |\n  | 20 |       return Temp (X / Y);  -- ERROR: 0.0/0.0 = NaN, cannot narrow\n  |    |              ^~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "source": "tests/negative/neg_rule5_nan.safe"
     }
   ],
   "mir_validation": [
@@ -1542,6 +1557,6 @@
     }
   ],
   "mode": "all",
-  "repeat_sha256": "05522a586c8a7fbb85b0bab80219aa917659a6feee21cbe2a52d7e87a9ffdbc2",
-  "report_sha256": "05522a586c8a7fbb85b0bab80219aa917659a6feee21cbe2a52d7e87a9ffdbc2"
+  "repeat_sha256": "988d1bce18acda0756afc3e017c7da0c3238f243ca7ba65cf48585633b9089d7",
+  "report_sha256": "988d1bce18acda0756afc3e017c7da0c3238f243ca7ba65cf48585633b9089d7"
 }

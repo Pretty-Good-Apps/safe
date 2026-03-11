@@ -19,6 +19,7 @@ package Safe_Frontend.Mir_Model is
    type Expr_Kind is
      (Expr_Unknown,
       Expr_Int,
+      Expr_Real,
       Expr_Bool,
       Expr_Null,
       Expr_Ident,
@@ -83,6 +84,16 @@ package Safe_Frontend.Mir_Model is
      (Index_Type   => Positive,
       Element_Type => Type_Field);
 
+   type Variant_Field is record
+      Name       : FT.UString := FT.To_UString ("");
+      Type_Name  : FT.UString := FT.To_UString ("");
+      When_True  : Boolean := False;
+   end record;
+
+   package Variant_Field_Vectors is new Ada.Containers.Indefinite_Vectors
+     (Index_Type   => Positive,
+      Element_Type => Variant_Field);
+
    type Type_Descriptor is record
       Name               : FT.UString := FT.To_UString ("");
       Kind               : FT.UString := FT.To_UString ("");
@@ -99,6 +110,18 @@ package Safe_Frontend.Mir_Model is
       Target             : FT.UString := FT.To_UString ("");
       Has_Base           : Boolean := False;
       Base               : FT.UString := FT.To_UString ("");
+      Has_Digits_Text    : Boolean := False;
+      Digits_Text        : FT.UString := FT.To_UString ("");
+      Has_Float_Low_Text : Boolean := False;
+      Float_Low_Text     : FT.UString := FT.To_UString ("");
+      Has_Float_High_Text : Boolean := False;
+      Float_High_Text     : FT.UString := FT.To_UString ("");
+      Has_Discriminant   : Boolean := False;
+      Discriminant_Name  : FT.UString := FT.To_UString ("");
+      Discriminant_Type  : FT.UString := FT.To_UString ("");
+      Has_Discriminant_Default : Boolean := False;
+      Discriminant_Default_Bool : Boolean := False;
+      Variant_Fields     : Variant_Field_Vectors.Vector;
       Not_Null           : Boolean := False;
       Anonymous          : Boolean := False;
       Is_Constant        : Boolean := False;

@@ -8,7 +8,7 @@ No user-facing `safec` command depends on Python at runtime.
 
 ## Current Frontend Boundary
 
-The current frontend supports PR05/PR06 sequential Rule 1-4 plus sequential ownership only.
+The current frontend supports the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern.
 
 Ada-native runtime commands:
 
@@ -40,8 +40,8 @@ The only live compiler frontend path is the Ada-native `Check_*` plus `Mir_*` pi
 
 See [`../docs/frontend_architecture_baseline.md`](../docs/frontend_architecture_baseline.md) for the canonical boundary statement and [`../docs/frontend_scale_limits.md`](../docs/frontend_scale_limits.md) for the current scale policy.
 
-## Pre-PR07 Baseline
+## PR07 Baseline
 
-PR06.9.1 through PR06.9.13 established the pre-PR07 frontend baseline.
+PR06.9.1 through PR06.9.13 established the hardened pre-PR07 baseline, and PR07 extends that same live path.
 
-PR07 starts from this cleaned baseline and must extend the live path rather than revive deleted legacy packages.
+PR08 starts from this cleaned PR07 baseline and must extend the live path rather than revive deleted legacy packages.
