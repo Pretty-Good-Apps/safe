@@ -43,6 +43,12 @@ DIRECT_CASES = [
         "golden": None,
     },
     {
+        "source": REPO_ROOT / "tests" / "positive" / "channel_pingpong.safe",
+        "expected_returncode": 0,
+        "expected_reason": None,
+        "golden": None,
+    },
+    {
         "source": REPO_ROOT / "tests" / "negative" / "neg_rule1_overflow.safe",
         "expected_returncode": 1,
         "expected_reason": "intermediate_overflow",
@@ -56,9 +62,7 @@ DIRECT_CASES = [
     },
 ]
 
-UNSUPPORTED_CASES = [
-    REPO_ROOT / "tests" / "positive" / "channel_pingpong.safe",
-]
+UNSUPPORTED_CASES: list[Path] = []
 
 HARNESSES = [
     REPO_ROOT / "scripts" / "run_pr05_d27_harness.py",

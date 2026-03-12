@@ -1,0 +1,33 @@
+-- Test: select_delay_local_scope
+-- Description: Delay-arm locals stay scoped to the delay arm.
+--   A declaration inside the delay arm must not leak into the enclosing
+--   select or task scope, and lowering must preserve that arm-local scope.
+-- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.4.p33:7a94ab51
+-- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.4.p38:35ed84d9
+-- Expected: ACCEPT
+
+package Select_Delay_Local_Scope is
+
+   type Message is range 0 .. 100;
+
+   channel Data_Ch : Message capacity 1;
+
+   task Worker is
+      Count : Natural = 0;
+   begin
+      loop
+         select
+            when Item : Message from Data_Ch then
+               if Item > 0 then
+                  Count = Count + 1;
+               end if;
+         or
+            delay 0.05 then
+               Temp : Natural = 1;
+               Temp = Temp + 1;
+               Count = Count + Temp;
+         end select;
+      end loop;
+   end Worker;
+
+end Select_Delay_Local_Scope;

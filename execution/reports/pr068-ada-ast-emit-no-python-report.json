@@ -28,14 +28,14 @@
     "tests/positive/rule2_binary_search.safe": {
       "iface/rule2_binary_search.safei.json": "dcdbb73b47e906727c47aa2cc65545d240295d139780f76e37079f66603e2dd0",
       "out/rule2_binary_search.ast.json": "2ad9a390149c6f97832bc851c9b629c25d0edc3fb8f41a2c351c25b18f8b3bcd",
-      "out/rule2_binary_search.mir.json": "8d9192f2939dfd97c326115d91c0dac1bd548b37d0a72e5eeba0c7c023dccf72",
-      "out/rule2_binary_search.typed.json": "918e37b64ee7ffd5e34a1eb1208710ec485f5712c98e4d964c0edc486a35054a"
+      "out/rule2_binary_search.mir.json": "3ee771e9a0c69818af40b06b2f5b81cb3652709115887f1d1d76d51bcd0faf09",
+      "out/rule2_binary_search.typed.json": "485ea2e66cb34bbabfe7ccf8e6cf5689de546ac6ef6cd4d3e6ef863ed990e1c7"
     },
     "tests/positive/rule4_conditional.safe": {
       "iface/rule4_conditional.safei.json": "714df4ba3b1d7d9bc0573f6ff780ffc2642d3b284cc0e08468ef5d71ea29e7ee",
       "out/rule4_conditional.ast.json": "03c0e4a5b7a2a576a4f9651ef9edb475a5ecbc17a8c403e5e461304fe8c3cd8c",
-      "out/rule4_conditional.mir.json": "7bc8fceadc7e2eed67e4ddf92a5d7a83d76f42d459f3ebfbbe0c3827ea8eabfe",
-      "out/rule4_conditional.typed.json": "ba99ea65794db085c505d7dd6d9aaa6ebceed47b2206cbc71e9e1cc2ab0f5704"
+      "out/rule4_conditional.mir.json": "0c535736abefdfd17d9b40834bbaf6875a595f8c6d8761c0baaa6dc54619d861",
+      "out/rule4_conditional.typed.json": "2e85711a22460b0fae2afed59fe9b05762fdb7ca2cfd2b35347f4aeda9ef15f6"
     }
   },
   "emit_no_python": {
@@ -654,8 +654,8 @@
         "hashes": {
           "iface/rule2_binary_search.safei.json": "dcdbb73b47e906727c47aa2cc65545d240295d139780f76e37079f66603e2dd0",
           "out/rule2_binary_search.ast.json": "2ad9a390149c6f97832bc851c9b629c25d0edc3fb8f41a2c351c25b18f8b3bcd",
-          "out/rule2_binary_search.mir.json": "8d9192f2939dfd97c326115d91c0dac1bd548b37d0a72e5eeba0c7c023dccf72",
-          "out/rule2_binary_search.typed.json": "918e37b64ee7ffd5e34a1eb1208710ec485f5712c98e4d964c0edc486a35054a"
+          "out/rule2_binary_search.mir.json": "3ee771e9a0c69818af40b06b2f5b81cb3652709115887f1d1d76d51bcd0faf09",
+          "out/rule2_binary_search.typed.json": "485ea2e66cb34bbabfe7ccf8e6cf5689de546ac6ef6cd4d3e6ef863ed990e1c7"
         },
         "mir_analysis": {
           "command": [
@@ -756,8 +756,8 @@
         "hashes": {
           "iface/rule4_conditional.safei.json": "714df4ba3b1d7d9bc0573f6ff780ffc2642d3b284cc0e08468ef5d71ea29e7ee",
           "out/rule4_conditional.ast.json": "03c0e4a5b7a2a576a4f9651ef9edb475a5ecbc17a8c403e5e461304fe8c3cd8c",
-          "out/rule4_conditional.mir.json": "7bc8fceadc7e2eed67e4ddf92a5d7a83d76f42d459f3ebfbbe0c3827ea8eabfe",
-          "out/rule4_conditional.typed.json": "ba99ea65794db085c505d7dd6d9aaa6ebceed47b2206cbc71e9e1cc2ab0f5704"
+          "out/rule4_conditional.mir.json": "0c535736abefdfd17d9b40834bbaf6875a595f8c6d8761c0baaa6dc54619d861",
+          "out/rule4_conditional.typed.json": "2e85711a22460b0fae2afed59fe9b05762fdb7ca2cfd2b35347f4aeda9ef15f6"
         },
         "mir_analysis": {
           "command": [
@@ -816,8 +816,8 @@
       "python3.11": "$TMPDIR/python-mask/python3.11"
     }
   },
-  "repeat_sha256": "06ab1f088374610c70c5cdde3f9441635dda61013f4ae08204083d42053fc5cf",
-  "report_sha256": "06ab1f088374610c70c5cdde3f9441635dda61013f4ae08204083d42053fc5cf",
+  "repeat_sha256": "2038e066669a876537340a69bc9528ae19789e99b895dbf2b3652c9518d5e789",
+  "report_sha256": "2038e066669a876537340a69bc9528ae19789e99b895dbf2b3652c9518d5e789",
   "runtime_rule": {
     "banned_tokens_absent": [
       "Run_Backend",

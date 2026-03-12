@@ -1,0 +1,15 @@
+-- Test: neg_statement_label_assignment
+-- Description: Statement labels before assignments remain unsupported.
+-- Expected: REJECT unsupported_source_construct
+
+package Statement_Label_Assignment_Test is
+
+   type Counter is range 0 .. 10;
+
+   procedure Main is
+      Value : Counter = 0;
+   begin
+      Label_1: Value = 1;
+   end Main;
+
+end Statement_Label_Assignment_Test;

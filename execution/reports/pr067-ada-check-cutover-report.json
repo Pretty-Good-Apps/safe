@@ -71,6 +71,38 @@
           "compiler_impl/bin/safec",
           "check",
           "--diag-json",
+          "tests/positive/channel_pingpong.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+      },
+      "diagnostics": {
+        "diagnostics": [],
+        "format": "diagnostics-v0"
+      },
+      "expected_reason": null,
+      "golden": null,
+      "human": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/positive/channel_pingpong.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "source": "tests/positive/channel_pingpong.safe"
+    },
+    {
+      "diag_json": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
           "tests/negative/neg_rule1_overflow.safe"
         ],
         "cwd": "$REPO_ROOT",
@@ -300,8 +332,8 @@
     "harness_blocked_log_path": "$TMPDIR/blocked-harness-python.log",
     "harness_stub_path": "$TMPDIR/python-mask-harness/python3"
   },
-  "repeat_sha256": "5b78a21898d4729d09c7d9f0549bed7a1e27d00b3905cb17f1f603e0f4cab62a",
-  "report_sha256": "5b78a21898d4729d09c7d9f0549bed7a1e27d00b3905cb17f1f603e0f4cab62a",
+  "repeat_sha256": "40bf453c92fabb0e7be0a53e6761194baa5204e12a60821322999dfa6e9776a6",
+  "report_sha256": "40bf453c92fabb0e7be0a53e6761194baa5204e12a60821322999dfa6e9776a6",
   "source_frontend_rejections": [
     {
       "diag_json": {
@@ -398,51 +430,5 @@
       "source": "$TMPDIR/oversized_integer_literal.safe"
     }
   ],
-  "unsupported_subset_rejections": [
-    {
-      "diag_json": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "check",
-          "--diag-json",
-          "tests/positive/channel_pingpong.safe"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 1,
-        "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"unsupported_source_construct\",\"message\":\"package item `channel` is outside the current PR05/PR06 check subset\",\"path\":\"$REPO_ROOT/tests/positive/channel_pingpong.safe\",\"span\":{\"start_line\":17,\"start_col\":4,\"end_line\":17,\"end_col\":10},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
-      },
-      "diagnostics": {
-        "diagnostics": [
-          {
-            "highlight_span": null,
-            "message": "package item `channel` is outside the current PR05/PR06 check subset",
-            "notes": [],
-            "path": "$REPO_ROOT/tests/positive/channel_pingpong.safe",
-            "reason": "unsupported_source_construct",
-            "span": {
-              "end_col": 10,
-              "end_line": 17,
-              "start_col": 4,
-              "start_line": 17
-            },
-            "suggestions": []
-          }
-        ],
-        "format": "diagnostics-v0"
-      },
-      "human": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "check",
-          "tests/positive/channel_pingpong.safe"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 1,
-        "stderr": "channel_pingpong.safe:17:4: error: package item `channel` is outside the current PR05/PR06 check subset\n  |\n  | 17 |    channel Ping_Ch : Message capacity 1;\n  |    |    ^~~~~~~\n  |\n",
-        "stdout": ""
-      },
-      "source": "tests/positive/channel_pingpong.safe"
-    }
-  ]
+  "unsupported_subset_rejections": []
 }

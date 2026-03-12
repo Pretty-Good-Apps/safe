@@ -21,6 +21,7 @@
       "scripts/run_pr06910_portability_environment.py",
       "scripts/run_pr06911_glue_script_safety.py",
       "scripts/run_pr06912_performance_scale_sanity.py",
+      "scripts/run_pr081_local_concurrency_frontend.py",
       "scripts/validate_execution_state.py",
       "scripts/validate_ast_output.py",
       "scripts/validate_output_contracts.py",
@@ -53,7 +54,8 @@
       "scripts/run_pr0699_build_reproducibility.py",
       "scripts/run_pr06910_portability_environment.py",
       "scripts/run_pr06911_glue_script_safety.py",
-      "scripts/run_pr06912_performance_scale_sanity.py"
+      "scripts/run_pr06912_performance_scale_sanity.py",
+      "scripts/run_pr081_local_concurrency_frontend.py"
     ],
     "safe_source_readers": [
       {
@@ -67,6 +69,10 @@
       {
         "category": "fixture metadata extraction via read_expected_reason",
         "script": "scripts/run_pr0691_semantic_correctness.py"
+      },
+      {
+        "category": "fixture metadata extraction via read_expected_reason",
+        "script": "scripts/run_pr081_local_concurrency_frontend.py"
       }
     ],
     "shell_assumption_violations": [],
@@ -85,23 +91,23 @@
   ],
   "referenced_deterministic_reports": {
     "build_reproducibility": {
-      "repeat_sha256": "a4c10078a30be8d2047a395719ced71b06f133bf38a55192c88e439e1586a094",
+      "repeat_sha256": "46770febd6962513c2561fac08f0d9d8ba89ace65539a7180b00586bb95eb6e0",
       "report_path": "execution/reports/pr0699-build-reproducibility-report.json",
-      "report_sha256": "a4c10078a30be8d2047a395719ced71b06f133bf38a55192c88e439e1586a094"
+      "report_sha256": "46770febd6962513c2561fac08f0d9d8ba89ace65539a7180b00586bb95eb6e0"
     },
     "frontend_smoke": {
-      "repeat_sha256": "9d99f32c9402c477a3eb335ad9edb897155de324a6fb68949677e162611ebc4c",
+      "repeat_sha256": "09f12e202dd5e032ffff5218521a83d311543dd28b1e17487186dc5e1bad1426",
       "report_path": "execution/reports/pr00-pr04-frontend-smoke.json",
-      "report_sha256": "9d99f32c9402c477a3eb335ad9edb897155de324a6fb68949677e162611ebc4c"
+      "report_sha256": "09f12e202dd5e032ffff5218521a83d311543dd28b1e17487186dc5e1bad1426"
     }
   },
-  "repeat_sha256": "82f54ccdfb939b77f776f30920813a7cd79e0abf8fb0fc45d91e8cc65930c72d",
-  "report_sha256": "82f54ccdfb939b77f776f30920813a7cd79e0abf8fb0fc45d91e8cc65930c72d",
+  "repeat_sha256": "a56056bd54c1d8f7066261083c7abcd2d73f84137b4df9712b6aa1f909b4065d",
+  "report_sha256": "a56056bd54c1d8f7066261083c7abcd2d73f84137b4df9712b6aa1f909b4065d",
   "reruns": {
     "gate_quality": {
-      "repeat_sha256": "4318d5d379732e26bb68556476a494e9d3718de540f6fd7ed57d36028ef2c0da",
+      "repeat_sha256": "be2abd6ff29c8404a334488bb3ecc11da343c27d95bd3c2a92be7dfffc7c72f7",
       "report_path": "execution/reports/pr0697-gate-quality-report.json",
-      "report_sha256": "4318d5d379732e26bb68556476a494e9d3718de540f6fd7ed57d36028ef2c0da",
+      "report_sha256": "be2abd6ff29c8404a334488bb3ecc11da343c27d95bd3c2a92be7dfffc7c72f7",
       "run": {
         "command": [
           "python3",
@@ -114,9 +120,9 @@
       }
     },
     "portability_environment": {
-      "repeat_sha256": "8ff735e5ca1df491bbd4ec9525380d48be284512675203c3fe8ef455d057289d",
+      "repeat_sha256": "b658b19a478d7b5c15aed2b8dc32c5a72b0e8f209bbec1be08c0d814a89bd1cb",
       "report_path": "execution/reports/pr06910-portability-environment-report.json",
-      "report_sha256": "8ff735e5ca1df491bbd4ec9525380d48be284512675203c3fe8ef455d057289d",
+      "report_sha256": "b658b19a478d7b5c15aed2b8dc32c5a72b0e8f209bbec1be08c0d814a89bd1cb",
       "run": {
         "command": [
           "python3",
@@ -170,6 +176,6 @@
     "cwd": "$REPO_ROOT",
     "result": "OK",
     "returncode": 0,
-    "tests_ran": 43
+    "tests_ran": 51
   }
 }

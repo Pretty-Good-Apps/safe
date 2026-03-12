@@ -233,7 +233,7 @@ def measure_emit_scenarios(*, safec: Path, env: dict[str, str]) -> tuple[list[di
 
 
 def analyze_expected_returncode(path: Path) -> int:
-    return 0 if path.name == "valid_mir_v2.json" else 1
+    return 0 if path.name in {"valid_mir_v2.json", "valid_mir_v2_concurrency.json"} else 1
 
 
 def measure_analyze_scenarios(*, safec: Path, env: dict[str, str]) -> tuple[list[dict[str, Any]], dict[str, float]]:

@@ -192,12 +192,12 @@ generated artifact, test file(s), and implementation status.
 | 27 | `4.3.p30:62619161` | 4.3 | 30 | Memory-safety | N/A | -- | stubbed |
 | 28 | `4.3.p31:a7297e97` | 4.3 | 31 | Race-freedom | Safe_Model.Channel_State | channel_pipeline.safe, golden_pipeline.ada, multi_task_channel.safe | stubbed |
 | 29 | `4.3.p31a:a621d08c` | 4.3 | 31a | Memory-safety | N/A | -- | stubbed |
-| 30 | `4.4.p33:7a94ab51` | 4.4 | 33 | Conformance | N/A | select_priority.safe | stubbed |
+| 30 | `4.4.p33:7a94ab51` | 4.4 | 33 | Conformance | N/A | select_priority.safe, select_with_delay.safe, select_delay_local_scope.safe | stubbed |
 | 31 | `4.4.p34:f0f83b83` | 4.4 | 34 | Conformance | N/A | -- | stubbed |
 | 32 | `4.4.p35:2ad6e64f` | 4.4 | 35 | Conformance | N/A | select_priority.safe | stubbed |
 | 33 | `4.4.p36:0bffbd47` | 4.4 | 36 | Conformance | N/A | -- | stubbed |
 | 34 | `4.4.p37:6ced8129` | 4.4 | 37 | Conformance | N/A | -- | stubbed |
-| 35 | `4.4.p38:35ed84d9` | 4.4 | 38 | Conformance | N/A | -- | stubbed |
+| 35 | `4.4.p38:35ed84d9` | 4.4 | 38 | Conformance | N/A | select_with_delay.safe, select_delay_local_scope.safe | stubbed |
 | 36 | `4.4.p39:1012f4db` | 4.4 | 39 | Determinism | N/A | select_priority.safe | stubbed |
 | 37 | `4.4.p40:4cfdeffe` | 4.4 | 40 | Determinism | N/A | -- | stubbed |
 | 38 | `4.4.p41:cdf6a558` | 4.4 | 41 | Determinism | N/A | -- | stubbed |
@@ -587,7 +587,9 @@ affected POs/models, severity, and related spec references.
 | exclusive_variable.safe | `4.5.p45:8bdd0c99`, `5.4.1.p32:90d4f527`, `5.4.1.p33:0fc25399` |
 | fifo_ordering.safe | `4.2.p20:8aa1a21e`, `4.3.p27:ef0ce6bd`, `4.3.p28:ea6bd13c` |
 | multi_task_channel.safe | `4.3.p31:a7297e97`, `4.3.p27:ef0ce6bd`, `4.3.p28:ea6bd13c` |
+| select_delay_local_scope.safe | `4.4.p33:7a94ab51`, `4.4.p38:35ed84d9` |
 | select_priority.safe | `4.4.p39:1012f4db`, `4.4.p33:7a94ab51`, `4.4.p35:2ad6e64f` |
+| select_with_delay.safe | `4.4.p33:7a94ab51`, `4.4.p38:35ed84d9` |
 | try_send_ownership.safe | `4.3.p29:f792d704`, `4.3.p29a:8d3f2225`, `4.3.p29b:7121ccd7` |
 
 ### `diagnostics_golden/`
