@@ -15,9 +15,9 @@
   "delegated_reports": {
     "frontend_smoke": {
       "binary_deterministic": true,
-      "repeat_sha256": "9d99f32c9402c477a3eb335ad9edb897155de324a6fb68949677e162611ebc4c",
+      "repeat_sha256": "09f12e202dd5e032ffff5218521a83d311543dd28b1e17487186dc5e1bad1426",
       "report_path": "execution/reports/pr00-pr04-frontend-smoke.json",
-      "report_sha256": "9d99f32c9402c477a3eb335ad9edb897155de324a6fb68949677e162611ebc4c",
+      "report_sha256": "09f12e202dd5e032ffff5218521a83d311543dd28b1e17487186dc5e1bad1426",
       "run": {
         "command": [
           "python3",
@@ -61,8 +61,8 @@
     }
   },
   "deterministic": true,
-  "repeat_sha256": "a4c10078a30be8d2047a395719ced71b06f133bf38a55192c88e439e1586a094",
-  "report_sha256": "a4c10078a30be8d2047a395719ced71b06f133bf38a55192c88e439e1586a094",
+  "repeat_sha256": "1dfad32bb21845a59a1f4a7ce0271fa08f972f5f6a33af5fcc7672fe28e02ef6",
+  "report_sha256": "1dfad32bb21845a59a1f4a7ce0271fa08f972f5f6a33af5fcc7672fe28e02ef6",
   "status": "ok",
   "task": "PR06.9.9"
 }
