@@ -237,6 +237,7 @@ package Safe_Frontend.Check_Model is
    type Delay_Select_Arm is record
       Duration_Expr : Expr_Access := null;
       Statements    : Statement_Access_Vectors.Vector;
+      Scope_Id      : FT.UString := FT.To_UString ("");
       Span          : FT.Source_Span := FT.Null_Span;
    end record;
 

@@ -38,13 +38,13 @@ def require_string(value: Any, path: str) -> str:
 
 
 def require_boolean(value: Any, path: str) -> bool:
-    if not isinstance(value, bool):
+    if type(value) is not bool:
         fail(f"{path} must be a boolean")
     return value
 
 
 def require_positive_int(value: Any, path: str) -> int:
-    if not isinstance(value, int) or value <= 0:
+    if type(value) is not int or value <= 0:
         fail(f"{path} must be a positive integer")
     return value
 
@@ -60,7 +60,7 @@ def validate_span(value: Any, path: str) -> None:
     span = require_mapping(value, path)
     for field in ("start_line", "start_col", "end_line", "end_col"):
         number = span.get(field)
-        if not isinstance(number, int) or number < 1:
+        if type(number) is not int or number < 1:
             fail(f"{path}.{field} must be a positive integer")
 
 
@@ -98,7 +98,7 @@ def validate_optional_typed_tasks(value: Any, path: str) -> list[dict[str, Any]]
     for index, item in enumerate(require_list(value, path)):
         entry = require_mapping(item, f"{path}[{index}]")
         require_string(entry.get("name"), f"{path}[{index}].name")
-        if not isinstance(entry.get("priority"), int):
+        if type(entry.get("priority")) is not int:
             fail(f"{path}[{index}].priority must be an integer")
         require_boolean(entry.get("has_explicit_priority"), f"{path}[{index}].has_explicit_priority")
         validate_span(entry.get("span"), f"{path}[{index}].span")
@@ -206,7 +206,7 @@ def validate_mir_graphs(value: Any, path: str) -> list[dict[str, Any]]:
         require_string(entry.get("entry_bb"), f"{path}[{index}].entry_bb")
         validate_span(entry.get("span"), f"{path}[{index}].span")
         if kind == "task":
-            if not isinstance(entry.get("priority"), int):
+            if type(entry.get("priority")) is not int:
                 fail(f"{path}[{index}].priority must be an integer for task graphs")
             require_boolean(entry.get("has_explicit_priority"), f"{path}[{index}].has_explicit_priority")
         validate_mir_blocks(entry.get("blocks"), f"{path}[{index}].blocks")

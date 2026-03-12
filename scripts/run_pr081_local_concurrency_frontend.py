@@ -155,6 +155,37 @@ ANALYSIS_REGRESSION_CASES = [
     },
 ]
 
+DELAY_ARM_SCOPE_CASE = {
+    "name": "select_delay_local_scope.safe",
+    "text": (
+        "package Select_Delay_Local_Scope is\n"
+        "\n"
+        "   type Message is range 0 .. 100;\n"
+        "\n"
+        "   channel Data_Ch : Message capacity 1;\n"
+        "\n"
+        "   task Worker is\n"
+        "      Count : Natural = 0;\n"
+        "   begin\n"
+        "      loop\n"
+        "         select\n"
+        "            when Item : Message from Data_Ch then\n"
+        "               if Item > 0 then\n"
+        "                  Count = Count + 1;\n"
+        "               end if;\n"
+        "         or\n"
+        "            delay 0.05 then\n"
+        "               Temp : Natural = 1;\n"
+        "               Temp = Temp + 1;\n"
+        "               Count = Count + Temp;\n"
+        "         end select;\n"
+        "      end loop;\n"
+        "   end Worker;\n"
+        "\n"
+        "end Select_Delay_Local_Scope;\n"
+    ),
+}
+
 
 def repo_arg(path: Path) -> str:
     return str(path.relative_to(REPO_ROOT))
@@ -238,6 +269,10 @@ def select_terminators(mir_payload: dict[str, Any]) -> list[dict[str, Any]]:
             if terminator["kind"] == "select":
                 result.append(terminator)
     return result
+
+
+def op_kinds_for_block(block: dict[str, Any]) -> set[str]:
+    return {op["kind"] for op in block["ops"]}
 
 
 def inspect_emitted_payloads(
@@ -596,6 +631,116 @@ def validate_analysis_regression_case(
     }
 
 
+def validate_delay_arm_scope_case(
+    *,
+    safec: Path,
+    python: str,
+    env: dict[str, str],
+    temp_root: Path,
+) -> dict[str, Any]:
+    source = temp_root / DELAY_ARM_SCOPE_CASE["name"]
+    source.write_text(DELAY_ARM_SCOPE_CASE["text"], encoding="utf-8")
+
+    root = temp_root / source.stem.lower()
+    (root / "out").mkdir(parents=True, exist_ok=True)
+    (root / "iface").mkdir(parents=True, exist_ok=True)
+
+    ast_result = run([str(safec), "ast", str(source)], cwd=REPO_ROOT, env=env, temp_root=temp_root)
+    ast_stdout_path = root / f"{source.stem.lower()}.ast.stdout.json"
+    ast_stdout_path.write_text(ast_result["stdout"], encoding="utf-8")
+    ast_stdout_validate = run(
+        [python, str(AST_VALIDATOR), str(ast_stdout_path)],
+        cwd=REPO_ROOT,
+        env=env,
+        temp_root=temp_root,
+    )
+
+    emit_result = run(
+        [
+            str(safec),
+            "emit",
+            str(source),
+            "--out-dir",
+            str(root / "out"),
+            "--interface-dir",
+            str(root / "iface"),
+        ],
+        cwd=REPO_ROOT,
+        env=env,
+        temp_root=temp_root,
+    )
+    paths = emitted_paths(root, source)
+
+    ast_validate = run([python, str(AST_VALIDATOR), str(paths["ast"])], cwd=REPO_ROOT, env=env, temp_root=temp_root)
+    output_validate = run(
+        [
+            python,
+            str(OUTPUT_VALIDATOR),
+            "--ast",
+            str(paths["ast"]),
+            "--typed",
+            str(paths["typed"]),
+            "--mir",
+            str(paths["mir"]),
+            "--safei",
+            str(paths["safei"]),
+            "--source-path",
+            str(source),
+        ],
+        cwd=REPO_ROOT,
+        env=env,
+        temp_root=temp_root,
+    )
+    mir_validate = run(
+        [str(safec), "validate-mir", str(paths["mir"])],
+        cwd=REPO_ROOT,
+        env=env,
+        temp_root=temp_root,
+    )
+    analyze_result = run(
+        [str(safec), "analyze-mir", "--diag-json", str(paths["mir"])],
+        cwd=REPO_ROOT,
+        env=env,
+        temp_root=temp_root,
+    )
+    analyze_payload = read_diag_json(analyze_result["stdout"], str(paths["mir"]))
+    require(
+        analyze_payload["diagnostics"] == [],
+        f"{source.name}: expected emitted MIR to be diagnostic-free",
+    )
+
+    mir_payload = load_json(paths["mir"])
+    worker = graph_by_name(mir_payload, "Worker")
+    delay_blocks = [block for block in worker["blocks"] if block["role"] == "select_delay_arm"]
+    require(delay_blocks, f"{source.name}: missing select_delay_arm block")
+    require(
+        any("scope_enter" in op_kinds_for_block(block) for block in delay_blocks),
+        f"{source.name}: missing delay-arm scope_enter",
+    )
+    require(
+        any("scope_exit" in op_kinds_for_block(block) for block in delay_blocks),
+        f"{source.name}: missing delay-arm scope_exit",
+    )
+
+    return {
+        "sample": "$TMPDIR/" + source.name,
+        "ast": ast_result,
+        "ast_stdout_validate": ast_stdout_validate,
+        "emit": emit_result,
+        "ast_validate": ast_validate,
+        "output_validate": output_validate,
+        "mir_validate": mir_validate,
+        "analyze_mir": analyze_result,
+        "checks": {
+            "delay_arm_roles": [block["role"] for block in delay_blocks],
+            "delay_arm_scope_ids": sorted({block["active_scope_id"] for block in delay_blocks}),
+            "delay_arm_op_kinds": sorted(
+                {kind for block in delay_blocks for kind in op_kinds_for_block(block)}
+            ),
+        },
+    }
+
+
 def run_deterministic_emit(
     *,
     safec: Path,
@@ -693,6 +838,12 @@ def build_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[str, 
                 )
                 for sample in ANALYSIS_REGRESSION_CASES
             ],
+            "delay_arm_scope_case": validate_delay_arm_scope_case(
+                safec=safec,
+                python=python,
+                env=env,
+                temp_root=temp_root,
+            ),
             "deterministic_emit": [
                 run_deterministic_emit(safec=safec, sample=sample, env=env, temp_root=temp_root)
                 for sample in DETERMINISTIC_EMIT_CASES

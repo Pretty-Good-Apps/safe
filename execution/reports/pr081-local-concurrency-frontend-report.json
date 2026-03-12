@@ -223,23 +223,130 @@
       "sample": "$TMPDIR/select_delay_division_by_zero.safe"
     }
   ],
+  "delay_arm_scope_case": {
+    "analyze_mir": {
+      "command": [
+        "compiler_impl/bin/safec",
+        "analyze-mir",
+        "--diag-json",
+        "$TMPDIR/select_delay_local_scope/out/select_delay_local_scope.mir.json"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+    },
+    "ast": {
+      "command": [
+        "compiler_impl/bin/safec",
+        "ast",
+        "$TMPDIR/select_delay_local_scope.safe"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "{\"context_clause\":{\"node_type\":\"ContextClause\",\"with_clauses\":[]},\"node_type\":\"CompilationUnit\",\"package_unit\":{\"node_type\":\"PackageUnit\",\"name\":\"Select_Delay_Local_Scope\",\"items\":[{\"node_type\":\"PackageItem\",\"kind\":\"BasicDeclaration\",\"item\":{\"node_type\":\"TypeDeclaration\",\"is_public\":false,\"name\":\"Message\",\"discriminant_part\":null,\"type_definition\":{\"node_type\":\"SignedIntegerTypeDefinition\",\"low_bound\":{\"node_type\":\"Expression\",\"relations\":[{\"node_type\":\"Relation\",\"left\":{\"node_type\":\"SimpleExpression\",\"unary_operator\":null,\"terms\":[{\"node_type\":\"Term\",\"factors\":[{\"node_type\":\"Factor\",\"kind\":\"Primary\",\"primary\":{\"node_type\":\"Primary\",\"kind\":\"Literal\",\"value\":{\"node_type\":\"NumericLiteral\",\"text\":\"0\",\"is_based\":false,\"is_real\":false,\"resolved_value\":\"0\",\"span\":{\"start_line\":3,\"start_col\":26,\"end_line\":3,\"end_col\":26}},\"span\":{\"start_line\":3,\"start_col\":26,\"end_line\":3,\"end_col\":26}},\"exponent\":null,\"span\":{\"start_line\":3,\"start_col\":26,\"end_line\":3,\"end_col\":26}}],\"operators\":[],\"span\":{\"start_line\":3,\"start_col\":26,\"end_line\":3,\"end_col\":26}}],\"binary_operators\":[],\"span\":{\"start_line\":3,\"start_col\":26,\"end_line\":3,\"end_col\":26}},\"operator\":null,\"right\":null,\"membership_test\":null,\"span\":{\"start_line\":3,\"start_col\":26,\"end_line\":3,\"end_col\":26}}],\"logical_operator\":null,\"resolved_type\":null,\"wide_arithmetic\":null,\"span\":{\"start_line\":3,\"start_col\":26,\"end_line\":3,\"end_col\":26}},\"high_bound\":{\"node_type\":\"Expression\",\"relations\":[{\"node_type\":\"Relation\",\"left\":{\"node_type\":\"SimpleExpression\",\"unary_operator\":null,\"terms\":[{\"node_type\":\"Term\",\"factors\":[{\"node_type\":\"Factor\",\"kind\":\"Primary\",\"primary\":{\"node_type\":\"Primary\",\"kind\":\"Literal\",\"value\":{\"node_type\":\"NumericLiteral\",\"text\":\"100\",\"is_based\":false,\"is_real\":false,\"resolved_value\":\"100\",\"span\":{\"start_line\":3,\"start_col\":31,\"end_line\":3,\"end_col\":33}},\"span\":{\"start_line\":3,\"start_col\":31,\"end_line\":3,\"end_col\":33}},\"exponent\":null,\"span\":{\"start_line\":3,\"start_col\":31,\"end_line\":3,\"end_col\":33}}],\"operators\":[],\"span\":{\"start_line\":3,\"start_col\":31,\"end_line\":3,\"end_col\":33}}],\"binary_operators\":[],\"span\":{\"start_line\":3,\"start_col\":31,\"end_line\":3,\"end_col\":33}},\"operator\":null,\"right\":null,\"membership_test\":null,\"span\":{\"start_line\":3,\"start_col\":31,\"end_line\":3,\"end_col\":33}}],\"logical_operator\":null,\"resolved_type\":null,\"wide_arithmetic\":null,\"span\":{\"start_line\":3,\"start_col\":31,\"end_line\":3,\"end_col\":33}},\"span\":{\"start_line\":3,\"start_col\":4,\"end_line\":3,\"end_col\":34}},\"span\":{\"start_line\":3,\"start_col\":4,\"end_line\":3,\"end_col\":34}},\"span\":{\"start_line\":3,\"start_col\":4,\"end_line\":3,\"end_col\":34}},{\"node_type\":\"PackageItem\",\"kind\":\"ChannelDeclaration\",\"item\":{\"node_type\":\"ChannelDeclaration\",\"is_public\":false,\"name\":\"Data_Ch\",\"element_type\":{\"node_type\":\"DirectName\",\"identifier\":\"Message\",\"span\":{\"start_line\":5,\"start_col\":22,\"end_line\":5,\"end_col\":28}},\"capacity\":{\"node_type\":\"Expression\",\"relations\":[{\"node_type\":\"Relation\",\"left\":{\"node_type\":\"SimpleExpression\",\"unary_operator\":null,\"terms\":[{\"node_type\":\"Term\",\"factors\":[{\"node_type\":\"Factor\",\"kind\":\"Primary\",\"primary\":{\"node_type\":\"Primary\",\"kind\":\"Literal\",\"value\":{\"node_type\":\"NumericLiteral\",\"text\":\"1\",\"is_based\":false,\"is_real\":false,\"resolved_value\":\"1\",\"span\":{\"start_line\":5,\"start_col\":39,\"end_line\":5,\"end_col\":39}},\"span\":{\"start_line\":5,\"start_col\":39,\"end_line\":5,\"end_col\":39}},\"exponent\":null,\"span\":{\"start_line\":5,\"start_col\":39,\"end_line\":5,\"end_col\":39}}],\"operators\":[],\"span\":{\"start_line\":5,\"start_col\":39,\"end_line\":5,\"end_col\":39}}],\"binary_operators\":[],\"span\":{\"start_line\":5,\"start_col\":39,\"end_line\":5,\"end_col\":39}},\"operator\":null,\"right\":null,\"membership_test\":null,\"span\":{\"start_line\":5,\"start_col\":39,\"end_line\":5,\"end_col\":39}}],\"logical_operator\":null,\"resolved_type\":null,\"wide_arithmetic\":null,\"span\":{\"start_line\":5,\"start_col\":39,\"end_line\":5,\"end_col\":39}},\"span\":{\"start_line\":5,\"start_col\":4,\"end_line\":5,\"end_col\":40}},\"span\":{\"start_line\":5,\"start_col\":4,\"end_line\":5,\"end_col\":40}},{\"node_type\":\"PackageItem\",\"kind\":\"TaskDeclaration\",\"item\":{\"node_type\":\"TaskDeclaration\",\"name\":\"Worker\",\"priority\":null,\"declarative_part\":[{\"node_type\":\"ObjectDeclaration\",\"is_public\":false,\"names\":[\"Count\"],\"is_aliased\":false,\"is_constant\":false,\"object_type\":{\"node_type\":\"SubtypeIndication\",\"is_not_null\":false,\"subtype_mark\":{\"node_type\":\"DirectName\",\"identifier\":\"Natural\",\"span\":{\"start_line\":8,\"start_col\":15,\"end_line\":8,\"end_col\":21}},\"constraint\":null,\"span\":{\"start_line\":8,\"start_col\":15,\"end_line\":8,\"end_col\":21}},\"initializer\":{\"node_type\":\"Expression\",\"relations\":[{\"node_type\":\"Relation\",\"left\":{\"node_type\":\"SimpleExpression\",\"unary_operator\":null,\"terms\":[{\"node_type\":\"Term\",\"factors\":[{\"node_type\":\"Factor\",\"kind\":\"Primary\",\"primary\":{\"node_type\":\"Primary\",\"kind\":\"Literal\",\"value\":{\"node_type\":\"NumericLiteral\",\"text\":\"0\",\"is_based\":false,\"is_real\":false,\"resolved_value\":\"0\",\"span\":{\"start_line\":8,\"start_col\":25,\"end_line\":8,\"end_col\":25}},\"span\":{\"start_line\":8,\"start_col\":25,\"end_line\":8,\"end_col\":25}},\"exponent\":null,\"span\":{\"start_line\":8,\"start_col\":25,\"end_line\":8,\"end_col\":25}}],\"operators\":[],\"span\":{\"start_line\":8,\"start_col\":25,\"end_line\":8,\"end_col\":25}}],\"binary_operators\":[],\"span\":{\"start_line\":8,\"start_col\":25,\"end_line\":8,\"end_col\":25}},\"operator\":null,\"right\":null,\"membership_test\":null,\"span\":{\"start_line\":8,\"start_col\":25,\"end_line\":8,\"end_col\":25}}],\"logical_operator\":null,\"resolved_type\":null,\"wide_arithmetic\":null,\"span\":{\"start_line\":8,\"start_col\":25,\"end_line\":8,\"end_col\":25}},\"span\":{\"start_line\":8,\"start_col\":7,\"end_line\":8,\"end_col\":26}}],\"body\":{\"node_type\":\"SequenceOfStatements\",\"items\":[{\"node_type\":\"InterleavedItem\",\"kind\":\"Statement\",\"item\":{\"node_type\":\"LoopStatement\",\"loop_name\":null,\"iteration_scheme\":null,\"body\":{\"node_type\":\"SequenceOfStatements\",\"items\":[{\"node_type\":\"InterleavedItem\",\"kind\":\"Statement\",\"item\":{\"node_type\":\"SelectStatement\",\"arms\":[{\"node_type\":\"SelectArm\",\"kind\":\"Channel\",\"arm\":{\"node_type\":\"ChannelArm\",\"variable_name\":\"Item\",\"subtype_mark\":{\"node_type\":\"DirectName\",\"identifier\":\"Message\",\"span\":{\"start_line\":12,\"start_col\":25,\"end_line\":12,\"end_col\":31}},\"channel_name\":{\"node_type\":\"DirectName\",\"identifier\":\"Data_Ch\",\"span\":{\"start_line\":12,\"start_col\":38,\"end_line\":12,\"end_col\":44}},\"statements\":{\"node_type\":\"SequenceOfStatements\",\"items\":[{\"node_type\":\"InterleavedItem\",\"kind\":\"Statement\",\"item\":{\"node_type\":\"IfStatement\",\"condition\":{\"node_type\":\"Expression\",\"relations\":[{\"node_type\":\"Relation\",\"left\":{\"node_type\":\"SimpleExpression\",\"unary_operator\":null,\"terms\":[{\"node_type\":\"Term\",\"factors\":[{\"node_type\":\"Factor\",\"kind\":\"Primary\",\"primary\":{\"node_type\":\"Primary\",\"kind\":\"Name\",\"value\":{\"node_type\":\"DirectName\",\"identifier\":\"Item\",\"span\":{\"start_line\":13,\"start_col\":19,\"end_line\":13,\"end_col\":22}},\"span\":{\"start_line\":13,\"start_col\":19,\"end_line\":13,\"end_col\":22}},\"exponent\":null,\"span\":{\"start_line\":13,\"start_col\":19,\"end_line\":13,\"end_col\":22}}],\"operators\":[],\"span\":{\"start_line\":13,\"start_col\":19,\"end_line\":13,\"end_col\":22}}],\"binary_operators\":[],\"span\":{\"start_line\":13,\"start_col\":19,\"end_line\":13,\"end_col\":22}},\"operator\":\">\",\"right\":{\"node_type\":\"SimpleExpression\",\"unary_operator\":null,\"terms\":[{\"node_type\":\"Term\",\"factors\":[{\"node_type\":\"Factor\",\"kind\":\"Primary\",\"primary\":{\"node_type\":\"Primary\",\"kind\":\"Literal\",\"value\":{\"node_type\":\"NumericLiteral\",\"text\":\"0\",\"is_based\":false,\"is_real\":false,\"resolved_value\":\"0\",\"span\":{\"start_line\":13,\"start_col\":26,\"end_line\":13,\"end_col\":26}},\"span\":{\"start_line\":13,\"start_col\":26,\"end_line\":13,\"end_col\":26}},\"exponent\":null,\"span\":{\"start_line\":13,\"start_col\":26,\"end_line\":13,\"end_col\":26}}],\"operators\":[],\"span\":{\"start_line\":13,\"start_col\":26,\"end_line\":13,\"end_col\":26}}],\"binary_operators\":[],\"span\":{\"start_line\":13,\"start_col\":26,\"end_line\":13,\"end_col\":26}},\"membership_test\":null,\"span\":{\"start_line\":13,\"start_col\":19,\"end_line\":13,\"end_col\":26}}],\"logical_operator\":null,\"resolved_type\":null,\"wide_arithmetic\":null,\"span\":{\"start_line\":13,\"start_col\":19,\"end_line\":13,\"end_col\":26}},\"then_stmts\":{\"node_type\":\"SequenceOfStatements\",\"items\":[{\"node_type\":\"InterleavedItem\",\"kind\":\"Statement\",\"item\":{\"node_type\":\"AssignmentStatement\",\"target\":{\"node_type\":\"DirectName\",\"identifier\":\"Count\",\"span\":{\"start_line\":14,\"start_col\":19,\"end_line\":14,\"end_col\":23}},\"expression\":{\"node_type\":\"Expression\",\"relations\":[{\"node_type\":\"Relation\",\"left\":{\"node_type\":\"SimpleExpression\",\"unary_operator\":null,\"terms\":[{\"node_type\":\"Term\",\"factors\":[{\"node_type\":\"Factor\",\"kind\":\"Primary\",\"primary\":{\"node_type\":\"Primary\",\"kind\":\"Name\",\"value\":{\"node_type\":\"DirectName\",\"identifier\":\"Count\",\"span\":{\"start_line\":14,\"start_col\":27,\"end_line\":14,\"end_col\":31}},\"span\":{\"start_line\":14,\"start_col\":27,\"end_line\":14,\"end_col\":31}},\"exponent\":null,\"span\":{\"start_line\":14,\"start_col\":27,\"end_line\":14,\"end_col\":31}}],\"operators\":[],\"span\":{\"start_line\":14,\"start_col\":27,\"end_line\":14,\"end_col\":31}},{\"node_type\":\"Term\",\"factors\":[{\"node_type\":\"Factor\",\"kind\":\"Primary\",\"primary\":{\"node_type\":\"Primary\",\"kind\":\"Literal\",\"value\":{\"node_type\":\"NumericLiteral\",\"text\":\"1\",\"is_based\":false,\"is_real\":false,\"resolved_value\":\"1\",\"span\":{\"start_line\":14,\"start_col\":35,\"end_line\":14,\"end_col\":35}},\"span\":{\"start_line\":14,\"start_col\":35,\"end_line\":14,\"end_col\":35}},\"exponent\":null,\"span\":{\"start_line\":14,\"start_col\":35,\"end_line\":14,\"end_col\":35}}],\"operators\":[],\"span\":{\"start_line\":14,\"start_col\":35,\"end_line\":14,\"end_col\":35}}],\"binary_operators\":[\"+\"],\"span\":{\"start_line\":14,\"start_col\":27,\"end_line\":14,\"end_col\":35}},\"operator\":null,\"right\":null,\"membership_test\":null,\"span\":{\"start_line\":14,\"start_col\":27,\"end_line\":14,\"end_col\":35}}],\"logical_operator\":null,\"resolved_type\":null,\"wide_arithmetic\":null,\"span\":{\"start_line\":14,\"start_col\":27,\"end_line\":14,\"end_col\":35}},\"ownership_action\":null,\"span\":{\"start_line\":14,\"start_col\":19,\"end_line\":14,\"end_col\":36}},\"span\":{\"start_line\":14,\"start_col\":19,\"end_line\":14,\"end_col\":36}}],\"span\":{\"start_line\":13,\"start_col\":16,\"end_line\":15,\"end_col\":22}},\"elsif_parts\":[],\"else_stmts\":null,\"span\":{\"start_line\":13,\"start_col\":16,\"end_line\":15,\"end_col\":22}},\"span\":{\"start_line\":13,\"start_col\":16,\"end_line\":15,\"end_col\":22}}],\"span\":{\"start_line\":12,\"start_col\":13,\"end_line\":15,\"end_col\":22}},\"span\":{\"start_line\":12,\"start_col\":13,\"end_line\":15,\"end_col\":22}},\"span\":{\"start_line\":12,\"start_col\":13,\"end_line\":15,\"end_col\":22}},{\"node_type\":\"SelectArm\",\"kind\":\"Delay\",\"arm\":{\"node_type\":\"DelayArm\",\"duration_expr\":{\"node_type\":\"Expression\",\"relations\":[{\"node_type\":\"Relation\",\"left\":{\"node_type\":\"SimpleExpression\",\"unary_operator\":null,\"terms\":[{\"node_type\":\"Term\",\"factors\":[{\"node_type\":\"Factor\",\"kind\":\"Primary\",\"primary\":{\"node_type\":\"Primary\",\"kind\":\"Literal\",\"value\":{\"node_type\":\"NumericLiteral\",\"text\":\"0.05\",\"is_based\":false,\"is_real\":true,\"resolved_value\":\"0.05\",\"span\":{\"start_line\":17,\"start_col\":19,\"end_line\":17,\"end_col\":22}},\"span\":{\"start_line\":17,\"start_col\":19,\"end_line\":17,\"end_col\":22}},\"exponent\":null,\"span\":{\"start_line\":17,\"start_col\":19,\"end_line\":17,\"end_col\":22}}],\"operators\":[],\"span\":{\"start_line\":17,\"start_col\":19,\"end_line\":17,\"end_col\":22}}],\"binary_operators\":[],\"span\":{\"start_line\":17,\"start_col\":19,\"end_line\":17,\"end_col\":22}},\"operator\":null,\"right\":null,\"membership_test\":null,\"span\":{\"start_line\":17,\"start_col\":19,\"end_line\":17,\"end_col\":22}}],\"logical_operator\":null,\"resolved_type\":null,\"wide_arithmetic\":null,\"span\":{\"start_line\":17,\"start_col\":19,\"end_line\":17,\"end_col\":22}},\"statements\":{\"node_type\":\"SequenceOfStatements\",\"items\":[{\"node_type\":\"InterleavedItem\",\"kind\":\"BasicDeclaration\",\"item\":{\"node_type\":\"ObjectDeclaration\",\"is_public\":false,\"names\":[\"Temp\"],\"is_aliased\":false,\"is_constant\":false,\"object_type\":{\"node_type\":\"SubtypeIndication\",\"is_not_null\":false,\"subtype_mark\":{\"node_type\":\"DirectName\",\"identifier\":\"Natural\",\"span\":{\"start_line\":18,\"start_col\":23,\"end_line\":18,\"end_col\":29}},\"constraint\":null,\"span\":{\"start_line\":18,\"start_col\":23,\"end_line\":18,\"end_col\":29}},\"initializer\":{\"node_type\":\"Expression\",\"relations\":[{\"node_type\":\"Relation\",\"left\":{\"node_type\":\"SimpleExpression\",\"unary_operator\":null,\"terms\":[{\"node_type\":\"Term\",\"factors\":[{\"node_type\":\"Factor\",\"kind\":\"Primary\",\"primary\":{\"node_type\":\"Primary\",\"kind\":\"Literal\",\"value\":{\"node_type\":\"NumericLiteral\",\"text\":\"1\",\"is_based\":false,\"is_real\":false,\"resolved_value\":\"1\",\"span\":{\"start_line\":18,\"start_col\":33,\"end_line\":18,\"end_col\":33}},\"span\":{\"start_line\":18,\"start_col\":33,\"end_line\":18,\"end_col\":33}},\"exponent\":null,\"span\":{\"start_line\":18,\"start_col\":33,\"end_line\":18,\"end_col\":33}}],\"operators\":[],\"span\":{\"start_line\":18,\"start_col\":33,\"end_line\":18,\"end_col\":33}}],\"binary_operators\":[],\"span\":{\"start_line\":18,\"start_col\":33,\"end_line\":18,\"end_col\":33}},\"operator\":null,\"right\":null,\"membership_test\":null,\"span\":{\"start_line\":18,\"start_col\":33,\"end_line\":18,\"end_col\":33}}],\"logical_operator\":null,\"resolved_type\":null,\"wide_arithmetic\":null,\"span\":{\"start_line\":18,\"start_col\":33,\"end_line\":18,\"end_col\":33}},\"span\":{\"start_line\":18,\"start_col\":16,\"end_line\":18,\"end_col\":34}},\"span\":{\"start_line\":18,\"start_col\":16,\"end_line\":18,\"end_col\":34}},{\"node_type\":\"InterleavedItem\",\"kind\":\"Statement\",\"item\":{\"node_type\":\"AssignmentStatement\",\"target\":{\"node_type\":\"DirectName\",\"identifier\":\"Temp\",\"span\":{\"start_line\":19,\"start_col\":16,\"end_line\":19,\"end_col\":19}},\"expression\":{\"node_type\":\"Expression\",\"relations\":[{\"node_type\":\"Relation\",\"left\":{\"node_type\":\"SimpleExpression\",\"unary_operator\":null,\"terms\":[{\"node_type\":\"Term\",\"factors\":[{\"node_type\":\"Factor\",\"kind\":\"Primary\",\"primary\":{\"node_type\":\"Primary\",\"kind\":\"Name\",\"value\":{\"node_type\":\"DirectName\",\"identifier\":\"Temp\",\"span\":{\"start_line\":19,\"start_col\":23,\"end_line\":19,\"end_col\":26}},\"span\":{\"start_line\":19,\"start_col\":23,\"end_line\":19,\"end_col\":26}},\"exponent\":null,\"span\":{\"start_line\":19,\"start_col\":23,\"end_line\":19,\"end_col\":26}}],\"operators\":[],\"span\":{\"start_line\":19,\"start_col\":23,\"end_line\":19,\"end_col\":26}},{\"node_type\":\"Term\",\"factors\":[{\"node_type\":\"Factor\",\"kind\":\"Primary\",\"primary\":{\"node_type\":\"Primary\",\"kind\":\"Literal\",\"value\":{\"node_type\":\"NumericLiteral\",\"text\":\"1\",\"is_based\":false,\"is_real\":false,\"resolved_value\":\"1\",\"span\":{\"start_line\":19,\"start_col\":30,\"end_line\":19,\"end_col\":30}},\"span\":{\"start_line\":19,\"start_col\":30,\"end_line\":19,\"end_col\":30}},\"exponent\":null,\"span\":{\"start_line\":19,\"start_col\":30,\"end_line\":19,\"end_col\":30}}],\"operators\":[],\"span\":{\"start_line\":19,\"start_col\":30,\"end_line\":19,\"end_col\":30}}],\"binary_operators\":[\"+\"],\"span\":{\"start_line\":19,\"start_col\":23,\"end_line\":19,\"end_col\":30}},\"operator\":null,\"right\":null,\"membership_test\":null,\"span\":{\"start_line\":19,\"start_col\":23,\"end_line\":19,\"end_col\":30}}],\"logical_operator\":null,\"resolved_type\":null,\"wide_arithmetic\":null,\"span\":{\"start_line\":19,\"start_col\":23,\"end_line\":19,\"end_col\":30}},\"ownership_action\":null,\"span\":{\"start_line\":19,\"start_col\":16,\"end_line\":19,\"end_col\":31}},\"span\":{\"start_line\":19,\"start_col\":16,\"end_line\":19,\"end_col\":31}},{\"node_type\":\"InterleavedItem\",\"kind\":\"Statement\",\"item\":{\"node_type\":\"AssignmentStatement\",\"target\":{\"node_type\":\"DirectName\",\"identifier\":\"Count\",\"span\":{\"start_line\":20,\"start_col\":16,\"end_line\":20,\"end_col\":20}},\"expression\":{\"node_type\":\"Expression\",\"relations\":[{\"node_type\":\"Relation\",\"left\":{\"node_type\":\"SimpleExpression\",\"unary_operator\":null,\"terms\":[{\"node_type\":\"Term\",\"factors\":[{\"node_type\":\"Factor\",\"kind\":\"Primary\",\"primary\":{\"node_type\":\"Primary\",\"kind\":\"Name\",\"value\":{\"node_type\":\"DirectName\",\"identifier\":\"Count\",\"span\":{\"start_line\":20,\"start_col\":24,\"end_line\":20,\"end_col\":28}},\"span\":{\"start_line\":20,\"start_col\":24,\"end_line\":20,\"end_col\":28}},\"exponent\":null,\"span\":{\"start_line\":20,\"start_col\":24,\"end_line\":20,\"end_col\":28}}],\"operators\":[],\"span\":{\"start_line\":20,\"start_col\":24,\"end_line\":20,\"end_col\":28}},{\"node_type\":\"Term\",\"factors\":[{\"node_type\":\"Factor\",\"kind\":\"Primary\",\"primary\":{\"node_type\":\"Primary\",\"kind\":\"Name\",\"value\":{\"node_type\":\"DirectName\",\"identifier\":\"Temp\",\"span\":{\"start_line\":20,\"start_col\":32,\"end_line\":20,\"end_col\":35}},\"span\":{\"start_line\":20,\"start_col\":32,\"end_line\":20,\"end_col\":35}},\"exponent\":null,\"span\":{\"start_line\":20,\"start_col\":32,\"end_line\":20,\"end_col\":35}}],\"operators\":[],\"span\":{\"start_line\":20,\"start_col\":32,\"end_line\":20,\"end_col\":35}}],\"binary_operators\":[\"+\"],\"span\":{\"start_line\":20,\"start_col\":24,\"end_line\":20,\"end_col\":35}},\"operator\":null,\"right\":null,\"membership_test\":null,\"span\":{\"start_line\":20,\"start_col\":24,\"end_line\":20,\"end_col\":35}}],\"logical_operator\":null,\"resolved_type\":null,\"wide_arithmetic\":null,\"span\":{\"start_line\":20,\"start_col\":24,\"end_line\":20,\"end_col\":35}},\"ownership_action\":null,\"span\":{\"start_line\":20,\"start_col\":16,\"end_line\":20,\"end_col\":36}},\"span\":{\"start_line\":20,\"start_col\":16,\"end_line\":20,\"end_col\":36}}],\"span\":{\"start_line\":17,\"start_col\":13,\"end_line\":20,\"end_col\":36}},\"span\":{\"start_line\":17,\"start_col\":13,\"end_line\":20,\"end_col\":36}},\"span\":{\"start_line\":17,\"start_col\":13,\"end_line\":20,\"end_col\":36}}],\"span\":{\"start_line\":11,\"start_col\":10,\"end_line\":21,\"end_col\":20}},\"span\":{\"start_line\":11,\"start_col\":10,\"end_line\":21,\"end_col\":20}}],\"span\":{\"start_line\":10,\"start_col\":7,\"end_line\":22,\"end_col\":15}},\"end_loop_name\":null,\"span\":{\"start_line\":10,\"start_col\":7,\"end_line\":22,\"end_col\":15}},\"span\":{\"start_line\":10,\"start_col\":7,\"end_line\":22,\"end_col\":15}}],\"span\":{\"start_line\":7,\"start_col\":4,\"end_line\":23,\"end_col\":14}},\"end_name\":\"Worker\",\"span\":{\"start_line\":7,\"start_col\":4,\"end_line\":23,\"end_col\":14}},\"span\":{\"start_line\":7,\"start_col\":4,\"end_line\":23,\"end_col\":14}}],\"end_name\":\"Select_Delay_Local_Scope\",\"span\":{\"start_line\":1,\"start_col\":1,\"end_line\":25,\"end_col\":29}},\"span\":{\"start_line\":1,\"start_col\":1,\"end_line\":25,\"end_col\":29}}\n"
+    },
+    "ast_stdout_validate": {
+      "command": [
+        "python3",
+        "scripts/validate_ast_output.py",
+        "$TMPDIR/select_delay_local_scope/select_delay_local_scope.ast.stdout.json"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "$TMPDIR/select_delay_local_scope/select_delay_local_scope.ast.stdout.json: OK\n"
+    },
+    "ast_validate": {
+      "command": [
+        "python3",
+        "scripts/validate_ast_output.py",
+        "$TMPDIR/select_delay_local_scope/out/select_delay_local_scope.ast.json"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "$TMPDIR/select_delay_local_scope/out/select_delay_local_scope.ast.json: OK\n"
+    },
+    "checks": {
+      "delay_arm_op_kinds": [
+        "assign",
+        "scope_enter",
+        "scope_exit"
+      ],
+      "delay_arm_roles": [
+        "select_delay_arm"
+      ],
+      "delay_arm_scope_ids": [
+        "scope2"
+      ]
+    },
+    "emit": {
+      "command": [
+        "compiler_impl/bin/safec",
+        "emit",
+        "$TMPDIR/select_delay_local_scope.safe",
+        "--out-dir",
+        "$TMPDIR/select_delay_local_scope/out",
+        "--interface-dir",
+        "$TMPDIR/select_delay_local_scope/iface"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": ""
+    },
+    "mir_validate": {
+      "command": [
+        "compiler_impl/bin/safec",
+        "validate-mir",
+        "$TMPDIR/select_delay_local_scope/out/select_delay_local_scope.mir.json"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "validate-mir: OK ($TMPDIR/select_delay_local_scope/out/select_delay_local_scope.mir.json)\n"
+    },
+    "output_validate": {
+      "command": [
+        "python3",
+        "scripts/validate_output_contracts.py",
+        "--ast",
+        "$TMPDIR/select_delay_local_scope/out/select_delay_local_scope.ast.json",
+        "--typed",
+        "$TMPDIR/select_delay_local_scope/out/select_delay_local_scope.typed.json",
+        "--mir",
+        "$TMPDIR/select_delay_local_scope/out/select_delay_local_scope.mir.json",
+        "--safei",
+        "$TMPDIR/select_delay_local_scope/iface/select_delay_local_scope.safei.json",
+        "--source-path",
+        "$TMPDIR/select_delay_local_scope.safe"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "output contracts: OK (select_delay_local_scope.ast.json, select_delay_local_scope.typed.json, select_delay_local_scope.mir.json, select_delay_local_scope.safei.json)\n"
+    },
+    "sample": "$TMPDIR/select_delay_local_scope.safe"
+  },
   "deterministic": true,
   "deterministic_emit": [
     {
       "hashes": {
         "ast": "494af0e238431f1849523e22b9784f00906968203d7917705888fdf25b26d8e0",
-        "mir": "d98e8fcb359a47a1d818dd648092cbc1ff781c85a33cbe9249d09592ddf31d3e",
+        "mir": "db1b0af354f3443870ce3b551a503f19bcf0496a8554ac358ceddec57719fd36",
         "safei": "af4704141bdb136aa486f601c6bcd080264b41a473db19c14210cd6890ab1f57",
-        "typed": "226778f4a27decbebf26f446e1c12bad81647a1d89cd9e8943e848f5a2858702"
+        "typed": "845b9fa2ccf0ea2c541a526b8f1afbd1b4eb322db5f01b2ced53e06aa182cc78"
       },
       "sample": "tests/positive/channel_pingpong.safe"
     },
     {
       "hashes": {
         "ast": "4e4e5f041d32e26070c24bec985ff1299ac43685e52f4db1297d14a1c37505b2",
-        "mir": "8e5e9b6c1c5b451333af32fb04afb6d9998f72316ec12e898eebab7a0ea98f2e",
+        "mir": "462ba463451d9384d2d4f9f106c012ee84481bada5a147fb15daf7533f89fdbe",
         "safei": "4b4051cf5940d828ccd3c90fde781b9b6f2479545495f0826132bbcbbb0582b9",
-        "typed": "97287e6fb984e7de0dac06c6fe22f251e01ca43a7e23e6e18482ec8b93f1f806"
+        "typed": "bb798dc4a282ec76f3dc6ad4629a31016871d3801ed3b35d5e2e9e48493c6e10"
       },
       "sample": "tests/concurrency/select_with_delay.safe"
     }
@@ -1949,8 +2056,8 @@
       "sample": "tests/concurrency/select_with_delay.safe"
     }
   ],
-  "repeat_sha256": "0cebef2f97b1296d5d28d511d75af6b84f907050b704fda334512c815030b1ff",
-  "report_sha256": "0cebef2f97b1296d5d28d511d75af6b84f907050b704fda334512c815030b1ff",
+  "repeat_sha256": "7183543f0c6d5a64da8cebae446779817e82eec47177963f89cee621bad32757",
+  "report_sha256": "7183543f0c6d5a64da8cebae446779817e82eec47177963f89cee621bad32757",
   "status": "ok",
   "task": "PR08.1"
 }

@@ -915,8 +915,16 @@ package body Safe_Frontend.Check_Lower is
                        (Arm.Channel_Data.Statements, Child, Scope_Id, Work, Locals);
                   end;
                elsif Arm.Kind = CM.Select_Arm_Delay then
-                  Collect_Scopes
-                    (Arm.Delay_Data.Statements, Current_Visible, Parent_Id, Work, Locals);
+                  declare
+                     Scope_Id : constant String := "scope" & Trimmed (Natural (Work.Scopes.Length));
+                     Scope    : GM.Scope_Entry := New_Scope (Scope_Id, Parent_Id, "select_arm");
+                     Child    : Type_Maps.Map := Current_Visible;
+                  begin
+                     Arm.Delay_Data.Scope_Id := FT.To_UString (Scope_Id);
+                     Register_Scope (Work, Scope);
+                     Collect_Scopes
+                       (Arm.Delay_Data.Statements, Child, Scope_Id, Work, Locals);
+                  end;
                end if;
             end loop;
          end if;
@@ -1714,17 +1722,33 @@ package body Safe_Frontend.Check_Lower is
                      end;
                   elsif Arm.Kind = CM.Select_Arm_Delay then
                      declare
+                        Scope_Id : constant String := UString_Value (Arm.Delay_Data.Scope_Id);
                         Entry_Id : constant FT.UString :=
-                          New_Block (Work, Arm.Span, "select_delay_arm", Current_Scope_Id);
+                          New_Block (Work, Arm.Span, "select_delay_arm", Scope_Id);
                         Body_End : FT.UString;
                         Arm_Info : GM.Select_Arm_Entry;
+                        Scope_Index : constant Positive := Work.Scope_Map.Element (Scope_Id);
+                        Scope_Op    : GM.Op_Entry;
                      begin
+                        Register_Scope_Entry (Work, Scope_Id, UString_Value (Entry_Id));
                         Arm_Info.Kind := GM.Select_Arm_Delay;
                         Arm_Info.Delay_Data.Duration_Expr :=
                           Lower_Expr (Arm.Delay_Data.Duration_Expr, Visible_Types, Type_Env);
                         Arm_Info.Delay_Data.Target := Entry_Id;
                         Arm_Info.Delay_Data.Span := Arm.Delay_Data.Span;
                         Select_Term.Arms.Append (Arm_Info);
+
+                        if not Work.Scopes (Scope_Index).Local_Ids.Is_Empty then
+                           Scope_Op := (others => <>);
+                           Scope_Op.Kind := GM.Op_Scope_Enter;
+                           Scope_Op.Span := Arm.Delay_Data.Span;
+                           Scope_Op.Scope_Id := FT.To_UString (Scope_Id);
+                           Scope_Op.Locals :=
+                             Local_Names_For_Ids
+                               (Work.Locals,
+                                Work.Scopes (Scope_Index).Local_Ids);
+                           Add_Op (Work, UString_Value (Entry_Id), Scope_Op);
+                        end if;
 
                         Body_End :=
                           Lower_Statement_List
@@ -1733,11 +1757,23 @@ package body Safe_Frontend.Check_Lower is
                              Arm.Delay_Data.Statements,
                              Visible_Types,
                              Type_Env,
-                             Current_Scope_Id,
+                             Scope_Id,
                              Functions);
                         if Has_Block (Body_End)
                           and then not Block_Terminated (Work, UString_Value (Body_End))
                         then
+                           if not Work.Scopes (Scope_Index).Local_Ids.Is_Empty then
+                              Scope_Op := (others => <>);
+                              Scope_Op.Kind := GM.Op_Scope_Exit;
+                              Scope_Op.Span := Arm.Delay_Data.Span;
+                              Scope_Op.Scope_Id := FT.To_UString (Scope_Id);
+                              Scope_Op.Locals :=
+                                Local_Names_For_Ids
+                                  (Work.Locals,
+                                   Work.Scopes (Scope_Index).Local_Ids);
+                              Add_Op (Work, UString_Value (Body_End), Scope_Op);
+                              Register_Scope_Exit (Work, Scope_Id, UString_Value (Body_End));
+                           end if;
                            Terminator := (others => <>);
                            Terminator.Kind := GM.Terminator_Jump;
                            Terminator.Span := Arm.Delay_Data.Span;
