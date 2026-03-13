@@ -1,3 +1,4 @@
+-- Expected: REJECT task_variable_ownership
 with Provider_Transitive_Global;
 
 package Neg_Imported_Shared_Global is

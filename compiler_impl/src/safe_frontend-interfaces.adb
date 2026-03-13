@@ -2,6 +2,7 @@ with Ada.Containers;
 with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Directories;
 with Ada.Exceptions;
+with Ada.Strings.Fixed;
 with Ada.Strings.Hash;
 with GNATCOLL.JSON;
 
@@ -53,6 +54,8 @@ package body Safe_Frontend.Interfaces is
    begin
       if Name = "" then
          return "";
+      elsif Ada.Strings.Fixed.Index (Name, ".") > 0 then
+         return Name;
       end if;
       return Package_Name & "." & Name;
    end Qualify_Name;
@@ -61,11 +64,20 @@ package body Safe_Frontend.Interfaces is
      (Package_Name : String;
       Name         : String) return String
    is
+      Global_Prefix : constant String := "global:";
    begin
       if Name = "return" then
          return Name;
       elsif Name'Length >= 6 and then Name (Name'First .. Name'First + 5) = "param:" then
          return Name;
+      elsif Name'Length >= Global_Prefix'Length
+        and then Name (Name'First .. Name'First + Global_Prefix'Length - 1) = Global_Prefix
+      then
+         return
+           Global_Prefix
+           & Qualify_Name
+               (Package_Name,
+                Name (Name'First + Global_Prefix'Length .. Name'Last));
       end if;
       return Qualify_Name (Package_Name, Name);
    end Qualify_Summary_Name;

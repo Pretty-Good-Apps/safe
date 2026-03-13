@@ -527,15 +527,19 @@ package body Safe_Frontend.Mir_Bronze is
    end Earliest_Task_Use_Span;
 
    function Local_Use_Note (Span : FT.Source_Span) return String is
+      function Pos_Image (Value : Positive) return String is
+      begin
+         return Ada.Strings.Fixed.Trim (Positive'Image (Value), Ada.Strings.Both);
+      end Pos_Image;
    begin
       if not Has_Span (Span) then
          return "";
       end if;
       return
         "earliest local use at "
-        & Positive'Image (Span.Start_Pos.Line)
+        & Pos_Image (Span.Start_Pos.Line)
         & ":"
-        & Positive'Image (Span.Start_Pos.Column);
+        & Pos_Image (Span.Start_Pos.Column);
    end Local_Use_Note;
 
    function Dependency_Vector
@@ -1119,9 +1123,11 @@ package body Safe_Frontend.Mir_Bronze is
                                  (if Has_Span (Summary.Span)
                                   then
                                     "imported declaration at "
-                                    & Positive'Image (Summary.Span.Start_Pos.Line)
+                                    & Ada.Strings.Fixed.Trim
+                                        (Positive'Image (Summary.Span.Start_Pos.Line), Ada.Strings.Both)
                                     & ":"
-                                    & Positive'Image (Summary.Span.Start_Pos.Column)
+                                    & Ada.Strings.Fixed.Trim
+                                        (Positive'Image (Summary.Span.Start_Pos.Column), Ada.Strings.Both)
                                     & "; package globals accessed by '" & Callee & "': "
                                     & Join_Strings (Globals_List)
                                   else

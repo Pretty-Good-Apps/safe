@@ -511,7 +511,7 @@
         "cwd": "$REPO_ROOT",
         "returncode": 1,
         "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"task_variable_ownership\",\"message\":\"package global 'Shared' is accessed by multiple tasks\",\"path\":\"tests/negative/neg_task_shared_variable.safe\",\"span\":{\"start_line\":9,\"start_col\":4,\"end_line\":9,\"end_col\":24},\"highlight_span\":{\"start_line\":9,\"start_col\":4,\"end_line\":9,\"end_col\":24},\"notes\":[\"tasks accessing 'Shared': A, B\",\"earliest local use at  14: 10\"],\"suggestions\":[]}]}\n"
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"task_variable_ownership\",\"message\":\"package global 'Shared' is accessed by multiple tasks\",\"path\":\"tests/negative/neg_task_shared_variable.safe\",\"span\":{\"start_line\":9,\"start_col\":4,\"end_line\":9,\"end_col\":24},\"highlight_span\":{\"start_line\":9,\"start_col\":4,\"end_line\":9,\"end_col\":24},\"notes\":[\"tasks accessing 'Shared': A, B\",\"earliest local use at 14:10\"],\"suggestions\":[]}]}\n"
       },
       "expected_reason": "task_variable_ownership",
       "first_diagnostic": {
@@ -532,7 +532,7 @@
         "cwd": "$REPO_ROOT",
         "returncode": 1,
         "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"task_variable_ownership\",\"message\":\"package global 'Shared' is accessed by multiple tasks\",\"path\":\"tests/negative/neg_task_shared_subprogram_global.safe\",\"span\":{\"start_line\":10,\"start_col\":4,\"end_line\":10,\"end_col\":24},\"highlight_span\":{\"start_line\":10,\"start_col\":4,\"end_line\":10,\"end_col\":24},\"notes\":[\"tasks accessing 'Shared': A, B\",\"earliest local use at  19: 7\"],\"suggestions\":[]}]}\n"
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"task_variable_ownership\",\"message\":\"package global 'Shared' is accessed by multiple tasks\",\"path\":\"tests/negative/neg_task_shared_subprogram_global.safe\",\"span\":{\"start_line\":10,\"start_col\":4,\"end_line\":10,\"end_col\":24},\"highlight_span\":{\"start_line\":10,\"start_col\":4,\"end_line\":10,\"end_col\":24},\"notes\":[\"tasks accessing 'Shared': A, B\",\"earliest local use at 19:7\"],\"suggestions\":[]}]}\n"
       },
       "expected_reason": "task_variable_ownership",
       "first_diagnostic": {
@@ -1784,8 +1784,8 @@
       }
     }
   ],
-  "repeat_sha256": "648984a0249a17fa718551eb3ee6fb39275612b49fa5ccedeaf1739a3932fbee",
-  "report_sha256": "648984a0249a17fa718551eb3ee6fb39275612b49fa5ccedeaf1739a3932fbee",
+  "repeat_sha256": "75cc5a700d3843c1478c145051b84394fbe97929fef96818a437cd8578b850c0",
+  "report_sha256": "75cc5a700d3843c1478c145051b84394fbe97929fef96818a437cd8578b850c0",
   "sequential_positive_regression_cases": [
     {
       "check": {

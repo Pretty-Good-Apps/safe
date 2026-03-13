@@ -1,3 +1,4 @@
+-- Expected: REJECT double_move
 with Provider_Imported_Call_Ownership;
 
 package Neg_Imported_Inout_Double_Move is

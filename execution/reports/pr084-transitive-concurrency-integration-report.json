@@ -75,7 +75,7 @@
         "cwd": "$REPO_ROOT",
         "returncode": 1,
         "stderr": "",
-        "stdout": "<488 chars>"
+        "stdout": "<486 chars>"
       },
       "diagnostic": {
         "message": "package global 'Provider_Transitive_Global.Shared' is accessed by multiple tasks",
@@ -2010,7 +2010,7 @@
         },
         "hashes": {
           "ast": "c6567251a3e38d27edd813bfa0e8b198e5c150acca086889258ad81617cbe0c1",
-          "mir": "ea558ccd66fa9f53952442dd0ab5fa740dcc5ce8b53458d390123bbee2d5898a",
+          "mir": "9b1fc8f24a8390f9d543dbdf68bd9e3de6521b8d2ec3d4478725fa78718195b6",
           "safei": "ad6e1c6f2ef670af569ff6c43f532a9676868d1bf027fead66413ec42c9cd51a",
           "typed": "debbca4b7e80308d9865867a662bba35a3bdda1ec31aab16f937b1223d846fce"
         },
@@ -2025,16 +2025,16 @@
                 "depends": [
                   {
                     "inputs": [
-                      "Provider_Transitive_Global.global:Shared"
+                      "global:Provider_Transitive_Global.Shared"
                     ],
-                    "output_name": "Provider_Transitive_Global.global:Shared"
+                    "output_name": "global:Provider_Transitive_Global.Shared"
                   }
                 ],
                 "inputs": [
-                  "Provider_Transitive_Global.global:Shared"
+                  "global:Provider_Transitive_Global.Shared"
                 ],
                 "outputs": [
-                  "Provider_Transitive_Global.global:Shared"
+                  "global:Provider_Transitive_Global.Shared"
                 ],
                 "reads": [
                   "Provider_Transitive_Global.Shared"
@@ -4412,8 +4412,8 @@
       }
     }
   },
-  "repeat_sha256": "afafbc5ee142bb89d28df5ea8e3f55360e837e04a54721d41512827939406e35",
-  "report_sha256": "afafbc5ee142bb89d28df5ea8e3f55360e837e04a54721d41512827939406e35",
+  "repeat_sha256": "525f8c13f56bed99c4d5f29a3b15a2d984e85af8a62de16dd4980d71b1a10a8f",
+  "report_sha256": "525f8c13f56bed99c4d5f29a3b15a2d984e85af8a62de16dd4980d71b1a10a8f",
   "synthetic_parity": {
     "imported_inout_parity": {
       "analyze_mir": {
@@ -4444,7 +4444,7 @@
         "cwd": "$REPO_ROOT",
         "returncode": 1,
         "stderr": "",
-        "stdout": "<503 chars>"
+        "stdout": "<501 chars>"
       },
       "diagnostic": {
         "message": "package global 'Provider_Transitive_Global.Shared' is accessed by multiple tasks",
