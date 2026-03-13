@@ -1013,6 +1013,10 @@ def documentation_architecture_clarity_report(
             clean_target = target.split("#", 1)[0]
             if not clean_target:
                 continue
+            candidate = Path(clean_target)
+            if candidate.is_absolute():
+                unresolved_local_links.append(f"{relative_path}:{target}")
+                continue
             resolved = (path.parent / clean_target).resolve()
             try:
                 resolved.relative_to(repo_root.resolve())

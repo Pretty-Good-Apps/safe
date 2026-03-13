@@ -245,4 +245,4 @@ To enforce the local pre-push gate chain in this clone, enable the tracked hook 
 git config core.hooksPath .githooks
 ```
 
-That hook runs [`scripts/run_local_pre_push.py`](/Users/agentc1/src/github.com/agentc1/safe/scripts/run_local_pre_push.py), which executes the mapped milestone gate and downstream evidence-refresh chain serially before allowing `git push`.
+That hook runs [`scripts/run_local_pre_push.py`](../scripts/run_local_pre_push.py), which executes the mapped milestone gate and downstream evidence-refresh chain serially before allowing `git push`.

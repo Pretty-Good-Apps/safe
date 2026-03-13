@@ -843,6 +843,42 @@ class ValidateExecutionStateTests(unittest.TestCase):
             )
             self.assertEqual(report["missing_required_links"], [])
 
+    def test_documentation_architecture_clarity_rejects_absolute_local_filesystem_links(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            docs_dir = repo_root / "docs"
+            docs_dir.mkdir()
+            (docs_dir / "frontend_architecture_baseline.md").write_text("ok\n", encoding="utf-8")
+            (docs_dir / "frontend_scale_limits.md").write_text("ok\n", encoding="utf-8")
+            absolute_target = repo_root / "docs" / "frontend_architecture_baseline.md"
+            (repo_root / "README.md").write_text(
+                f"[Baseline]({absolute_target})\n",
+                encoding="utf-8",
+            )
+            compiler_dir = repo_root / "compiler_impl"
+            compiler_dir.mkdir()
+            (compiler_dir / "README.md").write_text("ok\n", encoding="utf-8")
+            release_dir = repo_root / "release"
+            release_dir.mkdir()
+            (release_dir / "frontend_runtime_decision.md").write_text("ok\n", encoding="utf-8")
+
+            report = documentation_architecture_clarity_report(
+                repo_root=repo_root,
+                doc_requirements={
+                    "README.md": [],
+                    "compiler_impl/README.md": [],
+                    "release/frontend_runtime_decision.md": [],
+                    "docs/frontend_architecture_baseline.md": [],
+                    "docs/frontend_scale_limits.md": [],
+                },
+                required_links={},
+                stale_markers={},
+            )
+            self.assertEqual(
+                report["unresolved_local_links"],
+                [f"README.md:{absolute_target}"],
+            )
+
     def test_check_documentation_architecture_clarity_accepts_valid_docs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             repo_root = Path(temp_dir)
