@@ -206,6 +206,12 @@ class ValidateOutputContractsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_safei_payload(payload, path="sample.safei.json")
 
+    def test_validate_safei_payload_rejects_null_channels(self) -> None:
+        payload = valid_safei()
+        payload["channels"] = None
+        with self.assertRaises(ValueError):
+            validate_safei_payload(payload, path="sample.safei.json")
+
     def test_validate_safei_payload_rejects_malformed_params(self) -> None:
         payload = valid_safei()
         payload["subprograms"][0]["params"] = [{"name": "Value", "mode": "in", "span": valid_span()}]

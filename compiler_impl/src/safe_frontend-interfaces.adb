@@ -45,6 +45,17 @@ package body Safe_Frontend.Interfaces is
    function Parse_Type
      (Value : GNATCOLL.JSON.JSON_Value) return GM.Type_Descriptor;
 
+   function Require_Type_Value
+     (Value     : GNATCOLL.JSON.JSON_Value;
+      Context   : String;
+      File_Path : String) return GM.Type_Descriptor;
+
+   function Require_Type_Field
+     (Object_Value : GNATCOLL.JSON.JSON_Value;
+      Field        : String;
+      Context      : String;
+      File_Path    : String) return GM.Type_Descriptor;
+
    function Require_String
      (Object_Value : GNATCOLL.JSON.JSON_Value;
       Field        : String;
@@ -328,6 +339,41 @@ package body Safe_Frontend.Interfaces is
       return Result;
    end Parse_Type;
 
+   function Require_Type_Value
+     (Value     : GNATCOLL.JSON.JSON_Value;
+      Context   : String;
+      File_Path : String) return GM.Type_Descriptor
+   is
+      use GNATCOLL.JSON;
+      Result : constant GM.Type_Descriptor := Parse_Type (Value);
+   begin
+      if Value.Kind /= JSON_Object_Type then
+         raise Constraint_Error with File_Path & ": " & Context & " must be an object";
+      end if;
+
+      if FT.To_String (Result.Name) = "" or else FT.To_String (Result.Kind) = "" then
+         raise Constraint_Error with
+           File_Path & ": " & Context & " must include non-empty type name and kind";
+      end if;
+
+      return Result;
+   end Require_Type_Value;
+
+   function Require_Type_Field
+     (Object_Value : GNATCOLL.JSON.JSON_Value;
+      Field        : String;
+      Context      : String;
+      File_Path    : String) return GM.Type_Descriptor
+   is
+      use GNATCOLL.JSON;
+   begin
+      if Object_Value.Kind /= JSON_Object_Type or else not Has_Field (Object_Value, Field) then
+         raise Constraint_Error with File_Path & ": missing required field `" & Field & "`";
+      end if;
+
+      return Require_Type_Value (Get (Object_Value, Field), Context, File_Path);
+   end Require_Type_Field;
+
    function Require_String
      (Object_Value : GNATCOLL.JSON.JSON_Value;
       Field        : String;
@@ -563,12 +609,12 @@ package body Safe_Frontend.Interfaces is
 
       Types := Require_Array (Root, "types", File_Path);
       for Index in 1 .. Length (Types) loop
-         Result.Types.Append (Parse_Type (Get (Types, Index)));
+         Result.Types.Append (Require_Type_Value (Get (Types, Index), "types[]", File_Path));
       end loop;
 
       Types := Require_Array (Root, "subtypes", File_Path);
       for Index in 1 .. Length (Types) loop
-         Result.Subtypes.Append (Parse_Type (Get (Types, Index)));
+         Result.Subtypes.Append (Require_Type_Value (Get (Types, Index), "subtypes[]", File_Path));
       end loop;
 
       declare
@@ -583,7 +629,8 @@ package body Safe_Frontend.Interfaces is
             begin
                Channel.Name := FT.To_UString (Require_String (Item, "name", File_Path));
                Channel.Is_Public := Require_Boolean (Item, "is_public", File_Path);
-               Channel.Element_Type := Parse_Type (Field_Or_Null (Item, "element_type"));
+               Channel.Element_Type :=
+                 Require_Type_Field (Item, "element_type", "channels[].element_type", File_Path);
                Channel.Capacity := Require_Positive_Int (Item, "capacity", File_Path);
                Channel.Span := Parse_Span (Field_Or_Null (Item, "span"));
                Result.Channels.Append (Channel);
@@ -596,7 +643,7 @@ package body Safe_Frontend.Interfaces is
                Object : Imported_Object;
             begin
                Object.Name := FT.To_UString (Require_String (Item, "name", File_Path));
-               Object.Type_Info := Parse_Type (Field_Or_Null (Item, "type"));
+               Object.Type_Info := Require_Type_Field (Item, "type", "objects[].type", File_Path);
                Object.Span := Parse_Span (Field_Or_Null (Item, "span"));
                Result.Objects.Append (Object);
             end;
@@ -627,7 +674,12 @@ package body Safe_Frontend.Interfaces is
                   raise Constraint_Error with File_Path & ": subprograms[].return_is_access_def must be a boolean";
                end if;
                if Subp.Has_Return_Type then
-                  Subp.Return_Type := Parse_Type (Field_Or_Null (Item, "return_type"));
+                  Subp.Return_Type :=
+                    Require_Type_Field
+                      (Item,
+                       "return_type",
+                       "subprograms[].return_type",
+                       File_Path);
                end if;
                for Param_Index in 1 .. Length (Params) loop
                   declare
@@ -637,7 +689,12 @@ package body Safe_Frontend.Interfaces is
                      Symbol.Name := FT.To_UString (Require_String (Param_Item, "name", File_Path));
                      Symbol.Kind := FT.To_UString ("param");
                      Symbol.Mode := FT.To_UString (Require_String (Param_Item, "mode", File_Path));
-                     Symbol.Type_Info := Parse_Type (Field_Or_Null (Param_Item, "type"));
+                     Symbol.Type_Info :=
+                       Require_Type_Field
+                         (Param_Item,
+                          "type",
+                          "subprograms[].params[].type",
+                          File_Path);
                      Symbol.Span := Parse_Span (Field_Or_Null (Param_Item, "span"));
                      Subp.Params.Append (Symbol);
                   end;

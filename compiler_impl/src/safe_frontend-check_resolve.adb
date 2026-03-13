@@ -239,22 +239,6 @@ package body Safe_Frontend.Check_Resolve is
       return Name in "Integer" | "Natural" | "Boolean" | "Float" | "Long_Float" | "Duration";
    end Is_Builtin_Name;
 
-   function Root_Name (Expr : CM.Expr_Access) return String is
-   begin
-      if Expr = null then
-         return "";
-      elsif Expr.Kind = CM.Expr_Ident then
-         return UString_Value (Expr.Name);
-      elsif Expr.Kind = CM.Expr_Select then
-         return Root_Name (Expr.Prefix);
-      elsif Expr.Kind = CM.Expr_Resolved_Index then
-         return Root_Name (Expr.Prefix);
-      elsif Expr.Kind = CM.Expr_Conversion then
-         return Root_Name (Expr.Inner);
-      end if;
-      return "";
-   end Root_Name;
-
    function Qualify_Name
      (Package_Name : String;
       Name         : String) return String
@@ -972,13 +956,24 @@ package body Safe_Frontend.Check_Resolve is
 
    function Is_Read_Only_Imported_Target
      (Expr             : CM.Expr_Access;
-      Imported_Objects : Type_Maps.Map) return Boolean is
+      Imported_Objects : Type_Maps.Map) return Boolean
+   is
       Name : constant String := Flatten_Name (Expr);
-      Root : constant String := Root_Name (Expr);
    begin
-      return
-        (Name /= "" and then Imported_Objects.Contains (Name))
-        or else (Root /= "" and then Imported_Objects.Contains (Root));
+      if Expr = null then
+         return False;
+      elsif Name /= "" and then Imported_Objects.Contains (Name) then
+         return True;
+      end if;
+
+      case Expr.Kind is
+         when CM.Expr_Select | CM.Expr_Resolved_Index =>
+            return Is_Read_Only_Imported_Target (Expr.Prefix, Imported_Objects);
+         when CM.Expr_Conversion =>
+            return Is_Read_Only_Imported_Target (Expr.Inner, Imported_Objects);
+         when others =>
+            return False;
+      end case;
    end Is_Read_Only_Imported_Target;
 
    procedure Ensure_Writable_Target
@@ -1704,6 +1699,23 @@ package body Safe_Frontend.Check_Resolve is
       Result.Path := Unit.Path;
       Result.Package_Name := Unit.Package_Name;
 
+      if not Unit.Withs.Is_Empty then
+         declare
+            Loaded : constant SI.Load_Result :=
+              SI.Load_Dependencies
+                (Search_Dirs => Search_Dirs,
+                 Withs       => Unit.Withs,
+                 Path        => UString_Value (Unit.Path));
+         begin
+            if not Loaded.Success then
+               Raise_Diag (Loaded.Diagnostic);
+            end if;
+            for Item of Loaded.Interfaces loop
+               Add_Imported_Interface (Item);
+            end loop;
+         end;
+      end if;
+
       for Item of Unit.Items loop
          case Item.Kind is
             when CM.Item_Type_Decl =>
@@ -1756,23 +1768,6 @@ package body Safe_Frontend.Check_Resolve is
                null;
          end case;
       end loop;
-
-      if not Unit.Withs.Is_Empty then
-         declare
-            Loaded : constant SI.Load_Result :=
-              SI.Load_Dependencies
-                (Search_Dirs => Search_Dirs,
-                 Withs       => Unit.Withs,
-                 Path        => UString_Value (Unit.Path));
-         begin
-            if not Loaded.Success then
-               Raise_Diag (Loaded.Diagnostic);
-            end if;
-            for Item of Loaded.Interfaces loop
-               Add_Imported_Interface (Item);
-            end loop;
-         end;
-      end if;
 
       for Item of Unit.Items loop
          if Item.Kind = CM.Item_Channel then

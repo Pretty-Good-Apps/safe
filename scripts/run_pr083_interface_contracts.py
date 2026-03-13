@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -38,9 +39,13 @@ PROVIDER_CHANNEL = REPO_ROOT / "tests" / "interfaces" / "provider_channel.safe"
 CLIENT_CHANNEL = REPO_ROOT / "tests" / "interfaces" / "client_channel.safe"
 PROVIDER_OBJECT = REPO_ROOT / "tests" / "interfaces" / "provider_object.safe"
 CLIENT_OBJECT = REPO_ROOT / "tests" / "interfaces" / "client_object.safe"
+PROVIDER_RECORD_OBJECT = REPO_ROOT / "tests" / "interfaces" / "provider_record_object.safe"
 
 NEG_UNKNOWN_IMPORTED_MEMBER = REPO_ROOT / "tests" / "negative" / "neg_unknown_imported_member.safe"
 NEG_IMPORTED_OBJECT_ASSIGNMENT = REPO_ROOT / "tests" / "negative" / "neg_imported_object_assignment.safe"
+NEG_IMPORTED_OBJECT_SUBCOMPONENT_ASSIGNMENT = (
+    REPO_ROOT / "tests" / "negative" / "neg_imported_object_subcomponent_assignment.safe"
+)
 NEG_CHANNEL_PACKAGE_NOT_WITHD = REPO_ROOT / "tests" / "negative" / "neg_channel_package_not_withd.safe"
 NEG_QUALIFIED_CHANNEL_REFERENCE = REPO_ROOT / "tests" / "negative" / "neg_qualified_channel_reference.safe"
 
@@ -488,6 +493,35 @@ def make_malformed_dir(*, temp_root: Path) -> Path:
     return target
 
 
+def make_missing_channel_type_dir(*, base_interface: Path, temp_root: Path) -> Path:
+    target = temp_root / "missing-channel-type"
+    target.mkdir(parents=True, exist_ok=True)
+    payload = load_json(base_interface)
+    payload["channels"][0]["element_type"] = None
+    write_json(target / base_interface.name, payload)
+    return target
+
+
+def make_missing_object_type_dir(*, base_interface: Path, temp_root: Path) -> Path:
+    target = temp_root / "missing-object-type"
+    target.mkdir(parents=True, exist_ok=True)
+    payload = load_json(base_interface)
+    payload["objects"][0]["type"] = None
+    write_json(target / base_interface.name, payload)
+    return target
+
+
+def make_missing_subprogram_type_dir(*, base_interface: Path, temp_root: Path) -> Path:
+    target = temp_root / "missing-subprogram-type"
+    target.mkdir(parents=True, exist_ok=True)
+    payload = load_json(base_interface)
+    payload["subprograms"][0]["params"][0]["type"] = None
+    if payload["subprograms"][0].get("has_return_type"):
+        payload["subprograms"][0]["return_type"] = None
+    write_json(target / base_interface.name, payload)
+    return target
+
+
 def assert_failure_parity(
     *,
     name: str,
@@ -571,6 +605,79 @@ def assert_failure_parity(
         "check_diag": compact_result(check_diag),
         "emit": compact_result(emit_result),
         "first_header": ast_header,
+    }
+
+
+def assert_resolve_failure(
+    *,
+    name: str,
+    source: Path,
+    safec: Path,
+    env: dict[str, str],
+    temp_root: Path,
+    search_dirs: list[Path] | None = None,
+    expected_reason: str = "source_frontend_error",
+) -> dict[str, Any]:
+    check_result = run_ast_or_check(
+        safec=safec,
+        command="check",
+        source=source,
+        env=env,
+        temp_root=temp_root,
+        search_dirs=search_dirs,
+        expected_returncode=1,
+    )
+    check_diag = run(
+        [
+            str(safec),
+            "check",
+            "--diag-json",
+            repo_arg(source),
+            *[
+                part
+                for directory in (search_dirs or [])
+                for part in ("--interface-search-dir", str(directory))
+            ],
+        ],
+        cwd=REPO_ROOT,
+        env=env,
+        temp_root=temp_root,
+        expected_returncode=1,
+    )
+    emit_root = temp_root / f"{name}-emit-failure"
+    emit_result = run_emit(
+        safec=safec,
+        source=source,
+        out_dir=emit_root / "out",
+        iface_dir=emit_root / "iface",
+        env=env,
+        temp_root=temp_root,
+        search_dirs=search_dirs,
+        expected_returncode=1,
+    )
+
+    check_header = first_stderr_line(check_result, f"{name}: check")
+    emit_header = first_stderr_line(emit_result, f"{name}: emit")
+    require(check_header == emit_header, f"{name}: first diagnostic header drifted")
+    require(
+        read_first_reason(check_diag, source) == expected_reason,
+        f"{name}: check --diag-json reason drifted",
+    )
+    require(
+        observed_files(emit_root / "out") == [],
+        f"{name}: emit unexpectedly wrote output artifacts",
+    )
+    require(
+        observed_files(emit_root / "iface") == [],
+        f"{name}: emit unexpectedly wrote interface artifacts",
+    )
+
+    return {
+        "expected_reason": expected_reason,
+        "check": compact_result(check_result),
+        "check_diag": compact_result(check_diag),
+        "emit": compact_result(emit_result),
+        "first_header": check_header,
     }
 
 
@@ -698,6 +805,14 @@ def generate_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[st
         provider_types_iface = temp_root / "types-provider" / "iface" / "provider_types.safei.json"
         provider_channel_iface = temp_root / "channel-provider" / "iface" / "provider_channel.safei.json"
         provider_object_iface = temp_root / "object-provider" / "iface" / "provider_object.safei.json"
+        provider_record_object_iface, provider_record_object = emit_provider(
+            safec=safec,
+            python=python,
+            source=PROVIDER_RECORD_OBJECT,
+            env=env,
+            temp_root=temp_root,
+            label="record-object-provider",
+        )
 
         wrong_format_dir = make_wrong_format_dir(base_interface=provider_types_iface, temp_root=temp_root)
         duplicate_dir = make_duplicate_dir(base_interface=provider_types_iface, temp_root=temp_root)
@@ -706,6 +821,18 @@ def generate_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[st
             temp_root=temp_root,
         )
         malformed_dir = make_malformed_dir(temp_root=temp_root)
+        missing_channel_type_dir = make_missing_channel_type_dir(
+            base_interface=provider_channel_iface,
+            temp_root=temp_root,
+        )
+        missing_object_type_dir = make_missing_object_type_dir(
+            base_interface=provider_object_iface,
+            temp_root=temp_root,
+        )
+        missing_subprogram_type_dir = make_missing_subprogram_type_dir(
+            base_interface=provider_types_iface,
+            temp_root=temp_root,
+        )
 
         failures = {
             "missing_interface": assert_failure_parity(
@@ -744,6 +871,33 @@ def generate_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[st
                 search_dirs=[malformed_dir],
                 expected_reason="source_frontend_error",
             ),
+            "missing_channel_type": assert_resolve_failure(
+                name="missing-channel-type",
+                source=CLIENT_CHANNEL,
+                safec=safec,
+                env=env,
+                temp_root=temp_root,
+                search_dirs=[missing_channel_type_dir],
+                expected_reason="source_frontend_error",
+            ),
+            "missing_object_type": assert_resolve_failure(
+                name="missing-object-type",
+                source=CLIENT_OBJECT,
+                safec=safec,
+                env=env,
+                temp_root=temp_root,
+                search_dirs=[missing_object_type_dir],
+                expected_reason="source_frontend_error",
+            ),
+            "missing_subprogram_type": assert_resolve_failure(
+                name="missing-subprogram-type",
+                source=CLIENT_TYPES,
+                safec=safec,
+                env=env,
+                temp_root=temp_root,
+                search_dirs=[missing_subprogram_type_dir],
+                expected_reason="source_frontend_error",
+            ),
             "unknown_imported_member": assert_failure_parity(
                 name="unknown-imported-member",
                 source=NEG_UNKNOWN_IMPORTED_MEMBER,
@@ -759,6 +913,14 @@ def generate_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[st
                 env=env,
                 temp_root=temp_root,
                 search_dirs=[provider_object_iface.parent],
+            ),
+            "imported_object_subcomponent_assignment": assert_failure_parity(
+                name="imported-object-subcomponent-assignment",
+                source=NEG_IMPORTED_OBJECT_SUBCOMPONENT_ASSIGNMENT,
+                safec=safec,
+                env=env,
+                temp_root=temp_root,
+                search_dirs=[provider_record_object_iface],
             ),
             "qualified_channel_missing_with": assert_failure_parity(
                 name="qualified-channel-missing-with",
@@ -802,6 +964,9 @@ def generate_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[st
                 "channel": positive_channel,
                 "object": positive_object,
             },
+            "supporting_interfaces": {
+                "record_object_provider": provider_record_object,
+            },
             "negative_lookup_cases": failures,
             "search_order": search_order,
             "interface_dir_not_implicit_search": interface_dir_not_search,
@@ -815,7 +980,7 @@ def main() -> int:
 
     safec = require_repo_command(COMPILER_ROOT / "bin" / "safec", "safec")
     python = find_command("python3")
-    env = ensure_sdkroot(dict())
+    env = ensure_sdkroot(os.environ.copy())
 
     report = finalize_deterministic_report(
         lambda: generate_report(safec=safec, python=python, env=env),

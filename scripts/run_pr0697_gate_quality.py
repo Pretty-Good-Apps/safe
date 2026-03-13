@@ -40,6 +40,11 @@ INVALID_CONTRACT_CASES = [
         "source_path": "fixtures/sample.safe",
     },
     {
+        "name": "invalid_safei_null_channels",
+        "expected_error": "sample.safei.json.channels must be a list",
+        "source_path": "fixtures/sample.safe",
+    },
+    {
         "name": "invalid_safei_malformed_params",
         "expected_error": "sample.safei.json.subprograms[0].params[0].type must be an object",
         "source_path": "fixtures/sample.safe",

@@ -105,6 +105,10 @@ def validate_optional_typed_channels(value: Any, path: str) -> list[dict[str, An
     return result
 
 
+def validate_typed_channels(value: Any, path: str) -> list[dict[str, Any]]:
+    return validate_optional_typed_channels(require_list(value, path), path)
+
+
 def validate_optional_typed_tasks(value: Any, path: str) -> list[dict[str, Any]]:
     if value is None:
         return []
@@ -400,7 +404,7 @@ def validate_safei_payload(payload: Any, *, path: str) -> dict[str, Any]:
     public_declarations = validate_decl_list(safei.get("public_declarations"), f"{path}.public_declarations")
     validate_type_descriptor_list(safei.get("types"), f"{path}.types")
     validate_type_descriptor_list(safei.get("subtypes"), f"{path}.subtypes")
-    validate_optional_typed_channels(safei.get("channels"), f"{path}.channels")
+    validate_typed_channels(safei.get("channels"), f"{path}.channels")
     validate_safei_object_list(safei.get("objects"), f"{path}.objects")
     subprograms = validate_safei_subprograms(safei.get("subprograms"), f"{path}.subprograms")
     effect_summaries = validate_safei_effect_summaries(

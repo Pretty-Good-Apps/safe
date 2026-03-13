@@ -74,6 +74,30 @@
       }
     },
     {
+      "expected_error": "sample.safei.json.channels must be a list",
+      "name": "invalid_safei_null_channels",
+      "result": {
+        "command": [
+          "python3",
+          "scripts/validate_output_contracts.py",
+          "--ast",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_null_channels/sample.ast.json",
+          "--typed",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_null_channels/sample.typed.json",
+          "--mir",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_null_channels/sample.mir.json",
+          "--safei",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_null_channels/sample.safei.json",
+          "--source-path",
+          "fixtures/sample.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "output contract validation: ERROR: sample.safei.json.channels must be a list\n",
+        "stdout": ""
+      }
+    },
+    {
       "expected_error": "sample.safei.json.subprograms[0].params[0].type must be an object",
       "name": "invalid_safei_malformed_params",
       "result": {
@@ -146,8 +170,8 @@
       }
     }
   ],
-  "repeat_sha256": "b48e307ea9cfbf05b9080f6f3654fc36bb99040850798385d21dadcdffcac54b",
-  "report_sha256": "b48e307ea9cfbf05b9080f6f3654fc36bb99040850798385d21dadcdffcac54b",
+  "repeat_sha256": "ab227379efe080f2b35e05c9af38d3536c0a9e9400902d4e04e650db36baeb4b",
+  "report_sha256": "ab227379efe080f2b35e05c9af38d3536c0a9e9400902d4e04e650db36baeb4b",
   "status": "ok",
   "task": "PR06.9.7",
   "unit_tests": {
@@ -163,7 +187,7 @@
     ],
     "cwd": "$REPO_ROOT",
     "returncode": 0,
-    "stderr": "........................................................\n----------------------------------------------------------------------\nRan 56 tests in <elapsed>\n\nOK\n",
+    "stderr": ".........................................................\n----------------------------------------------------------------------\nRan 57 tests in <elapsed>\n\nOK\n",
     "stdout": ""
   },
   "valid_output_contracts": [
