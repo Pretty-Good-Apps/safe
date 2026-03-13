@@ -665,6 +665,9 @@ package body Safe_Frontend.Interfaces is
                   if Kind.Kind /= JSON_String_Type then
                      raise Constraint_Error with
                        File_Path & ": objects[].static_value_kind must be a string";
+                  elsif Value.Kind = JSON_Null_Type then
+                     raise Constraint_Error with
+                       File_Path & ": objects[].static_value is required when static_value_kind is present";
                   elsif Get (Kind) = "integer" then
                      if Value.Kind /= JSON_Int_Type then
                         raise Constraint_Error with

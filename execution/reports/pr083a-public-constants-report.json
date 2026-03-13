@@ -1191,8 +1191,8 @@
       ]
     }
   },
-  "repeat_sha256": "8fac3659263377736344ebec69949a2e5d882124fd984e2282c07d0a0564e834",
-  "report_sha256": "8fac3659263377736344ebec69949a2e5d882124fd984e2282c07d0a0564e834",
+  "repeat_sha256": "1cb360b779165b75e7250782796aaa13c52cb80d5f193ef718345cc629f5bbfe",
+  "report_sha256": "1cb360b779165b75e7250782796aaa13c52cb80d5f193ef718345cc629f5bbfe",
   "source_failures": {
     "imported_missing_static_value": {
       "ast": {
@@ -1327,7 +1327,7 @@
         ],
         "cwd": "$REPO_ROOT",
         "returncode": 1,
-        "stderr": "client_constant_range.safe:1:1: error: $TMPDIR/missing-static-value/provider_constant_int.safei.json: objects[].static_value must be an integer\n  |\n  | 1 | with Provider_Constant_Int;\n  |   | ^\n  |\n",
+        "stderr": "client_constant_range.safe:1:1: error: $TMPDIR/missing-static-value/provider_constant_int.safei.json: objects[].static_value is required when static_value_kind is pr\n  |\n  | 1 | with Provider_Constant_Int;\n  |   | ^\n  |\n",
         "stdout": ""
       },
       "check": {
@@ -1340,7 +1340,7 @@
         ],
         "cwd": "$REPO_ROOT",
         "returncode": 1,
-        "stderr": "client_constant_range.safe:1:1: error: $TMPDIR/missing-static-value/provider_constant_int.safei.json: objects[].static_value must be an integer\n  |\n  | 1 | with Provider_Constant_Int;\n  |   | ^\n  |\n",
+        "stderr": "client_constant_range.safe:1:1: error: $TMPDIR/missing-static-value/provider_constant_int.safei.json: objects[].static_value is required when static_value_kind is pr\n  |\n  | 1 | with Provider_Constant_Int;\n  |   | ^\n  |\n",
         "stdout": ""
       },
       "check_diag": {
@@ -1355,7 +1355,7 @@
         "cwd": "$REPO_ROOT",
         "returncode": 1,
         "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"$TMPDIR/missing-static-value/provider_constant_int.safei.json: objects[].static_value must be an integer\",\"path\":\"tests/interfaces/client_constant_range.safe\",\"span\":{\"start_line\":1,\"start_col\":1,\"end_line\":1,\"end_col\":1},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"$TMPDIR/missing-static-value/provider_constant_int.safei.json: objects[].static_value is required when static_value_kind is pr\",\"path\":\"tests/interfaces/client_constant_range.safe\",\"span\":{\"start_line\":1,\"start_col\":1,\"end_line\":1,\"end_col\":1},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
       },
       "emit": {
         "command": [
@@ -1371,11 +1371,11 @@
         ],
         "cwd": "$REPO_ROOT",
         "returncode": 1,
-        "stderr": "client_constant_range.safe:1:1: error: $TMPDIR/missing-static-value/provider_constant_int.safei.json: objects[].static_value must be an integer\n  |\n  | 1 | with Provider_Constant_Int;\n  |   | ^\n  |\n",
+        "stderr": "client_constant_range.safe:1:1: error: $TMPDIR/missing-static-value/provider_constant_int.safei.json: objects[].static_value is required when static_value_kind is pr\n  |\n  | 1 | with Provider_Constant_Int;\n  |   | ^\n  |\n",
         "stdout": ""
       },
       "expected_reason": "source_frontend_error",
-      "first_header": "client_constant_range.safe:1:1: error: $TMPDIR/missing-static-value/provider_constant_int.safei.json: objects[].static_value must be an integer"
+      "first_header": "client_constant_range.safe:1:1: error: $TMPDIR/missing-static-value/provider_constant_int.safei.json: objects[].static_value is required when static_value_kind is pr"
     },
     "named_number_unsupported": {
       "ast": {

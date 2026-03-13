@@ -537,6 +537,7 @@ def assert_failure_parity(
     temp_root: Path,
     search_dirs: list[Path] | None = None,
     expected_reason: str | None = None,
+    expected_header_substring: str | None = None,
 ) -> dict[str, Any]:
     reason = expected_reason or read_expected_reason(source)
 
@@ -591,6 +592,11 @@ def assert_failure_parity(
     check_header = first_stderr_line(check_result, f"{name}: check")
     emit_header = first_stderr_line(emit_result, f"{name}: emit")
     require(ast_header == check_header == emit_header, f"{name}: first diagnostic header drifted")
+    if expected_header_substring is not None:
+        require(
+            expected_header_substring in ast_header,
+            f"{name}: expected first header to contain {expected_header_substring!r}, saw {ast_header!r}",
+        )
     require(read_first_reason(check_diag, source) == reason, f"{name}: check --diag-json reason drifted")
     require(observed_files(emit_root / "out") == [], f"{name}: emit unexpectedly wrote output artifacts")
     require(observed_files(emit_root / "iface") == [], f"{name}: emit unexpectedly wrote interface artifacts")
@@ -905,6 +911,7 @@ def generate_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[st
                 temp_root=temp_root,
                 search_dirs=[missing_value_dir],
                 expected_reason="source_frontend_error",
+                expected_header_substring="objects[].static_value is required",
             ),
             "malformed_constant_payload_kind_mismatch": assert_failure_parity(
                 name="malformed-constant-payload-kind-mismatch",
