@@ -24,6 +24,8 @@
       "scripts/run_pr081_local_concurrency_frontend.py",
       "scripts/run_pr082_local_concurrency_analysis.py",
       "scripts/run_pr083_interface_contracts.py",
+      "scripts/run_pr083a_public_constants.py",
+      "scripts/run_local_pre_push.py",
       "scripts/validate_execution_state.py",
       "scripts/validate_ast_output.py",
       "scripts/validate_output_contracts.py",
@@ -59,7 +61,8 @@
       "scripts/run_pr06912_performance_scale_sanity.py",
       "scripts/run_pr081_local_concurrency_frontend.py",
       "scripts/run_pr082_local_concurrency_analysis.py",
-      "scripts/run_pr083_interface_contracts.py"
+      "scripts/run_pr083_interface_contracts.py",
+      "scripts/run_pr083a_public_constants.py"
     ],
     "safe_source_readers": [
       {
@@ -85,6 +88,10 @@
       {
         "category": "fixture metadata extraction via read_expected_reason",
         "script": "scripts/run_pr083_interface_contracts.py"
+      },
+      {
+        "category": "fixture metadata extraction via read_expected_reason and synthetic parity source generation",
+        "script": "scripts/run_pr083a_public_constants.py"
       }
     ],
     "shell_assumption_violations": [],
@@ -103,23 +110,23 @@
   ],
   "referenced_deterministic_reports": {
     "build_reproducibility": {
-      "repeat_sha256": "a9e3c1a9b9327eea4b7c8a31fb0525c9c9aa705932d3249a7144d7a1032badad",
+      "repeat_sha256": "17a5c906c9490eb2eb5e5c74f9109bc769441a18eb7dff26bf892a91fc042804",
       "report_path": "execution/reports/pr0699-build-reproducibility-report.json",
-      "report_sha256": "a9e3c1a9b9327eea4b7c8a31fb0525c9c9aa705932d3249a7144d7a1032badad"
+      "report_sha256": "17a5c906c9490eb2eb5e5c74f9109bc769441a18eb7dff26bf892a91fc042804"
     },
     "frontend_smoke": {
-      "repeat_sha256": "113783113d67de781571781d03587fc152f85b570f2179876dbcdab2990ea902",
+      "repeat_sha256": "d2ece170e08a36e3bfe3ea05507090d855cd22f2cc3a1bf6226d60f8ceac6fbf",
       "report_path": "execution/reports/pr00-pr04-frontend-smoke.json",
-      "report_sha256": "113783113d67de781571781d03587fc152f85b570f2179876dbcdab2990ea902"
+      "report_sha256": "d2ece170e08a36e3bfe3ea05507090d855cd22f2cc3a1bf6226d60f8ceac6fbf"
     }
   },
-  "repeat_sha256": "82cea93b9e2324c292b86d16e3e4113513da32680e4cfcc6ba64871b23887a0b",
-  "report_sha256": "82cea93b9e2324c292b86d16e3e4113513da32680e4cfcc6ba64871b23887a0b",
+  "repeat_sha256": "587a369045fb059bf4824027005732e7cf9c2f38b624f9ca17d585e6a2c05696",
+  "report_sha256": "587a369045fb059bf4824027005732e7cf9c2f38b624f9ca17d585e6a2c05696",
   "reruns": {
     "gate_quality": {
-      "repeat_sha256": "ab227379efe080f2b35e05c9af38d3536c0a9e9400902d4e04e650db36baeb4b",
+      "repeat_sha256": "2dea265bb1cb52e695bce6ef621e6404f137ae5d497ddaf442fb4c2192070634",
       "report_path": "execution/reports/pr0697-gate-quality-report.json",
-      "report_sha256": "ab227379efe080f2b35e05c9af38d3536c0a9e9400902d4e04e650db36baeb4b",
+      "report_sha256": "2dea265bb1cb52e695bce6ef621e6404f137ae5d497ddaf442fb4c2192070634",
       "run": {
         "command": [
           "python3",
@@ -132,9 +139,9 @@
       }
     },
     "portability_environment": {
-      "repeat_sha256": "fe6b3a096efb223565e893dda4ca91e3dbb4a4d173ceee7689698c90e0d1240e",
+      "repeat_sha256": "7428fdadf3b2bb0d74b86d886b97342bc6122dd7d02b2f5c2e9df4c30bc188f4",
       "report_path": "execution/reports/pr06910-portability-environment-report.json",
-      "report_sha256": "fe6b3a096efb223565e893dda4ca91e3dbb4a4d173ceee7689698c90e0d1240e",
+      "report_sha256": "7428fdadf3b2bb0d74b86d886b97342bc6122dd7d02b2f5c2e9df4c30bc188f4",
       "run": {
         "command": [
           "python3",
@@ -188,6 +195,6 @@
     "cwd": "$REPO_ROOT",
     "result": "OK",
     "returncode": 0,
-    "tests_ran": 57
+    "tests_ran": 68
   }
 }

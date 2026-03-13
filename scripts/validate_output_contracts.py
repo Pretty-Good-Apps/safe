@@ -215,6 +215,25 @@ def validate_mir_blocks(value: Any, path: str) -> list[dict[str, Any]]:
     return result
 
 
+def validate_mir_locals(value: Any, path: str) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for index, item in enumerate(require_list(value, path)):
+        entry = require_mapping(item, f"{path}[{index}]")
+        require_string(entry.get("id"), f"{path}[{index}].id")
+        require_string(entry.get("kind"), f"{path}[{index}].kind")
+        require_string(entry.get("mode"), f"{path}[{index}].mode")
+        require_string(entry.get("name"), f"{path}[{index}].name")
+        if "ownership_role" in entry and not isinstance(entry.get("ownership_role"), str):
+            fail(f"{path}[{index}].ownership_role must be a string when present")
+        require_string(entry.get("scope_id"), f"{path}[{index}].scope_id")
+        validate_span(entry.get("span"), f"{path}[{index}].span")
+        validate_type_descriptor(entry.get("type"), f"{path}[{index}].type")
+        if "is_constant" in entry:
+            require_boolean(entry.get("is_constant"), f"{path}[{index}].is_constant")
+        result.append(entry)
+    return result
+
+
 def validate_mir_graphs(value: Any, path: str) -> list[dict[str, Any]]:
     result: list[dict[str, Any]] = []
     for index, item in enumerate(require_list(value, path)):
@@ -229,6 +248,8 @@ def validate_mir_graphs(value: Any, path: str) -> list[dict[str, Any]]:
             require_boolean(entry.get("has_explicit_priority"), f"{path}[{index}].has_explicit_priority")
             if entry.get("return_type") is not None:
                 fail(f"{path}[{index}].return_type must be null for task graphs")
+        if "locals" in entry:
+            validate_mir_locals(entry.get("locals"), f"{path}[{index}].locals")
         validate_mir_blocks(entry.get("blocks"), f"{path}[{index}].blocks")
         result.append(entry)
     return result
@@ -304,6 +325,27 @@ def validate_safei_object_list(items: Any, path: str) -> list[dict[str, Any]]:
         entry = require_mapping(item, f"{path}[{index}]")
         require_string(entry.get("name"), f"{path}[{index}].name")
         validate_type_descriptor(entry.get("type"), f"{path}[{index}].type")
+        is_constant = entry.get("is_constant", False)
+        if "is_constant" in entry:
+            is_constant = require_boolean(entry.get("is_constant"), f"{path}[{index}].is_constant")
+        static_kind = entry.get("static_value_kind")
+        has_static_value = "static_value" in entry
+        if static_kind is None:
+            if has_static_value:
+                fail(f"{path}[{index}].static_value_kind is required when static_value is present")
+        else:
+            if not is_constant:
+                fail(f"{path}[{index}].static_value_kind requires is_constant to be true")
+            if type(static_kind) is not str or static_kind not in {"integer", "boolean"}:
+                fail(f"{path}[{index}].static_value_kind must be `integer` or `boolean`")
+            if not has_static_value:
+                fail(f"{path}[{index}].static_value is required when static_value_kind is present")
+            value = entry.get("static_value")
+            if static_kind == "integer":
+                if type(value) is not int:
+                    fail(f"{path}[{index}].static_value must be an integer")
+            elif type(value) is not bool:
+                fail(f"{path}[{index}].static_value must be a boolean")
         validate_span(entry.get("span"), f"{path}[{index}].span")
         result.append(entry)
     return result

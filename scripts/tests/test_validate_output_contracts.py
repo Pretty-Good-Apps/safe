@@ -33,6 +33,19 @@ def valid_type() -> dict[str, object]:
     return {"name": "Integer", "kind": "integer", "low": 0, "high": 10}
 
 
+def valid_mir_local() -> dict[str, object]:
+    return {
+        "id": "v0",
+        "kind": "local",
+        "mode": "in",
+        "name": "Value",
+        "ownership_role": "",
+        "scope_id": "scope0",
+        "span": valid_span(),
+        "type": valid_type(),
+    }
+
+
 def valid_safei() -> dict[str, object]:
     return {
         "format": "safei-v1",
@@ -43,7 +56,16 @@ def valid_safei() -> dict[str, object]:
         "types": [valid_type()],
         "subtypes": [],
         "channels": [],
-        "objects": [],
+        "objects": [
+            {
+                "name": "Max_Count",
+                "type": valid_type(),
+                "is_constant": True,
+                "static_value_kind": "integer",
+                "static_value": 4,
+                "span": valid_span(),
+            }
+        ],
         "subprograms": [
             {
                 "name": "Next",
@@ -196,6 +218,29 @@ class ValidateOutputContractsTests(unittest.TestCase):
                 "mir.graphs",
             )
 
+    def test_validate_mir_graphs_accepts_boolean_local_constant_flag(self) -> None:
+        graph = {
+            "name": "Worker",
+            "kind": "procedure",
+            "entry_bb": "bb0",
+            "span": valid_span(),
+            "locals": [{**valid_mir_local(), "is_constant": True}],
+            "blocks": [],
+        }
+        validate_mir_graphs([graph], "mir.graphs")
+
+    def test_validate_mir_graphs_rejects_non_boolean_local_constant_flag(self) -> None:
+        graph = {
+            "name": "Worker",
+            "kind": "procedure",
+            "entry_bb": "bb0",
+            "span": valid_span(),
+            "locals": [{**valid_mir_local(), "is_constant": 1}],
+            "blocks": [],
+        }
+        with self.assertRaises(ValueError):
+            validate_mir_graphs([graph], "mir.graphs")
+
     def test_validate_safei_payload_accepts_safei_v1(self) -> None:
         payload = validate_safei_payload(valid_safei(), path="sample.safei.json")
         self.assertEqual(payload["format"], "safei-v1")
@@ -227,6 +272,46 @@ class ValidateOutputContractsTests(unittest.TestCase):
     def test_validate_safei_payload_rejects_unknown_summary_target(self) -> None:
         payload = valid_safei()
         payload["effect_summaries"][0]["name"] = "Missing"
+        with self.assertRaises(ValueError):
+            validate_safei_payload(payload, path="sample.safei.json")
+
+    def test_validate_safei_payload_accepts_boolean_constant_payload(self) -> None:
+        payload = valid_safei()
+        payload["objects"] = [
+            {
+                "name": "Default_Active",
+                "type": {"name": "Boolean", "kind": "integer", "low": 0, "high": 1},
+                "is_constant": True,
+                "static_value_kind": "boolean",
+                "static_value": True,
+                "span": valid_span(),
+            }
+        ]
+        validate_safei_payload(payload, path="sample.safei.json")
+
+    def test_validate_safei_payload_rejects_static_kind_without_constant(self) -> None:
+        payload = valid_safei()
+        payload["objects"] = [
+            {
+                "name": "Max_Count",
+                "type": valid_type(),
+                "static_value_kind": "integer",
+                "static_value": 4,
+                "span": valid_span(),
+            }
+        ]
+        with self.assertRaises(ValueError):
+            validate_safei_payload(payload, path="sample.safei.json")
+
+    def test_validate_safei_payload_rejects_kind_value_mismatch(self) -> None:
+        payload = valid_safei()
+        payload["objects"][0]["static_value"] = True
+        with self.assertRaises(ValueError):
+            validate_safei_payload(payload, path="sample.safei.json")
+
+    def test_validate_safei_payload_rejects_value_without_kind(self) -> None:
+        payload = valid_safei()
+        del payload["objects"][0]["static_value_kind"]
         with self.assertRaises(ValueError):
             validate_safei_payload(payload, path="sample.safei.json")
 
