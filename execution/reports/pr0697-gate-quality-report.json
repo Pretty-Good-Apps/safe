@@ -240,10 +240,34 @@
         "stderr": "output contract validation: ERROR: sample.mir.json.source_path must preserve the exact emit CLI path: expected 'fixtures/sample.safe', saw 'fixtures/different.safe'\n",
         "stdout": ""
       }
+    },
+    {
+      "expected_error": "sample.mir.json.externals[0].effect_summary.reads must be a list",
+      "name": "invalid_mir_malformed_externals",
+      "result": {
+        "command": [
+          "python3",
+          "scripts/validate_output_contracts.py",
+          "--ast",
+          "scripts/tests/fixtures/output_contracts/invalid_mir_malformed_externals/sample.ast.json",
+          "--typed",
+          "scripts/tests/fixtures/output_contracts/invalid_mir_malformed_externals/sample.typed.json",
+          "--mir",
+          "scripts/tests/fixtures/output_contracts/invalid_mir_malformed_externals/sample.mir.json",
+          "--safei",
+          "scripts/tests/fixtures/output_contracts/invalid_mir_malformed_externals/sample.safei.json",
+          "--source-path",
+          "fixtures/sample.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "output contract validation: ERROR: sample.mir.json.externals[0].effect_summary.reads must be a list\n",
+        "stdout": ""
+      }
     }
   ],
-  "repeat_sha256": "2dea265bb1cb52e695bce6ef621e6404f137ae5d497ddaf442fb4c2192070634",
-  "report_sha256": "2dea265bb1cb52e695bce6ef621e6404f137ae5d497ddaf442fb4c2192070634",
+  "repeat_sha256": "d42897fbb62a4cc182193119b7572de11323de8f3ced6ac08756f6534a51c7bc",
+  "report_sha256": "d42897fbb62a4cc182193119b7572de11323de8f3ced6ac08756f6534a51c7bc",
   "status": "ok",
   "task": "PR06.9.7",
   "unit_tests": {
@@ -259,7 +283,7 @@
     ],
     "cwd": "$REPO_ROOT",
     "returncode": 0,
-    "stderr": "....................................................................\n----------------------------------------------------------------------\nRan 68 tests in <elapsed>\n\nOK\n",
+    "stderr": "..........................................................................\n----------------------------------------------------------------------\nRan 74 tests in <elapsed>\n\nOK\n",
     "stdout": ""
   },
   "valid_output_contracts": [

@@ -1,6 +1,6 @@
 # SafeC Frontend
 
-This workspace hosts the current Safe compiler frontend baseline established by PR07 on top of the PR06.9.x hardening series.
+This workspace hosts the current Safe compiler frontend baseline established by PR08 on top of the PR06.9.x hardening series.
 
 ## Current Boundary
 
@@ -13,7 +13,7 @@ This workspace hosts the current Safe compiler frontend baseline established by 
 - `safec check --diag-json <file.safe> [--interface-search-dir <dir>]...` writes `diagnostics-v0` JSON for the Ada-native check pipeline.
 - `safec emit <file.safe> --out-dir <dir> --interface-dir <dir> [--interface-search-dir <dir>]...` writes the current frontend artifacts for downstream inspection and regression checks.
 
-The current frontend supports the exact current Rule 5 fixture corpus, sequential ownership, the current boolean result-record discriminant pattern, the local-only PR08.1/PR08.2 concurrency slice for single-package task declarations, channel declarations, send, receive, try_send, try_receive, select, and relative delay, the PR08.3 interface-contract slice for imported package-qualified resolution through explicit dependency interfaces, and the PR08.3a additive constant slice for ordinary object constants plus imported integer/boolean constant values in the currently supported static-expression sites.
+The current frontend supports the exact current Rule 5 fixture corpus, sequential ownership, the current boolean result-record discriminant pattern, the local-only PR08.1/PR08.2 concurrency slice for single-package task declarations, channel declarations, send, receive, try_send, try_receive, select, and relative delay, the PR08.3 interface-contract slice for imported package-qualified resolution through explicit dependency interfaces, the PR08.3a additive constant slice for ordinary object constants plus imported integer/boolean constant values in the currently supported static-expression sites, and the PR08.4 transitive integration slice for imported-summary consumption, cross-package ownership/channel-ceiling analysis, and imported-call ownership semantics.
 
 That current boundary includes:
 
@@ -45,7 +45,7 @@ The old shallow `Ast` / `Parser` / `Semantics` / `Mir` chain was deleted in PR06
 
 The only live frontend path is now the Ada-native `Check_*` plus `Mir_*` pipeline, with `Lexer`, `Source`, `Types`, `Diagnostics`, and `Json` supporting that path.
 
-PR08 must extend the live `Check_*` + `Mir_*` pipeline.
+PR08 extends the live `Check_*` + `Mir_*` pipeline, and the current frontend baseline is now PR08.
 
 Unsupported-feature classification rule:
 - `unsupported_source_construct` means the Ada-native frontend recognized a construct that is outside the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern.
@@ -82,7 +82,7 @@ dependency explicitly rather than allowing it to spread by default.
 
 - `<stem>.mir.json`
   Format tag: `mir-v2`.
-  Contents: `source_path`, resolved `types[]`, package-level graph data, deterministic locals tables, `scopes[]`, blocks with `active_scope_id`, typed ops, explicit terminators, graph `return_type`, and ownership-effect metadata for the implemented sequential subset. PR08.1 extends this additively with top-level `channels[]`, task graphs with priority metadata, channel op kinds, and `select` terminators for the local concurrency frontend slice.
+  Contents: `source_path`, resolved `types[]`, package-level graph data, deterministic locals tables, `scopes[]`, blocks with `active_scope_id`, typed ops, explicit terminators, graph `return_type`, and ownership-effect metadata for the implemented sequential subset. PR08.1 extends this additively with top-level `channels[]`, task graphs with priority metadata, channel op kinds, and `select` terminators for the local concurrency frontend slice. PR08.4 extends it additively with optional `externals[]` entries for imported subprogram signatures plus imported effect/channel summaries, and with additive `required_ceiling` metadata on channels when available.
   Validation path: `safec validate-mir <stem>.mir.json`.
   Status: debug and regression artifact for the current sequential platform. Incompatible structural changes require a format-tag bump.
 
@@ -100,7 +100,7 @@ dependency explicitly rather than allowing it to spread by default.
   - `subprograms[]`
   - `effect_summaries[]`
   - `channel_access_summaries[]`
-  Public subprogram entries carry structured parameter and return-type descriptors, and the summary arrays are populated from the local Bronze pass for public subprograms. PR08.3a extends `objects[]` additively with `is_constant` plus optional `static_value_kind` / `static_value` for the supported integer and boolean constant subset.
+  Public subprogram entries carry structured parameter and return-type descriptors, and the summary arrays are populated from the local Bronze pass for public subprograms. PR08.3a extends `objects[]` additively with `is_constant` plus optional `static_value_kind` / `static_value` for the supported integer and boolean constant subset. PR08.4 extends public `channels[]` additively with optional `required_ceiling` so provider channel ceilings can compose with client task priorities.
 
 `safei-v1` is the versioned dependency-interface contract for cross-unit resolution. It carries structured public declarations, local Bronze-derived effect/channel summaries, and additive object constant metadata while remaining the base for later named-number extensions. If the schema changes incompatibly, the format tag must change as well.
 
@@ -238,6 +238,24 @@ python3 scripts/run_pr083a_public_constants.py
 
 That gate promotes ordinary object constants to the live Ada-native path, validates additive `safei-v1` constant payloads, proves imported integer/boolean constants work in the current static-expression sites, checks local `write_to_constant` parity between direct `check` and emitted `analyze-mir`, and records results in `execution/reports/pr083a-public-constants-report.json`.
 The supported static subset in PR08.3a is intentionally narrow: direct integer/boolean constant references (plus unary minus on integers) in the currently supported static sites. Imported constants without a supported exported static value remain readable objects but fail deterministically when a required static site tries to use them.
+
+The PR08.4 transitive concurrency integration gate is:
+
+```bash
+cd compiler_impl && $HOME/bin/alr build
+python3 scripts/run_pr084_transitive_concurrency_integration.py
+```
+
+That gate validates imported-summary consumption on provider/client interface pairs, checks cross-package ownership and imported-call parity between direct `check` and emitted `analyze-mir`, proves composed imported channel ceilings from provider `required_ceiling` plus client task priorities, and records results in `execution/reports/pr084-transitive-concurrency-integration-report.json`.
+
+The PR08 frontend baseline gate is:
+
+```bash
+cd compiler_impl && $HOME/bin/alr build
+python3 scripts/run_pr08_frontend_baseline.py
+```
+
+That gate reruns the PR08 milestone gates, verifies tracker/dashboard/docs all describe PR08 as the supported frontend baseline, and records results in `execution/reports/pr08-frontend-baseline-report.json`.
 
 To enforce the local pre-push gate chain in this clone, enable the tracked hook once:
 

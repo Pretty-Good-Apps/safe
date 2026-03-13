@@ -29,6 +29,8 @@ package Safe_Frontend.Interfaces is
       Return_Type          : GM.Type_Descriptor;
       Return_Is_Access_Def : Boolean := False;
       Span                 : FT.Source_Span := FT.Null_Span;
+      Effect_Summary       : GM.External_Effect_Summary;
+      Channel_Summary      : GM.External_Channel_Summary;
    end record;
 
    package Imported_Subprogram_Vectors is new Ada.Containers.Indefinite_Vectors

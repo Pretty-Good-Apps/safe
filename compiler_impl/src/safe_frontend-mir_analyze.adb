@@ -5289,6 +5289,18 @@ package body Safe_Frontend.Mir_Analyze is
          end loop;
          Result.Include (UString_Value (Graph.Name), Info);
       end loop;
+      for External of Document.Externals loop
+         Info := (others => <>);
+         Info.Name := External.Name;
+         Info.Kind := External.Kind;
+         Info.Has_Return_Type := External.Has_Return_Type;
+         Info.Return_Type := External.Return_Type;
+         Info.Span := External.Span;
+         for Param of External.Params loop
+            Info.Params.Append (Param);
+         end loop;
+         Result.Include (UString_Value (External.Name), Info);
+      end loop;
       return Result;
    end Build_Functions;
 

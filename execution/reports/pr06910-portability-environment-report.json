@@ -97,8 +97,8 @@
     "execution/reports/pr068-ada-ast-emit-no-python-report.json",
     "execution/reports/pr06910-portability-environment-report.json"
   ],
-  "repeat_sha256": "7428fdadf3b2bb0d74b86d886b97342bc6122dd7d02b2f5c2e9df4c30bc188f4",
-  "report_sha256": "7428fdadf3b2bb0d74b86d886b97342bc6122dd7d02b2f5c2e9df4c30bc188f4",
+  "repeat_sha256": "72c0905cb63ca329bd9edd1a9e20e5a22a9b2b5d738f88e7f8260d69f9ed1e47",
+  "report_sha256": "72c0905cb63ca329bd9edd1a9e20e5a22a9b2b5d738f88e7f8260d69f9ed1e47",
   "reruns": {
     "ast_emit_no_python": {
       "command": [
@@ -147,6 +147,6 @@
     "cwd": "$REPO_ROOT",
     "result": "OK",
     "returncode": 0,
-    "tests_ran": 68
+    "tests_ran": 74
   }
 }

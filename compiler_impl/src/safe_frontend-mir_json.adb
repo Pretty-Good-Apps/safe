@@ -29,6 +29,15 @@ package body Safe_Frontend.Mir_Json is
    function Parse_Channel
      (Value : GNATCOLL.JSON.JSON_Value) return GM.Channel_Entry;
 
+   function Parse_Effect_Summary
+     (Value : GNATCOLL.JSON.JSON_Value) return GM.External_Effect_Summary;
+
+   function Parse_Channel_Summary
+     (Value : GNATCOLL.JSON.JSON_Value) return GM.External_Channel_Summary;
+
+   function Parse_External
+     (Value : GNATCOLL.JSON.JSON_Value) return GM.External_Entry;
+
    function Parse_Op
      (Value : GNATCOLL.JSON.JSON_Value) return GM.Op_Entry;
 
@@ -618,9 +627,132 @@ package body Safe_Frontend.Mir_Json is
       if Has_Field (Value, "capacity") and then Get (Value, "capacity").Kind = JSON_Int_Type then
          Result.Capacity := Get (Get (Value, "capacity"));
       end if;
+      if Has_Field (Value, "required_ceiling")
+        and then Get (Value, "required_ceiling").Kind = JSON_Int_Type
+      then
+         Result.Has_Required_Ceiling := True;
+         Result.Required_Ceiling := Get (Get (Value, "required_ceiling"));
+      end if;
       Result.Span := Parse_Span (Field_Or_Null (Value, "span"));
       return Result;
    end Parse_Channel;
+
+   function Parse_Effect_Summary
+     (Value : GNATCOLL.JSON.JSON_Value) return GM.External_Effect_Summary
+   is
+      use GNATCOLL.JSON;
+      Result  : GM.External_Effect_Summary;
+      Reads   : constant JSON_Array := Json_Array_Or_Empty (Value, "reads");
+      Writes  : constant JSON_Array := Json_Array_Or_Empty (Value, "writes");
+      Inputs  : constant JSON_Array := Json_Array_Or_Empty (Value, "inputs");
+      Outputs : constant JSON_Array := Json_Array_Or_Empty (Value, "outputs");
+      Depends : constant JSON_Array := Json_Array_Or_Empty (Value, "depends");
+   begin
+      for Index in 1 .. Length (Reads) loop
+         Result.Reads.Append (FT.To_UString (Get (Get (Reads, Index))));
+      end loop;
+      for Index in 1 .. Length (Writes) loop
+         Result.Writes.Append (FT.To_UString (Get (Get (Writes, Index))));
+      end loop;
+      for Index in 1 .. Length (Inputs) loop
+         Result.Inputs.Append (FT.To_UString (Get (Get (Inputs, Index))));
+      end loop;
+      for Index in 1 .. Length (Outputs) loop
+         Result.Outputs.Append (FT.To_UString (Get (Get (Outputs, Index))));
+      end loop;
+      for Index in 1 .. Length (Depends) loop
+         declare
+            Dep_Item   : constant JSON_Value := Get (Depends, Index);
+            Dep_Inputs : constant JSON_Array := Json_Array_Or_Empty (Dep_Item, "inputs");
+            Dep        : GM.Summary_Depends_Entry;
+         begin
+            if Has_Field (Dep_Item, "output_name")
+              and then Get (Dep_Item, "output_name").Kind = JSON_String_Type
+            then
+               Dep.Output_Name := FT.To_UString (Get (Dep_Item, "output_name"));
+            end if;
+            for Input_Index in 1 .. Length (Dep_Inputs) loop
+               Dep.Inputs.Append
+                 (FT.To_UString (Get (Get (Dep_Inputs, Input_Index))));
+            end loop;
+            Result.Depends.Append (Dep);
+         end;
+      end loop;
+      return Result;
+   end Parse_Effect_Summary;
+
+   function Parse_Channel_Summary
+     (Value : GNATCOLL.JSON.JSON_Value) return GM.External_Channel_Summary
+   is
+      use GNATCOLL.JSON;
+      Result   : GM.External_Channel_Summary;
+      Channels : constant JSON_Array := Json_Array_Or_Empty (Value, "channels");
+   begin
+      for Index in 1 .. Length (Channels) loop
+         Result.Channels.Append (FT.To_UString (Get (Get (Channels, Index))));
+      end loop;
+      return Result;
+   end Parse_Channel_Summary;
+
+   function Parse_External
+     (Value : GNATCOLL.JSON.JSON_Value) return GM.External_Entry
+   is
+      use GNATCOLL.JSON;
+      Result : GM.External_Entry;
+      Params : constant JSON_Array := Json_Array_Or_Empty (Value, "params");
+   begin
+      if Value.Kind /= JSON_Object_Type then
+         return Result;
+      end if;
+
+      if Has_Field (Value, "name") and then Get (Value, "name").Kind = JSON_String_Type then
+         Result.Name := FT.To_UString (Get (Value, "name"));
+      end if;
+      if Has_Field (Value, "kind") and then Get (Value, "kind").Kind = JSON_String_Type then
+         Result.Kind := FT.To_UString (Get (Value, "kind"));
+      end if;
+      if Has_Field (Value, "signature") and then Get (Value, "signature").Kind = JSON_String_Type then
+         Result.Signature := FT.To_UString (Get (Value, "signature"));
+      end if;
+      if Has_Field (Value, "has_return_type")
+        and then Get (Value, "has_return_type").Kind = JSON_Boolean_Type
+      then
+         Result.Has_Return_Type := Get (Get (Value, "has_return_type"));
+      end if;
+      if Has_Field (Value, "return_is_access_def")
+        and then Get (Value, "return_is_access_def").Kind = JSON_Boolean_Type
+      then
+         Result.Return_Is_Access_Def := Get (Get (Value, "return_is_access_def"));
+      end if;
+      if Result.Has_Return_Type then
+         Result.Return_Type := Parse_Type (Field_Or_Null (Value, "return_type"));
+      end if;
+      Result.Span := Parse_Span (Field_Or_Null (Value, "span"));
+      for Index in 1 .. Length (Params) loop
+         declare
+            Param_Item : constant JSON_Value := Get (Params, Index);
+            Param      : GM.Local_Entry;
+         begin
+            Param.Kind := FT.To_UString ("param");
+            if Has_Field (Param_Item, "name")
+              and then Get (Param_Item, "name").Kind = JSON_String_Type
+            then
+               Param.Name := FT.To_UString (Get (Param_Item, "name"));
+            end if;
+            if Has_Field (Param_Item, "mode")
+              and then Get (Param_Item, "mode").Kind = JSON_String_Type
+            then
+               Param.Mode := FT.To_UString (Get (Param_Item, "mode"));
+            end if;
+            Param.Span := Parse_Span (Field_Or_Null (Param_Item, "span"));
+            Param.Type_Info := Parse_Type (Field_Or_Null (Param_Item, "type"));
+            Result.Params.Append (Param);
+         end;
+      end loop;
+      Result.Effect_Summary := Parse_Effect_Summary (Field_Or_Null (Value, "effect_summary"));
+      Result.Channel_Summary := Parse_Channel_Summary (Field_Or_Null (Value, "channel_access_summary"));
+      return Result;
+   end Parse_External;
 
    function Parse_Op
      (Value : GNATCOLL.JSON.JSON_Value) return GM.Op_Entry
@@ -938,9 +1070,10 @@ package body Safe_Frontend.Mir_Json is
       Format : JSON_Value;
       Kind   : GM.Mir_Format_Kind;
       Result : GM.Mir_Document;
-      Types  : JSON_Array;
+      Types    : JSON_Array;
       Channels : JSON_Array;
-      Graphs : JSON_Array;
+      Externals : JSON_Array;
+      Graphs   : JSON_Array;
    begin
       if not Parsed.Success then
          return
@@ -1013,6 +1146,11 @@ package body Safe_Frontend.Mir_Json is
       Channels := Json_Array_Or_Empty (Root, "channels");
       for Index in 1 .. Length (Channels) loop
          Result.Channels.Append (Parse_Channel (Get (Channels, Index)));
+      end loop;
+
+      Externals := Json_Array_Or_Empty (Root, "externals");
+      for Index in 1 .. Length (Externals) loop
+         Result.Externals.Append (Parse_External (Get (Externals, Index)));
       end loop;
 
       Graphs := Json_Array_Or_Empty (Root, "graphs");

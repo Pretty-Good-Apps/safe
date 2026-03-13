@@ -414,6 +414,8 @@ package Safe_Frontend.Check_Model is
       Name         : FT.UString := FT.To_UString ("");
       Element_Type : GM.Type_Descriptor;
       Capacity     : Long_Long_Integer := 0;
+      Has_Required_Ceiling : Boolean := False;
+      Required_Ceiling     : Long_Long_Integer := 0;
       Span         : FT.Source_Span := FT.Null_Span;
    end record;
 
@@ -457,7 +459,9 @@ package Safe_Frontend.Check_Model is
       Imported_Types : GM.Type_Descriptor_Vectors.Vector;
       Objects      : Resolved_Object_Decl_Vectors.Vector;
       Channels     : Resolved_Channel_Decl_Vectors.Vector;
+      Imported_Channels : Resolved_Channel_Decl_Vectors.Vector;
       Subprograms  : Resolved_Subprogram_Vectors.Vector;
+      Imported_Subprograms : GM.External_Vectors.Vector;
       Tasks        : Resolved_Task_Vectors.Vector;
    end record;
 

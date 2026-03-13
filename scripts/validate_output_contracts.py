@@ -100,6 +100,8 @@ def validate_optional_typed_channels(value: Any, path: str) -> list[dict[str, An
         require_boolean(entry.get("is_public"), f"{path}[{index}].is_public")
         validate_type_descriptor(entry.get("element_type"), f"{path}[{index}].element_type")
         require_positive_int(entry.get("capacity"), f"{path}[{index}].capacity")
+        if "required_ceiling" in entry:
+            require_positive_int(entry.get("required_ceiling"), f"{path}[{index}].required_ceiling")
         validate_span(entry.get("span"), f"{path}[{index}].span")
         result.append(entry)
     return result
@@ -133,7 +135,77 @@ def validate_optional_mir_channels(value: Any, path: str) -> list[dict[str, Any]
         require_string(entry.get("name"), f"{path}[{index}].name")
         validate_type_descriptor(entry.get("element_type"), f"{path}[{index}].element_type")
         require_positive_int(entry.get("capacity"), f"{path}[{index}].capacity")
+        if "required_ceiling" in entry:
+            require_positive_int(entry.get("required_ceiling"), f"{path}[{index}].required_ceiling")
         validate_span(entry.get("span"), f"{path}[{index}].span")
+        result.append(entry)
+    return result
+
+
+def validate_mir_external_params(value: Any, path: str) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for index, item in enumerate(require_list(value, path)):
+        entry = require_mapping(item, f"{path}[{index}]")
+        require_string(entry.get("name"), f"{path}[{index}].name")
+        require_string(entry.get("mode"), f"{path}[{index}].mode")
+        validate_span(entry.get("span"), f"{path}[{index}].span")
+        validate_type_descriptor(entry.get("type"), f"{path}[{index}].type")
+        result.append(entry)
+    return result
+
+
+def validate_mir_depends(value: Any, path: str) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for index, item in enumerate(require_list(value, path)):
+        entry = require_mapping(item, f"{path}[{index}]")
+        require_string(entry.get("output_name"), f"{path}[{index}].output_name")
+        validate_string_list(entry.get("inputs"), f"{path}[{index}].inputs")
+        result.append(entry)
+    return result
+
+
+def validate_mir_effect_summary(value: Any, path: str) -> dict[str, Any]:
+    entry = require_mapping(value, path)
+    validate_string_list(entry.get("reads"), f"{path}.reads")
+    validate_string_list(entry.get("writes"), f"{path}.writes")
+    validate_string_list(entry.get("inputs"), f"{path}.inputs")
+    validate_string_list(entry.get("outputs"), f"{path}.outputs")
+    validate_mir_depends(entry.get("depends"), f"{path}.depends")
+    return entry
+
+
+def validate_mir_channel_access_summary(value: Any, path: str) -> dict[str, Any]:
+    entry = require_mapping(value, path)
+    validate_string_list(entry.get("channels"), f"{path}.channels")
+    return entry
+
+
+def validate_optional_mir_externals(value: Any, path: str) -> list[dict[str, Any]]:
+    if value is None:
+        return []
+    result: list[dict[str, Any]] = []
+    for index, item in enumerate(require_list(value, path)):
+        entry = require_mapping(item, f"{path}[{index}]")
+        require_string(entry.get("name"), f"{path}[{index}].name")
+        require_string(entry.get("kind"), f"{path}[{index}].kind")
+        require_string(entry.get("signature"), f"{path}[{index}].signature")
+        validate_mir_external_params(entry.get("params"), f"{path}[{index}].params")
+        has_return_type = require_boolean(
+            entry.get("has_return_type"), f"{path}[{index}].has_return_type"
+        )
+        require_boolean(
+            entry.get("return_is_access_def"), f"{path}[{index}].return_is_access_def"
+        )
+        if has_return_type:
+            validate_type_descriptor(entry.get("return_type"), f"{path}[{index}].return_type")
+        elif entry.get("return_type") is not None:
+            fail(f"{path}[{index}].return_type must be null when has_return_type is false")
+        validate_span(entry.get("span"), f"{path}[{index}].span")
+        validate_mir_effect_summary(entry.get("effect_summary"), f"{path}[{index}].effect_summary")
+        validate_mir_channel_access_summary(
+            entry.get("channel_access_summary"),
+            f"{path}[{index}].channel_access_summary",
+        )
         result.append(entry)
     return result
 
@@ -315,6 +387,7 @@ def validate_mir_payload(payload: Any, *, path: str, expected_source_path: str) 
     require_string(mir.get("package_name"), f"{path}.package_name")
     require_list(mir.get("types"), f"{path}.types")
     validate_optional_mir_channels(mir.get("channels"), f"{path}.channels")
+    validate_optional_mir_externals(mir.get("externals"), f"{path}.externals")
     validate_mir_graphs(mir.get("graphs"), f"{path}.graphs")
     return mir
 

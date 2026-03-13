@@ -41,6 +41,10 @@ PRIMARY_GATE_SCRIPTS = {
         "scripts/run_pr083_interface_contracts.py",
         "scripts/run_pr083a_public_constants.py",
     ),
+    "codex/pr084": (
+        "scripts/run_pr084_transitive_concurrency_integration.py",
+        "scripts/run_pr08_frontend_baseline.py",
+    ),
 }
 
 

@@ -1,0 +1,12 @@
+with Provider_Transitive_Global;
+
+package Client_Transitive_Global_Ok is
+
+   task Worker is
+   begin
+      loop
+         Provider_Transitive_Global.Touch;
+      end loop;
+   end Worker;
+
+end Client_Transitive_Global_Ok;

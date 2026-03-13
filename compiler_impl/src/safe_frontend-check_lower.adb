@@ -2227,7 +2227,23 @@ package body Safe_Frontend.Check_Lower is
            ((Name => Channel_Item.Name,
              Element_Type => Channel_Item.Element_Type,
              Capacity => Channel_Item.Capacity,
+             Has_Required_Ceiling => Channel_Item.Has_Required_Ceiling,
+             Required_Ceiling => Channel_Item.Required_Ceiling,
              Span => Channel_Item.Span));
+      end loop;
+
+      for Channel_Item of Unit.Imported_Channels loop
+         Result.Channels.Append
+           ((Name => Channel_Item.Name,
+             Element_Type => Channel_Item.Element_Type,
+             Capacity => Channel_Item.Capacity,
+             Has_Required_Ceiling => Channel_Item.Has_Required_Ceiling,
+             Required_Ceiling => Channel_Item.Required_Ceiling,
+             Span => Channel_Item.Span));
+      end loop;
+
+      for Item of Unit.Imported_Subprograms loop
+         Result.Externals.Append (Item);
       end loop;
 
       for Subprogram of Unit.Subprograms loop

@@ -107,6 +107,22 @@ package body Safe_Frontend.Mir_Validate is
      (Value : GM.Channel_Entry;
       Where : String);
 
+   procedure Validate_External_Param
+     (Value : GM.Local_Entry;
+      Where : String);
+
+   procedure Validate_External_Effect_Summary
+     (Value : GM.External_Effect_Summary;
+      Where : String);
+
+   procedure Validate_External_Channel_Summary
+     (Value : GM.External_Channel_Summary;
+      Where : String);
+
+   procedure Validate_External
+     (Value : GM.External_Entry;
+      Where : String);
+
    procedure Validate_Select_Arm
      (Value           : GM.Select_Arm_Entry;
       Valid_Block_Ids : FT.UString_Vectors.Vector;
@@ -280,8 +296,115 @@ package body Safe_Frontend.Mir_Validate is
    begin
       Require (Has_Text (Value.Name), Where & ": missing channel name");
       Require (Value.Capacity > 0, Where & ": channel capacity must be positive");
+      if Value.Has_Required_Ceiling then
+         Require
+           (Value.Required_Ceiling > 0,
+            Where & ": required_ceiling must be positive when present");
+      end if;
       Validate_Type_Descriptor (Value.Element_Type, Where & ".element_type");
    end Validate_Channel;
+
+   procedure Validate_External_Param
+     (Value : GM.Local_Entry;
+      Where : String)
+   is
+   begin
+      Require (Has_Text (Value.Name), Where & ": missing parameter name");
+      Require (Has_Text (Value.Mode), Where & ": missing parameter mode");
+      Validate_Type_Descriptor (Value.Type_Info, Where & ".type");
+   end Validate_External_Param;
+
+   procedure Validate_External_Effect_Summary
+     (Value : GM.External_Effect_Summary;
+      Where : String)
+   is
+   begin
+      if not Value.Reads.Is_Empty then
+         for Index in Value.Reads.First_Index .. Value.Reads.Last_Index loop
+            Require
+              (Has_Text (Value.Reads (Index)),
+               Where & ".reads[" & Image (Index - 1) & "]: invalid name");
+         end loop;
+      end if;
+      if not Value.Writes.Is_Empty then
+         for Index in Value.Writes.First_Index .. Value.Writes.Last_Index loop
+            Require
+              (Has_Text (Value.Writes (Index)),
+               Where & ".writes[" & Image (Index - 1) & "]: invalid name");
+         end loop;
+      end if;
+      if not Value.Inputs.Is_Empty then
+         for Index in Value.Inputs.First_Index .. Value.Inputs.Last_Index loop
+            Require
+              (Has_Text (Value.Inputs (Index)),
+               Where & ".inputs[" & Image (Index - 1) & "]: invalid name");
+         end loop;
+      end if;
+      if not Value.Outputs.Is_Empty then
+         for Index in Value.Outputs.First_Index .. Value.Outputs.Last_Index loop
+            Require
+              (Has_Text (Value.Outputs (Index)),
+               Where & ".outputs[" & Image (Index - 1) & "]: invalid name");
+         end loop;
+      end if;
+      if not Value.Depends.Is_Empty then
+         for Index in Value.Depends.First_Index .. Value.Depends.Last_Index loop
+            declare
+               Dep : constant GM.Summary_Depends_Entry := Value.Depends (Index);
+            begin
+               Require
+                 (Has_Text (Dep.Output_Name),
+                  Where & ".depends[" & Image (Index - 1) & "]: missing output_name");
+               if not Dep.Inputs.Is_Empty then
+                  for Input_Index in Dep.Inputs.First_Index .. Dep.Inputs.Last_Index loop
+                     Require
+                       (Has_Text (Dep.Inputs (Input_Index)),
+                        Where & ".depends[" & Image (Index - 1) & "].inputs[" &
+                        Image (Input_Index - 1) & "]: invalid name");
+                  end loop;
+               end if;
+            end;
+         end loop;
+      end if;
+   end Validate_External_Effect_Summary;
+
+   procedure Validate_External_Channel_Summary
+     (Value : GM.External_Channel_Summary;
+      Where : String)
+   is
+   begin
+      if not Value.Channels.Is_Empty then
+         for Index in Value.Channels.First_Index .. Value.Channels.Last_Index loop
+            Require
+              (Has_Text (Value.Channels (Index)),
+               Where & ".channels[" & Image (Index - 1) & "]: invalid channel name");
+         end loop;
+      end if;
+   end Validate_External_Channel_Summary;
+
+   procedure Validate_External
+     (Value : GM.External_Entry;
+      Where : String)
+   is
+   begin
+      Require (Has_Text (Value.Name), Where & ": missing external name");
+      Require (Has_Text (Value.Kind), Where & ": missing external kind");
+      Require (Has_Text (Value.Signature), Where & ": missing external signature");
+      if not Value.Params.Is_Empty then
+         for Index in Value.Params.First_Index .. Value.Params.Last_Index loop
+            Validate_External_Param
+              (Value.Params (Index),
+               Where & ".params[" & Image (Index - 1) & "]");
+         end loop;
+      end if;
+      if Value.Has_Return_Type then
+         Validate_Type_Descriptor (Value.Return_Type, Where & ".return_type");
+      end if;
+      Validate_External_Effect_Summary (Value.Effect_Summary, Where & ".effect_summary");
+      Validate_External_Channel_Summary
+        (Value.Channel_Summary,
+         Where & ".channel_access_summary");
+   end Validate_External;
 
    procedure Validate_Select_Arm
      (Value           : GM.Select_Arm_Entry;
@@ -670,6 +793,14 @@ package body Safe_Frontend.Mir_Validate is
             Validate_Channel
               (Document.Channels (Index),
                "root.channels[" & Image (Index - 1) & "]");
+         end loop;
+      end if;
+
+      if not Document.Externals.Is_Empty then
+         for Index in Document.Externals.First_Index .. Document.Externals.Last_Index loop
+            Validate_External
+              (Document.Externals (Index),
+               "root.externals[" & Image (Index - 1) & "]");
          end loop;
       end if;
 

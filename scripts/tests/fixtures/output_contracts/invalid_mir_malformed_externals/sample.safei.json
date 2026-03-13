@@ -53,22 +53,6 @@
         "end_line": 1,
         "end_col": 10
       }
-    },
-    {
-      "name": "Enabled",
-      "type": {
-        "name": "Boolean",
-        "kind": "boolean"
-      },
-      "is_constant": true,
-      "static_value_kind": "boolean",
-      "static_value": true,
-      "span": {
-        "start_line": 1,
-        "start_col": 1,
-        "end_line": 1,
-        "end_col": 10
-      }
     }
   ],
   "subprograms": [

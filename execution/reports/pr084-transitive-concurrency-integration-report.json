@@ -1,0 +1,4455 @@
+{
+  "determinism": {
+    "emit_runs": {
+      "first": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/interfaces/client_transitive_channel_provider_ceiling.safe",
+          "--out-dir",
+          "$TMPDIR/determinism/first/out",
+          "--interface-dir",
+          "$TMPDIR/determinism/first/iface",
+          "--interface-search-dir",
+          "$TMPDIR/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "second": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/interfaces/client_transitive_channel_provider_ceiling.safe",
+          "--out-dir",
+          "$TMPDIR/determinism/second/out",
+          "--interface-dir",
+          "$TMPDIR/determinism/second/iface",
+          "--interface-search-dir",
+          "$TMPDIR/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      }
+    },
+    "mir_equal": true,
+    "safei_equal": true
+  },
+  "deterministic": true,
+  "milestone": "PR08.4",
+  "negatives": {
+    "neg_imported_inout_double_move.safe": {
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/negative/neg_imported_inout_double_move.safe",
+          "--interface-search-dir",
+          "$TMPDIR/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "<450 chars>"
+      },
+      "diagnostic": {
+        "message": "use of moved value 'Owner'",
+        "reason": "double_move"
+      }
+    },
+    "neg_imported_shared_global.safe": {
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/negative/neg_imported_shared_global.safe",
+          "--interface-search-dir",
+          "$TMPDIR/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "<486 chars>"
+      },
+      "diagnostic": {
+        "message": "package global 'Provider_Transitive_Global.Shared' is accessed by multiple tasks",
+        "reason": "task_variable_ownership"
+      }
+    }
+  },
+  "positives": {
+    "client_channel.safe": {
+      "bronze": {
+        "ceilings": {
+          "Provider_Channel.Data_Ch": 31
+        },
+        "ownership": {},
+        "summaries": {
+          "Sender": {
+            "calls": [],
+            "channels": [
+              "Provider_Channel.Data_Ch"
+            ],
+            "reads": [],
+            "writes": []
+          }
+        },
+        "task_calls": {}
+      },
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/interfaces/client_channel.safe",
+          "--interface-search-dir",
+          "$TMPDIR/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/interfaces/client_channel.safe",
+          "--out-dir",
+          "$TMPDIR/clients/client_channel/out",
+          "--interface-dir",
+          "$TMPDIR/iface",
+          "--interface-search-dir",
+          "$TMPDIR/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "outputs": {
+        "files": {
+          "ast": "out/client_channel.ast.json",
+          "mir": "out/client_channel.mir.json",
+          "safei": "iface/client_channel.safei.json",
+          "typed": "out/client_channel.typed.json"
+        },
+        "hashes": {
+          "ast": "2fc36eaaeda0b69f6bb9360b1730cbcec94fdeb913c7a421b1ade3e31a4a0788",
+          "mir": "26b5d698b8edb1070f719523b85e304855b9eb440bef3524a2c8b7b0deafc61e",
+          "safei": "10826a279d3773addc827c0369720075f445bf87fc851e8898bd3943378b7cac",
+          "typed": "a060e7509102ad65c8b0e5a982fcbe237b488184e9be263f92ec650d2c8ee5d4"
+        },
+        "mir_payload": {
+          "channels": [
+            {
+              "capacity": 4,
+              "element_type": {
+                "high": 10,
+                "kind": "integer",
+                "low": 0,
+                "name": "Provider_Channel.Message"
+              },
+              "name": "Provider_Channel.Data_Ch",
+              "span": {
+                "end_col": 47,
+                "end_line": 4,
+                "start_col": 11,
+                "start_line": 4
+              }
+            }
+          ],
+          "externals": [],
+          "format": "mir-v2",
+          "graphs": [
+            {
+              "blocks": [
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb0",
+                  "ops": [],
+                  "role": "entry",
+                  "span": {
+                    "end_col": 14,
+                    "end_line": 10,
+                    "start_col": 4,
+                    "start_line": 5
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 15,
+                      "end_line": 9,
+                      "start_col": 7,
+                      "start_line": 7
+                    },
+                    "target": "bb1"
+                  }
+                },
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb1",
+                  "loop": {
+                    "exit_target": "bb3",
+                    "kind": "loop"
+                  },
+                  "ops": [],
+                  "role": "loop_header",
+                  "span": {
+                    "end_col": 15,
+                    "end_line": 9,
+                    "start_col": 7,
+                    "start_line": 7
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 15,
+                      "end_line": 9,
+                      "start_col": 7,
+                      "start_line": 7
+                    },
+                    "target": "bb2"
+                  }
+                },
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb2",
+                  "ops": [
+                    {
+                      "channel": {
+                        "prefix": {
+                          "name": "Provider_Channel",
+                          "span": {
+                            "end_col": 30,
+                            "end_line": 8,
+                            "start_col": 15,
+                            "start_line": 8
+                          },
+                          "tag": "ident",
+                          "type": "Integer"
+                        },
+                        "selector": "Data_Ch",
+                        "span": {
+                          "end_col": 38,
+                          "end_line": 8,
+                          "start_col": 15,
+                          "start_line": 8
+                        },
+                        "tag": "select",
+                        "type": "Integer"
+                      },
+                      "kind": "channel_send",
+                      "ownership_effect": "None",
+                      "span": {
+                        "end_col": 42,
+                        "end_line": 8,
+                        "start_col": 10,
+                        "start_line": 8
+                      },
+                      "type": "Integer",
+                      "value": {
+                        "span": {
+                          "end_col": 41,
+                          "end_line": 8,
+                          "start_col": 41,
+                          "start_line": 8
+                        },
+                        "tag": "int",
+                        "text": "1",
+                        "type": "Integer",
+                        "value": 1
+                      }
+                    }
+                  ],
+                  "role": "loop_body",
+                  "span": {
+                    "end_col": 15,
+                    "end_line": 9,
+                    "start_col": 7,
+                    "start_line": 7
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 15,
+                      "end_line": 9,
+                      "start_col": 7,
+                      "start_line": 7
+                    },
+                    "target": "bb1"
+                  }
+                },
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb3",
+                  "ops": [],
+                  "role": "loop_exit",
+                  "span": {
+                    "end_col": 15,
+                    "end_line": 9,
+                    "start_col": 7,
+                    "start_line": 7
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 14,
+                      "end_line": 10,
+                      "start_col": 4,
+                      "start_line": 5
+                    },
+                    "target": "bb3"
+                  }
+                }
+              ],
+              "entry_bb": "bb0",
+              "has_explicit_priority": false,
+              "kind": "task",
+              "locals": [],
+              "name": "Sender",
+              "priority": 31,
+              "return_type": null,
+              "scopes": [
+                {
+                  "entry_block": "bb0",
+                  "exit_blocks": [],
+                  "id": "scope0",
+                  "kind": "task",
+                  "local_ids": [],
+                  "parent_scope_id": null
+                }
+              ],
+              "span": {
+                "end_col": 14,
+                "end_line": 10,
+                "start_col": 4,
+                "start_line": 5
+              }
+            }
+          ],
+          "package_name": "Client_Channel",
+          "source_path": "tests/interfaces/client_channel.safe",
+          "types": [
+            {
+              "high": 10,
+              "kind": "integer",
+              "low": 0,
+              "name": "Provider_Channel.Message"
+            }
+          ]
+        },
+        "safei_payload": {
+          "channel_access_summaries": [],
+          "channels": [],
+          "dependencies": [
+            "Provider_Channel"
+          ],
+          "effect_summaries": [],
+          "executables": [
+            {
+              "kind": "task",
+              "name": "Sender",
+              "signature": "task Sender",
+              "span": {
+                "end_col": 14,
+                "end_line": 10,
+                "start_col": 4,
+                "start_line": 5
+              }
+            }
+          ],
+          "format": "safei-v1",
+          "objects": [],
+          "package_name": "Client_Channel",
+          "public_declarations": [],
+          "subprograms": [],
+          "subtypes": [],
+          "types": []
+        },
+        "validators": {
+          "analyze_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "analyze-mir",
+              "--diag-json",
+              "$TMPDIR/clients/client_channel/out/client_channel.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+          },
+          "output_contracts": {
+            "command": [
+              "python3",
+              "scripts/validate_output_contracts.py",
+              "--ast",
+              "$TMPDIR/clients/client_channel/out/client_channel.ast.json",
+              "--typed",
+              "$TMPDIR/clients/client_channel/out/client_channel.typed.json",
+              "--mir",
+              "$TMPDIR/clients/client_channel/out/client_channel.mir.json",
+              "--safei",
+              "$TMPDIR/iface/client_channel.safei.json",
+              "--source-path",
+              "tests/interfaces/client_channel.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "output contracts: OK (client_channel.ast.json, client_channel.typed.json, client_channel.mir.json, client_channel.safei.json)\n"
+          },
+          "validate_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "validate-mir",
+              "$TMPDIR/clients/client_channel/out/client_channel.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "validate-mir: OK ($TMPDIR/clients/client_channel/out/client_channel.mir.json)\n"
+          }
+        }
+      }
+    },
+    "client_imported_borrow_observe.safe": {
+      "bronze": {
+        "ceilings": {},
+        "ownership": {},
+        "summaries": {
+          "Provider_Imported_Call_Ownership.Bump": {
+            "calls": [],
+            "channels": [],
+            "reads": [],
+            "writes": []
+          },
+          "Provider_Imported_Call_Ownership.Consume": {
+            "calls": [],
+            "channels": [],
+            "reads": [],
+            "writes": []
+          },
+          "Provider_Imported_Call_Ownership.Read_Value": {
+            "calls": [],
+            "channels": [],
+            "reads": [],
+            "writes": []
+          },
+          "Run": {
+            "calls": [
+              "Provider_Imported_Call_Ownership.Bump"
+            ],
+            "channels": [],
+            "reads": [],
+            "writes": []
+          }
+        },
+        "task_calls": {}
+      },
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/interfaces/client_imported_borrow_observe.safe",
+          "--interface-search-dir",
+          "$TMPDIR/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/interfaces/client_imported_borrow_observe.safe",
+          "--out-dir",
+          "$TMPDIR/clients/client_imported_borrow_observe/out",
+          "--interface-dir",
+          "$TMPDIR/iface",
+          "--interface-search-dir",
+          "$TMPDIR/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "outputs": {
+        "files": {
+          "ast": "out/client_imported_borrow_observe.ast.json",
+          "mir": "out/client_imported_borrow_observe.mir.json",
+          "safei": "iface/client_imported_borrow_observe.safei.json",
+          "typed": "out/client_imported_borrow_observe.typed.json"
+        },
+        "hashes": {
+          "ast": "571cca5c7acd96514ae568195cad75cd1d35091ad78324f84c4e6dd9fa494648",
+          "mir": "7d57a3496f9dcdf20051c2674184e90f045a50159d11ffa55a23178b1401e71f",
+          "safei": "8699bc0fdfb7caaebf8d843ac816f20f5e1489c3e69dfa5717c9da9bb58a05c8",
+          "typed": "fc9702ccdf0497192ec02b3ae736681545a23000026130a6523acd7cee61ea6c"
+        },
+        "mir_payload": {
+          "channels": [],
+          "externals": [
+            {
+              "channel_access_summary": {
+                "channels": []
+              },
+              "effect_summary": {
+                "depends": [],
+                "inputs": [
+                  "param:Ref"
+                ],
+                "outputs": [],
+                "reads": [],
+                "writes": []
+              },
+              "has_return_type": false,
+              "kind": "procedure",
+              "name": "Provider_Imported_Call_Ownership.Bump",
+              "params": [
+                {
+                  "mode": "in",
+                  "name": "Ref",
+                  "span": {
+                    "end_col": 46,
+                    "end_line": 9,
+                    "start_col": 27,
+                    "start_line": 9
+                  },
+                  "type": {
+                    "access_role": "Borrow",
+                    "anonymous": true,
+                    "is_all": false,
+                    "is_constant": false,
+                    "kind": "access",
+                    "name": "access Payload",
+                    "not_null": false,
+                    "target": "Provider_Imported_Call_Ownership.Payload"
+                  }
+                }
+              ],
+              "return_is_access_def": false,
+              "return_type": null,
+              "signature": "procedure Bump (Ref: access Payload)",
+              "span": {
+                "end_col": 12,
+                "end_line": 12,
+                "start_col": 11,
+                "start_line": 9
+              }
+            },
+            {
+              "channel_access_summary": {
+                "channels": []
+              },
+              "effect_summary": {
+                "depends": [
+                  {
+                    "inputs": [
+                      "param:Ref"
+                    ],
+                    "output_name": "return"
+                  }
+                ],
+                "inputs": [
+                  "param:Ref"
+                ],
+                "outputs": [
+                  "return"
+                ],
+                "reads": [],
+                "writes": []
+              },
+              "has_return_type": true,
+              "kind": "function",
+              "name": "Provider_Imported_Call_Ownership.Read_Value",
+              "params": [
+                {
+                  "mode": "in",
+                  "name": "Ref",
+                  "span": {
+                    "end_col": 60,
+                    "end_line": 14,
+                    "start_col": 32,
+                    "start_line": 14
+                  },
+                  "type": {
+                    "access_role": "Observe",
+                    "anonymous": true,
+                    "is_all": false,
+                    "is_constant": true,
+                    "kind": "access",
+                    "name": "access Payload",
+                    "not_null": false,
+                    "target": "Provider_Imported_Call_Ownership.Payload"
+                  }
+                }
+              ],
+              "return_is_access_def": false,
+              "return_type": {
+                "high": 9223372036854775807,
+                "kind": "integer",
+                "low": -9223372036854775808,
+                "name": "Integer"
+              },
+              "signature": "function Read_Value (Ref: access Payload) return Integer",
+              "span": {
+                "end_col": 18,
+                "end_line": 17,
+                "start_col": 11,
+                "start_line": 14
+              }
+            },
+            {
+              "channel_access_summary": {
+                "channels": []
+              },
+              "effect_summary": {
+                "depends": [],
+                "inputs": [],
+                "outputs": [],
+                "reads": [],
+                "writes": []
+              },
+              "has_return_type": false,
+              "kind": "procedure",
+              "name": "Provider_Imported_Call_Ownership.Consume",
+              "params": [
+                {
+                  "mode": "in out",
+                  "name": "Ref",
+                  "span": {
+                    "end_col": 53,
+                    "end_line": 19,
+                    "start_col": 30,
+                    "start_line": 19
+                  },
+                  "type": {
+                    "access_role": "Owner",
+                    "anonymous": false,
+                    "is_all": false,
+                    "is_constant": false,
+                    "kind": "access",
+                    "name": "Provider_Imported_Call_Ownership.Payload_Ptr",
+                    "not_null": false,
+                    "target": "Provider_Imported_Call_Ownership.Payload"
+                  }
+                }
+              ],
+              "return_is_access_def": false,
+              "return_type": null,
+              "signature": "procedure Consume (Ref: Payload_Ptr)",
+              "span": {
+                "end_col": 15,
+                "end_line": 22,
+                "start_col": 11,
+                "start_line": 19
+              }
+            }
+          ],
+          "format": "mir-v2",
+          "graphs": [
+            {
+              "blocks": [
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb0",
+                  "ops": [
+                    {
+                      "kind": "scope_enter",
+                      "locals": [
+                        "Owner",
+                        "Seen"
+                      ],
+                      "scope_id": "scope0",
+                      "span": {
+                        "end_col": 11,
+                        "end_line": 13,
+                        "start_col": 4,
+                        "start_line": 5
+                      }
+                    },
+                    {
+                      "declaration_init": true,
+                      "kind": "assign",
+                      "ownership_effect": "Move",
+                      "span": {
+                        "end_col": 70,
+                        "end_line": 7,
+                        "start_col": 7,
+                        "start_line": 6
+                      },
+                      "target": {
+                        "name": "Owner",
+                        "span": {
+                          "end_col": 70,
+                          "end_line": 7,
+                          "start_col": 7,
+                          "start_line": 6
+                        },
+                        "tag": "ident",
+                        "type": "Provider_Imported_Call_Ownership.Payload_Ptr"
+                      },
+                      "type": "Provider_Imported_Call_Ownership.Payload_Ptr",
+                      "value": {
+                        "span": {
+                          "end_col": 69,
+                          "end_line": 7,
+                          "start_col": 9,
+                          "start_line": 7
+                        },
+                        "tag": "allocator",
+                        "type": "Integer",
+                        "value": {
+                          "expr": {
+                            "fields": [
+                              {
+                                "expr": {
+                                  "span": {
+                                    "end_col": 23,
+                                    "end_line": 7,
+                                    "start_col": 23,
+                                    "start_line": 7
+                                  },
+                                  "tag": "int",
+                                  "text": "5",
+                                  "type": "Integer",
+                                  "value": 5
+                                },
+                                "field": "Value",
+                                "span": {
+                                  "end_col": 23,
+                                  "end_line": 7,
+                                  "start_col": 15,
+                                  "start_line": 7
+                                }
+                              }
+                            ],
+                            "span": {
+                              "end_col": 24,
+                              "end_line": 7,
+                              "start_col": 14,
+                              "start_line": 7
+                            },
+                            "tag": "aggregate",
+                            "type": "Integer"
+                          },
+                          "span": {
+                            "end_col": 69,
+                            "end_line": 7,
+                            "start_col": 13,
+                            "start_line": 7
+                          },
+                          "subtype": {
+                            "prefix": {
+                              "name": "Provider_Imported_Call_Ownership",
+                              "span": {
+                                "end_col": 69,
+                                "end_line": 7,
+                                "start_col": 13,
+                                "start_line": 7
+                              },
+                              "tag": "ident"
+                            },
+                            "selector": "Payload",
+                            "span": {
+                              "end_col": 69,
+                              "end_line": 7,
+                              "start_col": 13,
+                              "start_line": 7
+                            },
+                            "tag": "select"
+                          },
+                          "tag": "annotated",
+                          "type": "Integer"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "call",
+                      "ownership_effect": "None",
+                      "span": {
+                        "end_col": 52,
+                        "end_line": 10,
+                        "start_col": 7,
+                        "start_line": 10
+                      },
+                      "target": null,
+                      "type": "Integer",
+                      "value": {
+                        "args": [
+                          {
+                            "name": "Owner",
+                            "span": {
+                              "end_col": 50,
+                              "end_line": 10,
+                              "start_col": 46,
+                              "start_line": 10
+                            },
+                            "tag": "ident",
+                            "type": "Provider_Imported_Call_Ownership.Payload_Ptr"
+                          }
+                        ],
+                        "call_span": {
+                          "end_col": 51,
+                          "end_line": 10,
+                          "start_col": 45,
+                          "start_line": 10
+                        },
+                        "callee": {
+                          "prefix": {
+                            "name": "Provider_Imported_Call_Ownership",
+                            "span": {
+                              "end_col": 38,
+                              "end_line": 10,
+                              "start_col": 7,
+                              "start_line": 10
+                            },
+                            "tag": "ident",
+                            "type": "Integer"
+                          },
+                          "selector": "Bump",
+                          "span": {
+                            "end_col": 43,
+                            "end_line": 10,
+                            "start_col": 7,
+                            "start_line": 10
+                          },
+                          "tag": "select",
+                          "type": "Integer"
+                        },
+                        "span": {
+                          "end_col": 51,
+                          "end_line": 10,
+                          "start_col": 7,
+                          "start_line": 10
+                        },
+                        "tag": "call",
+                        "type": "Integer"
+                      }
+                    },
+                    {
+                      "declaration_init": false,
+                      "kind": "assign",
+                      "ownership_effect": "None",
+                      "span": {
+                        "end_col": 65,
+                        "end_line": 11,
+                        "start_col": 7,
+                        "start_line": 11
+                      },
+                      "target": {
+                        "name": "Seen",
+                        "span": {
+                          "end_col": 10,
+                          "end_line": 11,
+                          "start_col": 7,
+                          "start_line": 11
+                        },
+                        "tag": "ident",
+                        "type": "Integer"
+                      },
+                      "type": "Integer",
+                      "value": {
+                        "args": [
+                          {
+                            "name": "Owner",
+                            "span": {
+                              "end_col": 63,
+                              "end_line": 11,
+                              "start_col": 59,
+                              "start_line": 11
+                            },
+                            "tag": "ident",
+                            "type": "Provider_Imported_Call_Ownership.Payload_Ptr"
+                          }
+                        ],
+                        "call_span": {
+                          "end_col": 64,
+                          "end_line": 11,
+                          "start_col": 58,
+                          "start_line": 11
+                        },
+                        "callee": {
+                          "prefix": {
+                            "name": "Provider_Imported_Call_Ownership",
+                            "span": {
+                              "end_col": 45,
+                              "end_line": 11,
+                              "start_col": 14,
+                              "start_line": 11
+                            },
+                            "tag": "ident",
+                            "type": "Integer"
+                          },
+                          "selector": "Read_Value",
+                          "span": {
+                            "end_col": 56,
+                            "end_line": 11,
+                            "start_col": 14,
+                            "start_line": 11
+                          },
+                          "tag": "select",
+                          "type": "Integer"
+                        },
+                        "span": {
+                          "end_col": 64,
+                          "end_line": 11,
+                          "start_col": 14,
+                          "start_line": 11
+                        },
+                        "tag": "call",
+                        "type": "Integer"
+                      }
+                    },
+                    {
+                      "declaration_init": false,
+                      "kind": "assign",
+                      "ownership_effect": "None",
+                      "span": {
+                        "end_col": 29,
+                        "end_line": 12,
+                        "start_col": 7,
+                        "start_line": 12
+                      },
+                      "target": {
+                        "prefix": {
+                          "prefix": {
+                            "name": "Owner",
+                            "span": {
+                              "end_col": 11,
+                              "end_line": 12,
+                              "start_col": 7,
+                              "start_line": 12
+                            },
+                            "tag": "ident",
+                            "type": "Provider_Imported_Call_Ownership.Payload_Ptr"
+                          },
+                          "selector": "all",
+                          "span": {
+                            "end_col": 15,
+                            "end_line": 12,
+                            "start_col": 7,
+                            "start_line": 12
+                          },
+                          "tag": "select",
+                          "type": "Provider_Imported_Call_Ownership.Payload"
+                        },
+                        "selector": "Value",
+                        "span": {
+                          "end_col": 21,
+                          "end_line": 12,
+                          "start_col": 7,
+                          "start_line": 12
+                        },
+                        "tag": "select",
+                        "type": "Integer"
+                      },
+                      "type": "Integer",
+                      "value": {
+                        "name": "Seen",
+                        "span": {
+                          "end_col": 28,
+                          "end_line": 12,
+                          "start_col": 25,
+                          "start_line": 12
+                        },
+                        "tag": "ident",
+                        "type": "Integer"
+                      }
+                    }
+                  ],
+                  "role": "entry",
+                  "span": {
+                    "end_col": 11,
+                    "end_line": 13,
+                    "start_col": 4,
+                    "start_line": 5
+                  },
+                  "terminator": {
+                    "kind": "return",
+                    "ownership_effect": "None",
+                    "span": {
+                      "end_col": 11,
+                      "end_line": 13,
+                      "start_col": 4,
+                      "start_line": 5
+                    },
+                    "value": null
+                  }
+                }
+              ],
+              "entry_bb": "bb0",
+              "kind": "procedure",
+              "locals": [
+                {
+                  "id": "v0",
+                  "is_constant": false,
+                  "kind": "local",
+                  "mode": "in",
+                  "name": "Owner",
+                  "ownership_role": "Owner",
+                  "scope_id": "scope0",
+                  "span": {
+                    "end_col": 70,
+                    "end_line": 7,
+                    "start_col": 7,
+                    "start_line": 6
+                  },
+                  "type": {
+                    "access_role": "Owner",
+                    "anonymous": false,
+                    "is_all": false,
+                    "is_constant": false,
+                    "kind": "access",
+                    "name": "Provider_Imported_Call_Ownership.Payload_Ptr",
+                    "not_null": false,
+                    "target": "Provider_Imported_Call_Ownership.Payload"
+                  }
+                },
+                {
+                  "id": "v1",
+                  "is_constant": false,
+                  "kind": "local",
+                  "mode": "in",
+                  "name": "Seen",
+                  "ownership_role": "",
+                  "scope_id": "scope0",
+                  "span": {
+                    "end_col": 22,
+                    "end_line": 8,
+                    "start_col": 7,
+                    "start_line": 8
+                  },
+                  "type": {
+                    "high": 9223372036854775807,
+                    "kind": "integer",
+                    "low": -9223372036854775808,
+                    "name": "Integer"
+                  }
+                }
+              ],
+              "name": "Run",
+              "return_type": null,
+              "scopes": [
+                {
+                  "entry_block": "bb0",
+                  "exit_blocks": [
+                    "bb0"
+                  ],
+                  "id": "scope0",
+                  "kind": "subprogram",
+                  "local_ids": [
+                    "v0",
+                    "v1"
+                  ],
+                  "parent_scope_id": null
+                }
+              ],
+              "span": {
+                "end_col": 11,
+                "end_line": 13,
+                "start_col": 4,
+                "start_line": 5
+              }
+            }
+          ],
+          "package_name": "Client_Imported_Borrow_Observe",
+          "source_path": "tests/interfaces/client_imported_borrow_observe.safe",
+          "types": [
+            {
+              "fields": {
+                "Value": "Integer"
+              },
+              "kind": "record",
+              "name": "Provider_Imported_Call_Ownership.Payload"
+            },
+            {
+              "access_role": "Owner",
+              "anonymous": false,
+              "is_all": false,
+              "is_constant": false,
+              "kind": "access",
+              "name": "Provider_Imported_Call_Ownership.Payload_Ptr",
+              "not_null": false,
+              "target": "Provider_Imported_Call_Ownership.Payload"
+            }
+          ]
+        },
+        "safei_payload": {
+          "channel_access_summaries": [],
+          "channels": [],
+          "dependencies": [
+            "Provider_Imported_Call_Ownership"
+          ],
+          "effect_summaries": [],
+          "executables": [
+            {
+              "kind": "procedure",
+              "name": "Run",
+              "signature": "procedure Run ()",
+              "span": {
+                "end_col": 11,
+                "end_line": 13,
+                "start_col": 4,
+                "start_line": 5
+              }
+            }
+          ],
+          "format": "safei-v1",
+          "objects": [],
+          "package_name": "Client_Imported_Borrow_Observe",
+          "public_declarations": [],
+          "subprograms": [],
+          "subtypes": [],
+          "types": []
+        },
+        "validators": {
+          "analyze_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "analyze-mir",
+              "--diag-json",
+              "$TMPDIR/clients/client_imported_borrow_observe/out/client_imported_borrow_observe.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+          },
+          "output_contracts": {
+            "command": [
+              "python3",
+              "scripts/validate_output_contracts.py",
+              "--ast",
+              "$TMPDIR/clients/client_imported_borrow_observe/out/client_imported_borrow_observe.ast.json",
+              "--typed",
+              "$TMPDIR/clients/client_imported_borrow_observe/out/client_imported_borrow_observe.typed.json",
+              "--mir",
+              "$TMPDIR/clients/client_imported_borrow_observe/out/client_imported_borrow_observe.mir.json",
+              "--safei",
+              "$TMPDIR/iface/client_imported_borrow_observe.safei.json",
+              "--source-path",
+              "tests/interfaces/client_imported_borrow_observe.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "output contracts: OK (client_imported_borrow_observe.ast.json, client_imported_borrow_observe.typed.json, client_imported_borrow_observe.mir.json, client_imported_borrow_observe.safei.json)\n"
+          },
+          "validate_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "validate-mir",
+              "$TMPDIR/clients/client_imported_borrow_observe/out/client_imported_borrow_observe.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "validate-mir: OK ($TMPDIR/clients/client_imported_borrow_observe/out/client_imported_borrow_observe.mir.json)\n"
+          }
+        }
+      }
+    },
+    "client_transitive_channel_client_ceiling.safe": {
+      "bronze": {
+        "ceilings": {
+          "Provider_Transitive_Channel.Data_Ch": 20
+        },
+        "ownership": {},
+        "summaries": {
+          "Caller": {
+            "calls": [
+              "Provider_Transitive_Channel.Push"
+            ],
+            "channels": [
+              "Provider_Transitive_Channel.Data_Ch"
+            ],
+            "reads": [],
+            "writes": []
+          },
+          "Provider_Transitive_Channel.Push": {
+            "calls": [],
+            "channels": [
+              "Provider_Transitive_Channel.Data_Ch"
+            ],
+            "reads": [],
+            "writes": []
+          }
+        },
+        "task_calls": {
+          "Provider_Transitive_Channel.Push": [
+            "Caller"
+          ]
+        }
+      },
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/interfaces/client_transitive_channel_client_ceiling.safe",
+          "--interface-search-dir",
+          "$TMPDIR/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/interfaces/client_transitive_channel_client_ceiling.safe",
+          "--out-dir",
+          "$TMPDIR/clients/client_transitive_channel_client_ceiling/out",
+          "--interface-dir",
+          "$TMPDIR/iface",
+          "--interface-search-dir",
+          "$TMPDIR/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "outputs": {
+        "files": {
+          "ast": "out/client_transitive_channel_client_ceiling.ast.json",
+          "mir": "out/client_transitive_channel_client_ceiling.mir.json",
+          "safei": "iface/client_transitive_channel_client_ceiling.safei.json",
+          "typed": "out/client_transitive_channel_client_ceiling.typed.json"
+        },
+        "hashes": {
+          "ast": "47d5487882862225ae46c3c0bfc4b7d57e92223c43b56db005f9497a16a754dc",
+          "mir": "96380c0313d615aa38bed7157e7b5c0f485a69fb281ca8ace9ae961a8b441e0d",
+          "safei": "b0ef449893d45cc10e290d30587096962621e94ddaa11b6be3f6fd206049f75c",
+          "typed": "35d95344c8e6fc92a27eb7a01548ecb0ad1a6829dca368f44bf3c48ea99c54d9"
+        },
+        "mir_payload": {
+          "channels": [
+            {
+              "capacity": 4,
+              "element_type": {
+                "high": 10,
+                "kind": "integer",
+                "low": 0,
+                "name": "Provider_Transitive_Channel.Message"
+              },
+              "name": "Provider_Transitive_Channel.Data_Ch",
+              "required_ceiling": 12,
+              "span": {
+                "end_col": 47,
+                "end_line": 4,
+                "start_col": 11,
+                "start_line": 4
+              }
+            }
+          ],
+          "externals": [
+            {
+              "channel_access_summary": {
+                "channels": [
+                  "Provider_Transitive_Channel.Data_Ch"
+                ]
+              },
+              "effect_summary": {
+                "depends": [],
+                "inputs": [],
+                "outputs": [],
+                "reads": [],
+                "writes": []
+              },
+              "has_return_type": false,
+              "kind": "procedure",
+              "name": "Provider_Transitive_Channel.Push",
+              "params": [],
+              "return_is_access_def": false,
+              "return_type": null,
+              "signature": "procedure Push ()",
+              "span": {
+                "end_col": 12,
+                "end_line": 25,
+                "start_col": 11,
+                "start_line": 22
+              }
+            }
+          ],
+          "format": "mir-v2",
+          "graphs": [
+            {
+              "blocks": [
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb0",
+                  "ops": [],
+                  "role": "entry",
+                  "span": {
+                    "end_col": 14,
+                    "end_line": 10,
+                    "start_col": 4,
+                    "start_line": 5
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 15,
+                      "end_line": 9,
+                      "start_col": 7,
+                      "start_line": 7
+                    },
+                    "target": "bb1"
+                  }
+                },
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb1",
+                  "loop": {
+                    "exit_target": "bb3",
+                    "kind": "loop"
+                  },
+                  "ops": [],
+                  "role": "loop_header",
+                  "span": {
+                    "end_col": 15,
+                    "end_line": 9,
+                    "start_col": 7,
+                    "start_line": 7
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 15,
+                      "end_line": 9,
+                      "start_col": 7,
+                      "start_line": 7
+                    },
+                    "target": "bb2"
+                  }
+                },
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb2",
+                  "ops": [
+                    {
+                      "kind": "call",
+                      "ownership_effect": "None",
+                      "span": {
+                        "end_col": 42,
+                        "end_line": 8,
+                        "start_col": 10,
+                        "start_line": 8
+                      },
+                      "target": null,
+                      "type": "Integer",
+                      "value": {
+                        "args": [],
+                        "call_span": {
+                          "end_col": 41,
+                          "end_line": 8,
+                          "start_col": 10,
+                          "start_line": 8
+                        },
+                        "callee": {
+                          "prefix": {
+                            "name": "Provider_Transitive_Channel",
+                            "span": {
+                              "end_col": 36,
+                              "end_line": 8,
+                              "start_col": 10,
+                              "start_line": 8
+                            },
+                            "tag": "ident",
+                            "type": "Integer"
+                          },
+                          "selector": "Push",
+                          "span": {
+                            "end_col": 41,
+                            "end_line": 8,
+                            "start_col": 10,
+                            "start_line": 8
+                          },
+                          "tag": "select",
+                          "type": "Integer"
+                        },
+                        "span": {
+                          "end_col": 41,
+                          "end_line": 8,
+                          "start_col": 10,
+                          "start_line": 8
+                        },
+                        "tag": "call",
+                        "type": "Integer"
+                      }
+                    }
+                  ],
+                  "role": "loop_body",
+                  "span": {
+                    "end_col": 15,
+                    "end_line": 9,
+                    "start_col": 7,
+                    "start_line": 7
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 15,
+                      "end_line": 9,
+                      "start_col": 7,
+                      "start_line": 7
+                    },
+                    "target": "bb1"
+                  }
+                },
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb3",
+                  "ops": [],
+                  "role": "loop_exit",
+                  "span": {
+                    "end_col": 15,
+                    "end_line": 9,
+                    "start_col": 7,
+                    "start_line": 7
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 14,
+                      "end_line": 10,
+                      "start_col": 4,
+                      "start_line": 5
+                    },
+                    "target": "bb3"
+                  }
+                }
+              ],
+              "entry_bb": "bb0",
+              "has_explicit_priority": true,
+              "kind": "task",
+              "locals": [],
+              "name": "Caller",
+              "priority": 20,
+              "return_type": null,
+              "scopes": [
+                {
+                  "entry_block": "bb0",
+                  "exit_blocks": [],
+                  "id": "scope0",
+                  "kind": "task",
+                  "local_ids": [],
+                  "parent_scope_id": null
+                }
+              ],
+              "span": {
+                "end_col": 14,
+                "end_line": 10,
+                "start_col": 4,
+                "start_line": 5
+              }
+            }
+          ],
+          "package_name": "Client_Transitive_Channel_Client_Ceiling",
+          "source_path": "tests/interfaces/client_transitive_channel_client_ceiling.safe",
+          "types": [
+            {
+              "high": 10,
+              "kind": "integer",
+              "low": 0,
+              "name": "Provider_Transitive_Channel.Message"
+            }
+          ]
+        },
+        "safei_payload": {
+          "channel_access_summaries": [],
+          "channels": [],
+          "dependencies": [
+            "Provider_Transitive_Channel"
+          ],
+          "effect_summaries": [],
+          "executables": [
+            {
+              "kind": "task",
+              "name": "Caller",
+              "signature": "task Caller",
+              "span": {
+                "end_col": 14,
+                "end_line": 10,
+                "start_col": 4,
+                "start_line": 5
+              }
+            }
+          ],
+          "format": "safei-v1",
+          "objects": [],
+          "package_name": "Client_Transitive_Channel_Client_Ceiling",
+          "public_declarations": [],
+          "subprograms": [],
+          "subtypes": [],
+          "types": []
+        },
+        "validators": {
+          "analyze_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "analyze-mir",
+              "--diag-json",
+              "$TMPDIR/clients/client_transitive_channel_client_ceiling/out/client_transitive_channel_client_ceiling.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+          },
+          "output_contracts": {
+            "command": [
+              "python3",
+              "scripts/validate_output_contracts.py",
+              "--ast",
+              "$TMPDIR/clients/client_transitive_channel_client_ceiling/out/client_transitive_channel_client_ceiling.ast.json",
+              "--typed",
+              "$TMPDIR/clients/client_transitive_channel_client_ceiling/out/client_transitive_channel_client_ceiling.typed.json",
+              "--mir",
+              "$TMPDIR/clients/client_transitive_channel_client_ceiling/out/client_transitive_channel_client_ceiling.mir.json",
+              "--safei",
+              "$TMPDIR/iface/client_transitive_channel_client_ceiling.safei.json",
+              "--source-path",
+              "tests/interfaces/client_transitive_channel_client_ceiling.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "output contracts: OK (client_transitive_channel_client_ceiling.ast.json, client_transitive_channel_client_ceiling.typed.json, client_transitive_channel_client_ceiling.mir.json, client_transitive_channel_client_ceiling.safei.json)\n"
+          },
+          "validate_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "validate-mir",
+              "$TMPDIR/clients/client_transitive_channel_client_ceiling/out/client_transitive_channel_client_ceiling.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "validate-mir: OK ($TMPDIR/clients/client_transitive_channel_client_ceiling/out/client_transitive_channel_client_ceiling.mir.json)\n"
+          }
+        }
+      }
+    },
+    "client_transitive_channel_provider_ceiling.safe": {
+      "bronze": {
+        "ceilings": {
+          "Provider_Transitive_Channel.Data_Ch": 12
+        },
+        "ownership": {},
+        "summaries": {
+          "Caller": {
+            "calls": [
+              "Provider_Transitive_Channel.Push"
+            ],
+            "channels": [
+              "Provider_Transitive_Channel.Data_Ch"
+            ],
+            "reads": [],
+            "writes": []
+          },
+          "Provider_Transitive_Channel.Push": {
+            "calls": [],
+            "channels": [
+              "Provider_Transitive_Channel.Data_Ch"
+            ],
+            "reads": [],
+            "writes": []
+          }
+        },
+        "task_calls": {
+          "Provider_Transitive_Channel.Push": [
+            "Caller"
+          ]
+        }
+      },
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/interfaces/client_transitive_channel_provider_ceiling.safe",
+          "--interface-search-dir",
+          "$TMPDIR/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/interfaces/client_transitive_channel_provider_ceiling.safe",
+          "--out-dir",
+          "$TMPDIR/clients/client_transitive_channel_provider_ceiling/out",
+          "--interface-dir",
+          "$TMPDIR/iface",
+          "--interface-search-dir",
+          "$TMPDIR/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "outputs": {
+        "files": {
+          "ast": "out/client_transitive_channel_provider_ceiling.ast.json",
+          "mir": "out/client_transitive_channel_provider_ceiling.mir.json",
+          "safei": "iface/client_transitive_channel_provider_ceiling.safei.json",
+          "typed": "out/client_transitive_channel_provider_ceiling.typed.json"
+        },
+        "hashes": {
+          "ast": "d8780a6411230f3173b66d9a32321f994858be29e5a668d47d8028c169592d3b",
+          "mir": "7832695d53ba8ce01b96468e9c0145e39e5241e045d605408795b1ed17eb9fff",
+          "safei": "a287e2ac04dac4e48c62e26912304aa6fd19a87437db1cf04e0a2451f6d7e026",
+          "typed": "bc41cdbcf5158795f98f83e38b6dbc536e452327e3b0c3a7b808b3e2bfd84e98"
+        },
+        "mir_payload": {
+          "channels": [
+            {
+              "capacity": 4,
+              "element_type": {
+                "high": 10,
+                "kind": "integer",
+                "low": 0,
+                "name": "Provider_Transitive_Channel.Message"
+              },
+              "name": "Provider_Transitive_Channel.Data_Ch",
+              "required_ceiling": 12,
+              "span": {
+                "end_col": 47,
+                "end_line": 4,
+                "start_col": 11,
+                "start_line": 4
+              }
+            }
+          ],
+          "externals": [
+            {
+              "channel_access_summary": {
+                "channels": [
+                  "Provider_Transitive_Channel.Data_Ch"
+                ]
+              },
+              "effect_summary": {
+                "depends": [],
+                "inputs": [],
+                "outputs": [],
+                "reads": [],
+                "writes": []
+              },
+              "has_return_type": false,
+              "kind": "procedure",
+              "name": "Provider_Transitive_Channel.Push",
+              "params": [],
+              "return_is_access_def": false,
+              "return_type": null,
+              "signature": "procedure Push ()",
+              "span": {
+                "end_col": 12,
+                "end_line": 25,
+                "start_col": 11,
+                "start_line": 22
+              }
+            }
+          ],
+          "format": "mir-v2",
+          "graphs": [
+            {
+              "blocks": [
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb0",
+                  "ops": [],
+                  "role": "entry",
+                  "span": {
+                    "end_col": 14,
+                    "end_line": 10,
+                    "start_col": 4,
+                    "start_line": 5
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 15,
+                      "end_line": 9,
+                      "start_col": 7,
+                      "start_line": 7
+                    },
+                    "target": "bb1"
+                  }
+                },
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb1",
+                  "loop": {
+                    "exit_target": "bb3",
+                    "kind": "loop"
+                  },
+                  "ops": [],
+                  "role": "loop_header",
+                  "span": {
+                    "end_col": 15,
+                    "end_line": 9,
+                    "start_col": 7,
+                    "start_line": 7
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 15,
+                      "end_line": 9,
+                      "start_col": 7,
+                      "start_line": 7
+                    },
+                    "target": "bb2"
+                  }
+                },
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb2",
+                  "ops": [
+                    {
+                      "kind": "call",
+                      "ownership_effect": "None",
+                      "span": {
+                        "end_col": 42,
+                        "end_line": 8,
+                        "start_col": 10,
+                        "start_line": 8
+                      },
+                      "target": null,
+                      "type": "Integer",
+                      "value": {
+                        "args": [],
+                        "call_span": {
+                          "end_col": 41,
+                          "end_line": 8,
+                          "start_col": 10,
+                          "start_line": 8
+                        },
+                        "callee": {
+                          "prefix": {
+                            "name": "Provider_Transitive_Channel",
+                            "span": {
+                              "end_col": 36,
+                              "end_line": 8,
+                              "start_col": 10,
+                              "start_line": 8
+                            },
+                            "tag": "ident",
+                            "type": "Integer"
+                          },
+                          "selector": "Push",
+                          "span": {
+                            "end_col": 41,
+                            "end_line": 8,
+                            "start_col": 10,
+                            "start_line": 8
+                          },
+                          "tag": "select",
+                          "type": "Integer"
+                        },
+                        "span": {
+                          "end_col": 41,
+                          "end_line": 8,
+                          "start_col": 10,
+                          "start_line": 8
+                        },
+                        "tag": "call",
+                        "type": "Integer"
+                      }
+                    }
+                  ],
+                  "role": "loop_body",
+                  "span": {
+                    "end_col": 15,
+                    "end_line": 9,
+                    "start_col": 7,
+                    "start_line": 7
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 15,
+                      "end_line": 9,
+                      "start_col": 7,
+                      "start_line": 7
+                    },
+                    "target": "bb1"
+                  }
+                },
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb3",
+                  "ops": [],
+                  "role": "loop_exit",
+                  "span": {
+                    "end_col": 15,
+                    "end_line": 9,
+                    "start_col": 7,
+                    "start_line": 7
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 14,
+                      "end_line": 10,
+                      "start_col": 4,
+                      "start_line": 5
+                    },
+                    "target": "bb3"
+                  }
+                }
+              ],
+              "entry_bb": "bb0",
+              "has_explicit_priority": true,
+              "kind": "task",
+              "locals": [],
+              "name": "Caller",
+              "priority": 8,
+              "return_type": null,
+              "scopes": [
+                {
+                  "entry_block": "bb0",
+                  "exit_blocks": [],
+                  "id": "scope0",
+                  "kind": "task",
+                  "local_ids": [],
+                  "parent_scope_id": null
+                }
+              ],
+              "span": {
+                "end_col": 14,
+                "end_line": 10,
+                "start_col": 4,
+                "start_line": 5
+              }
+            }
+          ],
+          "package_name": "Client_Transitive_Channel_Provider_Ceiling",
+          "source_path": "tests/interfaces/client_transitive_channel_provider_ceiling.safe",
+          "types": [
+            {
+              "high": 10,
+              "kind": "integer",
+              "low": 0,
+              "name": "Provider_Transitive_Channel.Message"
+            }
+          ]
+        },
+        "safei_payload": {
+          "channel_access_summaries": [],
+          "channels": [],
+          "dependencies": [
+            "Provider_Transitive_Channel"
+          ],
+          "effect_summaries": [],
+          "executables": [
+            {
+              "kind": "task",
+              "name": "Caller",
+              "signature": "task Caller",
+              "span": {
+                "end_col": 14,
+                "end_line": 10,
+                "start_col": 4,
+                "start_line": 5
+              }
+            }
+          ],
+          "format": "safei-v1",
+          "objects": [],
+          "package_name": "Client_Transitive_Channel_Provider_Ceiling",
+          "public_declarations": [],
+          "subprograms": [],
+          "subtypes": [],
+          "types": []
+        },
+        "validators": {
+          "analyze_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "analyze-mir",
+              "--diag-json",
+              "$TMPDIR/clients/client_transitive_channel_provider_ceiling/out/client_transitive_channel_provider_ceiling.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+          },
+          "output_contracts": {
+            "command": [
+              "python3",
+              "scripts/validate_output_contracts.py",
+              "--ast",
+              "$TMPDIR/clients/client_transitive_channel_provider_ceiling/out/client_transitive_channel_provider_ceiling.ast.json",
+              "--typed",
+              "$TMPDIR/clients/client_transitive_channel_provider_ceiling/out/client_transitive_channel_provider_ceiling.typed.json",
+              "--mir",
+              "$TMPDIR/clients/client_transitive_channel_provider_ceiling/out/client_transitive_channel_provider_ceiling.mir.json",
+              "--safei",
+              "$TMPDIR/iface/client_transitive_channel_provider_ceiling.safei.json",
+              "--source-path",
+              "tests/interfaces/client_transitive_channel_provider_ceiling.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "output contracts: OK (client_transitive_channel_provider_ceiling.ast.json, client_transitive_channel_provider_ceiling.typed.json, client_transitive_channel_provider_ceiling.mir.json, client_transitive_channel_provider_ceiling.safei.json)\n"
+          },
+          "validate_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "validate-mir",
+              "$TMPDIR/clients/client_transitive_channel_provider_ceiling/out/client_transitive_channel_provider_ceiling.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "validate-mir: OK ($TMPDIR/clients/client_transitive_channel_provider_ceiling/out/client_transitive_channel_provider_ceiling.mir.json)\n"
+          }
+        }
+      }
+    },
+    "client_transitive_global_ok.safe": {
+      "bronze": {
+        "ceilings": {},
+        "ownership": {
+          "Provider_Transitive_Global.Shared": [
+            "Worker"
+          ]
+        },
+        "summaries": {
+          "Provider_Transitive_Global.Touch": {
+            "calls": [],
+            "channels": [],
+            "reads": [
+              "Provider_Transitive_Global.Shared"
+            ],
+            "writes": [
+              "Provider_Transitive_Global.Shared"
+            ]
+          },
+          "Worker": {
+            "calls": [
+              "Provider_Transitive_Global.Touch"
+            ],
+            "channels": [],
+            "reads": [
+              "Provider_Transitive_Global.Shared"
+            ],
+            "writes": [
+              "Provider_Transitive_Global.Shared"
+            ]
+          }
+        },
+        "task_calls": {
+          "Provider_Transitive_Global.Touch": [
+            "Worker"
+          ]
+        }
+      },
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/interfaces/client_transitive_global_ok.safe",
+          "--interface-search-dir",
+          "$TMPDIR/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/interfaces/client_transitive_global_ok.safe",
+          "--out-dir",
+          "$TMPDIR/clients/client_transitive_global_ok/out",
+          "--interface-dir",
+          "$TMPDIR/iface",
+          "--interface-search-dir",
+          "$TMPDIR/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "outputs": {
+        "files": {
+          "ast": "out/client_transitive_global_ok.ast.json",
+          "mir": "out/client_transitive_global_ok.mir.json",
+          "safei": "iface/client_transitive_global_ok.safei.json",
+          "typed": "out/client_transitive_global_ok.typed.json"
+        },
+        "hashes": {
+          "ast": "c6567251a3e38d27edd813bfa0e8b198e5c150acca086889258ad81617cbe0c1",
+          "mir": "9b1fc8f24a8390f9d543dbdf68bd9e3de6521b8d2ec3d4478725fa78718195b6",
+          "safei": "ad6e1c6f2ef670af569ff6c43f532a9676868d1bf027fead66413ec42c9cd51a",
+          "typed": "debbca4b7e80308d9865867a662bba35a3bdda1ec31aab16f937b1223d846fce"
+        },
+        "mir_payload": {
+          "channels": [],
+          "externals": [
+            {
+              "channel_access_summary": {
+                "channels": []
+              },
+              "effect_summary": {
+                "depends": [
+                  {
+                    "inputs": [
+                      "global:Provider_Transitive_Global.Shared"
+                    ],
+                    "output_name": "global:Provider_Transitive_Global.Shared"
+                  }
+                ],
+                "inputs": [
+                  "global:Provider_Transitive_Global.Shared"
+                ],
+                "outputs": [
+                  "global:Provider_Transitive_Global.Shared"
+                ],
+                "reads": [
+                  "Provider_Transitive_Global.Shared"
+                ],
+                "writes": [
+                  "Provider_Transitive_Global.Shared"
+                ]
+              },
+              "has_return_type": false,
+              "kind": "procedure",
+              "name": "Provider_Transitive_Global.Touch",
+              "params": [],
+              "return_is_access_def": false,
+              "return_type": null,
+              "signature": "procedure Touch ()",
+              "span": {
+                "end_col": 13,
+                "end_line": 13,
+                "start_col": 11,
+                "start_line": 10
+              }
+            }
+          ],
+          "format": "mir-v2",
+          "graphs": [
+            {
+              "blocks": [
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb0",
+                  "ops": [],
+                  "role": "entry",
+                  "span": {
+                    "end_col": 14,
+                    "end_line": 10,
+                    "start_col": 4,
+                    "start_line": 5
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 15,
+                      "end_line": 9,
+                      "start_col": 7,
+                      "start_line": 7
+                    },
+                    "target": "bb1"
+                  }
+                },
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb1",
+                  "loop": {
+                    "exit_target": "bb3",
+                    "kind": "loop"
+                  },
+                  "ops": [],
+                  "role": "loop_header",
+                  "span": {
+                    "end_col": 15,
+                    "end_line": 9,
+                    "start_col": 7,
+                    "start_line": 7
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 15,
+                      "end_line": 9,
+                      "start_col": 7,
+                      "start_line": 7
+                    },
+                    "target": "bb2"
+                  }
+                },
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb2",
+                  "ops": [
+                    {
+                      "kind": "call",
+                      "ownership_effect": "None",
+                      "span": {
+                        "end_col": 42,
+                        "end_line": 8,
+                        "start_col": 10,
+                        "start_line": 8
+                      },
+                      "target": null,
+                      "type": "Integer",
+                      "value": {
+                        "args": [],
+                        "call_span": {
+                          "end_col": 41,
+                          "end_line": 8,
+                          "start_col": 10,
+                          "start_line": 8
+                        },
+                        "callee": {
+                          "prefix": {
+                            "name": "Provider_Transitive_Global",
+                            "span": {
+                              "end_col": 35,
+                              "end_line": 8,
+                              "start_col": 10,
+                              "start_line": 8
+                            },
+                            "tag": "ident",
+                            "type": "Integer"
+                          },
+                          "selector": "Touch",
+                          "span": {
+                            "end_col": 41,
+                            "end_line": 8,
+                            "start_col": 10,
+                            "start_line": 8
+                          },
+                          "tag": "select",
+                          "type": "Integer"
+                        },
+                        "span": {
+                          "end_col": 41,
+                          "end_line": 8,
+                          "start_col": 10,
+                          "start_line": 8
+                        },
+                        "tag": "call",
+                        "type": "Integer"
+                      }
+                    }
+                  ],
+                  "role": "loop_body",
+                  "span": {
+                    "end_col": 15,
+                    "end_line": 9,
+                    "start_col": 7,
+                    "start_line": 7
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 15,
+                      "end_line": 9,
+                      "start_col": 7,
+                      "start_line": 7
+                    },
+                    "target": "bb1"
+                  }
+                },
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb3",
+                  "ops": [],
+                  "role": "loop_exit",
+                  "span": {
+                    "end_col": 15,
+                    "end_line": 9,
+                    "start_col": 7,
+                    "start_line": 7
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 14,
+                      "end_line": 10,
+                      "start_col": 4,
+                      "start_line": 5
+                    },
+                    "target": "bb3"
+                  }
+                }
+              ],
+              "entry_bb": "bb0",
+              "has_explicit_priority": false,
+              "kind": "task",
+              "locals": [],
+              "name": "Worker",
+              "priority": 31,
+              "return_type": null,
+              "scopes": [
+                {
+                  "entry_block": "bb0",
+                  "exit_blocks": [],
+                  "id": "scope0",
+                  "kind": "task",
+                  "local_ids": [],
+                  "parent_scope_id": null
+                }
+              ],
+              "span": {
+                "end_col": 14,
+                "end_line": 10,
+                "start_col": 4,
+                "start_line": 5
+              }
+            }
+          ],
+          "package_name": "Client_Transitive_Global_Ok",
+          "source_path": "tests/interfaces/client_transitive_global_ok.safe",
+          "types": []
+        },
+        "safei_payload": {
+          "channel_access_summaries": [],
+          "channels": [],
+          "dependencies": [
+            "Provider_Transitive_Global"
+          ],
+          "effect_summaries": [],
+          "executables": [
+            {
+              "kind": "task",
+              "name": "Worker",
+              "signature": "task Worker",
+              "span": {
+                "end_col": 14,
+                "end_line": 10,
+                "start_col": 4,
+                "start_line": 5
+              }
+            }
+          ],
+          "format": "safei-v1",
+          "objects": [],
+          "package_name": "Client_Transitive_Global_Ok",
+          "public_declarations": [],
+          "subprograms": [],
+          "subtypes": [],
+          "types": []
+        },
+        "validators": {
+          "analyze_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "analyze-mir",
+              "--diag-json",
+              "$TMPDIR/clients/client_transitive_global_ok/out/client_transitive_global_ok.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+          },
+          "output_contracts": {
+            "command": [
+              "python3",
+              "scripts/validate_output_contracts.py",
+              "--ast",
+              "$TMPDIR/clients/client_transitive_global_ok/out/client_transitive_global_ok.ast.json",
+              "--typed",
+              "$TMPDIR/clients/client_transitive_global_ok/out/client_transitive_global_ok.typed.json",
+              "--mir",
+              "$TMPDIR/clients/client_transitive_global_ok/out/client_transitive_global_ok.mir.json",
+              "--safei",
+              "$TMPDIR/iface/client_transitive_global_ok.safei.json",
+              "--source-path",
+              "tests/interfaces/client_transitive_global_ok.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "output contracts: OK (client_transitive_global_ok.ast.json, client_transitive_global_ok.typed.json, client_transitive_global_ok.mir.json, client_transitive_global_ok.safei.json)\n"
+          },
+          "validate_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "validate-mir",
+              "$TMPDIR/clients/client_transitive_global_ok/out/client_transitive_global_ok.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "validate-mir: OK ($TMPDIR/clients/client_transitive_global_ok/out/client_transitive_global_ok.mir.json)\n"
+          }
+        }
+      }
+    }
+  },
+  "providers": {
+    "provider_channel.safe": {
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/interfaces/provider_channel.safe",
+          "--out-dir",
+          "$TMPDIR/providers/provider_channel/out",
+          "--interface-dir",
+          "$TMPDIR/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "outputs": {
+        "files": {
+          "ast": "out/provider_channel.ast.json",
+          "mir": "out/provider_channel.mir.json",
+          "safei": "iface/provider_channel.safei.json",
+          "typed": "out/provider_channel.typed.json"
+        },
+        "hashes": {
+          "ast": "2cf8bcf2624d851236e0308d4d9b30b25c9596e05c06d140724e9710226084c4",
+          "mir": "57038aea0aefa254d27c9036ac3dae87589fa29df4729f76de28358ba7b74fc3",
+          "safei": "63f39f599af7c242f25807f205acc233e67d79fa650c873b9cc5a7f29dcad6f1",
+          "typed": "9d8cac6eaa156240bd75b97e0c1d531eb44a12a7f9b29c92558f0714567ba13c"
+        },
+        "mir_payload": {
+          "channels": [
+            {
+              "capacity": 4,
+              "element_type": {
+                "high": 10,
+                "kind": "integer",
+                "low": 0,
+                "name": "Message"
+              },
+              "name": "Data_Ch",
+              "span": {
+                "end_col": 47,
+                "end_line": 4,
+                "start_col": 11,
+                "start_line": 4
+              }
+            }
+          ],
+          "externals": [],
+          "format": "mir-v2",
+          "graphs": [],
+          "package_name": "Provider_Channel",
+          "source_path": "tests/interfaces/provider_channel.safe",
+          "types": [
+            {
+              "high": 10,
+              "kind": "integer",
+              "low": 0,
+              "name": "Message"
+            }
+          ]
+        },
+        "safei_payload": {
+          "channel_access_summaries": [],
+          "channels": [
+            {
+              "capacity": 4,
+              "element_type": {
+                "high": 10,
+                "kind": "integer",
+                "low": 0,
+                "name": "Message"
+              },
+              "is_public": true,
+              "name": "Data_Ch",
+              "span": {
+                "end_col": 47,
+                "end_line": 4,
+                "start_col": 11,
+                "start_line": 4
+              }
+            }
+          ],
+          "dependencies": [],
+          "effect_summaries": [],
+          "executables": [],
+          "format": "safei-v1",
+          "objects": [],
+          "package_name": "Provider_Channel",
+          "public_declarations": [
+            {
+              "kind": "TypeDeclaration",
+              "name": "Message",
+              "signature": "Message",
+              "span": {
+                "end_col": 40,
+                "end_line": 3,
+                "start_col": 11,
+                "start_line": 3
+              }
+            }
+          ],
+          "subprograms": [],
+          "subtypes": [],
+          "types": [
+            {
+              "high": 10,
+              "kind": "integer",
+              "low": 0,
+              "name": "Message"
+            }
+          ]
+        },
+        "validators": {
+          "analyze_mir": {
+            "reason": "no_local_graphs",
+            "skipped": true
+          },
+          "output_contracts": {
+            "command": [
+              "python3",
+              "scripts/validate_output_contracts.py",
+              "--ast",
+              "$TMPDIR/providers/provider_channel/out/provider_channel.ast.json",
+              "--typed",
+              "$TMPDIR/providers/provider_channel/out/provider_channel.typed.json",
+              "--mir",
+              "$TMPDIR/providers/provider_channel/out/provider_channel.mir.json",
+              "--safei",
+              "$TMPDIR/iface/provider_channel.safei.json",
+              "--source-path",
+              "tests/interfaces/provider_channel.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "output contracts: OK (provider_channel.ast.json, provider_channel.typed.json, provider_channel.mir.json, provider_channel.safei.json)\n"
+          },
+          "validate_mir": {
+            "reason": "no_local_graphs",
+            "skipped": true
+          }
+        }
+      }
+    },
+    "provider_imported_call_ownership.safe": {
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/interfaces/provider_imported_call_ownership.safe",
+          "--out-dir",
+          "$TMPDIR/providers/provider_imported_call_ownership/out",
+          "--interface-dir",
+          "$TMPDIR/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "outputs": {
+        "files": {
+          "ast": "out/provider_imported_call_ownership.ast.json",
+          "mir": "out/provider_imported_call_ownership.mir.json",
+          "safei": "iface/provider_imported_call_ownership.safei.json",
+          "typed": "out/provider_imported_call_ownership.typed.json"
+        },
+        "hashes": {
+          "ast": "78b31deabe6c395e357a7d06f6e46db21a4831788ddbf330bc9b0d82f673be22",
+          "mir": "4a28b3abb3169fd3bc04b3f332740896b8acefc1c3c9fe1923180b878f5da9d3",
+          "safei": "d9e5e5df60b697f378f04c724e056b5dd26fff443abb5903f487f789e5f40d76",
+          "typed": "40af19743ca2fffaeb09d0a577f79583f4d808ba8a5ae2b15b8d7a007abaeaa2"
+        },
+        "mir_payload": {
+          "channels": [],
+          "externals": [],
+          "format": "mir-v2",
+          "graphs": [
+            {
+              "blocks": [
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb0",
+                  "ops": [
+                    {
+                      "declaration_init": false,
+                      "kind": "assign",
+                      "ownership_effect": "None",
+                      "span": {
+                        "end_col": 40,
+                        "end_line": 11,
+                        "start_col": 7,
+                        "start_line": 11
+                      },
+                      "target": {
+                        "prefix": {
+                          "prefix": {
+                            "name": "Ref",
+                            "span": {
+                              "end_col": 9,
+                              "end_line": 11,
+                              "start_col": 7,
+                              "start_line": 11
+                            },
+                            "tag": "ident",
+                            "type": "access Payload"
+                          },
+                          "selector": "all",
+                          "span": {
+                            "end_col": 13,
+                            "end_line": 11,
+                            "start_col": 7,
+                            "start_line": 11
+                          },
+                          "tag": "select",
+                          "type": "Payload"
+                        },
+                        "selector": "Value",
+                        "span": {
+                          "end_col": 19,
+                          "end_line": 11,
+                          "start_col": 7,
+                          "start_line": 11
+                        },
+                        "tag": "select",
+                        "type": "Integer"
+                      },
+                      "type": "Integer",
+                      "value": {
+                        "left": {
+                          "prefix": {
+                            "prefix": {
+                              "name": "Ref",
+                              "span": {
+                                "end_col": 25,
+                                "end_line": 11,
+                                "start_col": 23,
+                                "start_line": 11
+                              },
+                              "tag": "ident",
+                              "type": "access Payload"
+                            },
+                            "selector": "all",
+                            "span": {
+                              "end_col": 29,
+                              "end_line": 11,
+                              "start_col": 23,
+                              "start_line": 11
+                            },
+                            "tag": "select",
+                            "type": "Payload"
+                          },
+                          "selector": "Value",
+                          "span": {
+                            "end_col": 35,
+                            "end_line": 11,
+                            "start_col": 23,
+                            "start_line": 11
+                          },
+                          "tag": "select",
+                          "type": "Integer"
+                        },
+                        "op": "+",
+                        "right": {
+                          "span": {
+                            "end_col": 39,
+                            "end_line": 11,
+                            "start_col": 39,
+                            "start_line": 11
+                          },
+                          "tag": "int",
+                          "text": "1",
+                          "type": "Integer",
+                          "value": 1
+                        },
+                        "span": {
+                          "end_col": 39,
+                          "end_line": 11,
+                          "start_col": 23,
+                          "start_line": 11
+                        },
+                        "tag": "binary",
+                        "type": "Integer"
+                      }
+                    }
+                  ],
+                  "role": "entry",
+                  "span": {
+                    "end_col": 12,
+                    "end_line": 12,
+                    "start_col": 11,
+                    "start_line": 9
+                  },
+                  "terminator": {
+                    "kind": "return",
+                    "ownership_effect": "None",
+                    "span": {
+                      "end_col": 12,
+                      "end_line": 12,
+                      "start_col": 11,
+                      "start_line": 9
+                    },
+                    "value": null
+                  }
+                }
+              ],
+              "entry_bb": "bb0",
+              "kind": "procedure",
+              "locals": [
+                {
+                  "id": "v0",
+                  "is_constant": false,
+                  "kind": "param",
+                  "mode": "in",
+                  "name": "Ref",
+                  "ownership_role": "Borrow",
+                  "scope_id": "scope0",
+                  "span": {
+                    "end_col": 46,
+                    "end_line": 9,
+                    "start_col": 27,
+                    "start_line": 9
+                  },
+                  "type": {
+                    "access_role": "Borrow",
+                    "anonymous": true,
+                    "is_all": false,
+                    "is_constant": false,
+                    "kind": "access",
+                    "name": "access Payload",
+                    "not_null": false,
+                    "target": "Payload"
+                  }
+                }
+              ],
+              "name": "Bump",
+              "return_type": null,
+              "scopes": [
+                {
+                  "entry_block": "bb0",
+                  "exit_blocks": [
+                    "bb0"
+                  ],
+                  "id": "scope0",
+                  "kind": "subprogram",
+                  "local_ids": [
+                    "v0"
+                  ],
+                  "parent_scope_id": null
+                }
+              ],
+              "span": {
+                "end_col": 12,
+                "end_line": 12,
+                "start_col": 11,
+                "start_line": 9
+              }
+            },
+            {
+              "blocks": [
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb0",
+                  "ops": [],
+                  "role": "entry",
+                  "span": {
+                    "end_col": 18,
+                    "end_line": 17,
+                    "start_col": 11,
+                    "start_line": 14
+                  },
+                  "terminator": {
+                    "kind": "return",
+                    "ownership_effect": "None",
+                    "span": {
+                      "end_col": 27,
+                      "end_line": 16,
+                      "start_col": 7,
+                      "start_line": 16
+                    },
+                    "value": {
+                      "prefix": {
+                        "prefix": {
+                          "name": "Ref",
+                          "span": {
+                            "end_col": 16,
+                            "end_line": 16,
+                            "start_col": 14,
+                            "start_line": 16
+                          },
+                          "tag": "ident",
+                          "type": "access Payload"
+                        },
+                        "selector": "all",
+                        "span": {
+                          "end_col": 20,
+                          "end_line": 16,
+                          "start_col": 14,
+                          "start_line": 16
+                        },
+                        "tag": "select",
+                        "type": "Payload"
+                      },
+                      "selector": "Value",
+                      "span": {
+                        "end_col": 26,
+                        "end_line": 16,
+                        "start_col": 14,
+                        "start_line": 16
+                      },
+                      "tag": "select",
+                      "type": "Integer"
+                    }
+                  }
+                }
+              ],
+              "entry_bb": "bb0",
+              "kind": "function",
+              "locals": [
+                {
+                  "id": "v0",
+                  "is_constant": false,
+                  "kind": "param",
+                  "mode": "in",
+                  "name": "Ref",
+                  "ownership_role": "Observe",
+                  "scope_id": "scope0",
+                  "span": {
+                    "end_col": 60,
+                    "end_line": 14,
+                    "start_col": 32,
+                    "start_line": 14
+                  },
+                  "type": {
+                    "access_role": "Observe",
+                    "anonymous": true,
+                    "is_all": false,
+                    "is_constant": true,
+                    "kind": "access",
+                    "name": "access Payload",
+                    "not_null": false,
+                    "target": "Payload"
+                  }
+                }
+              ],
+              "name": "Read_Value",
+              "return_type": {
+                "high": 9223372036854775807,
+                "kind": "integer",
+                "low": -9223372036854775808,
+                "name": "Integer"
+              },
+              "scopes": [
+                {
+                  "entry_block": "bb0",
+                  "exit_blocks": [
+                    "bb0"
+                  ],
+                  "id": "scope0",
+                  "kind": "subprogram",
+                  "local_ids": [
+                    "v0"
+                  ],
+                  "parent_scope_id": null
+                }
+              ],
+              "span": {
+                "end_col": 18,
+                "end_line": 17,
+                "start_col": 11,
+                "start_line": 14
+              }
+            },
+            {
+              "blocks": [
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb0",
+                  "ops": [],
+                  "role": "entry",
+                  "span": {
+                    "end_col": 15,
+                    "end_line": 22,
+                    "start_col": 11,
+                    "start_line": 19
+                  },
+                  "terminator": {
+                    "kind": "return",
+                    "ownership_effect": "None",
+                    "span": {
+                      "end_col": 15,
+                      "end_line": 22,
+                      "start_col": 11,
+                      "start_line": 19
+                    },
+                    "value": null
+                  }
+                }
+              ],
+              "entry_bb": "bb0",
+              "kind": "procedure",
+              "locals": [
+                {
+                  "id": "v0",
+                  "is_constant": false,
+                  "kind": "param",
+                  "mode": "in out",
+                  "name": "Ref",
+                  "ownership_role": "Owner",
+                  "scope_id": "scope0",
+                  "span": {
+                    "end_col": 53,
+                    "end_line": 19,
+                    "start_col": 30,
+                    "start_line": 19
+                  },
+                  "type": {
+                    "access_role": "Owner",
+                    "anonymous": false,
+                    "is_all": false,
+                    "is_constant": false,
+                    "kind": "access",
+                    "name": "Payload_Ptr",
+                    "not_null": false,
+                    "target": "Payload"
+                  }
+                }
+              ],
+              "name": "Consume",
+              "return_type": null,
+              "scopes": [
+                {
+                  "entry_block": "bb0",
+                  "exit_blocks": [
+                    "bb0"
+                  ],
+                  "id": "scope0",
+                  "kind": "subprogram",
+                  "local_ids": [
+                    "v0"
+                  ],
+                  "parent_scope_id": null
+                }
+              ],
+              "span": {
+                "end_col": 15,
+                "end_line": 22,
+                "start_col": 11,
+                "start_line": 19
+              }
+            }
+          ],
+          "package_name": "Provider_Imported_Call_Ownership",
+          "source_path": "tests/interfaces/provider_imported_call_ownership.safe",
+          "types": [
+            {
+              "fields": {
+                "Value": "Integer"
+              },
+              "kind": "record",
+              "name": "Payload"
+            },
+            {
+              "access_role": "Owner",
+              "anonymous": false,
+              "is_all": false,
+              "is_constant": false,
+              "kind": "access",
+              "name": "Payload_Ptr",
+              "not_null": false,
+              "target": "Payload"
+            }
+          ]
+        },
+        "safei_payload": {
+          "channel_access_summaries": [
+            {
+              "channels": [],
+              "name": "Bump",
+              "signature": "procedure Bump (Ref: access Payload)"
+            },
+            {
+              "channels": [],
+              "name": "Read_Value",
+              "signature": "function Read_Value (Ref: access Payload) return Integer"
+            },
+            {
+              "channels": [],
+              "name": "Consume",
+              "signature": "procedure Consume (Ref: Payload_Ptr)"
+            }
+          ],
+          "channels": [],
+          "dependencies": [],
+          "effect_summaries": [
+            {
+              "depends": [],
+              "inputs": [
+                "param:Ref"
+              ],
+              "name": "Bump",
+              "outputs": [],
+              "reads": [],
+              "signature": "procedure Bump (Ref: access Payload)",
+              "writes": []
+            },
+            {
+              "depends": [
+                {
+                  "inputs": [
+                    "param:Ref"
+                  ],
+                  "output_name": "return"
+                }
+              ],
+              "inputs": [
+                "param:Ref"
+              ],
+              "name": "Read_Value",
+              "outputs": [
+                "return"
+              ],
+              "reads": [],
+              "signature": "function Read_Value (Ref: access Payload) return Integer",
+              "writes": []
+            },
+            {
+              "depends": [],
+              "inputs": [],
+              "name": "Consume",
+              "outputs": [],
+              "reads": [],
+              "signature": "procedure Consume (Ref: Payload_Ptr)",
+              "writes": []
+            }
+          ],
+          "executables": [
+            {
+              "kind": "procedure",
+              "name": "Bump",
+              "signature": "procedure Bump (Ref: access Payload)",
+              "span": {
+                "end_col": 12,
+                "end_line": 12,
+                "start_col": 11,
+                "start_line": 9
+              }
+            },
+            {
+              "kind": "function",
+              "name": "Read_Value",
+              "signature": "function Read_Value (Ref: access Payload) return Integer",
+              "span": {
+                "end_col": 18,
+                "end_line": 17,
+                "start_col": 11,
+                "start_line": 14
+              }
+            },
+            {
+              "kind": "procedure",
+              "name": "Consume",
+              "signature": "procedure Consume (Ref: Payload_Ptr)",
+              "span": {
+                "end_col": 15,
+                "end_line": 22,
+                "start_col": 11,
+                "start_line": 19
+              }
+            }
+          ],
+          "format": "safei-v1",
+          "objects": [],
+          "package_name": "Provider_Imported_Call_Ownership",
+          "public_declarations": [
+            {
+              "kind": "TypeDeclaration",
+              "name": "Payload",
+              "signature": "Payload",
+              "span": {
+                "end_col": 14,
+                "end_line": 5,
+                "start_col": 11,
+                "start_line": 3
+              }
+            },
+            {
+              "kind": "TypeDeclaration",
+              "name": "Payload_Ptr",
+              "signature": "Payload_Ptr",
+              "span": {
+                "end_col": 45,
+                "end_line": 7,
+                "start_col": 11,
+                "start_line": 7
+              }
+            },
+            {
+              "kind": "SubprogramBody",
+              "name": "Bump",
+              "signature": "procedure Bump (Ref: access Payload)",
+              "span": {
+                "end_col": 12,
+                "end_line": 12,
+                "start_col": 11,
+                "start_line": 9
+              }
+            },
+            {
+              "kind": "SubprogramBody",
+              "name": "Read_Value",
+              "signature": "function Read_Value (Ref: access Payload) return Integer",
+              "span": {
+                "end_col": 18,
+                "end_line": 17,
+                "start_col": 11,
+                "start_line": 14
+              }
+            },
+            {
+              "kind": "SubprogramBody",
+              "name": "Consume",
+              "signature": "procedure Consume (Ref: Payload_Ptr)",
+              "span": {
+                "end_col": 15,
+                "end_line": 22,
+                "start_col": 11,
+                "start_line": 19
+              }
+            }
+          ],
+          "subprograms": [
+            {
+              "has_return_type": false,
+              "kind": "procedure",
+              "name": "Bump",
+              "params": [
+                {
+                  "mode": "in",
+                  "name": "Ref",
+                  "span": {
+                    "end_col": 46,
+                    "end_line": 9,
+                    "start_col": 27,
+                    "start_line": 9
+                  },
+                  "type": {
+                    "access_role": "Borrow",
+                    "anonymous": true,
+                    "is_all": false,
+                    "is_constant": false,
+                    "kind": "access",
+                    "name": "access Payload",
+                    "not_null": false,
+                    "target": "Payload"
+                  }
+                }
+              ],
+              "return_is_access_def": false,
+              "return_type": null,
+              "signature": "procedure Bump (Ref: access Payload)",
+              "span": {
+                "end_col": 12,
+                "end_line": 12,
+                "start_col": 11,
+                "start_line": 9
+              }
+            },
+            {
+              "has_return_type": true,
+              "kind": "function",
+              "name": "Read_Value",
+              "params": [
+                {
+                  "mode": "in",
+                  "name": "Ref",
+                  "span": {
+                    "end_col": 60,
+                    "end_line": 14,
+                    "start_col": 32,
+                    "start_line": 14
+                  },
+                  "type": {
+                    "access_role": "Observe",
+                    "anonymous": true,
+                    "is_all": false,
+                    "is_constant": true,
+                    "kind": "access",
+                    "name": "access Payload",
+                    "not_null": false,
+                    "target": "Payload"
+                  }
+                }
+              ],
+              "return_is_access_def": false,
+              "return_type": {
+                "high": 9223372036854775807,
+                "kind": "integer",
+                "low": -9223372036854775808,
+                "name": "Integer"
+              },
+              "signature": "function Read_Value (Ref: access Payload) return Integer",
+              "span": {
+                "end_col": 18,
+                "end_line": 17,
+                "start_col": 11,
+                "start_line": 14
+              }
+            },
+            {
+              "has_return_type": false,
+              "kind": "procedure",
+              "name": "Consume",
+              "params": [
+                {
+                  "mode": "in out",
+                  "name": "Ref",
+                  "span": {
+                    "end_col": 53,
+                    "end_line": 19,
+                    "start_col": 30,
+                    "start_line": 19
+                  },
+                  "type": {
+                    "access_role": "Owner",
+                    "anonymous": false,
+                    "is_all": false,
+                    "is_constant": false,
+                    "kind": "access",
+                    "name": "Payload_Ptr",
+                    "not_null": false,
+                    "target": "Payload"
+                  }
+                }
+              ],
+              "return_is_access_def": false,
+              "return_type": null,
+              "signature": "procedure Consume (Ref: Payload_Ptr)",
+              "span": {
+                "end_col": 15,
+                "end_line": 22,
+                "start_col": 11,
+                "start_line": 19
+              }
+            }
+          ],
+          "subtypes": [],
+          "types": [
+            {
+              "fields": {
+                "Value": "Integer"
+              },
+              "kind": "record",
+              "name": "Payload"
+            },
+            {
+              "access_role": "Owner",
+              "anonymous": false,
+              "is_all": false,
+              "is_constant": false,
+              "kind": "access",
+              "name": "Payload_Ptr",
+              "not_null": false,
+              "target": "Payload"
+            }
+          ]
+        },
+        "validators": {
+          "analyze_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "analyze-mir",
+              "--diag-json",
+              "$TMPDIR/providers/provider_imported_call_ownership/out/provider_imported_call_ownership.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+          },
+          "output_contracts": {
+            "command": [
+              "python3",
+              "scripts/validate_output_contracts.py",
+              "--ast",
+              "$TMPDIR/providers/provider_imported_call_ownership/out/provider_imported_call_ownership.ast.json",
+              "--typed",
+              "$TMPDIR/providers/provider_imported_call_ownership/out/provider_imported_call_ownership.typed.json",
+              "--mir",
+              "$TMPDIR/providers/provider_imported_call_ownership/out/provider_imported_call_ownership.mir.json",
+              "--safei",
+              "$TMPDIR/iface/provider_imported_call_ownership.safei.json",
+              "--source-path",
+              "tests/interfaces/provider_imported_call_ownership.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "output contracts: OK (provider_imported_call_ownership.ast.json, provider_imported_call_ownership.typed.json, provider_imported_call_ownership.mir.json, provider_imported_call_ownership.safei.json)\n"
+          },
+          "validate_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "validate-mir",
+              "$TMPDIR/providers/provider_imported_call_ownership/out/provider_imported_call_ownership.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "validate-mir: OK ($TMPDIR/providers/provider_imported_call_ownership/out/provider_imported_call_ownership.mir.json)\n"
+          }
+        }
+      }
+    },
+    "provider_transitive_channel.safe": {
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/interfaces/provider_transitive_channel.safe",
+          "--out-dir",
+          "$TMPDIR/providers/provider_transitive_channel/out",
+          "--interface-dir",
+          "$TMPDIR/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "outputs": {
+        "files": {
+          "ast": "out/provider_transitive_channel.ast.json",
+          "mir": "out/provider_transitive_channel.mir.json",
+          "safei": "iface/provider_transitive_channel.safei.json",
+          "typed": "out/provider_transitive_channel.typed.json"
+        },
+        "hashes": {
+          "ast": "ec001b01a1f46607c4449b81caf39832117e020e4f333d7f3a170c53a5a69245",
+          "mir": "1d815eb93cf85300e43a61d2b9ba59af884b3db7b17ba267fba1fad2b49bd0bd",
+          "safei": "153e3167448b0210069a1b75ec2c7b152871a14a7033abc02d5e4865777e5062",
+          "typed": "030ec773d7facd2174f506e046dbb7cfd4d0e652027ccee6b880b9a4ab3913d5"
+        },
+        "mir_payload": {
+          "channels": [
+            {
+              "capacity": 4,
+              "element_type": {
+                "high": 10,
+                "kind": "integer",
+                "low": 0,
+                "name": "Message"
+              },
+              "name": "Data_Ch",
+              "span": {
+                "end_col": 47,
+                "end_line": 4,
+                "start_col": 11,
+                "start_line": 4
+              }
+            }
+          ],
+          "externals": [],
+          "format": "mir-v2",
+          "graphs": [
+            {
+              "blocks": [
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb0",
+                  "ops": [
+                    {
+                      "channel": {
+                        "name": "Data_Ch",
+                        "span": {
+                          "end_col": 18,
+                          "end_line": 19,
+                          "start_col": 12,
+                          "start_line": 19
+                        },
+                        "tag": "ident",
+                        "type": "Integer"
+                      },
+                      "kind": "channel_send",
+                      "ownership_effect": "None",
+                      "span": {
+                        "end_col": 22,
+                        "end_line": 19,
+                        "start_col": 7,
+                        "start_line": 19
+                      },
+                      "type": "Integer",
+                      "value": {
+                        "span": {
+                          "end_col": 21,
+                          "end_line": 19,
+                          "start_col": 21,
+                          "start_line": 19
+                        },
+                        "tag": "int",
+                        "text": "1",
+                        "type": "Integer",
+                        "value": 1
+                      }
+                    }
+                  ],
+                  "role": "entry",
+                  "span": {
+                    "end_col": 21,
+                    "end_line": 20,
+                    "start_col": 4,
+                    "start_line": 17
+                  },
+                  "terminator": {
+                    "kind": "return",
+                    "ownership_effect": "None",
+                    "span": {
+                      "end_col": 21,
+                      "end_line": 20,
+                      "start_col": 4,
+                      "start_line": 17
+                    },
+                    "value": null
+                  }
+                }
+              ],
+              "entry_bb": "bb0",
+              "kind": "procedure",
+              "locals": [],
+              "name": "Push_Internal",
+              "return_type": null,
+              "scopes": [
+                {
+                  "entry_block": "bb0",
+                  "exit_blocks": [
+                    "bb0"
+                  ],
+                  "id": "scope0",
+                  "kind": "subprogram",
+                  "local_ids": [],
+                  "parent_scope_id": null
+                }
+              ],
+              "span": {
+                "end_col": 21,
+                "end_line": 20,
+                "start_col": 4,
+                "start_line": 17
+              }
+            },
+            {
+              "blocks": [
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb0",
+                  "ops": [
+                    {
+                      "kind": "call",
+                      "ownership_effect": "None",
+                      "span": {
+                        "end_col": 20,
+                        "end_line": 24,
+                        "start_col": 7,
+                        "start_line": 24
+                      },
+                      "target": null,
+                      "type": "Integer",
+                      "value": {
+                        "args": [],
+                        "call_span": {
+                          "end_col": 19,
+                          "end_line": 24,
+                          "start_col": 7,
+                          "start_line": 24
+                        },
+                        "callee": {
+                          "name": "Push_Internal",
+                          "span": {
+                            "end_col": 19,
+                            "end_line": 24,
+                            "start_col": 7,
+                            "start_line": 24
+                          },
+                          "tag": "ident",
+                          "type": "Integer"
+                        },
+                        "span": {
+                          "end_col": 19,
+                          "end_line": 24,
+                          "start_col": 7,
+                          "start_line": 24
+                        },
+                        "tag": "call",
+                        "type": "Integer"
+                      }
+                    }
+                  ],
+                  "role": "entry",
+                  "span": {
+                    "end_col": 12,
+                    "end_line": 25,
+                    "start_col": 11,
+                    "start_line": 22
+                  },
+                  "terminator": {
+                    "kind": "return",
+                    "ownership_effect": "None",
+                    "span": {
+                      "end_col": 12,
+                      "end_line": 25,
+                      "start_col": 11,
+                      "start_line": 22
+                    },
+                    "value": null
+                  }
+                }
+              ],
+              "entry_bb": "bb0",
+              "kind": "procedure",
+              "locals": [],
+              "name": "Push",
+              "return_type": null,
+              "scopes": [
+                {
+                  "entry_block": "bb0",
+                  "exit_blocks": [
+                    "bb0"
+                  ],
+                  "id": "scope0",
+                  "kind": "subprogram",
+                  "local_ids": [],
+                  "parent_scope_id": null
+                }
+              ],
+              "span": {
+                "end_col": 12,
+                "end_line": 25,
+                "start_col": 11,
+                "start_line": 22
+              }
+            },
+            {
+              "blocks": [
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb0",
+                  "ops": [],
+                  "role": "entry",
+                  "span": {
+                    "end_col": 14,
+                    "end_line": 15,
+                    "start_col": 4,
+                    "start_line": 6
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 15,
+                      "end_line": 14,
+                      "start_col": 7,
+                      "start_line": 8
+                    },
+                    "target": "bb1"
+                  }
+                },
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb1",
+                  "loop": {
+                    "exit_target": "bb3",
+                    "kind": "loop"
+                  },
+                  "ops": [],
+                  "role": "loop_header",
+                  "span": {
+                    "end_col": 15,
+                    "end_line": 14,
+                    "start_col": 7,
+                    "start_line": 8
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 15,
+                      "end_line": 14,
+                      "start_col": 7,
+                      "start_line": 8
+                    },
+                    "target": "bb2"
+                  }
+                },
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb2",
+                  "ops": [],
+                  "role": "loop_body",
+                  "span": {
+                    "end_col": 15,
+                    "end_line": 14,
+                    "start_col": 7,
+                    "start_line": 8
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 13,
+                      "end_line": 13,
+                      "start_col": 10,
+                      "start_line": 9
+                    },
+                    "target": "bb4"
+                  }
+                },
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb3",
+                  "ops": [],
+                  "role": "loop_exit",
+                  "span": {
+                    "end_col": 15,
+                    "end_line": 14,
+                    "start_col": 7,
+                    "start_line": 8
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 14,
+                      "end_line": 15,
+                      "start_col": 4,
+                      "start_line": 6
+                    },
+                    "target": "bb3"
+                  }
+                },
+                {
+                  "active_scope_id": "scope1",
+                  "id": "bb4",
+                  "ops": [
+                    {
+                      "kind": "scope_enter",
+                      "locals": [
+                        "Item"
+                      ],
+                      "scope_id": "scope1",
+                      "span": {
+                        "end_col": 13,
+                        "end_line": 13,
+                        "start_col": 10,
+                        "start_line": 9
+                      }
+                    },
+                    {
+                      "declaration_init": true,
+                      "kind": "assign",
+                      "ownership_effect": "None",
+                      "span": {
+                        "end_col": 31,
+                        "end_line": 10,
+                        "start_col": 13,
+                        "start_line": 10
+                      },
+                      "target": {
+                        "name": "Item",
+                        "span": {
+                          "end_col": 31,
+                          "end_line": 10,
+                          "start_col": 13,
+                          "start_line": 10
+                        },
+                        "tag": "ident",
+                        "type": "Message"
+                      },
+                      "type": "Message",
+                      "value": {
+                        "span": {
+                          "end_col": 30,
+                          "end_line": 10,
+                          "start_col": 30,
+                          "start_line": 10
+                        },
+                        "tag": "int",
+                        "text": "0",
+                        "type": "Integer",
+                        "value": 0
+                      }
+                    },
+                    {
+                      "channel": {
+                        "name": "Data_Ch",
+                        "span": {
+                          "end_col": 27,
+                          "end_line": 12,
+                          "start_col": 21,
+                          "start_line": 12
+                        },
+                        "tag": "ident",
+                        "type": "Integer"
+                      },
+                      "kind": "channel_receive",
+                      "ownership_effect": "None",
+                      "span": {
+                        "end_col": 34,
+                        "end_line": 12,
+                        "start_col": 13,
+                        "start_line": 12
+                      },
+                      "target": {
+                        "name": "Item",
+                        "span": {
+                          "end_col": 33,
+                          "end_line": 12,
+                          "start_col": 30,
+                          "start_line": 12
+                        },
+                        "tag": "ident",
+                        "type": "Message"
+                      },
+                      "type": "Message"
+                    },
+                    {
+                      "kind": "scope_exit",
+                      "scope_id": "scope1",
+                      "span": {
+                        "end_col": 13,
+                        "end_line": 13,
+                        "start_col": 10,
+                        "start_line": 9
+                      }
+                    }
+                  ],
+                  "role": "block_entry",
+                  "span": {
+                    "end_col": 13,
+                    "end_line": 13,
+                    "start_col": 10,
+                    "start_line": 9
+                  },
+                  "terminator": {
+                    "kind": "jump",
+                    "span": {
+                      "end_col": 15,
+                      "end_line": 14,
+                      "start_col": 7,
+                      "start_line": 8
+                    },
+                    "target": "bb1"
+                  }
+                }
+              ],
+              "entry_bb": "bb0",
+              "has_explicit_priority": true,
+              "kind": "task",
+              "locals": [
+                {
+                  "id": "v0",
+                  "is_constant": false,
+                  "kind": "local",
+                  "mode": "in",
+                  "name": "Item",
+                  "ownership_role": "",
+                  "scope_id": "scope1",
+                  "span": {
+                    "end_col": 31,
+                    "end_line": 10,
+                    "start_col": 13,
+                    "start_line": 10
+                  },
+                  "type": {
+                    "high": 10,
+                    "kind": "integer",
+                    "low": 0,
+                    "name": "Message"
+                  }
+                }
+              ],
+              "name": "Worker",
+              "priority": 12,
+              "return_type": null,
+              "scopes": [
+                {
+                  "entry_block": "bb0",
+                  "exit_blocks": [],
+                  "id": "scope0",
+                  "kind": "task",
+                  "local_ids": [],
+                  "parent_scope_id": null
+                },
+                {
+                  "entry_block": "bb4",
+                  "exit_blocks": [
+                    "bb4"
+                  ],
+                  "id": "scope1",
+                  "kind": "block",
+                  "local_ids": [
+                    "v0"
+                  ],
+                  "parent_scope_id": "scope0"
+                }
+              ],
+              "span": {
+                "end_col": 14,
+                "end_line": 15,
+                "start_col": 4,
+                "start_line": 6
+              }
+            }
+          ],
+          "package_name": "Provider_Transitive_Channel",
+          "source_path": "tests/interfaces/provider_transitive_channel.safe",
+          "types": [
+            {
+              "high": 10,
+              "kind": "integer",
+              "low": 0,
+              "name": "Message"
+            }
+          ]
+        },
+        "safei_payload": {
+          "channel_access_summaries": [
+            {
+              "channels": [
+                "Data_Ch"
+              ],
+              "name": "Push",
+              "signature": "procedure Push ()"
+            }
+          ],
+          "channels": [
+            {
+              "capacity": 4,
+              "element_type": {
+                "high": 10,
+                "kind": "integer",
+                "low": 0,
+                "name": "Message"
+              },
+              "is_public": true,
+              "name": "Data_Ch",
+              "required_ceiling": 12,
+              "span": {
+                "end_col": 47,
+                "end_line": 4,
+                "start_col": 11,
+                "start_line": 4
+              }
+            }
+          ],
+          "dependencies": [],
+          "effect_summaries": [
+            {
+              "depends": [],
+              "inputs": [],
+              "name": "Push",
+              "outputs": [],
+              "reads": [],
+              "signature": "procedure Push ()",
+              "writes": []
+            }
+          ],
+          "executables": [
+            {
+              "kind": "procedure",
+              "name": "Push_Internal",
+              "signature": "procedure Push_Internal ()",
+              "span": {
+                "end_col": 21,
+                "end_line": 20,
+                "start_col": 4,
+                "start_line": 17
+              }
+            },
+            {
+              "kind": "procedure",
+              "name": "Push",
+              "signature": "procedure Push ()",
+              "span": {
+                "end_col": 12,
+                "end_line": 25,
+                "start_col": 11,
+                "start_line": 22
+              }
+            },
+            {
+              "kind": "task",
+              "name": "Worker",
+              "signature": "task Worker",
+              "span": {
+                "end_col": 14,
+                "end_line": 15,
+                "start_col": 4,
+                "start_line": 6
+              }
+            }
+          ],
+          "format": "safei-v1",
+          "objects": [],
+          "package_name": "Provider_Transitive_Channel",
+          "public_declarations": [
+            {
+              "kind": "TypeDeclaration",
+              "name": "Message",
+              "signature": "Message",
+              "span": {
+                "end_col": 40,
+                "end_line": 3,
+                "start_col": 11,
+                "start_line": 3
+              }
+            },
+            {
+              "kind": "SubprogramBody",
+              "name": "Push",
+              "signature": "procedure Push ()",
+              "span": {
+                "end_col": 12,
+                "end_line": 25,
+                "start_col": 11,
+                "start_line": 22
+              }
+            }
+          ],
+          "subprograms": [
+            {
+              "has_return_type": false,
+              "kind": "procedure",
+              "name": "Push",
+              "params": [],
+              "return_is_access_def": false,
+              "return_type": null,
+              "signature": "procedure Push ()",
+              "span": {
+                "end_col": 12,
+                "end_line": 25,
+                "start_col": 11,
+                "start_line": 22
+              }
+            }
+          ],
+          "subtypes": [],
+          "types": [
+            {
+              "high": 10,
+              "kind": "integer",
+              "low": 0,
+              "name": "Message"
+            }
+          ]
+        },
+        "validators": {
+          "analyze_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "analyze-mir",
+              "--diag-json",
+              "$TMPDIR/providers/provider_transitive_channel/out/provider_transitive_channel.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+          },
+          "output_contracts": {
+            "command": [
+              "python3",
+              "scripts/validate_output_contracts.py",
+              "--ast",
+              "$TMPDIR/providers/provider_transitive_channel/out/provider_transitive_channel.ast.json",
+              "--typed",
+              "$TMPDIR/providers/provider_transitive_channel/out/provider_transitive_channel.typed.json",
+              "--mir",
+              "$TMPDIR/providers/provider_transitive_channel/out/provider_transitive_channel.mir.json",
+              "--safei",
+              "$TMPDIR/iface/provider_transitive_channel.safei.json",
+              "--source-path",
+              "tests/interfaces/provider_transitive_channel.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "output contracts: OK (provider_transitive_channel.ast.json, provider_transitive_channel.typed.json, provider_transitive_channel.mir.json, provider_transitive_channel.safei.json)\n"
+          },
+          "validate_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "validate-mir",
+              "$TMPDIR/providers/provider_transitive_channel/out/provider_transitive_channel.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "validate-mir: OK ($TMPDIR/providers/provider_transitive_channel/out/provider_transitive_channel.mir.json)\n"
+          }
+        }
+      }
+    },
+    "provider_transitive_global.safe": {
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/interfaces/provider_transitive_global.safe",
+          "--out-dir",
+          "$TMPDIR/providers/provider_transitive_global/out",
+          "--interface-dir",
+          "$TMPDIR/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "outputs": {
+        "files": {
+          "ast": "out/provider_transitive_global.ast.json",
+          "mir": "out/provider_transitive_global.mir.json",
+          "safei": "iface/provider_transitive_global.safei.json",
+          "typed": "out/provider_transitive_global.typed.json"
+        },
+        "hashes": {
+          "ast": "21a4970800954bbcfc1d7f3f8e657c67caa8ee9d5af8dbd82efd22244ef42fad",
+          "mir": "1c309495addced5fb6d586fff3d25699fa819c876f9c9e1c11bafaf94ef34ea8",
+          "safei": "45f3030bc64811c793d888a3293adfd0e58609a4c61b49d34ab1af6327339d92",
+          "typed": "858274245d68e18934119bd7e1485a8d61a859794f14389d063b8569b04a7ac9"
+        },
+        "mir_payload": {
+          "channels": [],
+          "externals": [],
+          "format": "mir-v2",
+          "graphs": [
+            {
+              "blocks": [
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb0",
+                  "ops": [
+                    {
+                      "declaration_init": true,
+                      "kind": "assign",
+                      "ownership_effect": "None",
+                      "span": {
+                        "end_col": 24,
+                        "end_line": 3,
+                        "start_col": 4,
+                        "start_line": 3
+                      },
+                      "target": {
+                        "name": "Shared",
+                        "span": {
+                          "end_col": 24,
+                          "end_line": 3,
+                          "start_col": 4,
+                          "start_line": 3
+                        },
+                        "tag": "ident",
+                        "type": "Integer"
+                      },
+                      "type": "Integer",
+                      "value": {
+                        "span": {
+                          "end_col": 23,
+                          "end_line": 3,
+                          "start_col": 23,
+                          "start_line": 3
+                        },
+                        "tag": "int",
+                        "text": "0",
+                        "type": "Integer",
+                        "value": 0
+                      }
+                    },
+                    {
+                      "declaration_init": false,
+                      "kind": "assign",
+                      "ownership_effect": "None",
+                      "span": {
+                        "end_col": 26,
+                        "end_line": 7,
+                        "start_col": 7,
+                        "start_line": 7
+                      },
+                      "target": {
+                        "name": "Shared",
+                        "span": {
+                          "end_col": 12,
+                          "end_line": 7,
+                          "start_col": 7,
+                          "start_line": 7
+                        },
+                        "tag": "ident",
+                        "type": "Integer"
+                      },
+                      "type": "Integer",
+                      "value": {
+                        "left": {
+                          "name": "Shared",
+                          "span": {
+                            "end_col": 21,
+                            "end_line": 7,
+                            "start_col": 16,
+                            "start_line": 7
+                          },
+                          "tag": "ident",
+                          "type": "Integer"
+                        },
+                        "op": "+",
+                        "right": {
+                          "span": {
+                            "end_col": 25,
+                            "end_line": 7,
+                            "start_col": 25,
+                            "start_line": 7
+                          },
+                          "tag": "int",
+                          "text": "1",
+                          "type": "Integer",
+                          "value": 1
+                        },
+                        "span": {
+                          "end_col": 25,
+                          "end_line": 7,
+                          "start_col": 16,
+                          "start_line": 7
+                        },
+                        "tag": "binary",
+                        "type": "Integer"
+                      }
+                    }
+                  ],
+                  "role": "entry",
+                  "span": {
+                    "end_col": 22,
+                    "end_line": 8,
+                    "start_col": 4,
+                    "start_line": 5
+                  },
+                  "terminator": {
+                    "kind": "return",
+                    "ownership_effect": "None",
+                    "span": {
+                      "end_col": 22,
+                      "end_line": 8,
+                      "start_col": 4,
+                      "start_line": 5
+                    },
+                    "value": null
+                  }
+                }
+              ],
+              "entry_bb": "bb0",
+              "kind": "procedure",
+              "locals": [
+                {
+                  "id": "v0",
+                  "is_constant": false,
+                  "kind": "global",
+                  "mode": "in",
+                  "name": "Shared",
+                  "ownership_role": "",
+                  "scope_id": "scope0",
+                  "span": {
+                    "end_col": 24,
+                    "end_line": 3,
+                    "start_col": 4,
+                    "start_line": 3
+                  },
+                  "type": {
+                    "high": 9223372036854775807,
+                    "kind": "integer",
+                    "low": -9223372036854775808,
+                    "name": "Integer"
+                  }
+                }
+              ],
+              "name": "Touch_Internal",
+              "return_type": null,
+              "scopes": [
+                {
+                  "entry_block": "bb0",
+                  "exit_blocks": [
+                    "bb0"
+                  ],
+                  "id": "scope0",
+                  "kind": "subprogram",
+                  "local_ids": [
+                    "v0"
+                  ],
+                  "parent_scope_id": null
+                }
+              ],
+              "span": {
+                "end_col": 22,
+                "end_line": 8,
+                "start_col": 4,
+                "start_line": 5
+              }
+            },
+            {
+              "blocks": [
+                {
+                  "active_scope_id": "scope0",
+                  "id": "bb0",
+                  "ops": [
+                    {
+                      "declaration_init": true,
+                      "kind": "assign",
+                      "ownership_effect": "None",
+                      "span": {
+                        "end_col": 24,
+                        "end_line": 3,
+                        "start_col": 4,
+                        "start_line": 3
+                      },
+                      "target": {
+                        "name": "Shared",
+                        "span": {
+                          "end_col": 24,
+                          "end_line": 3,
+                          "start_col": 4,
+                          "start_line": 3
+                        },
+                        "tag": "ident",
+                        "type": "Integer"
+                      },
+                      "type": "Integer",
+                      "value": {
+                        "span": {
+                          "end_col": 23,
+                          "end_line": 3,
+                          "start_col": 23,
+                          "start_line": 3
+                        },
+                        "tag": "int",
+                        "text": "0",
+                        "type": "Integer",
+                        "value": 0
+                      }
+                    },
+                    {
+                      "kind": "call",
+                      "ownership_effect": "None",
+                      "span": {
+                        "end_col": 21,
+                        "end_line": 12,
+                        "start_col": 7,
+                        "start_line": 12
+                      },
+                      "target": null,
+                      "type": "Integer",
+                      "value": {
+                        "args": [],
+                        "call_span": {
+                          "end_col": 20,
+                          "end_line": 12,
+                          "start_col": 7,
+                          "start_line": 12
+                        },
+                        "callee": {
+                          "name": "Touch_Internal",
+                          "span": {
+                            "end_col": 20,
+                            "end_line": 12,
+                            "start_col": 7,
+                            "start_line": 12
+                          },
+                          "tag": "ident",
+                          "type": "Integer"
+                        },
+                        "span": {
+                          "end_col": 20,
+                          "end_line": 12,
+                          "start_col": 7,
+                          "start_line": 12
+                        },
+                        "tag": "call",
+                        "type": "Integer"
+                      }
+                    }
+                  ],
+                  "role": "entry",
+                  "span": {
+                    "end_col": 13,
+                    "end_line": 13,
+                    "start_col": 11,
+                    "start_line": 10
+                  },
+                  "terminator": {
+                    "kind": "return",
+                    "ownership_effect": "None",
+                    "span": {
+                      "end_col": 13,
+                      "end_line": 13,
+                      "start_col": 11,
+                      "start_line": 10
+                    },
+                    "value": null
+                  }
+                }
+              ],
+              "entry_bb": "bb0",
+              "kind": "procedure",
+              "locals": [
+                {
+                  "id": "v0",
+                  "is_constant": false,
+                  "kind": "global",
+                  "mode": "in",
+                  "name": "Shared",
+                  "ownership_role": "",
+                  "scope_id": "scope0",
+                  "span": {
+                    "end_col": 24,
+                    "end_line": 3,
+                    "start_col": 4,
+                    "start_line": 3
+                  },
+                  "type": {
+                    "high": 9223372036854775807,
+                    "kind": "integer",
+                    "low": -9223372036854775808,
+                    "name": "Integer"
+                  }
+                }
+              ],
+              "name": "Touch",
+              "return_type": null,
+              "scopes": [
+                {
+                  "entry_block": "bb0",
+                  "exit_blocks": [
+                    "bb0"
+                  ],
+                  "id": "scope0",
+                  "kind": "subprogram",
+                  "local_ids": [
+                    "v0"
+                  ],
+                  "parent_scope_id": null
+                }
+              ],
+              "span": {
+                "end_col": 13,
+                "end_line": 13,
+                "start_col": 11,
+                "start_line": 10
+              }
+            }
+          ],
+          "package_name": "Provider_Transitive_Global",
+          "source_path": "tests/interfaces/provider_transitive_global.safe",
+          "types": []
+        },
+        "safei_payload": {
+          "channel_access_summaries": [
+            {
+              "channels": [],
+              "name": "Touch",
+              "signature": "procedure Touch ()"
+            }
+          ],
+          "channels": [],
+          "dependencies": [],
+          "effect_summaries": [
+            {
+              "depends": [
+                {
+                  "inputs": [
+                    "global:Shared"
+                  ],
+                  "output_name": "global:Shared"
+                }
+              ],
+              "inputs": [
+                "global:Shared"
+              ],
+              "name": "Touch",
+              "outputs": [
+                "global:Shared"
+              ],
+              "reads": [
+                "Shared"
+              ],
+              "signature": "procedure Touch ()",
+              "writes": [
+                "Shared"
+              ]
+            }
+          ],
+          "executables": [
+            {
+              "kind": "procedure",
+              "name": "Touch_Internal",
+              "signature": "procedure Touch_Internal ()",
+              "span": {
+                "end_col": 22,
+                "end_line": 8,
+                "start_col": 4,
+                "start_line": 5
+              }
+            },
+            {
+              "kind": "procedure",
+              "name": "Touch",
+              "signature": "procedure Touch ()",
+              "span": {
+                "end_col": 13,
+                "end_line": 13,
+                "start_col": 11,
+                "start_line": 10
+              }
+            }
+          ],
+          "format": "safei-v1",
+          "objects": [],
+          "package_name": "Provider_Transitive_Global",
+          "public_declarations": [
+            {
+              "kind": "SubprogramBody",
+              "name": "Touch",
+              "signature": "procedure Touch ()",
+              "span": {
+                "end_col": 13,
+                "end_line": 13,
+                "start_col": 11,
+                "start_line": 10
+              }
+            }
+          ],
+          "subprograms": [
+            {
+              "has_return_type": false,
+              "kind": "procedure",
+              "name": "Touch",
+              "params": [],
+              "return_is_access_def": false,
+              "return_type": null,
+              "signature": "procedure Touch ()",
+              "span": {
+                "end_col": 13,
+                "end_line": 13,
+                "start_col": 11,
+                "start_line": 10
+              }
+            }
+          ],
+          "subtypes": [],
+          "types": []
+        },
+        "validators": {
+          "analyze_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "analyze-mir",
+              "--diag-json",
+              "$TMPDIR/providers/provider_transitive_global/out/provider_transitive_global.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+          },
+          "output_contracts": {
+            "command": [
+              "python3",
+              "scripts/validate_output_contracts.py",
+              "--ast",
+              "$TMPDIR/providers/provider_transitive_global/out/provider_transitive_global.ast.json",
+              "--typed",
+              "$TMPDIR/providers/provider_transitive_global/out/provider_transitive_global.typed.json",
+              "--mir",
+              "$TMPDIR/providers/provider_transitive_global/out/provider_transitive_global.mir.json",
+              "--safei",
+              "$TMPDIR/iface/provider_transitive_global.safei.json",
+              "--source-path",
+              "tests/interfaces/provider_transitive_global.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "output contracts: OK (provider_transitive_global.ast.json, provider_transitive_global.typed.json, provider_transitive_global.mir.json, provider_transitive_global.safei.json)\n"
+          },
+          "validate_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "validate-mir",
+              "$TMPDIR/providers/provider_transitive_global/out/provider_transitive_global.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "validate-mir: OK ($TMPDIR/providers/provider_transitive_global/out/provider_transitive_global.mir.json)\n"
+          }
+        }
+      }
+    }
+  },
+  "repeat_sha256": "525f8c13f56bed99c4d5f29a3b15a2d984e85af8a62de16dd4980d71b1a10a8f",
+  "report_sha256": "525f8c13f56bed99c4d5f29a3b15a2d984e85af8a62de16dd4980d71b1a10a8f",
+  "synthetic_parity": {
+    "imported_inout_parity": {
+      "analyze_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "analyze-mir",
+          "--diag-json",
+          "$TMPDIR/synthetic_imported_double_move.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "<434 chars>"
+      },
+      "diagnostic": {
+        "message": "use of moved value 'Owner'",
+        "reason": "double_move"
+      }
+    },
+    "imported_shared_global_parity": {
+      "analyze_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "analyze-mir",
+          "--diag-json",
+          "$TMPDIR/synthetic_imported_shared_global.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "<501 chars>"
+      },
+      "diagnostic": {
+        "message": "package global 'Provider_Transitive_Global.Shared' is accessed by multiple tasks",
+        "reason": "task_variable_ownership"
+      }
+    }
+  }
+}

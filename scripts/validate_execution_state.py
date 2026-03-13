@@ -158,7 +158,7 @@ DOCUMENTATION_ARCHITECTURE_DOC_REQUIREMENTS = {
         "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern",
         "Ada-native `safec lex` / `ast` / `validate-mir` / `analyze-mir` / `check` / `emit`",
         "Python remains glue/orchestration only around the compiler.",
-        "PR07 is the milestone that establishes this expanded baseline before PR08.",
+        "PR08 is now the supported frontend baseline, and later work continues on that live Ada-native path rather than reviving deleted packages.",
     ],
     "compiler_impl/README.md": [
         "../docs/frontend_architecture_baseline.md",
@@ -167,7 +167,7 @@ DOCUMENTATION_ARCHITECTURE_DOC_REQUIREMENTS = {
         "All current user-facing `safec` commands are Ada-native for that supported surface.",
         "Python remains glue/orchestration only around the compiler.",
         "The old shallow `Ast` / `Parser` / `Semantics` / `Mir` chain was deleted in PR06.9.8.",
-        "PR08 must extend the live `Check_*` + `Mir_*` pipeline.",
+        "PR08 extends the live `Check_*` + `Mir_*` pipeline, and the current frontend baseline is now PR08.",
     ],
     "release/frontend_runtime_decision.md": [
         "../docs/frontend_architecture_baseline.md",
@@ -196,7 +196,7 @@ DOCUMENTATION_ARCHITECTURE_DOC_REQUIREMENTS = {
         "`Json`",
         "The old shallow `Ast` / `Parser` / `Semantics` / `Mir` chain was deleted in PR06.9.8.",
         "the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern",
-        "PR08 must extend the live path rather than revive deleted legacy packages.",
+        "PR08 extends the live path rather than reviving deleted legacy packages, and the current supported frontend baseline is now PR08 rather than PR07.",
     ],
     "docs/frontend_scale_limits.md": [
         "frontend_architecture_baseline.md",

@@ -1816,6 +1816,9 @@ package body Safe_Frontend.Check_Emit is
                & Type_Json (Channel_Item.Element_Type)
                & ",""capacity"":"
                & Long_Long_Integer'Image (Channel_Item.Capacity)
+               & (if Channel_Item.Has_Required_Ceiling
+                  then ",""required_ceiling"":" & Long_Long_Integer'Image (Channel_Item.Required_Ceiling)
+                  else "")
                & ",""span"":"
                & JS.Span_Object (Channel_Item.Span)
                & "}");
@@ -1908,12 +1911,32 @@ package body Safe_Frontend.Check_Emit is
       return Json_List (Items);
    end Public_Types_Json;
 
-   function Public_Channels_Json (Resolved : CM.Resolved_Unit) return String is
+   function Channel_Required_Ceiling
+     (Bronze : MB.Bronze_Result;
+      Name   : FT.UString) return Long_Long_Integer is
+   begin
+      if not Bronze.Ceilings.Is_Empty then
+         for Item of Bronze.Ceilings loop
+            if FT.To_String (Item.Channel_Name) = FT.To_String (Name) then
+               return Item.Priority;
+            end if;
+         end loop;
+      end if;
+      return 0;
+   end Channel_Required_Ceiling;
+
+   function Public_Channels_Json
+     (Resolved : CM.Resolved_Unit;
+      Bronze   : MB.Bronze_Result) return String is
       Items : String_Vectors.Vector;
    begin
       if not Resolved.Channels.Is_Empty then
          for Channel_Item of Resolved.Channels loop
             if Channel_Item.Is_Public then
+               declare
+                  Ceiling : constant Long_Long_Integer :=
+                    Channel_Required_Ceiling (Bronze, Channel_Item.Name);
+               begin
                Items.Append
                  ("{""name"":"
                   & JS.Quote (Channel_Item.Name)
@@ -1923,9 +1946,13 @@ package body Safe_Frontend.Check_Emit is
                   & Type_Json (Channel_Item.Element_Type)
                   & ",""capacity"":"
                   & Long_Long_Integer'Image (Channel_Item.Capacity)
+                  & (if Ceiling > 0
+                     then ",""required_ceiling"":" & Long_Long_Integer'Image (Ceiling)
+                     else "")
                   & ",""span"":"
                   & JS.Span_Object (Channel_Item.Span)
                   & "}");
+               end;
             end if;
          end loop;
       end if;
@@ -2407,7 +2434,7 @@ package body Safe_Frontend.Check_Emit is
         & Public_Types_Json (Parsed, Resolved, True)
         & ","
         & """channels"":"
-        & Public_Channels_Json (Resolved)
+        & Public_Channels_Json (Resolved, Bronze)
         & ","
         & """objects"":"
         & Public_Objects_Json (Parsed, Resolved)

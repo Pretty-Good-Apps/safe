@@ -1,0 +1,76 @@
+{
+  "deterministic": true,
+  "docs": {
+    "compiler_readme": "compiler_impl/README.md",
+    "dashboard_synced": true,
+    "frontend_baseline": "docs/frontend_architecture_baseline.md",
+    "readme": "README.md"
+  },
+  "repeat_sha256": "df67a634df3d5df2993f72bb9161b8882372afdc37810d7fc4225d27967f619b",
+  "report_sha256": "df67a634df3d5df2993f72bb9161b8882372afdc37810d7fc4225d27967f619b",
+  "status": "ok",
+  "subgates": {
+    "run_pr081_local_concurrency_frontend.py": {
+      "command": [
+        "python3",
+        "scripts/run_pr081_local_concurrency_frontend.py"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "pr08.1 local concurrency frontend: OK (execution/reports/pr081-local-concurrency-frontend-report.json)\n"
+    },
+    "run_pr082_local_concurrency_analysis.py": {
+      "command": [
+        "python3",
+        "scripts/run_pr082_local_concurrency_analysis.py"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "pr08.2 local concurrency analysis: OK (execution/reports/pr082-local-concurrency-analysis-report.json)\n"
+    },
+    "run_pr083_interface_contracts.py": {
+      "command": [
+        "python3",
+        "scripts/run_pr083_interface_contracts.py"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "pr083 interface contracts: OK (execution/reports/pr083-interface-contracts-report.json)\n"
+    },
+    "run_pr083a_public_constants.py": {
+      "command": [
+        "python3",
+        "scripts/run_pr083a_public_constants.py"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "pr083a public constants: OK (execution/reports/pr083a-public-constants-report.json)\n"
+    },
+    "run_pr084_transitive_concurrency_integration.py": {
+      "command": [
+        "python3",
+        "scripts/run_pr084_transitive_concurrency_integration.py"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "[pr084] wrote report to execution/reports/pr084-transitive-concurrency-integration-report.json\n"
+    }
+  },
+  "task": "PR08",
+  "tracker": {
+    "next_task_id": "PR09",
+    "pr084_evidence": [
+      "execution/reports/pr084-transitive-concurrency-integration-report.json"
+    ],
+    "pr084_status": "done",
+    "pr08_evidence": [
+      "execution/reports/pr08-frontend-baseline-report.json"
+    ],
+    "pr08_status": "done"
+  }
+}

@@ -1,6 +1,7 @@
 with Ada.Containers;
 with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Containers.Indefinite_Hashed_Sets;
+with Ada.Strings.Fixed;
 with Ada.Strings.Hash;
 
 package body Safe_Frontend.Mir_Bronze is
@@ -55,7 +56,14 @@ package body Safe_Frontend.Mir_Bronze is
       Inputs         : String_Sets.Set;
       Outputs        : String_Sets.Set;
       Span           : FT.Source_Span := FT.Null_Span;
+      Use_Spans      : Span_Maps.Map;
    end record;
+
+   package Integer_Maps is new Ada.Containers.Indefinite_Hashed_Maps
+     (Key_Type        => String,
+      Element_Type    => Long_Long_Integer,
+      Hash            => Ada.Strings.Hash,
+      Equivalent_Keys => "=");
 
    package Summary_Maps is new Ada.Containers.Indefinite_Hashed_Maps
      (Key_Type        => String,
@@ -84,6 +92,14 @@ package body Safe_Frontend.Mir_Bronze is
 
    function Flatten_Name (Expr : GM.Expr_Access) return String;
    function Root_Name (Expr : GM.Expr_Access) return String;
+   function Has_Span (Span : FT.Source_Span) return Boolean;
+   function Earlier_Span
+     (Left  : FT.Source_Span;
+      Right : FT.Source_Span) return FT.Source_Span;
+   procedure Note_Use_Span
+     (Name      : String;
+      Span      : FT.Source_Span;
+      Use_Spans : in out Span_Maps.Map);
    function Join_Strings
      (Items     : FT.UString_Vectors.Vector;
       Separator : String := ", ") return String;
@@ -97,19 +113,30 @@ package body Safe_Frontend.Mir_Bronze is
      (Name      : String;
       Locals    : Local_Maps.Map;
       Reads     : in out String_Sets.Set;
-      Inputs    : in out String_Sets.Set);
+      Inputs    : in out String_Sets.Set;
+      Use_Spans : in out Span_Maps.Map;
+      Span      : FT.Source_Span);
    procedure Note_Write
      (Name      : String;
       Locals    : Local_Maps.Map;
       Writes    : in out String_Sets.Set;
-      Outputs   : in out String_Sets.Set);
+      Outputs   : in out String_Sets.Set;
+      Use_Spans : in out Span_Maps.Map;
+      Span      : FT.Source_Span);
    procedure Walk_Expr
      (Expr        : GM.Expr_Access;
       Locals      : Local_Maps.Map;
-      Graph_Map   : Graph_Maps.Map;
+      Callable_Names : String_Sets.Set;
       Reads       : in out String_Sets.Set;
       Calls       : in out String_Sets.Set;
-      Inputs      : in out String_Sets.Set);
+      Inputs      : in out String_Sets.Set;
+      Use_Spans   : in out Span_Maps.Map);
+   function External_Summary (Value : GM.External_Entry) return Direct_Summary;
+   function Earliest_Task_Use_Span
+     (Task_Names : FT.UString_Vectors.Vector;
+      Summaries  : Summary_Maps.Map;
+      Name       : String) return FT.Source_Span;
+   function Local_Use_Note (Span : FT.Source_Span) return String;
    function Dependency_Vector
      (Outputs : String_Sets.Set;
       Inputs  : String_Sets.Set) return Depends_Vectors.Vector;
@@ -146,6 +173,45 @@ package body Safe_Frontend.Mir_Bronze is
       end if;
       return "";
    end Root_Name;
+
+   function Has_Span (Span : FT.Source_Span) return Boolean is
+   begin
+      return Span /= FT.Null_Span;
+   end Has_Span;
+
+   function Earlier_Span
+     (Left  : FT.Source_Span;
+      Right : FT.Source_Span) return FT.Source_Span
+   is
+   begin
+      if not Has_Span (Left) then
+         return Right;
+      elsif not Has_Span (Right) then
+         return Left;
+      elsif Right.Start_Pos.Line < Left.Start_Pos.Line then
+         return Right;
+      elsif Right.Start_Pos.Line = Left.Start_Pos.Line
+        and then Right.Start_Pos.Column < Left.Start_Pos.Column
+      then
+         return Right;
+      end if;
+      return Left;
+   end Earlier_Span;
+
+   procedure Note_Use_Span
+     (Name      : String;
+      Span      : FT.Source_Span;
+      Use_Spans : in out Span_Maps.Map)
+   is
+   begin
+      if Name = "" or else not Has_Span (Span) then
+         return;
+      elsif Use_Spans.Contains (Name) then
+         Use_Spans.Replace (Name, Earlier_Span (Use_Spans.Element (Name), Span));
+      else
+         Use_Spans.Include (Name, Span);
+      end if;
+   end Note_Use_Span;
 
    function Join_Strings
      (Items     : FT.UString_Vectors.Vector;
@@ -275,19 +341,27 @@ package body Safe_Frontend.Mir_Bronze is
      (Name      : String;
       Locals    : Local_Maps.Map;
       Reads     : in out String_Sets.Set;
-      Inputs    : in out String_Sets.Set)
+      Inputs    : in out String_Sets.Set;
+      Use_Spans : in out Span_Maps.Map;
+      Span      : FT.Source_Span)
    is
       Local : GM.Local_Entry;
    begin
-      if Name = "" or else not Locals.Contains (Name) then
+      if Name = "" then
          return;
-      end if;
-      Local := Locals.Element (Name);
-      if UString_Value (Local.Kind) = "global" then
+      elsif Locals.Contains (Name) then
+         Local := Locals.Element (Name);
+         if UString_Value (Local.Kind) = "global" then
+            Reads.Include (Name);
+            Inputs.Include ("global:" & Name);
+            Note_Use_Span (Name, Span, Use_Spans);
+         elsif UString_Value (Local.Kind) = "param" then
+            Inputs.Include ("param:" & Name);
+         end if;
+      elsif Ada.Strings.Fixed.Index (Name, ".") > 0 then
          Reads.Include (Name);
          Inputs.Include ("global:" & Name);
-      elsif UString_Value (Local.Kind) = "param" then
-         Inputs.Include ("param:" & Name);
+         Note_Use_Span (Name, Span, Use_Spans);
       end if;
    end Note_Read;
 
@@ -295,34 +369,44 @@ package body Safe_Frontend.Mir_Bronze is
      (Name      : String;
       Locals    : Local_Maps.Map;
       Writes    : in out String_Sets.Set;
-      Outputs   : in out String_Sets.Set)
+      Outputs   : in out String_Sets.Set;
+      Use_Spans : in out Span_Maps.Map;
+      Span      : FT.Source_Span)
    is
       Local : GM.Local_Entry;
    begin
-      if Name = "" or else not Locals.Contains (Name) then
+      if Name = "" then
          return;
-      end if;
-      Local := Locals.Element (Name);
-      if UString_Value (Local.Kind) = "global" then
+      elsif Locals.Contains (Name) then
+         Local := Locals.Element (Name);
+         if UString_Value (Local.Kind) = "global" then
+            Writes.Include (Name);
+            Outputs.Include ("global:" & Name);
+            Note_Use_Span (Name, Span, Use_Spans);
+         elsif UString_Value (Local.Kind) = "param"
+           and then UString_Value (Local.Mode) in "out" | "in out"
+         then
+            Outputs.Include ("param:" & Name);
+         end if;
+      elsif Ada.Strings.Fixed.Index (Name, ".") > 0 then
          Writes.Include (Name);
          Outputs.Include ("global:" & Name);
-      elsif UString_Value (Local.Kind) = "param"
-        and then UString_Value (Local.Mode) in "out" | "in out"
-      then
-         Outputs.Include ("param:" & Name);
+         Note_Use_Span (Name, Span, Use_Spans);
       end if;
    end Note_Write;
 
    procedure Walk_Expr
      (Expr        : GM.Expr_Access;
       Locals      : Local_Maps.Map;
-      Graph_Map   : Graph_Maps.Map;
+      Callable_Names : String_Sets.Set;
       Reads       : in out String_Sets.Set;
       Calls       : in out String_Sets.Set;
-      Inputs      : in out String_Sets.Set)
+      Inputs      : in out String_Sets.Set;
+      Use_Spans   : in out Span_Maps.Map)
    is
       Root   : FT.UString := FT.To_UString ("");
       Callee : FT.UString := FT.To_UString ("");
+      Full   : FT.UString := FT.To_UString ("");
    begin
       if Expr = null then
          return;
@@ -330,48 +414,133 @@ package body Safe_Frontend.Mir_Bronze is
 
       case Expr.Kind is
          when GM.Expr_Ident =>
-            Note_Read (UString_Value (Expr.Name), Locals, Reads, Inputs);
+            Note_Read (UString_Value (Expr.Name), Locals, Reads, Inputs, Use_Spans, Expr.Span);
          when GM.Expr_Select =>
             if UString_Value (Expr.Selector) = "Access" then
                Root := FT.To_UString (Root_Name (Expr.Prefix));
-               Note_Read (UString_Value (Root), Locals, Reads, Inputs);
+               Full := FT.To_UString (Flatten_Name (Expr.Prefix));
+               if UString_Value (Root) /= "" and then Locals.Contains (UString_Value (Root)) then
+                  Note_Read (UString_Value (Root), Locals, Reads, Inputs, Use_Spans, Expr.Span);
+               else
+                  Note_Read (UString_Value (Full), Locals, Reads, Inputs, Use_Spans, Expr.Span);
+               end if;
+            elsif Ada.Strings.Fixed.Index (Flatten_Name (Expr), ".") > 0
+              and then not Locals.Contains (Root_Name (Expr))
+            then
+               Note_Read (Flatten_Name (Expr), Locals, Reads, Inputs, Use_Spans, Expr.Span);
             else
-               Walk_Expr (Expr.Prefix, Locals, Graph_Map, Reads, Calls, Inputs);
+               Walk_Expr (Expr.Prefix, Locals, Callable_Names, Reads, Calls, Inputs, Use_Spans);
             end if;
          when GM.Expr_Resolved_Index =>
-            Walk_Expr (Expr.Prefix, Locals, Graph_Map, Reads, Calls, Inputs);
+            Walk_Expr (Expr.Prefix, Locals, Callable_Names, Reads, Calls, Inputs, Use_Spans);
             if not Expr.Args.Is_Empty then
                for Arg of Expr.Args loop
-                  Walk_Expr (Arg, Locals, Graph_Map, Reads, Calls, Inputs);
+                  Walk_Expr (Arg, Locals, Callable_Names, Reads, Calls, Inputs, Use_Spans);
                end loop;
             end if;
          when GM.Expr_Conversion | GM.Expr_Unary | GM.Expr_Annotated =>
-            Walk_Expr (Expr.Inner, Locals, Graph_Map, Reads, Calls, Inputs);
+            Walk_Expr (Expr.Inner, Locals, Callable_Names, Reads, Calls, Inputs, Use_Spans);
          when GM.Expr_Binary =>
-            Walk_Expr (Expr.Left, Locals, Graph_Map, Reads, Calls, Inputs);
-            Walk_Expr (Expr.Right, Locals, Graph_Map, Reads, Calls, Inputs);
+            Walk_Expr (Expr.Left, Locals, Callable_Names, Reads, Calls, Inputs, Use_Spans);
+            Walk_Expr (Expr.Right, Locals, Callable_Names, Reads, Calls, Inputs, Use_Spans);
          when GM.Expr_Allocator =>
-            Walk_Expr (Expr.Value, Locals, Graph_Map, Reads, Calls, Inputs);
+            Walk_Expr (Expr.Value, Locals, Callable_Names, Reads, Calls, Inputs, Use_Spans);
          when GM.Expr_Aggregate =>
             if not Expr.Fields.Is_Empty then
                for Field of Expr.Fields loop
-                  Walk_Expr (Field.Expr, Locals, Graph_Map, Reads, Calls, Inputs);
+                  Walk_Expr (Field.Expr, Locals, Callable_Names, Reads, Calls, Inputs, Use_Spans);
                end loop;
             end if;
          when GM.Expr_Call =>
             Callee := FT.To_UString (Flatten_Name (Expr.Callee));
-            if UString_Value (Callee) /= "" and then Graph_Map.Contains (UString_Value (Callee)) then
+            if UString_Value (Callee) /= "" and then Callable_Names.Contains (UString_Value (Callee)) then
                Calls.Include (UString_Value (Callee));
+               Note_Use_Span
+                 (UString_Value (Callee),
+                  (if Expr.Has_Call_Span then Expr.Call_Span else Expr.Span),
+                  Use_Spans);
             end if;
             if not Expr.Args.Is_Empty then
                for Arg of Expr.Args loop
-                  Walk_Expr (Arg, Locals, Graph_Map, Reads, Calls, Inputs);
+                  Walk_Expr (Arg, Locals, Callable_Names, Reads, Calls, Inputs, Use_Spans);
                end loop;
             end if;
          when others =>
             null;
       end case;
    end Walk_Expr;
+
+   function External_Summary (Value : GM.External_Entry) return Direct_Summary is
+      Result : Direct_Summary;
+   begin
+      Result.Name := Value.Name;
+      Result.Kind := Value.Kind;
+      Result.Span := Value.Span;
+      for Item of Value.Effect_Summary.Reads loop
+         Result.Direct_Reads.Include (UString_Value (Item));
+      end loop;
+      for Item of Value.Effect_Summary.Writes loop
+         Result.Direct_Writes.Include (UString_Value (Item));
+      end loop;
+      for Item of Value.Effect_Summary.Inputs loop
+         Result.Direct_Inputs.Include (UString_Value (Item));
+      end loop;
+      for Item of Value.Effect_Summary.Outputs loop
+         Result.Direct_Outputs.Include (UString_Value (Item));
+      end loop;
+      for Item of Value.Channel_Summary.Channels loop
+         Result.Direct_Channels.Include (UString_Value (Item));
+      end loop;
+      Result.Reads := Result.Direct_Reads;
+      Result.Writes := Result.Direct_Writes;
+      Result.Channels := Result.Direct_Channels;
+      Result.Calls := Result.Direct_Calls;
+      Result.Inputs := Result.Direct_Inputs;
+      Result.Outputs := Result.Direct_Outputs;
+      return Result;
+   end External_Summary;
+
+   function Earliest_Task_Use_Span
+     (Task_Names : FT.UString_Vectors.Vector;
+      Summaries  : Summary_Maps.Map;
+      Name       : String) return FT.Source_Span
+   is
+      Result : FT.Source_Span := FT.Null_Span;
+   begin
+      if not Task_Names.Is_Empty then
+         for Task_Name of Task_Names loop
+            declare
+               Task_Key : constant String := UString_Value (Task_Name);
+            begin
+               if Summaries.Contains (Task_Key)
+                 and then Summaries.Element (Task_Key).Use_Spans.Contains (Name)
+               then
+                  Result :=
+                    Earlier_Span
+                      (Result,
+                       Summaries.Element (Task_Key).Use_Spans.Element (Name));
+               end if;
+            end;
+         end loop;
+      end if;
+      return Result;
+   end Earliest_Task_Use_Span;
+
+   function Local_Use_Note (Span : FT.Source_Span) return String is
+      function Pos_Image (Value : Positive) return String is
+      begin
+         return Ada.Strings.Fixed.Trim (Positive'Image (Value), Ada.Strings.Both);
+      end Pos_Image;
+   begin
+      if not Has_Span (Span) then
+         return "";
+      end if;
+      return
+        "earliest local use at "
+        & Pos_Image (Span.Start_Pos.Line)
+        & ":"
+        & Pos_Image (Span.Start_Pos.Column);
+   end Local_Use_Note;
 
    function Dependency_Vector
      (Outputs : String_Sets.Set;
@@ -393,7 +562,7 @@ package body Safe_Frontend.Mir_Bronze is
 
    function Summary_For
      (Graph      : GM.Graph_Entry;
-      Graph_Map  : Graph_Maps.Map;
+      Callable_Names : String_Sets.Set;
       Init_Set   : in out String_Sets.Set;
       Global_Spans : in out Span_Maps.Map) return Direct_Summary
    is
@@ -424,10 +593,11 @@ package body Safe_Frontend.Mir_Bronze is
                   Walk_Expr
                     (Op.Value,
                      Locals,
-                     Graph_Map,
+                     Callable_Names,
                      Result.Direct_Reads,
                      Result.Direct_Calls,
-                     Result.Direct_Inputs);
+                     Result.Direct_Inputs,
+                     Result.Use_Spans);
                   Root := FT.To_UString (Root_Name (Op.Target));
                   if UString_Value (Root) /= ""
                     and then Locals.Contains (UString_Value (Root))
@@ -436,78 +606,100 @@ package body Safe_Frontend.Mir_Bronze is
                   then
                      Init_Set.Include (UString_Value (Root));
                   else
-                     Note_Write (UString_Value (Root), Locals, Result.Direct_Writes, Result.Direct_Outputs);
+                     Note_Write
+                       (UString_Value (Root),
+                        Locals,
+                        Result.Direct_Writes,
+                        Result.Direct_Outputs,
+                        Result.Use_Spans,
+                        Op.Span);
                   end if;
                when GM.Op_Call =>
                   Walk_Expr
                     (Op.Value,
                      Locals,
-                     Graph_Map,
+                     Callable_Names,
                      Result.Direct_Reads,
                      Result.Direct_Calls,
-                     Result.Direct_Inputs);
+                     Result.Direct_Inputs,
+                     Result.Use_Spans);
                when GM.Op_Channel_Send =>
                   Walk_Expr
                     (Op.Value,
                      Locals,
-                     Graph_Map,
+                     Callable_Names,
                      Result.Direct_Reads,
                      Result.Direct_Calls,
-                     Result.Direct_Inputs);
-                  Root := FT.To_UString (Root_Name (Op.Channel));
+                     Result.Direct_Inputs,
+                     Result.Use_Spans);
+                  Root := FT.To_UString (Flatten_Name (Op.Channel));
                   if UString_Value (Root) /= "" then
                      Result.Direct_Channels.Include (UString_Value (Root));
+                     Note_Use_Span (UString_Value (Root), Op.Span, Result.Use_Spans);
                   end if;
                when GM.Op_Channel_Receive =>
-                  Root := FT.To_UString (Root_Name (Op.Channel));
+                  Root := FT.To_UString (Flatten_Name (Op.Channel));
                   if UString_Value (Root) /= "" then
                      Result.Direct_Channels.Include (UString_Value (Root));
+                     Note_Use_Span (UString_Value (Root), Op.Span, Result.Use_Spans);
                   end if;
                   Note_Write
                     (Root_Name (Op.Target),
                      Locals,
                      Result.Direct_Writes,
-                     Result.Direct_Outputs);
+                     Result.Direct_Outputs,
+                     Result.Use_Spans,
+                     Op.Span);
                when GM.Op_Channel_Try_Send =>
                   Walk_Expr
                     (Op.Value,
                      Locals,
-                     Graph_Map,
+                     Callable_Names,
                      Result.Direct_Reads,
                      Result.Direct_Calls,
-                     Result.Direct_Inputs);
-                  Root := FT.To_UString (Root_Name (Op.Channel));
+                     Result.Direct_Inputs,
+                     Result.Use_Spans);
+                  Root := FT.To_UString (Flatten_Name (Op.Channel));
                   if UString_Value (Root) /= "" then
                      Result.Direct_Channels.Include (UString_Value (Root));
+                     Note_Use_Span (UString_Value (Root), Op.Span, Result.Use_Spans);
                   end if;
                   Note_Write
                     (Root_Name (Op.Success_Target),
                      Locals,
                      Result.Direct_Writes,
-                     Result.Direct_Outputs);
+                     Result.Direct_Outputs,
+                     Result.Use_Spans,
+                     Op.Span);
                when GM.Op_Channel_Try_Receive =>
-                  Root := FT.To_UString (Root_Name (Op.Channel));
+                  Root := FT.To_UString (Flatten_Name (Op.Channel));
                   if UString_Value (Root) /= "" then
                      Result.Direct_Channels.Include (UString_Value (Root));
+                     Note_Use_Span (UString_Value (Root), Op.Span, Result.Use_Spans);
                   end if;
                   Note_Write
                     (Root_Name (Op.Target),
                      Locals,
                      Result.Direct_Writes,
-                     Result.Direct_Outputs);
+                     Result.Direct_Outputs,
+                     Result.Use_Spans,
+                     Op.Span);
                   Note_Write
                     (Root_Name (Op.Success_Target),
                      Locals,
                      Result.Direct_Writes,
-                     Result.Direct_Outputs);
+                     Result.Direct_Outputs,
+                     Result.Use_Spans,
+                     Op.Span);
                when GM.Op_Delay =>
                   Walk_Expr
                     (Op.Value,
                      Locals,
-                     Graph_Map,
+                     Callable_Names,
                      Result.Direct_Reads,
                      Result.Direct_Calls,
-                     Result.Direct_Inputs);
+                     Result.Direct_Inputs,
+                     Result.Use_Spans);
                when others =>
                   null;
             end case;
@@ -518,19 +710,21 @@ package body Safe_Frontend.Mir_Bronze is
                Walk_Expr
                  (Block.Terminator.Condition,
                   Locals,
-                  Graph_Map,
+                  Callable_Names,
                   Result.Direct_Reads,
                   Result.Direct_Calls,
-                  Result.Direct_Inputs);
+                  Result.Direct_Inputs,
+                  Result.Use_Spans);
             when GM.Terminator_Return =>
                if Block.Terminator.Has_Value then
                   Walk_Expr
                     (Block.Terminator.Value,
                      Locals,
-                     Graph_Map,
+                     Callable_Names,
                      Result.Direct_Reads,
                      Result.Direct_Calls,
-                     Result.Direct_Inputs);
+                     Result.Direct_Inputs,
+                     Result.Use_Spans);
                   Result.Direct_Outputs.Include ("return");
                end if;
             when GM.Terminator_Select =>
@@ -539,14 +733,19 @@ package body Safe_Frontend.Mir_Bronze is
                      if Arm.Kind = GM.Select_Arm_Channel then
                         Result.Direct_Channels.Include
                           (UString_Value (Arm.Channel_Data.Channel_Name));
+                        Note_Use_Span
+                          (UString_Value (Arm.Channel_Data.Channel_Name),
+                           Arm.Channel_Data.Span,
+                           Result.Use_Spans);
                      elsif Arm.Kind = GM.Select_Arm_Delay then
                         Walk_Expr
                           (Arm.Delay_Data.Duration_Expr,
                            Locals,
-                           Graph_Map,
+                           Callable_Names,
                            Result.Direct_Reads,
                            Result.Direct_Calls,
-                           Result.Direct_Inputs);
+                           Result.Direct_Inputs,
+                           Result.Use_Spans);
                      end if;
                   end loop;
                end if;
@@ -595,23 +794,37 @@ package body Safe_Frontend.Mir_Bronze is
    is
       Result        : Bronze_Result;
       Graph_Map     : Graph_Maps.Map;
+      Callable_Names : String_Sets.Set;
       Summaries     : Summary_Maps.Map;
       Global_Spans  : Span_Maps.Map;
       Init_Set      : String_Sets.Set;
       Task_Access   : Set_Maps.Map;
       Task_Calls    : Set_Maps.Map;
       Channel_Tasks : Set_Maps.Map;
+      Channel_Base_Ceilings : Integer_Maps.Map;
       Changed       : Boolean := True;
       Cursor        : Summary_Maps.Cursor;
    begin
       for Graph of Document.Graphs loop
          Graph_Map.Include (UString_Value (Graph.Name), Graph);
+         Callable_Names.Include (UString_Value (Graph.Name));
+      end loop;
+
+      for External of Document.Externals loop
+         Callable_Names.Include (UString_Value (External.Name));
+         Summaries.Include (UString_Value (External.Name), External_Summary (External));
+      end loop;
+
+      for Channel of Document.Channels loop
+         if Channel.Has_Required_Ceiling then
+            Channel_Base_Ceilings.Include (UString_Value (Channel.Name), Channel.Required_Ceiling);
+         end if;
       end loop;
 
       for Graph of Document.Graphs loop
          declare
             Summary : constant Direct_Summary :=
-              Summary_For (Graph, Graph_Map, Init_Set, Global_Spans);
+              Summary_For (Graph, Callable_Names, Init_Set, Global_Spans);
          begin
             Summaries.Include (UString_Value (Graph.Name), Summary);
          end;
@@ -644,6 +857,94 @@ package body Safe_Frontend.Mir_Bronze is
                                  Updated.Inputs.Union (Callee_Summary.Inputs);
                                  Updated.Outputs.Union (Callee_Summary.Outputs);
                                  Updated.Calls.Union (Callee_Summary.Calls);
+                                 declare
+                                    Entity_Cursor : String_Sets.Cursor := Callee_Summary.Reads.First;
+                                 begin
+                                    while String_Sets.Has_Element (Entity_Cursor) loop
+                                       declare
+                                          Entity_Name : constant String := String_Sets.Element (Entity_Cursor);
+                                       begin
+                                          if not Updated.Use_Spans.Contains (Entity_Name) then
+                                             if Summary.Use_Spans.Contains (Callee) then
+                                                Updated.Use_Spans.Include
+                                                  (Entity_Name,
+                                                   Summary.Use_Spans.Element (Callee));
+                                             elsif Callee_Summary.Use_Spans.Contains (Entity_Name) then
+                                                Updated.Use_Spans.Include
+                                                  (Entity_Name,
+                                                   Callee_Summary.Use_Spans.Element (Entity_Name));
+                                             end if;
+                                          end if;
+                                          String_Sets.Next (Entity_Cursor);
+                                       end;
+                                    end loop;
+                                 end;
+                                 declare
+                                    Entity_Cursor : String_Sets.Cursor := Callee_Summary.Writes.First;
+                                 begin
+                                    while String_Sets.Has_Element (Entity_Cursor) loop
+                                       declare
+                                          Entity_Name : constant String := String_Sets.Element (Entity_Cursor);
+                                       begin
+                                          if not Updated.Use_Spans.Contains (Entity_Name) then
+                                             if Summary.Use_Spans.Contains (Callee) then
+                                                Updated.Use_Spans.Include
+                                                  (Entity_Name,
+                                                   Summary.Use_Spans.Element (Callee));
+                                             elsif Callee_Summary.Use_Spans.Contains (Entity_Name) then
+                                                Updated.Use_Spans.Include
+                                                  (Entity_Name,
+                                                   Callee_Summary.Use_Spans.Element (Entity_Name));
+                                             end if;
+                                          end if;
+                                          String_Sets.Next (Entity_Cursor);
+                                       end;
+                                    end loop;
+                                 end;
+                                 declare
+                                    Entity_Cursor : String_Sets.Cursor := Callee_Summary.Channels.First;
+                                 begin
+                                    while String_Sets.Has_Element (Entity_Cursor) loop
+                                       declare
+                                          Entity_Name : constant String := String_Sets.Element (Entity_Cursor);
+                                       begin
+                                          if not Updated.Use_Spans.Contains (Entity_Name) then
+                                             if Summary.Use_Spans.Contains (Callee) then
+                                                Updated.Use_Spans.Include
+                                                  (Entity_Name,
+                                                   Summary.Use_Spans.Element (Callee));
+                                             elsif Callee_Summary.Use_Spans.Contains (Entity_Name) then
+                                                Updated.Use_Spans.Include
+                                                  (Entity_Name,
+                                                   Callee_Summary.Use_Spans.Element (Entity_Name));
+                                             end if;
+                                          end if;
+                                          String_Sets.Next (Entity_Cursor);
+                                       end;
+                                    end loop;
+                                 end;
+                                 declare
+                                    Call_Cursor_2 : String_Sets.Cursor := Callee_Summary.Calls.First;
+                                 begin
+                                    while String_Sets.Has_Element (Call_Cursor_2) loop
+                                       declare
+                                          Entity_Name : constant String := String_Sets.Element (Call_Cursor_2);
+                                       begin
+                                          if not Updated.Use_Spans.Contains (Entity_Name) then
+                                             if Callee_Summary.Use_Spans.Contains (Entity_Name) then
+                                                Updated.Use_Spans.Include
+                                                  (Entity_Name,
+                                                   Callee_Summary.Use_Spans.Element (Entity_Name));
+                                             elsif Summary.Use_Spans.Contains (Callee) then
+                                                Updated.Use_Spans.Include
+                                                  (Entity_Name,
+                                                   Summary.Use_Spans.Element (Callee));
+                                             end if;
+                                          end if;
+                                          String_Sets.Next (Call_Cursor_2);
+                                       end;
+                                    end loop;
+                                 end;
                               end;
                            end if;
                            String_Sets.Next (Call_Cursor);
@@ -777,8 +1078,9 @@ package body Safe_Frontend.Mir_Bronze is
                         "package global '" & Global_Name & "' is accessed by multiple tasks",
                         (if Global_Spans.Contains (Global_Name)
                          then Global_Spans.Element (Global_Name)
-                         else FT.Null_Span),
-                        "tasks accessing '" & Global_Name & "': " & Join_Strings (Task_Names)));
+                         else Earliest_Task_Use_Span (Task_Names, Summaries, Global_Name)),
+                        "tasks accessing '" & Global_Name & "': " & Join_Strings (Task_Names),
+                        Local_Use_Note (Earliest_Task_Use_Span (Task_Names, Summaries, Global_Name))));
                elsif Task_Names.Length = 1 then
                   Result.Ownership.Append
                     ((Global_Name => FT.To_UString (Global_Name),
@@ -806,6 +1108,8 @@ package body Safe_Frontend.Mir_Bronze is
                         declare
                            Globals      : String_Sets.Set := Summary.Reads;
                            Globals_List : FT.UString_Vectors.Vector;
+                           Primary_Span : constant FT.Source_Span :=
+                             Earliest_Task_Use_Span (Task_Names, Summaries, Callee);
                         begin
                            Globals.Union (Summary.Writes);
                            Globals_List := To_Vector (Globals);
@@ -814,9 +1118,21 @@ package body Safe_Frontend.Mir_Bronze is
                                 (Path_String,
                                  "task_variable_ownership",
                                  "subprogram '" & Callee & "' with package-global effects is reachable from multiple tasks",
-                                 Summary.Span,
+                                 Primary_Span,
                                  "tasks reaching '" & Callee & "': " & Join_Strings (Task_Names),
-                                 "package globals accessed by '" & Callee & "': " & Join_Strings (Globals_List)));
+                                 (if Has_Span (Summary.Span)
+                                  then
+                                    "imported declaration at "
+                                    & Ada.Strings.Fixed.Trim
+                                        (Positive'Image (Summary.Span.Start_Pos.Line), Ada.Strings.Both)
+                                    & ":"
+                                    & Ada.Strings.Fixed.Trim
+                                        (Positive'Image (Summary.Span.Start_Pos.Column), Ada.Strings.Both)
+                                    & "; package globals accessed by '" & Callee & "': "
+                                    & Join_Strings (Globals_List)
+                                  else
+                                    "package globals accessed by '" & Callee & "': "
+                                    & Join_Strings (Globals_List))));
                         end;
                      end if;
                   end;
@@ -845,6 +1161,11 @@ package body Safe_Frontend.Mir_Bronze is
                         Priority := Summaries.Element (UString_Value (Task_Name)).Priority;
                      end if;
                   end loop;
+                  if Channel_Base_Ceilings.Contains (Channel_Name)
+                    and then Channel_Base_Ceilings.Element (Channel_Name) > Priority
+                  then
+                     Priority := Channel_Base_Ceilings.Element (Channel_Name);
+                  end if;
                   Ceiling.Channel_Name := FT.To_UString (Channel_Name);
                   Ceiling.Priority := Priority;
                   Ceiling.Task_Names := Task_Names;

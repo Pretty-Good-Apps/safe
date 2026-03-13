@@ -1,0 +1,27 @@
+package Provider_Transitive_Channel is
+
+   public type Message is range 0 .. 10;
+   public channel Data_Ch : Message capacity 4;
+
+   task Worker with Priority = 12 is
+   begin
+      loop
+         declare
+            Item : Message = 0;
+         begin
+            receive Data_Ch, Item;
+         end;
+      end loop;
+   end Worker;
+
+   procedure Push_Internal is
+   begin
+      send Data_Ch, 1;
+   end Push_Internal;
+
+   public procedure Push is
+   begin
+      Push_Internal;
+   end Push;
+
+end Provider_Transitive_Channel;

@@ -1974,6 +1974,7 @@ package body Safe_Frontend.Check_Resolve is
                  (Channel_Env,
                   UString_Value (Qualified.Name),
                   Qualified.Element_Type);
+               Result.Imported_Channels.Append (Qualified);
             end;
          end loop;
 
@@ -1999,6 +2000,7 @@ package body Safe_Frontend.Check_Resolve is
          for Subp_Item of Item.Subprograms loop
             declare
                Info : Function_Info;
+               External : GM.External_Entry;
             begin
                Info.Name :=
                  FT.To_UString (Qualify_Name (Package_Name, UString_Value (Subp_Item.Name)));
@@ -2012,12 +2014,31 @@ package body Safe_Frontend.Check_Resolve is
                for Param of Subp_Item.Params loop
                   declare
                      Symbol : CM.Symbol := Param;
+                     Local  : GM.Local_Entry;
                   begin
                      Symbol.Type_Info := Qualify_Type_Info (Param.Type_Info, Package_Name);
                      Info.Params.Append (Symbol);
+                     Local.Name := Symbol.Name;
+                     Local.Kind := FT.To_UString ("param");
+                     Local.Mode := Symbol.Mode;
+                     Local.Type_Info := Symbol.Type_Info;
+                     Local.Span := Symbol.Span;
+                     External.Params.Append (Local);
                   end;
                end loop;
+               External.Name := Info.Name;
+               External.Kind := Info.Kind;
+               External.Signature := Subp_Item.Signature;
+               External.Has_Return_Type := Subp_Item.Has_Return_Type;
+               External.Return_Is_Access_Def := Subp_Item.Return_Is_Access_Def;
+               External.Span := Subp_Item.Span;
+               if Subp_Item.Has_Return_Type then
+                  External.Return_Type := Qualify_Type_Info (Subp_Item.Return_Type, Package_Name);
+               end if;
+               External.Effect_Summary := Subp_Item.Effect_Summary;
+               External.Channel_Summary := Subp_Item.Channel_Summary;
                Put_Function (Functions, UString_Value (Info.Name), Info);
+               Result.Imported_Subprograms.Append (External);
             end;
          end loop;
       end Add_Imported_Interface;

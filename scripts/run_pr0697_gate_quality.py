@@ -74,6 +74,11 @@ INVALID_CONTRACT_CASES = [
         "expected_error": "sample.mir.json.source_path must preserve the exact emit CLI path",
         "source_path": "fixtures/sample.safe",
     },
+    {
+        "name": "invalid_mir_malformed_externals",
+        "expected_error": "sample.mir.json.externals[0].effect_summary.reads must be a list",
+        "source_path": "fixtures/sample.safe",
+    },
 ]
 
 VALID_CONTRACT_CASES = [

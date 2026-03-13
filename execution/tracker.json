@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-03-13T06:05:00Z",
+  "updated_at": "2026-03-13T21:27:32Z",
   "frozen_spec_sha": "468cf72332724b04b7c193b4d2a3b02f1584125d",
   "active_task_id": null,
-  "next_task_id": "PR08.4",
+  "next_task_id": "PR09",
   "repo_facts": {
     "tests": {
       "positive": 41,
-      "negative": 73,
+      "negative": 75,
       "golden": 3,
       "concurrency": 12,
       "diagnostics_golden": 17,
-      "total": 146
+      "total": 148
     }
   },
   "tasks": [
@@ -526,7 +526,7 @@
     {
       "id": "PR08.4",
       "title": "Transitive concurrency integration and baseline flip",
-      "status": "planned",
+      "status": "done",
       "depends_on": ["PR08.3"],
       "acceptance": [
         "Imported safei-v1 summaries are consumed transitively for cross-package task ownership, channel-access, and channel ceiling analysis.",
@@ -534,20 +534,24 @@
         "A dedicated PR08 gate and report plus CI wiring exist, and unsupported-boundary expectations are updated for the newly supported concurrency surfaces.",
         "Tracker, dashboard, and frontend docs flip the supported baseline from PR07 to PR08 and advance next_task_id to PR09."
       ],
-      "evidence": [],
+      "evidence": [
+        "execution/reports/pr084-transitive-concurrency-integration-report.json"
+      ],
       "blockers": [],
       "unblock_condition": ""
     },
     {
       "id": "PR08",
       "title": "Concurrency legality and Bronze summaries",
-      "status": "planned",
+      "status": "done",
       "depends_on": ["PR08.4"],
       "acceptance": [
         "PR08.1 through PR08.4, plus PR08.3a, complete the concurrency frontend, local analysis, interface contracts, ordinary-constant interface coverage, and transitive integration work on the live Ada-native path.",
         "The supported frontend subset expands from the PR07 sequential baseline to the PR08 concurrency baseline without reviving deleted legacy packages."
       ],
-      "evidence": [],
+      "evidence": [
+        "execution/reports/pr08-frontend-baseline-report.json"
+      ],
       "blockers": [],
       "unblock_condition": ""
     },

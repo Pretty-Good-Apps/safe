@@ -2,6 +2,7 @@ with Ada.Containers;
 with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Directories;
 with Ada.Exceptions;
+with Ada.Strings.Fixed;
 with Ada.Strings.Hash;
 with GNATCOLL.JSON;
 
@@ -24,12 +25,62 @@ package body Safe_Frontend.Interfaces is
      (Index_Type   => Positive,
       Element_Type => String);
 
+   type Named_Effect_Summary is record
+      Name    : FT.UString := FT.To_UString ("");
+      Summary : GM.External_Effect_Summary;
+   end record;
+
+   package Named_Effect_Summary_Vectors is new Ada.Containers.Indefinite_Vectors
+     (Index_Type   => Positive,
+      Element_Type => Named_Effect_Summary);
+
+   type Named_Channel_Summary is record
+      Name    : FT.UString := FT.To_UString ("");
+      Summary : GM.External_Channel_Summary;
+   end record;
+
+   package Named_Channel_Summary_Vectors is new Ada.Containers.Indefinite_Vectors
+     (Index_Type   => Positive,
+      Element_Type => Named_Channel_Summary);
+
    use type Ada.Containers.Count_Type;
 
    function Canonical (Name : String) return String is
    begin
       return FT.Lowercase (Name);
    end Canonical;
+
+   function Qualify_Name (Package_Name, Name : String) return String is
+   begin
+      if Name = "" then
+         return "";
+      elsif Ada.Strings.Fixed.Index (Name, ".") > 0 then
+         return Name;
+      end if;
+      return Package_Name & "." & Name;
+   end Qualify_Name;
+
+   function Qualify_Summary_Name
+     (Package_Name : String;
+      Name         : String) return String
+   is
+      Global_Prefix : constant String := "global:";
+   begin
+      if Name = "return" then
+         return Name;
+      elsif Name'Length >= 6 and then Name (Name'First .. Name'First + 5) = "param:" then
+         return Name;
+      elsif Name'Length >= Global_Prefix'Length
+        and then Name (Name'First .. Name'First + Global_Prefix'Length - 1) = Global_Prefix
+      then
+         return
+           Global_Prefix
+           & Qualify_Name
+               (Package_Name,
+                Name (Name'First + Global_Prefix'Length .. Name'Last));
+      end if;
+      return Qualify_Name (Package_Name, Name);
+   end Qualify_Summary_Name;
 
    function Json_Array_Or_Empty
      (Object_Value : GNATCOLL.JSON.JSON_Value;
@@ -93,6 +144,16 @@ package body Safe_Frontend.Interfaces is
    procedure Validate_Channel_Summaries
      (Value     : GNATCOLL.JSON.JSON_Array;
       File_Path : String);
+
+   function Parse_Effect_Summaries
+     (Value        : GNATCOLL.JSON.JSON_Array;
+      Package_Name : String;
+      File_Path    : String) return Named_Effect_Summary_Vectors.Vector;
+
+   function Parse_Channel_Summaries
+     (Value        : GNATCOLL.JSON.JSON_Array;
+      Package_Name : String;
+      File_Path    : String) return Named_Channel_Summary_Vectors.Vector;
 
    function Discover_Interface_Files (Dir : String) return String_Vectors.Vector;
 
@@ -539,6 +600,118 @@ package body Safe_Frontend.Interfaces is
       end loop;
    end Validate_Channel_Summaries;
 
+   function Parse_Effect_Summaries
+     (Value        : GNATCOLL.JSON.JSON_Array;
+      Package_Name : String;
+      File_Path    : String) return Named_Effect_Summary_Vectors.Vector
+   is
+      use GNATCOLL.JSON;
+      Result : Named_Effect_Summary_Vectors.Vector;
+   begin
+      Validate_Effect_Summaries (Value, File_Path);
+      for Index in 1 .. Length (Value) loop
+         declare
+            Item     : constant JSON_Value := Get (Value, Index);
+            Summary_Entry : Named_Effect_Summary;
+            Depends  : constant JSON_Array := Require_Array (Item, "depends", File_Path);
+            Reads    : constant JSON_Array := Require_Array (Item, "reads", File_Path);
+            Writes   : constant JSON_Array := Require_Array (Item, "writes", File_Path);
+            Inputs   : constant JSON_Array := Require_Array (Item, "inputs", File_Path);
+            Outputs  : constant JSON_Array := Require_Array (Item, "outputs", File_Path);
+         begin
+            Summary_Entry.Name :=
+              FT.To_UString
+                (Qualify_Name
+                   (Package_Name,
+                    Require_String (Item, "name", File_Path)));
+            for List_Index in 1 .. Length (Reads) loop
+               Summary_Entry.Summary.Reads.Append
+                 (FT.To_UString
+                    (Qualify_Summary_Name
+                       (Package_Name,
+                        Get (Get (Reads, List_Index)))));
+            end loop;
+            for List_Index in 1 .. Length (Writes) loop
+               Summary_Entry.Summary.Writes.Append
+                 (FT.To_UString
+                    (Qualify_Summary_Name
+                       (Package_Name,
+                        Get (Get (Writes, List_Index)))));
+            end loop;
+            for List_Index in 1 .. Length (Inputs) loop
+               Summary_Entry.Summary.Inputs.Append
+                 (FT.To_UString
+                    (Qualify_Summary_Name
+                       (Package_Name,
+                        Get (Get (Inputs, List_Index)))));
+            end loop;
+            for List_Index in 1 .. Length (Outputs) loop
+               Summary_Entry.Summary.Outputs.Append
+                 (FT.To_UString
+                    (Qualify_Summary_Name
+                       (Package_Name,
+                        Get (Get (Outputs, List_Index)))));
+            end loop;
+            for Dep_Index in 1 .. Length (Depends) loop
+               declare
+                  Dep_Item : constant JSON_Value := Get (Depends, Dep_Index);
+                  Dep      : GM.Summary_Depends_Entry;
+                  Inputs   : constant JSON_Array := Require_Array (Dep_Item, "inputs", File_Path);
+               begin
+                  Dep.Output_Name :=
+                    FT.To_UString
+                      (Qualify_Summary_Name
+                         (Package_Name,
+                          Require_String (Dep_Item, "output_name", File_Path)));
+                  for Input_Index in 1 .. Length (Inputs) loop
+                     Dep.Inputs.Append
+                       (FT.To_UString
+                          (Qualify_Summary_Name
+                             (Package_Name,
+                              Get (Get (Inputs, Input_Index)))));
+                  end loop;
+                  Summary_Entry.Summary.Depends.Append (Dep);
+               end;
+            end loop;
+            Result.Append (Summary_Entry);
+         end;
+      end loop;
+      return Result;
+   end Parse_Effect_Summaries;
+
+   function Parse_Channel_Summaries
+     (Value        : GNATCOLL.JSON.JSON_Array;
+      Package_Name : String;
+      File_Path    : String) return Named_Channel_Summary_Vectors.Vector
+   is
+      use GNATCOLL.JSON;
+      Result : Named_Channel_Summary_Vectors.Vector;
+   begin
+      Validate_Channel_Summaries (Value, File_Path);
+      for Index in 1 .. Length (Value) loop
+         declare
+            Item          : constant JSON_Value := Get (Value, Index);
+            Summary_Entry : Named_Channel_Summary;
+            Channels : constant JSON_Array := Require_Array (Item, "channels", File_Path);
+         begin
+            Summary_Entry.Name :=
+              FT.To_UString
+                (Qualify_Name
+                   (Package_Name,
+                    Require_String (Item, "name", File_Path)));
+            for Channel_Index in 1 .. Length (Channels) loop
+               Summary_Entry.Summary.Channels.Append
+                 (FT.To_UString
+                    (Qualify_Name
+                       (Package_Name,
+                        Get (Get (Channels, Channel_Index)))));
+            end loop;
+            Result.Append (Summary_Entry);
+         end;
+      end loop;
+      return Result;
+   end Parse_Channel_Summaries;
+
    function Discover_Interface_Files (Dir : String) return String_Vectors.Vector is
       use Ada.Directories;
       Result : String_Vectors.Vector;
@@ -621,6 +794,16 @@ package body Safe_Frontend.Interfaces is
          Channels : constant JSON_Array := Require_Array (Root, "channels", File_Path);
          Objects  : constant JSON_Array := Require_Array (Root, "objects", File_Path);
          Subps    : constant JSON_Array := Require_Array (Root, "subprograms", File_Path);
+         Effects  : constant Named_Effect_Summary_Vectors.Vector :=
+           Parse_Effect_Summaries
+             (Require_Array (Root, "effect_summaries", File_Path),
+              FT.To_String (Result.Package_Name),
+              File_Path);
+         Channel_Summaries : constant Named_Channel_Summary_Vectors.Vector :=
+           Parse_Channel_Summaries
+             (Require_Array (Root, "channel_access_summaries", File_Path),
+              FT.To_String (Result.Package_Name),
+              File_Path);
       begin
          for Index in 1 .. Length (Channels) loop
             declare
@@ -632,6 +815,18 @@ package body Safe_Frontend.Interfaces is
                Channel.Element_Type :=
                  Require_Type_Field (Item, "element_type", "channels[].element_type", File_Path);
                Channel.Capacity := Require_Positive_Int (Item, "capacity", File_Path);
+               if Has_Field (Item, "required_ceiling") then
+                  if Get (Item, "required_ceiling").Kind /= JSON_Int_Type then
+                     raise Constraint_Error with
+                       File_Path & ": channels[].required_ceiling must be an integer";
+                  end if;
+                  Channel.Has_Required_Ceiling := True;
+                  Channel.Required_Ceiling := Get (Get (Item, "required_ceiling"));
+                  if Channel.Required_Ceiling <= 0 then
+                     raise Constraint_Error with
+                       File_Path & ": channels[].required_ceiling must be positive";
+                  end if;
+               end if;
                Channel.Span := Parse_Span (Field_Or_Null (Item, "span"));
                Result.Channels.Append (Channel);
             end;
@@ -746,13 +941,34 @@ package body Safe_Frontend.Interfaces is
                      Subp.Params.Append (Symbol);
                   end;
                end loop;
+               if not Effects.Is_Empty then
+                  for Summary of Effects loop
+                     if FT.To_String (Summary.Name)
+                       = Qualify_Name
+                           (FT.To_String (Result.Package_Name),
+                            FT.To_String (Subp.Name))
+                     then
+                        Subp.Effect_Summary := Summary.Summary;
+                        exit;
+                     end if;
+                  end loop;
+               end if;
+               if not Channel_Summaries.Is_Empty then
+                  for Summary of Channel_Summaries loop
+                     if FT.To_String (Summary.Name)
+                       = Qualify_Name
+                           (FT.To_String (Result.Package_Name),
+                            FT.To_String (Subp.Name))
+                     then
+                        Subp.Channel_Summary := Summary.Summary;
+                        exit;
+                     end if;
+                  end loop;
+               end if;
                Result.Subprograms.Append (Subp);
             end;
          end loop;
       end;
-
-      Validate_Effect_Summaries (Require_Array (Root, "effect_summaries", File_Path), File_Path);
-      Validate_Channel_Summaries (Require_Array (Root, "channel_access_summaries", File_Path), File_Path);
 
       pragma Unreferenced (Unit_Path);
       return Result;

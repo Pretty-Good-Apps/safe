@@ -11,7 +11,9 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 from validate_output_contracts import (
     require_positive_int,
+    validate_mir_payload,
     validate_mir_graphs,
+    validate_optional_mir_externals,
     validate_optional_mir_channels,
     validate_safei_payload,
     validate_optional_typed_channels,
@@ -55,7 +57,16 @@ def valid_safei() -> dict[str, object]:
         "public_declarations": [],
         "types": [valid_type()],
         "subtypes": [],
-        "channels": [],
+        "channels": [
+            {
+                "name": "Data_Ch",
+                "is_public": True,
+                "element_type": valid_type(),
+                "capacity": 4,
+                "required_ceiling": 6,
+                "span": valid_span(),
+            }
+        ],
         "objects": [
             {
                 "name": "Max_Count",
@@ -103,6 +114,41 @@ def valid_safei() -> dict[str, object]:
                 "channels": [],
             }
         ],
+    }
+
+
+def valid_mir_external() -> dict[str, object]:
+    return {
+        "name": "Provider.Touch",
+        "kind": "procedure",
+        "signature": "procedure Provider.Touch (Value: Integer)",
+        "params": [
+            {
+                "name": "Value",
+                "mode": "in",
+                "span": valid_span(),
+                "type": valid_type(),
+            }
+        ],
+        "has_return_type": False,
+        "return_type": None,
+        "return_is_access_def": False,
+        "span": valid_span(),
+        "effect_summary": {
+            "reads": ["Provider.Counter"],
+            "writes": ["Provider.Counter"],
+            "inputs": ["param:Value", "global:Provider.Counter"],
+            "outputs": ["global:Provider.Counter"],
+            "depends": [
+                {
+                    "output_name": "global:Provider.Counter",
+                    "inputs": ["param:Value", "global:Provider.Counter"],
+                }
+            ],
+        },
+        "channel_access_summary": {
+            "channels": ["Provider.Data_Ch"],
+        },
     }
 
 
@@ -160,6 +206,21 @@ class ValidateOutputContractsTests(unittest.TestCase):
                         "name": "Data_Ch",
                         "element_type": {"name": "Integer", "kind": "integer"},
                         "capacity": True,
+                        "span": valid_span(),
+                    }
+                ],
+                "mir.channels",
+            )
+
+    def test_validate_optional_mir_channels_rejects_boolean_required_ceiling(self) -> None:
+        with self.assertRaises(ValueError):
+            validate_optional_mir_channels(
+                [
+                    {
+                        "name": "Data_Ch",
+                        "element_type": {"name": "Integer", "kind": "integer"},
+                        "capacity": 4,
+                        "required_ceiling": True,
                         "span": valid_span(),
                     }
                 ],
@@ -240,6 +301,57 @@ class ValidateOutputContractsTests(unittest.TestCase):
         }
         with self.assertRaises(ValueError):
             validate_mir_graphs([graph], "mir.graphs")
+
+    def test_validate_optional_mir_externals_accepts_valid_entry(self) -> None:
+        validate_optional_mir_externals([valid_mir_external()], "mir.externals")
+
+    def test_validate_optional_mir_externals_rejects_malformed_effect_summary(self) -> None:
+        external = valid_mir_external()
+        external["effect_summary"]["depends"] = True
+        with self.assertRaises(ValueError):
+            validate_optional_mir_externals([external], "mir.externals")
+
+    def test_validate_mir_payload_accepts_optional_externals(self) -> None:
+        payload = {
+            "format": "mir-v2",
+            "source_path": "fixtures/sample.safe",
+            "package_name": "Sample",
+            "types": [valid_type()],
+            "channels": [
+                {
+                    "name": "Data_Ch",
+                    "element_type": valid_type(),
+                    "capacity": 4,
+                    "required_ceiling": 8,
+                    "span": valid_span(),
+                }
+            ],
+            "externals": [valid_mir_external()],
+            "graphs": [
+                {
+                    "name": "Main",
+                    "kind": "procedure",
+                    "entry_bb": "bb0",
+                    "span": valid_span(),
+                    "locals": [],
+                    "blocks": [
+                        {
+                            "id": "bb0",
+                            "role": "entry",
+                            "active_scope_id": "scope0",
+                            "span": valid_span(),
+                            "ops": [],
+                            "terminator": {"kind": "return"},
+                        }
+                    ],
+                }
+            ],
+        }
+        validate_mir_payload(
+            payload,
+            path="sample.mir.json",
+            expected_source_path="fixtures/sample.safe",
+        )
 
     def test_validate_safei_payload_accepts_safei_v1(self) -> None:
         payload = validate_safei_payload(valid_safei(), path="sample.safei.json")

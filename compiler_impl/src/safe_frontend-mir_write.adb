@@ -337,10 +337,112 @@ package body Safe_Frontend.Mir_Write is
         & Type_Json (Item.Element_Type)
         & ",""capacity"":"
         & Long_Long_Integer'Image (Item.Capacity)
+        & (if Item.Has_Required_Ceiling
+           then ",""required_ceiling"":" & Long_Long_Integer'Image (Item.Required_Ceiling)
+           else "")
         & ",""span"":"
         & JS.Span_Object (Item.Span)
         & "}";
    end Channel_Json;
+
+   function External_Param_Json (Item : GM.Local_Entry) return String is
+   begin
+      return
+        "{""name"":"
+        & JS.Quote (Item.Name)
+        & ",""mode"":"
+        & JS.Quote (Item.Mode)
+        & ",""span"":"
+        & JS.Span_Object (Item.Span)
+        & ",""type"":"
+        & Type_Json (Item.Type_Info)
+        & "}";
+   end External_Param_Json;
+
+   function Effect_Summary_Json
+     (Item : GM.External_Effect_Summary) return String
+   is
+      Reads   : String_Vectors.Vector;
+      Writes  : String_Vectors.Vector;
+      Inputs  : String_Vectors.Vector;
+      Outputs : String_Vectors.Vector;
+      Depends : String_Vectors.Vector;
+      Dep_Inputs : String_Vectors.Vector;
+   begin
+      for Value of Item.Reads loop
+         Reads.Append (JS.Quote (Value));
+      end loop;
+      for Value of Item.Writes loop
+         Writes.Append (JS.Quote (Value));
+      end loop;
+      for Value of Item.Inputs loop
+         Inputs.Append (JS.Quote (Value));
+      end loop;
+      for Value of Item.Outputs loop
+         Outputs.Append (JS.Quote (Value));
+      end loop;
+      if not Item.Depends.Is_Empty then
+         for Dep of Item.Depends loop
+            Dep_Inputs.Clear;
+            for Input of Dep.Inputs loop
+               Dep_Inputs.Append (JS.Quote (Input));
+            end loop;
+            Depends.Append
+              ("{""output_name"":"
+               & JS.Quote (Dep.Output_Name)
+               & ",""inputs"":"
+               & Json_List (Dep_Inputs)
+               & "}");
+         end loop;
+      end if;
+      return
+        "{""reads"":"
+        & Json_List (Reads)
+        & ",""writes"":"
+        & Json_List (Writes)
+        & ",""inputs"":"
+        & Json_List (Inputs)
+        & ",""outputs"":"
+        & Json_List (Outputs)
+        & ",""depends"":"
+        & Json_List (Depends)
+        & "}";
+   end Effect_Summary_Json;
+
+   function Channel_Summary_Json
+     (Item : GM.External_Channel_Summary) return String
+   is
+      Channels : String_Vectors.Vector;
+   begin
+      for Value of Item.Channels loop
+         Channels.Append (JS.Quote (Value));
+      end loop;
+      return "{""channels"":" & Json_List (Channels) & "}";
+   end Channel_Summary_Json;
+
+   function External_Json (Item : GM.External_Entry) return String is
+      Params : String_Vectors.Vector;
+      Fields : String_Vectors.Vector;
+   begin
+      for Param of Item.Params loop
+         Params.Append (External_Param_Json (Param));
+      end loop;
+      Fields.Append ("""name"":" & JS.Quote (Item.Name));
+      Fields.Append ("""kind"":" & JS.Quote (Item.Kind));
+      Fields.Append ("""signature"":" & JS.Quote (Item.Signature));
+      Fields.Append ("""params"":" & Json_List (Params));
+      Fields.Append ("""has_return_type"":" & JS.Bool_Literal (Item.Has_Return_Type));
+      Fields.Append
+        ("""return_type"":"
+         & (if Item.Has_Return_Type then Type_Json (Item.Return_Type) else "null"));
+      Fields.Append
+        ("""return_is_access_def"":" & JS.Bool_Literal (Item.Return_Is_Access_Def));
+      Fields.Append ("""span"":" & JS.Span_Object (Item.Span));
+      Fields.Append ("""effect_summary"":" & Effect_Summary_Json (Item.Effect_Summary));
+      Fields.Append
+        ("""channel_access_summary"":" & Channel_Summary_Json (Item.Channel_Summary));
+      return "{" & Join_Object_Fields (Fields) & "}";
+   end External_Json;
 
    function Select_Arm_Json (Item : GM.Select_Arm_Entry) return String is
       Kind : constant String :=
@@ -543,6 +645,7 @@ package body Safe_Frontend.Mir_Write is
    is
       Types  : String_Vectors.Vector;
       Channels : String_Vectors.Vector;
+      Externals : String_Vectors.Vector;
       Graphs : String_Vectors.Vector;
    begin
       for Item of Document.Types loop
@@ -550,6 +653,9 @@ package body Safe_Frontend.Mir_Write is
       end loop;
       for Item of Document.Channels loop
          Channels.Append (Channel_Json (Item));
+      end loop;
+      for Item of Document.Externals loop
+         Externals.Append (External_Json (Item));
       end loop;
       for Item of Document.Graphs loop
          Graphs.Append (Graph_Json (Item));
@@ -570,6 +676,9 @@ package body Safe_Frontend.Mir_Write is
         & ","
         & """channels"":"
         & Json_List (Channels)
+        & ","
+        & """externals"":"
+        & Json_List (Externals)
         & ","
         & """graphs"":"
         & Json_List (Graphs)

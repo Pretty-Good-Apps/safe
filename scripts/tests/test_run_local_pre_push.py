@@ -22,6 +22,15 @@ class RunLocalPrePushTests(unittest.TestCase):
             ),
         )
 
+    def test_gate_scripts_for_branch_maps_known_pr084_branch(self) -> None:
+        self.assertEqual(
+            gate_scripts_for_branch("codex/pr084-imported-summary-integration"),
+            (
+                "scripts/run_pr084_transitive_concurrency_integration.py",
+                "scripts/run_pr08_frontend_baseline.py",
+            ),
+        )
+
     def test_gate_scripts_for_branch_rejects_unknown_pr08_branch(self) -> None:
         with self.assertRaises(RuntimeError):
             gate_scripts_for_branch("codex/pr083b-named-numbers")
@@ -41,6 +50,18 @@ class RunLocalPrePushTests(unittest.TestCase):
         self.assertIn("Run run_pr0699_build_reproducibility.py", labels)
         self.assertIn("Rebuild compiler after reproducibility gate", labels)
         self.assertEqual(labels[-1], "Require clean tracked tree after local gates")
+
+    def test_build_steps_include_pr084_and_pr08_baseline_gates(self) -> None:
+        steps = build_steps(
+            branch="codex/pr084-imported-summary-integration",
+            python="python3",
+            alr="alr",
+            git="git",
+            include_diff=False,
+        )
+        labels = [step.label for step in steps]
+        self.assertIn("Run run_pr084_transitive_concurrency_integration.py", labels)
+        self.assertIn("Run run_pr08_frontend_baseline.py", labels)
 
     def test_build_steps_skips_unmapped_non_pr08_branch(self) -> None:
         self.assertEqual(

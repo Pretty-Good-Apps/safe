@@ -67,7 +67,7 @@
     ],
     "missing_doc_files": []
   },
-  "repeat_sha256": "9efea91412d3ec1579125871850438e9d506f0316a46b8cc7a2590623d7a8d53",
+  "repeat_sha256": "377146b2d74426813b18cded65710b8893a0b399421ee1ae4266309cea59fca4",
   "repeated_scenarios": {
     "analyze_mir": [
       {
@@ -137,9 +137,9 @@
       {
         "artifact_bytes": {
           "ast": 17810,
-          "mir": 6574,
+          "mir": 6589,
           "safei": 406,
-          "total": 43201,
+          "total": 43216,
           "typed": 18411
         },
         "artifact_ratio_caps": {
@@ -162,9 +162,9 @@
       {
         "artifact_bytes": {
           "ast": 39533,
-          "mir": 13825,
+          "mir": 13840,
           "safei": 432,
-          "total": 93895,
+          "total": 93910,
           "typed": 40105
         },
         "artifact_ratio_caps": {
@@ -187,9 +187,9 @@
       {
         "artifact_bytes": {
           "ast": 19120,
-          "mir": 7443,
+          "mir": 7458,
           "safei": 557,
-          "total": 46951,
+          "total": 46966,
           "typed": 19831
         },
         "artifact_ratio_caps": {
@@ -216,7 +216,7 @@
     "check": 5,
     "emit": 3
   },
-  "report_sha256": "9efea91412d3ec1579125871850438e9d506f0316a46b8cc7a2590623d7a8d53",
+  "report_sha256": "377146b2d74426813b18cded65710b8893a0b399421ee1ae4266309cea59fca4",
   "status": "ok",
   "task": "PR06.9.12"
 }

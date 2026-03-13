@@ -67,9 +67,7 @@
         "end_col": 10
       },
       "effect_summary": {
-        "reads": [
-          "Provider.Counter"
-        ],
+        "reads": "Provider.Counter",
         "writes": [],
         "inputs": [
           "param:Value"

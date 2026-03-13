@@ -138,6 +138,8 @@ package Safe_Frontend.Mir_Model is
       Name         : FT.UString := FT.To_UString ("");
       Element_Type : Type_Descriptor;
       Capacity     : Long_Long_Integer := 0;
+      Has_Required_Ceiling : Boolean := False;
+      Required_Ceiling     : Long_Long_Integer := 0;
       Span         : FT.Source_Span := FT.Null_Span;
    end record;
 
@@ -278,6 +280,44 @@ package Safe_Frontend.Mir_Model is
      (Index_Type   => Positive,
       Element_Type => Block_Entry);
 
+   type Summary_Depends_Entry is record
+      Output_Name : FT.UString := FT.To_UString ("");
+      Inputs      : FT.UString_Vectors.Vector;
+   end record;
+
+   package Summary_Depends_Vectors is new Ada.Containers.Indefinite_Vectors
+     (Index_Type   => Positive,
+      Element_Type => Summary_Depends_Entry);
+
+   type External_Effect_Summary is record
+      Reads   : FT.UString_Vectors.Vector;
+      Writes  : FT.UString_Vectors.Vector;
+      Inputs  : FT.UString_Vectors.Vector;
+      Outputs : FT.UString_Vectors.Vector;
+      Depends : Summary_Depends_Vectors.Vector;
+   end record;
+
+   type External_Channel_Summary is record
+      Channels : FT.UString_Vectors.Vector;
+   end record;
+
+   type External_Entry is record
+      Name                 : FT.UString := FT.To_UString ("");
+      Kind                 : FT.UString := FT.To_UString ("");
+      Signature            : FT.UString := FT.To_UString ("");
+      Params               : Local_Vectors.Vector;
+      Has_Return_Type      : Boolean := False;
+      Return_Type          : Type_Descriptor;
+      Return_Is_Access_Def : Boolean := False;
+      Span                 : FT.Source_Span := FT.Null_Span;
+      Effect_Summary       : External_Effect_Summary;
+      Channel_Summary      : External_Channel_Summary;
+   end record;
+
+   package External_Vectors is new Ada.Containers.Indefinite_Vectors
+     (Index_Type   => Positive,
+      Element_Type => External_Entry);
+
    type Graph_Entry is record
       Name            : FT.UString := FT.To_UString ("");
       Kind            : FT.UString := FT.To_UString ("");
@@ -306,6 +346,7 @@ package Safe_Frontend.Mir_Model is
       Package_Name    : FT.UString := FT.To_UString ("");
       Types           : Type_Descriptor_Vectors.Vector;
       Channels        : Channel_Vectors.Vector;
+      Externals       : External_Vectors.Vector;
       Graphs          : Graph_Vectors.Vector;
       Root            : GNATCOLL.JSON.JSON_Value := GNATCOLL.JSON.Create;
    end record;

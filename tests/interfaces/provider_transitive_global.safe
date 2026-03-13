@@ -1,0 +1,15 @@
+package Provider_Transitive_Global is
+
+   Shared : Integer = 0;
+
+   procedure Touch_Internal is
+   begin
+      Shared = Shared + 1;
+   end Touch_Internal;
+
+   public procedure Touch is
+   begin
+      Touch_Internal;
+   end Touch;
+
+end Provider_Transitive_Global;

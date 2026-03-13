@@ -3,17 +3,17 @@
 - **Schema version:** `1`
 - **Frozen spec SHA:** `468cf72332724b04b7c193b4d2a3b02f1584125d`
 - **Active task:** `none`
-- **Next task:** `PR08.4`
-- **Updated at:** `2026-03-13T06:05:00Z`
+- **Next task:** `PR09`
+- **Updated at:** `2026-03-13T21:27:32Z`
 
 ## Repo Facts
 
 - `tests/positive`: 41
-- `tests/negative`: 73
+- `tests/negative`: 75
 - `tests/golden`: 3
 - `tests/concurrency`: 12
 - `tests/diagnostics_golden`: 17
-- **Total test files:** 146
+- **Total test files:** 148
 
 ## Task Ledger
 
@@ -48,8 +48,8 @@
 | PR08.2 | done | PR08.1 | 1 |
 | PR08.3 | done | PR08.2 | 1 |
 | PR08.3a | done | PR08.3 | 1 |
-| PR08.4 | planned | PR08.3 | 0 |
-| PR08 | planned | PR08.4 | 0 |
+| PR08.4 | done | PR08.3 | 1 |
+| PR08 | done | PR08.4 | 1 |
 | PR09 | planned | PR08 | 0 |
 | PR10 | planned | PR09 | 0 |
 
@@ -457,7 +457,7 @@
 
 ### PR08.4 — Transitive concurrency integration and baseline flip
 
-- **Status:** `planned`
+- **Status:** `done`
 - **Depends on:** PR08.3
 - **Blockers:** none
 - **Acceptance:**
@@ -465,15 +465,19 @@
   - Representative imported concurrency cases preserve parity between safec check --diag-json and emitted safec analyze-mir --diag-json.
   - A dedicated PR08 gate and report plus CI wiring exist, and unsupported-boundary expectations are updated for the newly supported concurrency surfaces.
   - Tracker, dashboard, and frontend docs flip the supported baseline from PR07 to PR08 and advance next_task_id to PR09.
+- **Evidence:**
+  - `execution/reports/pr084-transitive-concurrency-integration-report.json`
 
 ### PR08 — Concurrency legality and Bronze summaries
 
-- **Status:** `planned`
+- **Status:** `done`
 - **Depends on:** PR08.4
 - **Blockers:** none
 - **Acceptance:**
   - PR08.1 through PR08.4, plus PR08.3a, complete the concurrency frontend, local analysis, interface contracts, ordinary-constant interface coverage, and transitive integration work on the live Ada-native path.
   - The supported frontend subset expands from the PR07 sequential baseline to the PR08 concurrency baseline without reviving deleted legacy packages.
+- **Evidence:**
+  - `execution/reports/pr08-frontend-baseline-report.json`
 
 ### PR09 — Ada/SPARK emission and snapshot refresh
 

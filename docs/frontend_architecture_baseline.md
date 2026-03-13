@@ -1,6 +1,6 @@
 # Frontend Architecture Baseline
 
-This document is the canonical prose baseline for the Safe compiler frontend after PR08.3a.
+This document is the canonical prose baseline for the Safe compiler frontend after PR08.
 
 ## Live Ada-Native Commands
 
@@ -25,6 +25,8 @@ PR08.3 adds explicit dependency-interface lookup plus `safei-v1` publication/con
 
 PR08.3a adds ordinary object constants on the live Ada-native path plus imported integer/boolean constant values in the currently supported static-expression sites.
 
+PR08.4 adds imported-summary consumption for cross-package task ownership, channel-access, and channel ceiling analysis through imported `safei-v1` summaries, plus imported-call ownership semantics at the call boundary.
+
 That means the current frontend baseline covers:
 
 - the frozen Rule 5 floating-point corpus
@@ -33,6 +35,8 @@ That means the current frontend baseline covers:
 - local-only concurrency checking for accepted single-package task/channel/select/delay sources
 - imported package-qualified resolution through explicit `--interface-search-dir` inputs and `safei-v1`
 - ordinary object constants plus imported integer/boolean constant values in the current static-expression sites
+- cross-package task ownership, channel-access, and channel ceiling analysis through imported `safei-v1` summaries
+- imported-call ownership semantics at the call boundary
 - AST, `typed-v2`, `mir-v2`, and `safei-v1` emission for that same subset
 - MIR validation and MIR analysis for the same subset
 
@@ -43,7 +47,6 @@ The following surfaces remain explicitly out of scope for the current frontend b
 - discriminant constraints
 - access discriminants
 - named numbers and richer constant folding beyond the PR08.3a constant slice
-- cross-package ownership/channel-ceiling analysis beyond the PR08.3 interface slice
 - broader Ada/SPARK emission work
 
 ## No-Python Doctrine
@@ -70,8 +73,8 @@ The old shallow `Ast` / `Parser` / `Semantics` / `Mir` chain was deleted in PR06
 
 The current frontend baseline therefore lives only on the Ada-native `Check_*` plus `Mir_*` pipeline, with `Lexer`, `Source`, `Types`, `Diagnostics`, and `Json` supporting that path.
 
-## PR08 Starting Point
+## PR08 Baseline
 
-PR08 must extend the live path rather than revive deleted legacy packages.
+PR08 extends the live path rather than reviving deleted legacy packages, and the current supported frontend baseline is now PR08 rather than PR07.
 
 The current PR07 scope and scale limits are summarized in [frontend_scale_limits.md](frontend_scale_limits.md).
