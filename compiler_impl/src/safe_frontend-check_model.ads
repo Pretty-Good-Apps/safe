@@ -440,6 +440,7 @@ package Safe_Frontend.Check_Model is
       Path         : FT.UString := FT.To_UString ("");
       Package_Name : FT.UString := FT.To_UString ("");
       Types        : GM.Type_Descriptor_Vectors.Vector;
+      Imported_Types : GM.Type_Descriptor_Vectors.Vector;
       Objects      : Resolved_Object_Decl_Vectors.Vector;
       Channels     : Resolved_Channel_Decl_Vectors.Vector;
       Subprograms  : Resolved_Subprogram_Vectors.Vector;

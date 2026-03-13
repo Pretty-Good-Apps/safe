@@ -26,13 +26,13 @@
   "deterministic": true,
   "deterministic_outputs": {
     "tests/positive/rule2_binary_search.safe": {
-      "iface/rule2_binary_search.safei.json": "dcdbb73b47e906727c47aa2cc65545d240295d139780f76e37079f66603e2dd0",
+      "iface/rule2_binary_search.safei.json": "d0a45bdc66522b274a9c67bca10528f755682161554b6308e5b021035b474a4c",
       "out/rule2_binary_search.ast.json": "2ad9a390149c6f97832bc851c9b629c25d0edc3fb8f41a2c351c25b18f8b3bcd",
       "out/rule2_binary_search.mir.json": "3ee771e9a0c69818af40b06b2f5b81cb3652709115887f1d1d76d51bcd0faf09",
       "out/rule2_binary_search.typed.json": "485ea2e66cb34bbabfe7ccf8e6cf5689de546ac6ef6cd4d3e6ef863ed990e1c7"
     },
     "tests/positive/rule4_conditional.safe": {
-      "iface/rule4_conditional.safei.json": "714df4ba3b1d7d9bc0573f6ff780ffc2642d3b284cc0e08468ef5d71ea29e7ee",
+      "iface/rule4_conditional.safei.json": "9e4779ddb3c599f80d1845d9effbe54bd0a2a48bc3bbe19234901628d8d91659",
       "out/rule4_conditional.ast.json": "03c0e4a5b7a2a576a4f9651ef9edb475a5ecbc17a8c403e5e461304fe8c3cd8c",
       "out/rule4_conditional.mir.json": "0c535736abefdfd17d9b40834bbaf6875a595f8c6d8761c0baaa6dc54619d861",
       "out/rule4_conditional.typed.json": "2e85711a22460b0fae2afed59fe9b05762fdb7ca2cfd2b35347f4aeda9ef15f6"
@@ -197,7 +197,7 @@
           "tag": "resolved_index",
           "type": "Element"
         },
-        "safei_format": "safei-v0",
+        "safei_format": "safei-v1",
         "source": "$TMPDIR/package_global_array.safe",
         "typed_format": "typed-v2"
       },
@@ -370,7 +370,7 @@
           "tag": "call",
           "type": "Integer"
         },
-        "safei_format": "safei-v0",
+        "safei_format": "safei-v1",
         "source": "$TMPDIR/package_global_observe.safe",
         "typed_format": "typed-v2"
       },
@@ -483,7 +483,7 @@
           "tag": "select",
           "type": "Value"
         },
-        "safei_format": "safei-v0",
+        "safei_format": "safei-v1",
         "source": "$TMPDIR/package_global_owner.safe",
         "typed_format": "typed-v2"
       },
@@ -594,7 +594,7 @@
           "tag": "select",
           "type": "Natural"
         },
-        "safei_format": "safei-v0",
+        "safei_format": "safei-v1",
         "source": "$TMPDIR/package_global_record.safe",
         "typed_format": "typed-v2"
       }
@@ -652,7 +652,7 @@
           "stdout": ""
         },
         "hashes": {
-          "iface/rule2_binary_search.safei.json": "dcdbb73b47e906727c47aa2cc65545d240295d139780f76e37079f66603e2dd0",
+          "iface/rule2_binary_search.safei.json": "d0a45bdc66522b274a9c67bca10528f755682161554b6308e5b021035b474a4c",
           "out/rule2_binary_search.ast.json": "2ad9a390149c6f97832bc851c9b629c25d0edc3fb8f41a2c351c25b18f8b3bcd",
           "out/rule2_binary_search.mir.json": "3ee771e9a0c69818af40b06b2f5b81cb3652709115887f1d1d76d51bcd0faf09",
           "out/rule2_binary_search.typed.json": "485ea2e66cb34bbabfe7ccf8e6cf5689de546ac6ef6cd4d3e6ef863ed990e1c7"
@@ -684,7 +684,7 @@
           "stderr": "",
           "stdout": "validate-mir: OK ($TMPDIR/rule2_binary_search-emit-a/out/rule2_binary_search.mir.json)\n"
         },
-        "safei_format": "safei-v0",
+        "safei_format": "safei-v1",
         "second_emit": {
           "command": [
             "compiler_impl/bin/safec",
@@ -754,7 +754,7 @@
           "stdout": ""
         },
         "hashes": {
-          "iface/rule4_conditional.safei.json": "714df4ba3b1d7d9bc0573f6ff780ffc2642d3b284cc0e08468ef5d71ea29e7ee",
+          "iface/rule4_conditional.safei.json": "9e4779ddb3c599f80d1845d9effbe54bd0a2a48bc3bbe19234901628d8d91659",
           "out/rule4_conditional.ast.json": "03c0e4a5b7a2a576a4f9651ef9edb475a5ecbc17a8c403e5e461304fe8c3cd8c",
           "out/rule4_conditional.mir.json": "0c535736abefdfd17d9b40834bbaf6875a595f8c6d8761c0baaa6dc54619d861",
           "out/rule4_conditional.typed.json": "2e85711a22460b0fae2afed59fe9b05762fdb7ca2cfd2b35347f4aeda9ef15f6"
@@ -786,7 +786,7 @@
           "stderr": "",
           "stdout": "validate-mir: OK ($TMPDIR/rule4_conditional-emit-a/out/rule4_conditional.mir.json)\n"
         },
-        "safei_format": "safei-v0",
+        "safei_format": "safei-v1",
         "second_emit": {
           "command": [
             "compiler_impl/bin/safec",
@@ -816,8 +816,8 @@
       "python3.11": "$TMPDIR/python-mask/python3.11"
     }
   },
-  "repeat_sha256": "95d2ba8b0da4941c54b0b77f5e1be7306102cf141bf006122cf2f9b2aa60bc51",
-  "report_sha256": "95d2ba8b0da4941c54b0b77f5e1be7306102cf141bf006122cf2f9b2aa60bc51",
+  "repeat_sha256": "b566dfd147aad1939e85a322a25e77184c7c7498ca9ed7cab0dce0c39bf1b80a",
+  "report_sha256": "b566dfd147aad1939e85a322a25e77184c7c7498ca9ed7cab0dce0c39bf1b80a",
   "runtime_rule": {
     "banned_tokens_absent": [
       "Run_Backend",
@@ -837,6 +837,7 @@
       "compiler_impl/src/safe_frontend-check_resolve.adb",
       "compiler_impl/src/safe_frontend-diagnostics.adb",
       "compiler_impl/src/safe_frontend-driver.adb",
+      "compiler_impl/src/safe_frontend-interfaces.adb",
       "compiler_impl/src/safe_frontend-json.adb",
       "compiler_impl/src/safe_frontend-lexer.adb",
       "compiler_impl/src/safe_frontend-mir_analyze.adb",
@@ -856,6 +857,7 @@
       "compiler_impl/src/safe_frontend-check_resolve.ads",
       "compiler_impl/src/safe_frontend-diagnostics.ads",
       "compiler_impl/src/safe_frontend-driver.ads",
+      "compiler_impl/src/safe_frontend-interfaces.ads",
       "compiler_impl/src/safe_frontend-json.ads",
       "compiler_impl/src/safe_frontend-lexer.ads",
       "compiler_impl/src/safe_frontend-mir_analyze.ads",

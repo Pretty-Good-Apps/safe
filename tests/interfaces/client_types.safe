@@ -1,0 +1,11 @@
+with provider_types;
+
+package Client_Types is
+
+   type Handle_Ref is access PROVIDER_TYPES.hANDLE;
+
+   Current    : Handle_Ref = null;
+   Value      : provider_types.sMALL_cOUNT = 1;
+   Next_Value : PROVIDER_TYPES.cOUNT = Provider_Types.nEXT (Value);
+
+end Client_Types;

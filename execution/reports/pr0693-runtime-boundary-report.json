@@ -272,7 +272,7 @@
         },
         "formats": {
           "mir": "mir-v2",
-          "safei": "safei-v0",
+          "safei": "safei-v1",
           "typed": "typed-v2"
         },
         "outputs": {
@@ -381,8 +381,8 @@
       "python3.11": "$TMPDIR/python-mask/python3.11"
     }
   },
-  "repeat_sha256": "500c5b7e6f860daa93fca267de0c64f7ea00741f6351a68e43a9b4d7cd9995a6",
-  "report_sha256": "500c5b7e6f860daa93fca267de0c64f7ea00741f6351a68e43a9b4d7cd9995a6",
+  "repeat_sha256": "62dfe467d4bd9d47bd84b337790080a6467fb78c3a0b2fee69206d9e5658c270",
+  "report_sha256": "62dfe467d4bd9d47bd84b337790080a6467fb78c3a0b2fee69206d9e5658c270",
   "runtime_rule": {
     "legacy_backend_path": "compiler_impl/backend/pr05_backend.py",
     "legacy_backend_present": false,
@@ -399,6 +399,7 @@
       "compiler_impl/src/safe_frontend-check_resolve.adb",
       "compiler_impl/src/safe_frontend-diagnostics.adb",
       "compiler_impl/src/safe_frontend-driver.adb",
+      "compiler_impl/src/safe_frontend-interfaces.adb",
       "compiler_impl/src/safe_frontend-json.adb",
       "compiler_impl/src/safe_frontend-lexer.adb",
       "compiler_impl/src/safe_frontend-mir_analyze.adb",
@@ -418,6 +419,7 @@
       "compiler_impl/src/safe_frontend-check_resolve.ads",
       "compiler_impl/src/safe_frontend-diagnostics.ads",
       "compiler_impl/src/safe_frontend-driver.ads",
+      "compiler_impl/src/safe_frontend-interfaces.ads",
       "compiler_impl/src/safe_frontend-json.ads",
       "compiler_impl/src/safe_frontend-lexer.ads",
       "compiler_impl/src/safe_frontend-mir_analyze.ads",

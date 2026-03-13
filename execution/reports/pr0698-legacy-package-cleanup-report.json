@@ -80,6 +80,7 @@
       "compiler_impl/src/safe_frontend-check_resolve.adb",
       "compiler_impl/src/safe_frontend-diagnostics.adb",
       "compiler_impl/src/safe_frontend-driver.adb",
+      "compiler_impl/src/safe_frontend-interfaces.adb",
       "compiler_impl/src/safe_frontend-json.adb",
       "compiler_impl/src/safe_frontend-lexer.adb",
       "compiler_impl/src/safe_frontend-mir_analyze.adb",
@@ -100,6 +101,7 @@
       "compiler_impl/src/safe_frontend-check_resolve.ads",
       "compiler_impl/src/safe_frontend-diagnostics.ads",
       "compiler_impl/src/safe_frontend-driver.ads",
+      "compiler_impl/src/safe_frontend-interfaces.ads",
       "compiler_impl/src/safe_frontend-json.ads",
       "compiler_impl/src/safe_frontend-lexer.ads",
       "compiler_impl/src/safe_frontend-mir_analyze.ads",
@@ -114,8 +116,8 @@
       "compiler_impl/src/safe_frontend.ads"
     ]
   },
-  "repeat_sha256": "1070321470b210dbcd10ffc6172b8c4e6f28a4ffee81249296d132dac377051a",
-  "report_sha256": "1070321470b210dbcd10ffc6172b8c4e6f28a4ffee81249296d132dac377051a",
+  "repeat_sha256": "93f3dac25b04d8a829cd2c43b0b379ac46bd2222371dd8e54021ff8d731d715d",
+  "report_sha256": "93f3dac25b04d8a829cd2c43b0b379ac46bd2222371dd8e54021ff8d731d715d",
   "status": "ok",
   "task": "PR06.9.8"
 }

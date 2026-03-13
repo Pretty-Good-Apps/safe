@@ -591,8 +591,8 @@
       }
     }
   },
-  "repeat_sha256": "dc793ea71bb2662e4421cbf16473083432a1709c01034c1d716e82217527019c",
-  "report_sha256": "dc793ea71bb2662e4421cbf16473083432a1709c01034c1d716e82217527019c",
+  "repeat_sha256": "21a1067f1d204a610a7bd604f5f845fed8de5bfc6b8f8d749077eb1861b99da8",
+  "report_sha256": "21a1067f1d204a610a7bd604f5f845fed8de5bfc6b8f8d749077eb1861b99da8",
   "scope": {
     "analyzer_fixture_pairs": [
       {
@@ -1159,7 +1159,7 @@
         },
         "formats": {
           "mir": "mir-v2",
-          "safei": "safei-v0",
+          "safei": "safei-v1",
           "typed": "typed-v2"
         },
         "source": "tests/positive/rule2_binary_search.safe",
@@ -1225,7 +1225,7 @@
         },
         "formats": {
           "mir": "mir-v2",
-          "safei": "safei-v0",
+          "safei": "safei-v1",
           "typed": "typed-v2"
         },
         "source": "tests/positive/rule3_divide.safe",
@@ -1291,7 +1291,7 @@
         },
         "formats": {
           "mir": "mir-v2",
-          "safei": "safei-v0",
+          "safei": "safei-v1",
           "typed": "typed-v2"
         },
         "source": "tests/positive/rule4_conditional.safe",
@@ -1359,7 +1359,7 @@
         },
         "formats": {
           "mir": "mir-v2",
-          "safei": "safei-v0",
+          "safei": "safei-v1",
           "typed": "typed-v2"
         },
         "source": "tests/positive/ownership_return.safe",
@@ -1425,7 +1425,7 @@
         },
         "formats": {
           "mir": "mir-v2",
-          "safei": "safei-v0",
+          "safei": "safei-v1",
           "typed": "typed-v2"
         },
         "source": "tests/positive/ownership_inout.safe",
@@ -1491,7 +1491,7 @@
         },
         "formats": {
           "mir": "mir-v2",
-          "safei": "safei-v0",
+          "safei": "safei-v1",
           "typed": "typed-v2"
         },
         "source": "tests/positive/ownership_observe_access.safe",
@@ -1559,7 +1559,7 @@
         },
         "formats": {
           "mir": "mir-v2",
-          "safei": "safei-v0",
+          "safei": "safei-v1",
           "typed": "typed-v2"
         },
         "source": "tests/positive/rule1_parameter.safe",
@@ -1625,7 +1625,7 @@
         },
         "formats": {
           "mir": "mir-v2",
-          "safei": "safei-v0",
+          "safei": "safei-v1",
           "typed": "typed-v2"
         },
         "source": "tests/positive/rule1_return.safe",

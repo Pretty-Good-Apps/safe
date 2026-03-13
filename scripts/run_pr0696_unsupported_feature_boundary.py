@@ -92,11 +92,6 @@ UNSUPPORTED_CASES = [
         "expected_reason": "unsupported_source_construct",
     },
     {
-        "name": "qualified_channel_reference",
-        "source": REPO_ROOT / "tests" / "negative" / "neg_qualified_channel_reference.safe",
-        "expected_reason": "unsupported_source_construct",
-    },
-    {
         "name": "statement_label_assignment",
         "source": REPO_ROOT / "tests" / "negative" / "neg_statement_label_assignment.safe",
         "expected_reason": "unsupported_source_construct",

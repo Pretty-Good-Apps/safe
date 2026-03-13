@@ -1,6 +1,5 @@
 with Ada.Exceptions;
 with Ada.IO_Exceptions;
-with Ada.Command_Line;
 with Ada.Characters.Handling;
 with Ada.Directories;
 with Ada.Strings.Fixed;
@@ -13,6 +12,7 @@ with Safe_Frontend.Check_Resolve;
 with Safe_Frontend.Diagnostics;
 with Safe_Frontend.Lexer;
 with Safe_Frontend.Mir_Analyze;
+with Safe_Frontend.Mir_Bronze;
 with Safe_Frontend.Mir_Diagnostics;
 with Safe_Frontend.Mir_Model;
 with Safe_Frontend.Mir_Validate;
@@ -28,9 +28,9 @@ package body Safe_Frontend.Driver is
    package CS renames Safe_Frontend.Check_Resolve;
    package FD renames Safe_Frontend.Diagnostics;
    package FL renames Safe_Frontend.Lexer;
+   package MB renames Safe_Frontend.Mir_Bronze;
    package MD renames Safe_Frontend.Mir_Diagnostics;
    package FS renames Safe_Frontend.Source;
-   package FT renames Safe_Frontend.Types;
    type Lex_Result is record
       Input       : FS.Source_File;
       Tokens      : FL.Token_Vectors.Vector;
@@ -206,7 +206,11 @@ package body Safe_Frontend.Driver is
          return Result;
    end Run_Lexing;
 
-   function Run_Source_Pipeline (Path : String) return Source_Result is
+   function Run_Source_Pipeline
+     (Path        : String;
+      Search_Dirs : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector)
+      return Source_Result
+   is
       Lexed : constant Lex_Result := Run_Lexing (Path);
    begin
       if not Lexed.Success then
@@ -224,7 +228,8 @@ package body Safe_Frontend.Driver is
          end if;
 
          declare
-            Resolved : constant CS.CM.Resolve_Result := CS.Resolve (Parsed.Unit);
+            Resolved : constant CS.CM.Resolve_Result :=
+              CS.Resolve (Parsed.Unit, Search_Dirs);
          begin
             if not Resolved.Success then
                return
@@ -327,8 +332,12 @@ package body Safe_Frontend.Driver is
          return Safe_Frontend.Exit_Internal;
    end Run_Analyze_Mir;
 
-   function Run_Ast (Path : String) return Integer is
-      Result : Source_Result := Run_Source_Pipeline (Path);
+   function Run_Ast
+     (Path        : String;
+      Search_Dirs : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector)
+      return Integer
+   is
+      Result : Source_Result := Run_Source_Pipeline (Path, Search_Dirs);
    begin
       if not Result.Lexed.Success then
          FD.Print (Result.Lexed.Diagnostics);
@@ -357,12 +366,14 @@ package body Safe_Frontend.Driver is
 
    function Run_Check
      (Path      : String;
-      Diag_Json : Boolean := False) return Integer
+      Diag_Json : Boolean := False;
+      Search_Dirs : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector)
+      return Integer
    is
       Pipeline    : Source_Result;
       Diagnostics : MD.Diagnostic_Vectors.Vector;
    begin
-      Pipeline := Run_Source_Pipeline (Path);
+      Pipeline := Run_Source_Pipeline (Path, Search_Dirs);
       if not Pipeline.Lexed.Success then
          if Pipeline.Lexed.Internal_Failure then
             Ada.Text_IO.Put_Line
@@ -428,9 +439,11 @@ package body Safe_Frontend.Driver is
    function Run_Emit
      (Path          : String;
       Out_Dir       : String;
-      Interface_Dir : String) return Integer
+      Interface_Dir : String;
+      Search_Dirs   : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector)
+      return Integer
    is
-      Pipeline : Source_Result := Run_Source_Pipeline (Path);
+      Pipeline : Source_Result := Run_Source_Pipeline (Path, Search_Dirs);
    begin
       if not Pipeline.Lexed.Success then
          FD.Print (Pipeline.Lexed.Diagnostics);
@@ -447,6 +460,7 @@ package body Safe_Frontend.Driver is
       declare
          Mir_Doc    : constant Safe_Frontend.Mir_Model.Mir_Document :=
            CL.Lower (Pipeline.Resolved);
+         Bronze     : constant MB.Bronze_Result := MB.Summarize (Mir_Doc, Path);
          Mir_Result : constant Safe_Frontend.Mir_Analyze.Analyze_Result :=
            Safe_Frontend.Mir_Analyze.Analyze (Mir_Doc);
          Stem       : constant String := Source_Stem (Path);
@@ -480,7 +494,7 @@ package body Safe_Frontend.Driver is
             Safe_Frontend.Mir_Write.To_Json (Mir_Doc));
          Write_File
            (Interface_Dir & "/" & Stem & ".safei.json",
-            CE.Interface_Json (Pipeline.Parsed, Pipeline.Resolved));
+            CE.Interface_Json (Pipeline.Parsed, Pipeline.Resolved, Bronze));
          return Safe_Frontend.Exit_Success;
       end;
    exception

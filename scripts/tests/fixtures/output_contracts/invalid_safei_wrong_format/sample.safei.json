@@ -1,0 +1,14 @@
+{
+  "format": "safei-v0",
+  "package_name": "Sample",
+  "dependencies": [],
+  "executables": [],
+  "public_declarations": [],
+  "types": [],
+  "subtypes": [],
+  "channels": [],
+  "objects": [],
+  "subprograms": [],
+  "effect_summaries": [],
+  "channel_access_summaries": []
+}

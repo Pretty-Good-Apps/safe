@@ -50,6 +50,102 @@
       }
     },
     {
+      "expected_error": "sample.safei.json.format must be safei-v1",
+      "name": "invalid_safei_wrong_format",
+      "result": {
+        "command": [
+          "python3",
+          "scripts/validate_output_contracts.py",
+          "--ast",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_wrong_format/sample.ast.json",
+          "--typed",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_wrong_format/sample.typed.json",
+          "--mir",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_wrong_format/sample.mir.json",
+          "--safei",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_wrong_format/sample.safei.json",
+          "--source-path",
+          "fixtures/sample.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "output contract validation: ERROR: sample.safei.json.format must be safei-v1\n",
+        "stdout": ""
+      }
+    },
+    {
+      "expected_error": "sample.safei.json.channels must be a list",
+      "name": "invalid_safei_null_channels",
+      "result": {
+        "command": [
+          "python3",
+          "scripts/validate_output_contracts.py",
+          "--ast",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_null_channels/sample.ast.json",
+          "--typed",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_null_channels/sample.typed.json",
+          "--mir",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_null_channels/sample.mir.json",
+          "--safei",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_null_channels/sample.safei.json",
+          "--source-path",
+          "fixtures/sample.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "output contract validation: ERROR: sample.safei.json.channels must be a list\n",
+        "stdout": ""
+      }
+    },
+    {
+      "expected_error": "sample.safei.json.subprograms[0].params[0].type must be an object",
+      "name": "invalid_safei_malformed_params",
+      "result": {
+        "command": [
+          "python3",
+          "scripts/validate_output_contracts.py",
+          "--ast",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_malformed_params/sample.ast.json",
+          "--typed",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_malformed_params/sample.typed.json",
+          "--mir",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_malformed_params/sample.mir.json",
+          "--safei",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_malformed_params/sample.safei.json",
+          "--source-path",
+          "fixtures/sample.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "output contract validation: ERROR: sample.safei.json.subprograms[0].params[0].type must be an object\n",
+        "stdout": ""
+      }
+    },
+    {
+      "expected_error": "sample.safei.json.effect_summaries[0].depends[0].inputs must be a list",
+      "name": "invalid_safei_bad_effect_summaries",
+      "result": {
+        "command": [
+          "python3",
+          "scripts/validate_output_contracts.py",
+          "--ast",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_bad_effect_summaries/sample.ast.json",
+          "--typed",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_bad_effect_summaries/sample.typed.json",
+          "--mir",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_bad_effect_summaries/sample.mir.json",
+          "--safei",
+          "scripts/tests/fixtures/output_contracts/invalid_safei_bad_effect_summaries/sample.safei.json",
+          "--source-path",
+          "fixtures/sample.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "output contract validation: ERROR: sample.safei.json.effect_summaries[0].depends[0].inputs must be a list\n",
+        "stdout": ""
+      }
+    },
+    {
       "expected_error": "sample.mir.json.source_path must preserve the exact emit CLI path",
       "name": "invalid_mir_source_path_mismatch",
       "result": {
@@ -74,8 +170,8 @@
       }
     }
   ],
-  "repeat_sha256": "be2abd6ff29c8404a334488bb3ecc11da343c27d95bd3c2a92be7dfffc7c72f7",
-  "report_sha256": "be2abd6ff29c8404a334488bb3ecc11da343c27d95bd3c2a92be7dfffc7c72f7",
+  "repeat_sha256": "ab227379efe080f2b35e05c9af38d3536c0a9e9400902d4e04e650db36baeb4b",
+  "report_sha256": "ab227379efe080f2b35e05c9af38d3536c0a9e9400902d4e04e650db36baeb4b",
   "status": "ok",
   "task": "PR06.9.7",
   "unit_tests": {
@@ -91,7 +187,32 @@
     ],
     "cwd": "$REPO_ROOT",
     "returncode": 0,
-    "stderr": "...................................................\n----------------------------------------------------------------------\nRan 51 tests in <elapsed>\n\nOK\n",
+    "stderr": ".........................................................\n----------------------------------------------------------------------\nRan 57 tests in <elapsed>\n\nOK\n",
     "stdout": ""
-  }
+  },
+  "valid_output_contracts": [
+    {
+      "name": "valid_safei_v1_full",
+      "result": {
+        "command": [
+          "python3",
+          "scripts/validate_output_contracts.py",
+          "--ast",
+          "scripts/tests/fixtures/output_contracts/valid_safei_v1_full/sample.ast.json",
+          "--typed",
+          "scripts/tests/fixtures/output_contracts/valid_safei_v1_full/sample.typed.json",
+          "--mir",
+          "scripts/tests/fixtures/output_contracts/valid_safei_v1_full/sample.mir.json",
+          "--safei",
+          "scripts/tests/fixtures/output_contracts/valid_safei_v1_full/sample.safei.json",
+          "--source-path",
+          "fixtures/sample.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "output contracts: OK (sample.ast.json, sample.typed.json, sample.mir.json, sample.safei.json)\n"
+      }
+    }
+  ]
 }

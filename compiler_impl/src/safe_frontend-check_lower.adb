@@ -2203,6 +2203,10 @@ package body Safe_Frontend.Check_Lower is
          Type_Env.Include (UString_Value (Item.Name), Item);
          Result.Types.Append (Item);
       end loop;
+      for Item of Unit.Imported_Types loop
+         Type_Env.Include (UString_Value (Item.Name), Item);
+         Result.Types.Append (Item);
+      end loop;
 
       Result.Path := Unit.Path;
       Result.Format := GM.Mir_V2;

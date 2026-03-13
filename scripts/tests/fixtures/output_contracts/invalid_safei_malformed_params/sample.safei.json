@@ -1,0 +1,44 @@
+{
+  "format": "safei-v1",
+  "package_name": "Sample",
+  "dependencies": [],
+  "executables": [],
+  "public_declarations": [],
+  "types": [],
+  "subtypes": [],
+  "channels": [],
+  "objects": [],
+  "subprograms": [
+    {
+      "name": "Next",
+      "kind": "function",
+      "signature": "function Next (Value: Integer) return Integer",
+      "params": [
+        {
+          "name": "Value",
+          "mode": "in",
+          "span": {
+            "start_line": 1,
+            "start_col": 1,
+            "end_line": 1,
+            "end_col": 10
+          }
+        }
+      ],
+      "has_return_type": true,
+      "return_type": {
+        "name": "Integer",
+        "kind": "integer"
+      },
+      "return_is_access_def": false,
+      "span": {
+        "start_line": 1,
+        "start_col": 1,
+        "end_line": 1,
+        "end_col": 10
+      }
+    }
+  ],
+  "effect_summaries": [],
+  "channel_access_summaries": []
+}

@@ -225,7 +225,7 @@ def run_positive_case(safec: Path, source: Path, env: dict[str, str], temp_root:
     safei_payload = load_json(safei_output)
     require(typed_payload.get("format") == "typed-v2", f"{typed_output}: expected typed-v2")
     require(mir_payload.get("format") == "mir-v2", f"{mir_output}: expected mir-v2")
-    require(safei_payload.get("format") == "safei-v0", f"{safei_output}: expected safei-v0")
+    require(safei_payload.get("format") == "safei-v1", f"{safei_output}: expected safei-v1")
     require(mir_payload["source_path"] == str(source), f"{mir_output}: source_path must preserve CLI path")
 
     return {

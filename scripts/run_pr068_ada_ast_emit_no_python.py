@@ -344,7 +344,7 @@ def emit_inline_source_case(
     safei_payload = load_json(safei_output)
     require(typed_payload.get("format") == "typed-v2", f"{typed_output}: expected typed-v2")
     require(mir_payload.get("format") == "mir-v2", f"{mir_output}: expected mir-v2")
-    require(safei_payload.get("format") == "safei-v0", f"{safei_output}: expected safei-v0")
+    require(safei_payload.get("format") == "safei-v1", f"{safei_output}: expected safei-v1")
     require(diagnostics["diagnostics"] == [], f"{mir_output}: expected zero diagnostics")
     require(mir_payload["source_path"] == str(source), f"{mir_output}: source_path must preserve CLI path")
 
@@ -588,7 +588,7 @@ def generate_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[st
             mir_payload = load_json(mir_output)
             require(mir_payload.get("format") == "mir-v2", f"{mir_output}: expected mir-v2")
             safei_payload = load_json(interface_output)
-            require(safei_payload.get("format") == "safei-v0", f"{interface_output}: expected safei-v0")
+            require(safei_payload.get("format") == "safei-v1", f"{interface_output}: expected safei-v1")
 
             file_hashes: dict[str, str] = {}
             for relative, left in sorted(expected_files.items()):

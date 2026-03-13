@@ -13,6 +13,7 @@ from validate_output_contracts import (
     require_positive_int,
     validate_mir_graphs,
     validate_optional_mir_channels,
+    validate_safei_payload,
     validate_optional_typed_channels,
     validate_optional_typed_tasks,
     validate_span,
@@ -25,6 +26,61 @@ def valid_span() -> dict[str, int]:
         "start_col": 1,
         "end_line": 1,
         "end_col": 1,
+    }
+
+
+def valid_type() -> dict[str, object]:
+    return {"name": "Integer", "kind": "integer", "low": 0, "high": 10}
+
+
+def valid_safei() -> dict[str, object]:
+    return {
+        "format": "safei-v1",
+        "package_name": "Sample",
+        "dependencies": ["Provider"],
+        "executables": [],
+        "public_declarations": [],
+        "types": [valid_type()],
+        "subtypes": [],
+        "channels": [],
+        "objects": [],
+        "subprograms": [
+            {
+                "name": "Next",
+                "kind": "function",
+                "signature": "function Next (Value: Integer) return Integer",
+                "params": [
+                    {
+                        "name": "Value",
+                        "mode": "in",
+                        "type": valid_type(),
+                        "span": valid_span(),
+                    }
+                ],
+                "has_return_type": True,
+                "return_type": valid_type(),
+                "return_is_access_def": False,
+                "span": valid_span(),
+            }
+        ],
+        "effect_summaries": [
+            {
+                "name": "Next",
+                "signature": "function Next (Value: Integer) return Integer",
+                "reads": [],
+                "writes": [],
+                "inputs": ["param:Value"],
+                "outputs": ["return"],
+                "depends": [{"output_name": "return", "inputs": ["param:Value"]}],
+            }
+        ],
+        "channel_access_summaries": [
+            {
+                "name": "Next",
+                "signature": "function Next (Value: Integer) return Integer",
+                "channels": [],
+            }
+        ],
     }
 
 
@@ -139,6 +195,40 @@ class ValidateOutputContractsTests(unittest.TestCase):
                 ],
                 "mir.graphs",
             )
+
+    def test_validate_safei_payload_accepts_safei_v1(self) -> None:
+        payload = validate_safei_payload(valid_safei(), path="sample.safei.json")
+        self.assertEqual(payload["format"], "safei-v1")
+
+    def test_validate_safei_payload_rejects_wrong_format(self) -> None:
+        payload = valid_safei()
+        payload["format"] = "safei-v0"
+        with self.assertRaises(ValueError):
+            validate_safei_payload(payload, path="sample.safei.json")
+
+    def test_validate_safei_payload_rejects_null_channels(self) -> None:
+        payload = valid_safei()
+        payload["channels"] = None
+        with self.assertRaises(ValueError):
+            validate_safei_payload(payload, path="sample.safei.json")
+
+    def test_validate_safei_payload_rejects_malformed_params(self) -> None:
+        payload = valid_safei()
+        payload["subprograms"][0]["params"] = [{"name": "Value", "mode": "in", "span": valid_span()}]
+        with self.assertRaises(ValueError):
+            validate_safei_payload(payload, path="sample.safei.json")
+
+    def test_validate_safei_payload_rejects_malformed_effect_summary(self) -> None:
+        payload = valid_safei()
+        payload["effect_summaries"][0]["depends"] = [{"output_name": "return", "inputs": True}]
+        with self.assertRaises(ValueError):
+            validate_safei_payload(payload, path="sample.safei.json")
+
+    def test_validate_safei_payload_rejects_unknown_summary_target(self) -> None:
+        payload = valid_safei()
+        payload["effect_summaries"][0]["name"] = "Missing"
+        with self.assertRaises(ValueError):
+            validate_safei_payload(payload, path="sample.safei.json")
 
 
 if __name__ == "__main__":

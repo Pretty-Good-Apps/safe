@@ -2,6 +2,7 @@ with Ada.Characters.Latin_1;
 with Ada.Containers.Indefinite_Vectors;
 with Ada.Strings.Unbounded;
 with Safe_Frontend.Json;
+with Safe_Frontend.Mir_Bronze;
 with Safe_Frontend.Mir_Model;
 with Safe_Frontend.Types;
 
@@ -959,24 +960,27 @@ package body Safe_Frontend.Check_Emit is
             declare
                Component_List : constant String := Component_List_Node (Decl);
             begin
-            return
-              "{""node_type"":""TypeDeclaration"",""is_public"":"
-              & JS.Bool_Literal (Decl.Is_Public)
-              & ",""name"":"
-              & JS.Quote (Decl.Name)
-              & ",""discriminant_part"":"
-              & Discriminant_Part_Node (Decl)
-              & ",""type_definition"":{""node_type"":""RecordTypeDefinition"",""is_limited"":false,""is_private"":false,""record_definition"":{""node_type"":""RecordDefinition"",""is_null_record"":"
-              & JS.Bool_Literal (Component_List = "null")
-              & ",""component_list"":"
-              & Component_List
-              & ",""span"":"
-              & JS.Span_Object (Decl.Span)
-              & "},""span"":"
-              & JS.Span_Object (Decl.Span)
-              & "},""span"":"
-              & JS.Span_Object (Decl.Span)
-              & "}";
+               return
+                 "{""node_type"":""TypeDeclaration"",""is_public"":"
+                 & JS.Bool_Literal (Decl.Is_Public)
+                 & ",""name"":"
+                 & JS.Quote (Decl.Name)
+                 & ",""discriminant_part"":"
+                 & Discriminant_Part_Node (Decl)
+                 & ",""type_definition"":{""node_type"":""RecordTypeDefinition"""
+                 & ",""is_limited"":false,""is_private"":false"
+                 & ",""record_definition"":{""node_type"":""RecordDefinition"""
+                 & ",""is_null_record"":"
+                 & JS.Bool_Literal (Component_List = "null")
+                 & ",""component_list"":"
+                 & Component_List
+                 & ",""span"":"
+                 & JS.Span_Object (Decl.Span)
+                 & "},""span"":"
+                 & JS.Span_Object (Decl.Span)
+                 & "},""span"":"
+                 & JS.Span_Object (Decl.Span)
+                 & "}";
             end;
          when CM.Type_Decl_Access =>
             return
@@ -1831,6 +1835,323 @@ package body Safe_Frontend.Check_Emit is
       return Json_List (Items);
    end Tasks_Json;
 
+   function Dependencies_Json (Parsed : CM.Parsed_Unit) return String is
+      Items : String_Vectors.Vector;
+      Seen  : String_Vectors.Vector;
+
+      function Already_Seen (Name : String) return Boolean is
+      begin
+         if not Seen.Is_Empty then
+            for Item of Seen loop
+               if FT.Lowercase (Item) = FT.Lowercase (Name) then
+                  return True;
+               end if;
+            end loop;
+         end if;
+         return False;
+      end Already_Seen;
+   begin
+      if not Parsed.Withs.Is_Empty then
+         for Clause of Parsed.Withs loop
+            for Name of Clause.Names loop
+               declare
+                  Value : constant String := FT.To_String (Name);
+               begin
+                  if not Already_Seen (Value) then
+                     Seen.Append (Value);
+                     Items.Append (JS.Quote (Name));
+                  end if;
+               end;
+            end loop;
+         end loop;
+      end if;
+      return Json_List (Items);
+   end Dependencies_Json;
+
+   function Public_Types_Json
+     (Parsed        : CM.Parsed_Unit;
+      Resolved      : CM.Resolved_Unit;
+      Subtype_Only  : Boolean) return String
+   is
+      Items      : String_Vectors.Vector;
+      Type_Index : Natural := 0;
+   begin
+      for Item of Parsed.Items loop
+         if Item.Kind in CM.Item_Type_Decl | CM.Item_Subtype_Decl then
+            Type_Index := Type_Index + 1;
+            if not Resolved.Types.Is_Empty
+              and then Type_Index in Resolved.Types.First_Index .. Resolved.Types.Last_Index
+            then
+               if Item.Kind = CM.Item_Type_Decl
+                 and then not Subtype_Only
+                 and then Item.Type_Data.Is_Public
+               then
+                  Items.Append (Type_Json (Resolved.Types (Type_Index)));
+               elsif Item.Kind = CM.Item_Subtype_Decl
+                 and then Subtype_Only
+                 and then Item.Sub_Data.Is_Public
+               then
+                  Items.Append (Type_Json (Resolved.Types (Type_Index)));
+               end if;
+            end if;
+         end if;
+      end loop;
+      return Json_List (Items);
+   end Public_Types_Json;
+
+   function Public_Channels_Json (Resolved : CM.Resolved_Unit) return String is
+      Items : String_Vectors.Vector;
+   begin
+      if not Resolved.Channels.Is_Empty then
+         for Channel_Item of Resolved.Channels loop
+            if Channel_Item.Is_Public then
+               Items.Append
+                 ("{""name"":"
+                  & JS.Quote (Channel_Item.Name)
+                  & ",""is_public"":"
+                  & JS.Bool_Literal (Channel_Item.Is_Public)
+                  & ",""element_type"":"
+                  & Type_Json (Channel_Item.Element_Type)
+                  & ",""capacity"":"
+                  & Long_Long_Integer'Image (Channel_Item.Capacity)
+                  & ",""span"":"
+                  & JS.Span_Object (Channel_Item.Span)
+                  & "}");
+            end if;
+         end loop;
+      end if;
+      return Json_List (Items);
+   end Public_Channels_Json;
+
+   function Public_Objects_Json
+     (Parsed   : CM.Parsed_Unit;
+      Resolved : CM.Resolved_Unit) return String
+   is
+      Items        : String_Vectors.Vector;
+      Object_Index : Natural := 0;
+   begin
+      for Item of Parsed.Items loop
+         if Item.Kind = CM.Item_Object_Decl then
+            Object_Index := Object_Index + 1;
+            if Item.Obj_Data.Is_Public
+              and then not Resolved.Objects.Is_Empty
+              and then Object_Index in Resolved.Objects.First_Index .. Resolved.Objects.Last_Index
+            then
+               for Name of Item.Obj_Data.Names loop
+                  Items.Append
+                    ("{""name"":"
+                     & JS.Quote (Name)
+                     & ",""type"":"
+                     & Type_Json (Resolved.Objects (Object_Index).Type_Info)
+                     & ",""span"":"
+                     & JS.Span_Object (Item.Obj_Data.Span)
+                     & "}");
+               end loop;
+            end if;
+         end if;
+      end loop;
+      return Json_List (Items);
+   end Public_Objects_Json;
+
+   function Param_Json (Param : CM.Symbol) return String is
+   begin
+      return
+        "{""name"":"
+        & JS.Quote (Param.Name)
+        & ",""mode"":"
+        & JS.Quote (Param.Mode)
+        & ",""type"":"
+        & Type_Json (Param.Type_Info)
+        & ",""span"":"
+        & JS.Span_Object (Param.Span)
+        & "}";
+   end Param_Json;
+
+   function Public_Subprograms_Json
+     (Parsed   : CM.Parsed_Unit;
+      Resolved : CM.Resolved_Unit) return String
+   is
+      Items            : String_Vectors.Vector;
+      Subprogram_Index : Natural := 0;
+      Params           : String_Vectors.Vector;
+   begin
+      for Item of Parsed.Items loop
+         if Item.Kind = CM.Item_Subprogram then
+            Subprogram_Index := Subprogram_Index + 1;
+            if Item.Subp_Data.Is_Public
+              and then not Resolved.Subprograms.Is_Empty
+              and then Subprogram_Index in Resolved.Subprograms.First_Index .. Resolved.Subprograms.Last_Index
+            then
+               declare
+                  Subp : constant CM.Resolved_Subprogram := Resolved.Subprograms (Subprogram_Index);
+               begin
+                  Params.Clear;
+                  for Param of Subp.Params loop
+                     Params.Append (Param_Json (Param));
+                  end loop;
+                  Items.Append
+                    ("{""name"":"
+                     & JS.Quote (Subp.Name)
+                     & ",""kind"":"
+                     & JS.Quote (Subp.Kind)
+                     & ",""signature"":"
+                     & JS.Quote (Signature_For (Subp))
+                     & ",""params"":"
+                     & Json_List (Params)
+                     & ",""has_return_type"":"
+                     & JS.Bool_Literal (Subp.Has_Return_Type)
+                     & ",""return_type"":"
+                     & (if Subp.Has_Return_Type then Type_Json (Subp.Return_Type) else "null")
+                     & ",""return_is_access_def"":"
+                     & JS.Bool_Literal (Subp.Return_Is_Access_Def)
+                     & ",""span"":"
+                     & JS.Span_Object (Subp.Span)
+                     & "}");
+               end;
+            end if;
+         end if;
+      end loop;
+      return Json_List (Items);
+   end Public_Subprograms_Json;
+
+   function Graph_Summary_For
+     (Bronze : MB.Bronze_Result;
+      Name   : FT.UString) return MB.Graph_Summary is
+   begin
+      if not Bronze.Graphs.Is_Empty then
+         for Item of Bronze.Graphs loop
+            if FT.To_String (Item.Name) = FT.To_String (Name) then
+               return Item;
+            end if;
+         end loop;
+      end if;
+      return (others => <>);
+   end Graph_Summary_For;
+
+   function Depends_Json (Items : MB.Depends_Vectors.Vector) return String is
+      Result : String_Vectors.Vector;
+      Inputs : String_Vectors.Vector;
+   begin
+      if not Items.Is_Empty then
+         for Item of Items loop
+            Inputs.Clear;
+            if not Item.Inputs.Is_Empty then
+               for Input of Item.Inputs loop
+                  Inputs.Append (JS.Quote (Input));
+               end loop;
+            end if;
+            Result.Append
+              ("{""output_name"":"
+               & JS.Quote (Item.Output_Name)
+               & ",""inputs"":"
+               & Json_List (Inputs)
+               & "}");
+         end loop;
+      end if;
+      return Json_List (Result);
+   end Depends_Json;
+
+   function Effect_Summaries_Json
+     (Parsed   : CM.Parsed_Unit;
+      Resolved : CM.Resolved_Unit;
+      Bronze   : MB.Bronze_Result) return String
+   is
+      Items            : String_Vectors.Vector;
+      Reads            : String_Vectors.Vector;
+      Writes           : String_Vectors.Vector;
+      Inputs           : String_Vectors.Vector;
+      Outputs          : String_Vectors.Vector;
+      Subprogram_Index : Natural := 0;
+   begin
+      for Item of Parsed.Items loop
+         if Item.Kind = CM.Item_Subprogram then
+            Subprogram_Index := Subprogram_Index + 1;
+            if Item.Subp_Data.Is_Public
+              and then not Resolved.Subprograms.Is_Empty
+              and then Subprogram_Index in Resolved.Subprograms.First_Index .. Resolved.Subprograms.Last_Index
+            then
+               declare
+                  Subp    : constant CM.Resolved_Subprogram := Resolved.Subprograms (Subprogram_Index);
+                  Summary : constant MB.Graph_Summary := Graph_Summary_For (Bronze, Subp.Name);
+               begin
+                  Reads.Clear;
+                  Writes.Clear;
+                  Inputs.Clear;
+                  Outputs.Clear;
+                  for Name of Summary.Reads loop
+                     Reads.Append (JS.Quote (Name));
+                  end loop;
+                  for Name of Summary.Writes loop
+                     Writes.Append (JS.Quote (Name));
+                  end loop;
+                  for Name of Summary.Inputs loop
+                     Inputs.Append (JS.Quote (Name));
+                  end loop;
+                  for Name of Summary.Outputs loop
+                     Outputs.Append (JS.Quote (Name));
+                  end loop;
+                  Items.Append
+                    ("{""name"":"
+                     & JS.Quote (Subp.Name)
+                     & ",""signature"":"
+                     & JS.Quote (Signature_For (Subp))
+                     & ",""reads"":"
+                     & Json_List (Reads)
+                     & ",""writes"":"
+                     & Json_List (Writes)
+                     & ",""inputs"":"
+                     & Json_List (Inputs)
+                     & ",""outputs"":"
+                     & Json_List (Outputs)
+                     & ",""depends"":"
+                     & Depends_Json (Summary.Depends)
+                     & "}");
+               end;
+            end if;
+         end if;
+      end loop;
+      return Json_List (Items);
+   end Effect_Summaries_Json;
+
+   function Channel_Access_Summaries_Json
+     (Parsed   : CM.Parsed_Unit;
+      Resolved : CM.Resolved_Unit;
+      Bronze   : MB.Bronze_Result) return String
+   is
+      Items            : String_Vectors.Vector;
+      Channels         : String_Vectors.Vector;
+      Subprogram_Index : Natural := 0;
+   begin
+      for Item of Parsed.Items loop
+         if Item.Kind = CM.Item_Subprogram then
+            Subprogram_Index := Subprogram_Index + 1;
+            if Item.Subp_Data.Is_Public
+              and then not Resolved.Subprograms.Is_Empty
+              and then Subprogram_Index in Resolved.Subprograms.First_Index .. Resolved.Subprograms.Last_Index
+            then
+               declare
+                  Subp    : constant CM.Resolved_Subprogram := Resolved.Subprograms (Subprogram_Index);
+                  Summary : constant MB.Graph_Summary := Graph_Summary_For (Bronze, Subp.Name);
+               begin
+                  Channels.Clear;
+                  for Name of Summary.Channels loop
+                     Channels.Append (JS.Quote (Name));
+                  end loop;
+                  Items.Append
+                    ("{""name"":"
+                     & JS.Quote (Subp.Name)
+                     & ",""signature"":"
+                     & JS.Quote (Signature_For (Subp))
+                     & ",""channels"":"
+                     & Json_List (Channels)
+                     & "}");
+               end;
+            end if;
+         end if;
+      end loop;
+      return Json_List (Items);
+   end Channel_Access_Summaries_Json;
+
    function Type_Json (Info : GM.Type_Descriptor) return String is
       Items  : String_Vectors.Vector;
       Fields : String_Vectors.Vector;
@@ -1925,6 +2246,11 @@ package body Safe_Frontend.Check_Emit is
    begin
       if not Resolved.Types.Is_Empty then
          for Item of Resolved.Types loop
+            Items.Append (Type_Json (Item));
+         end loop;
+      end if;
+      if not Resolved.Imported_Types.Is_Empty then
+         for Item of Resolved.Imported_Types loop
             Items.Append (Type_Json (Item));
          end loop;
       end if;
@@ -2031,19 +2357,44 @@ package body Safe_Frontend.Check_Emit is
 
    function Interface_Json
      (Parsed   : CM.Parsed_Unit;
-      Resolved : CM.Resolved_Unit) return String is
+      Resolved : CM.Resolved_Unit;
+      Bronze   : MB.Bronze_Result) return String is
    begin
       return
         "{"
-        & """executables"":"
-        & Executables (Resolved)
-        & ","
-        & """format"":""safei-v0"","
+        & """format"":""safei-v1"","
         & """package_name"":"
         & JS.Quote (Parsed.Package_Name)
         & ","
+        & """dependencies"":"
+        & Dependencies_Json (Parsed)
+        & ","
+        & """executables"":"
+        & Executables (Resolved)
+        & ","
         & """public_declarations"":"
         & Public_Declarations (Parsed, Resolved)
+        & ","
+        & """types"":"
+        & Public_Types_Json (Parsed, Resolved, False)
+        & ","
+        & """subtypes"":"
+        & Public_Types_Json (Parsed, Resolved, True)
+        & ","
+        & """channels"":"
+        & Public_Channels_Json (Resolved)
+        & ","
+        & """objects"":"
+        & Public_Objects_Json (Parsed, Resolved)
+        & ","
+        & """subprograms"":"
+        & Public_Subprograms_Json (Parsed, Resolved)
+        & ","
+        & """effect_summaries"":"
+        & Effect_Summaries_Json (Parsed, Resolved, Bronze)
+        & ","
+        & """channel_access_summaries"":"
+        & Channel_Access_Summaries_Json (Parsed, Resolved, Bronze)
         & "}"
         & Ada.Characters.Latin_1.LF;
    end Interface_Json;

@@ -3,17 +3,17 @@
 - **Schema version:** `1`
 - **Frozen spec SHA:** `468cf72332724b04b7c193b4d2a3b02f1584125d`
 - **Active task:** `none`
-- **Next task:** `PR08.3`
-- **Updated at:** `2026-03-12T21:05:00Z`
+- **Next task:** `PR08.3a`
+- **Updated at:** `2026-03-13T00:07:34Z`
 
 ## Repo Facts
 
 - `tests/positive`: 35
-- `tests/negative`: 65
+- `tests/negative`: 69
 - `tests/golden`: 3
 - `tests/concurrency`: 12
 - `tests/diagnostics_golden`: 17
-- **Total test files:** 132
+- **Total test files:** 136
 
 ## Task Ledger
 
@@ -46,9 +46,11 @@
 | PR07 | done | PR06.9.13 | 1 |
 | PR08.1 | done | PR07 | 1 |
 | PR08.2 | done | PR08.1 | 1 |
-| PR08.3 | planned | PR08.2 | 0 |
+| PR08.3 | done | PR08.2 | 1 |
+| PR08.3a | planned | PR08.3 | 0 |
+| PR08.3b | planned | PR08.3a | 0 |
 | PR08.4 | planned | PR08.3 | 0 |
-| PR08 | planned | PR08.4 | 0 |
+| PR08 | planned | PR08.3b, PR08.4 | 0 |
 | PR09 | planned | PR08 | 0 |
 | PR10 | planned | PR09 | 0 |
 
@@ -428,14 +430,41 @@
 
 ### PR08.3 — Interface contracts and cross-package resolution
 
-- **Status:** `planned`
+- **Status:** `done`
 - **Depends on:** PR08.2
 - **Blockers:** none
 - **Acceptance:**
   - safec ast, check, and emit accept repeatable --interface-search-dir flags while emit keeps --interface-dir for output.
   - safei-v1 is emitted with public declaration data plus effect and channel-access summaries derived from the local Bronze pass.
-  - Package-qualified resolution can consume imported interfaces for public types, subtypes, channels, objects and constants, and subprogram signatures without reading dependency source.
+  - Package-qualified resolution can consume imported interfaces for public types, subtypes, channels, objects, and subprogram signatures without reading dependency source.
   - Missing interfaces and duplicate same-package matches in one search dir fail deterministically as source_frontend_error.
+  - safei-v1.objects[] remains additively extensible for later constant payload fields without requiring another format bump.
+- **Evidence:**
+  - `execution/reports/pr083-interface-contracts-report.json`
+
+### PR08.3a — Public constants and imported constant values
+
+- **Status:** `planned`
+- **Depends on:** PR08.3
+- **Blockers:** none
+- **Acceptance:**
+  - Ordinary package-level X : constant T = Expr declarations are supported on the live Ada-native path and preserve constant-ness through parse, resolve, and emit.
+  - safei-v1.objects[] grows additively with is_constant plus optional static_value and static_value_kind fields for the supported static subset.
+  - Provider/client fixtures prove imported public constants work in package-qualified static contexts without changing typed-v2, mir-v2, or adding new CLI JSON surfaces.
+  - Missing or invalid imported constant values fail deterministically and safei-v1 constant payloads remain validator-covered and deterministic.
+  - A dedicated PR08.3a gate and report cover imported public constants and keep committed evidence up to date.
+
+### PR08.3b — Named numbers
+
+- **Status:** `planned`
+- **Depends on:** PR08.3a
+- **Blockers:** none
+- **Acceptance:**
+  - Named-number declarations are supported on the live Ada-native path as a distinct declaration form from ordinary constants.
+  - safei-v1 grows additively with named_numbers[] rather than overloading objects[].
+  - Provider/client fixtures prove imported named numbers work in package-qualified static contexts.
+  - Named-number interface payloads remain deterministic and validator-covered without bumping safei-v1 again.
+  - A dedicated PR08.3b gate and report cover imported named numbers and keep committed evidence up to date.
 
 ### PR08.4 — Transitive concurrency integration and baseline flip
 
@@ -451,10 +480,10 @@
 ### PR08 — Concurrency legality and Bronze summaries
 
 - **Status:** `planned`
-- **Depends on:** PR08.4
+- **Depends on:** PR08.3b, PR08.4
 - **Blockers:** none
 - **Acceptance:**
-  - PR08.1 through PR08.4 complete the concurrency frontend, local analysis, interface contracts, and transitive integration work on the live Ada-native path.
+  - PR08.1 through PR08.4, plus PR08.3a and PR08.3b, complete the concurrency frontend, local analysis, interface contracts, constant/named-number interface coverage, and transitive integration work on the live Ada-native path.
   - The supported frontend subset expands from the PR07 sequential baseline to the PR08 concurrency baseline without reviving deleted legacy packages.
 
 ### PR09 — Ada/SPARK emission and snapshot refresh

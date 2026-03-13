@@ -5,20 +5,20 @@ This workspace hosts the current Safe compiler frontend baseline established by 
 ## Current Boundary
 
 - `safec lex <file.safe>` lexes a Safe source file and writes versioned token JSON to stdout.
-- `safec ast <file.safe>` lexes and parses a Safe source file and writes AST JSON to stdout.
+- `safec ast <file.safe> [--interface-search-dir <dir>]...` lexes, resolves, and writes AST JSON for the current supported subset.
 - `safec validate-mir <file.mir.json>` validates emitted `mir-v1` / `mir-v2` structure in Ada and exits nonzero on structural contract failures.
 - `safec analyze-mir <file.mir.json>` validates analyzable `mir-v2` input and exits nonzero if MIR-level diagnostics are emitted.
 - `safec analyze-mir --diag-json <file.mir.json>` writes `diagnostics-v0` JSON for a `mir-v2` input.
-- `safec check <file.safe>` runs the Ada-native check pipeline for the currently supported subset and exits nonzero if diagnostics are emitted.
-- `safec check --diag-json <file.safe>` writes `diagnostics-v0` JSON for the Ada-native check pipeline.
-- `safec emit <file.safe> --out-dir <dir> --interface-dir <dir>` writes the current frontend artifacts for downstream inspection and regression checks.
+- `safec check <file.safe> [--interface-search-dir <dir>]...` runs the Ada-native check pipeline for the currently supported subset and exits nonzero if diagnostics are emitted.
+- `safec check --diag-json <file.safe> [--interface-search-dir <dir>]...` writes `diagnostics-v0` JSON for the Ada-native check pipeline.
+- `safec emit <file.safe> --out-dir <dir> --interface-dir <dir> [--interface-search-dir <dir>]...` writes the current frontend artifacts for downstream inspection and regression checks.
 
-The current frontend supports the exact current Rule 5 fixture corpus, sequential ownership, the current boolean result-record discriminant pattern, and the local-only PR08.1/PR08.2 concurrency slice for single-package task declarations, channel declarations, send, receive, try_send, try_receive, select, and relative delay.
+The current frontend supports the exact current Rule 5 fixture corpus, sequential ownership, the current boolean result-record discriminant pattern, the local-only PR08.1/PR08.2 concurrency slice for single-package task declarations, channel declarations, send, receive, try_send, try_receive, select, and relative delay, and the PR08.3 interface-contract slice for imported package-qualified resolution through explicit dependency interfaces.
 
 That current boundary includes:
 
 - schema-true AST emission for the implemented subset
-- `typed-v2`, self-sufficient `mir-v2`, and `safei-v0` emission for that subset
+- `typed-v2`, self-sufficient `mir-v2`, and `safei-v1` emission for that subset
 - Ada-native MIR validation and MIR analysis for that subset
 - Ada-native `check` over the exact current Rule 5 fixture corpus, the sequential ownership corpus, the current boolean result-record discriminant pattern, and the accepted local-only concurrency corpus
 
@@ -87,14 +87,22 @@ dependency explicitly rather than allowing it to spread by default.
   Status: debug and regression artifact for the current sequential platform. Incompatible structural changes require a format-tag bump.
 
 - `<stem>.safei.json`
-  Format tag: `safei-v0`.
+  Format tag: `safei-v1`.
   Contents:
+  - `dependencies[]`
   - `package_name`
-  - `public_declarations[]`
   - `executables[]`
-  Each summary entry includes `name`, `kind`, `signature`, and `span`.
+  - `public_declarations[]`
+  - `types[]`
+  - `subtypes[]`
+  - `channels[]`
+  - `objects[]`
+  - `subprograms[]`
+  - `effect_summaries[]`
+  - `channel_access_summaries[]`
+  Public subprogram entries carry structured parameter and return-type descriptors, and the summary arrays are populated from the local Bronze pass for public subprograms.
 
-`safei-v0` is the versioned dependency-interface seed for later cross-unit resolution and interprocedural analysis. If the schema changes incompatibly, the format tag must change as well.
+`safei-v1` is the versioned dependency-interface contract for cross-unit resolution. It carries structured public declarations, local Bronze-derived effect/channel summaries, and remains the additive base for later constant and named-number extensions. If the schema changes incompatibly, the format tag must change as well.
 
 ## Verification
 
@@ -211,3 +219,12 @@ python3 scripts/run_pr082_local_concurrency_analysis.py
 ```
 
 That gate promotes the accepted local concurrency corpus to a clean `safec check --diag-json` surface, checks direct `check` versus emitted `analyze-mir` first-diagnostic parity on representative concurrency negatives, re-derives deterministic Bronze evidence from emitted MIR, guards representative sequential parity cases against analyzer regressions, and records results in `execution/reports/pr082-local-concurrency-analysis-report.json`.
+
+The PR08.3 interface contracts gate is:
+
+```bash
+cd compiler_impl && $HOME/bin/alr build
+python3 scripts/run_pr083_interface_contracts.py
+```
+
+That gate emits provider interfaces, compiles clients through explicit `--interface-search-dir` inputs, validates `safei-v1`, exercises deterministic lookup failures and search-order behavior, proves `--interface-dir` is output-only, and records results in `execution/reports/pr083-interface-contracts-report.json`.

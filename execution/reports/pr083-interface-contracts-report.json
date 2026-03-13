@@ -1,0 +1,1970 @@
+{
+  "deterministic": true,
+  "interface_dir_not_implicit_search": {
+    "emit": {
+      "command": [
+        "compiler_impl/bin/safec",
+        "emit",
+        "tests/interfaces/client_types.safe",
+        "--out-dir",
+        "$TMPDIR/interface-dir-not-search/out",
+        "--interface-dir",
+        "$TMPDIR/types-provider/iface"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 1,
+      "stderr": "client_types.safe:1:1: error: missing dependency interface for package `provider_types`\n  |\n  | 1 | with provider_types;\n  |   | ^~~~~~~~~~~~~~~~~~~~\n  |\n",
+      "stdout": ""
+    },
+    "iface_files_after": [
+      "provider_types.safei.json"
+    ],
+    "iface_files_before": [
+      "provider_types.safei.json"
+    ]
+  },
+  "negative_lookup_cases": {
+    "duplicate_same_dir": {
+      "ast": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "ast",
+          "tests/interfaces/client_types.safe",
+          "--interface-search-dir",
+          "$TMPDIR/duplicate-dir"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "client_types.safe:1:1: error: duplicate interface for package `Provider_Types` in search dir `$TMPDIR/duplicate-dir`\n  |\n  | 1 | with provider_types;\n  |   | ^\n  |\n",
+        "stdout": ""
+      },
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/interfaces/client_types.safe",
+          "--interface-search-dir",
+          "$TMPDIR/duplicate-dir"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "client_types.safe:1:1: error: duplicate interface for package `Provider_Types` in search dir `$TMPDIR/duplicate-dir`\n  |\n  | 1 | with provider_types;\n  |   | ^\n  |\n",
+        "stdout": ""
+      },
+      "check_diag": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/interfaces/client_types.safe",
+          "--interface-search-dir",
+          "$TMPDIR/duplicate-dir"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"duplicate interface for package `Provider_Types` in search dir `$TMPDIR/duplicate-dir`\",\"path\":\"tests/interfaces/client_types.safe\",\"span\":{\"start_line\":1,\"start_col\":1,\"end_line\":1,\"end_col\":1},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/interfaces/client_types.safe",
+          "--out-dir",
+          "$TMPDIR/duplicate-same-dir-emit-failure/out",
+          "--interface-dir",
+          "$TMPDIR/duplicate-same-dir-emit-failure/iface",
+          "--interface-search-dir",
+          "$TMPDIR/duplicate-dir"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "client_types.safe:1:1: error: duplicate interface for package `Provider_Types` in search dir `$TMPDIR/duplicate-dir`\n  |\n  | 1 | with provider_types;\n  |   | ^\n  |\n",
+        "stdout": ""
+      },
+      "expected_reason": "source_frontend_error",
+      "first_header": "client_types.safe:1:1: error: duplicate interface for package `Provider_Types` in search dir `$TMPDIR/duplicate-dir`"
+    },
+    "imported_object_assignment": {
+      "ast": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "ast",
+          "tests/negative/neg_imported_object_assignment.safe",
+          "--interface-search-dir",
+          "$TMPDIR/object-provider/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_imported_object_assignment.safe:12:10: error: assignment to imported package-qualified objects is outside the current PR08.3 interface subset\n  |\n  | 12 |          Provider_Object.Seed = 4;\n  |    |          ^~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_imported_object_assignment.safe",
+          "--interface-search-dir",
+          "$TMPDIR/object-provider/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_imported_object_assignment.safe:12:10: error: assignment to imported package-qualified objects is outside the current PR08.3 interface subset\n  |\n  | 12 |          Provider_Object.Seed = 4;\n  |    |          ^~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "check_diag": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/negative/neg_imported_object_assignment.safe",
+          "--interface-search-dir",
+          "$TMPDIR/object-provider/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"unsupported_source_construct\",\"message\":\"assignment to imported package-qualified objects is outside the current PR08.3 interface subset\",\"path\":\"tests/negative/neg_imported_object_assignment.safe\",\"span\":{\"start_line\":12,\"start_col\":10,\"end_line\":12,\"end_col\":29},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/negative/neg_imported_object_assignment.safe",
+          "--out-dir",
+          "$TMPDIR/imported-object-assignment-emit-failure/out",
+          "--interface-dir",
+          "$TMPDIR/imported-object-assignment-emit-failure/iface",
+          "--interface-search-dir",
+          "$TMPDIR/object-provider/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_imported_object_assignment.safe:12:10: error: assignment to imported package-qualified objects is outside the current PR08.3 interface subset\n  |\n  | 12 |          Provider_Object.Seed = 4;\n  |    |          ^~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "expected_reason": "unsupported_source_construct",
+      "first_header": "neg_imported_object_assignment.safe:12:10: error: assignment to imported package-qualified objects is outside the current PR08.3 interface subset"
+    },
+    "imported_object_subcomponent_assignment": {
+      "ast": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "ast",
+          "tests/negative/neg_imported_object_subcomponent_assignment.safe",
+          "--interface-search-dir",
+          "$TMPDIR/record-object-provider/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_imported_object_subcomponent_assignment.safe:12:10: error: assignment to imported package-qualified objects is outside the current PR08.3 interface subset\n  |\n  | 12 |          Provider_Record_Object.State.Value = 4;\n  |    |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_imported_object_subcomponent_assignment.safe",
+          "--interface-search-dir",
+          "$TMPDIR/record-object-provider/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_imported_object_subcomponent_assignment.safe:12:10: error: assignment to imported package-qualified objects is outside the current PR08.3 interface subset\n  |\n  | 12 |          Provider_Record_Object.State.Value = 4;\n  |    |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "check_diag": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/negative/neg_imported_object_subcomponent_assignment.safe",
+          "--interface-search-dir",
+          "$TMPDIR/record-object-provider/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"unsupported_source_construct\",\"message\":\"assignment to imported package-qualified objects is outside the current PR08.3 interface subset\",\"path\":\"tests/negative/neg_imported_object_subcomponent_assignment.safe\",\"span\":{\"start_line\":12,\"start_col\":10,\"end_line\":12,\"end_col\":43},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/negative/neg_imported_object_subcomponent_assignment.safe",
+          "--out-dir",
+          "$TMPDIR/imported-object-subcomponent-assignment-emit-failure/out",
+          "--interface-dir",
+          "$TMPDIR/imported-object-subcomponent-assignment-emit-failure/iface",
+          "--interface-search-dir",
+          "$TMPDIR/record-object-provider/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_imported_object_subcomponent_assignment.safe:12:10: error: assignment to imported package-qualified objects is outside the current PR08.3 interface subset\n  |\n  | 12 |          Provider_Record_Object.State.Value = 4;\n  |    |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "expected_reason": "unsupported_source_construct",
+      "first_header": "neg_imported_object_subcomponent_assignment.safe:12:10: error: assignment to imported package-qualified objects is outside the current PR08.3 interface subset"
+    },
+    "malformed_interface": {
+      "ast": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "ast",
+          "tests/interfaces/client_types.safe",
+          "--interface-search-dir",
+          "$TMPDIR/malformed-dir"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "client_types.safe:1:1: error: $TMPDIR/malformed-dir/broken.safei.json: invalid JSON: 1:3: invalid token\n  |\n  | 1 | with provider_types;\n  |   | ^\n  |\n",
+        "stdout": ""
+      },
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/interfaces/client_types.safe",
+          "--interface-search-dir",
+          "$TMPDIR/malformed-dir"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "client_types.safe:1:1: error: $TMPDIR/malformed-dir/broken.safei.json: invalid JSON: 1:3: invalid token\n  |\n  | 1 | with provider_types;\n  |   | ^\n  |\n",
+        "stdout": ""
+      },
+      "check_diag": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/interfaces/client_types.safe",
+          "--interface-search-dir",
+          "$TMPDIR/malformed-dir"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"$TMPDIR/malformed-dir/broken.safei.json: invalid JSON: 1:3: invalid token\",\"path\":\"tests/interfaces/client_types.safe\",\"span\":{\"start_line\":1,\"start_col\":1,\"end_line\":1,\"end_col\":1},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/interfaces/client_types.safe",
+          "--out-dir",
+          "$TMPDIR/malformed-interface-emit-failure/out",
+          "--interface-dir",
+          "$TMPDIR/malformed-interface-emit-failure/iface",
+          "--interface-search-dir",
+          "$TMPDIR/malformed-dir"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "client_types.safe:1:1: error: $TMPDIR/malformed-dir/broken.safei.json: invalid JSON: 1:3: invalid token\n  |\n  | 1 | with provider_types;\n  |   | ^\n  |\n",
+        "stdout": ""
+      },
+      "expected_reason": "source_frontend_error",
+      "first_header": "client_types.safe:1:1: error: $TMPDIR/malformed-dir/broken.safei.json: invalid JSON: 1:3: invalid token"
+    },
+    "missing_channel_type": {
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/interfaces/client_channel.safe",
+          "--interface-search-dir",
+          "$TMPDIR/missing-channel-type"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "client_channel.safe:1:1: error: $TMPDIR/missing-channel-type/provider_channel.safei.json: channels[].element_type must be an object\n  |\n  | 1 | with Provider_Channel;\n  |   | ^\n  |\n",
+        "stdout": ""
+      },
+      "check_diag": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/interfaces/client_channel.safe",
+          "--interface-search-dir",
+          "$TMPDIR/missing-channel-type"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"$TMPDIR/missing-channel-type/provider_channel.safei.json: channels[].element_type must be an object\",\"path\":\"tests/interfaces/client_channel.safe\",\"span\":{\"start_line\":1,\"start_col\":1,\"end_line\":1,\"end_col\":1},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/interfaces/client_channel.safe",
+          "--out-dir",
+          "$TMPDIR/missing-channel-type-emit-failure/out",
+          "--interface-dir",
+          "$TMPDIR/missing-channel-type-emit-failure/iface",
+          "--interface-search-dir",
+          "$TMPDIR/missing-channel-type"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "client_channel.safe:1:1: error: $TMPDIR/missing-channel-type/provider_channel.safei.json: channels[].element_type must be an object\n  |\n  | 1 | with Provider_Channel;\n  |   | ^\n  |\n",
+        "stdout": ""
+      },
+      "expected_reason": "source_frontend_error",
+      "first_header": "client_channel.safe:1:1: error: $TMPDIR/missing-channel-type/provider_channel.safei.json: channels[].element_type must be an object"
+    },
+    "missing_interface": {
+      "ast": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "ast",
+          "tests/interfaces/client_types.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "client_types.safe:1:1: error: missing dependency interface for package `provider_types`\n  |\n  | 1 | with provider_types;\n  |   | ^~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/interfaces/client_types.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "client_types.safe:1:1: error: missing dependency interface for package `provider_types`\n  |\n  | 1 | with provider_types;\n  |   | ^~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "check_diag": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/interfaces/client_types.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"missing dependency interface for package `provider_types`\",\"path\":\"tests/interfaces/client_types.safe\",\"span\":{\"start_line\":1,\"start_col\":1,\"end_line\":1,\"end_col\":20},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/interfaces/client_types.safe",
+          "--out-dir",
+          "$TMPDIR/missing-interface-emit-failure/out",
+          "--interface-dir",
+          "$TMPDIR/missing-interface-emit-failure/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "client_types.safe:1:1: error: missing dependency interface for package `provider_types`\n  |\n  | 1 | with provider_types;\n  |   | ^~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "expected_reason": "source_frontend_error",
+      "first_header": "client_types.safe:1:1: error: missing dependency interface for package `provider_types`"
+    },
+    "missing_object_type": {
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/interfaces/client_object.safe",
+          "--interface-search-dir",
+          "$TMPDIR/missing-object-type"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "client_object.safe:1:1: error: $TMPDIR/missing-object-type/provider_object.safei.json: objects[].type must be an object\n  |\n  | 1 | with Provider_Object;\n  |   | ^\n  |\n",
+        "stdout": ""
+      },
+      "check_diag": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/interfaces/client_object.safe",
+          "--interface-search-dir",
+          "$TMPDIR/missing-object-type"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"$TMPDIR/missing-object-type/provider_object.safei.json: objects[].type must be an object\",\"path\":\"tests/interfaces/client_object.safe\",\"span\":{\"start_line\":1,\"start_col\":1,\"end_line\":1,\"end_col\":1},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/interfaces/client_object.safe",
+          "--out-dir",
+          "$TMPDIR/missing-object-type-emit-failure/out",
+          "--interface-dir",
+          "$TMPDIR/missing-object-type-emit-failure/iface",
+          "--interface-search-dir",
+          "$TMPDIR/missing-object-type"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "client_object.safe:1:1: error: $TMPDIR/missing-object-type/provider_object.safei.json: objects[].type must be an object\n  |\n  | 1 | with Provider_Object;\n  |   | ^\n  |\n",
+        "stdout": ""
+      },
+      "expected_reason": "source_frontend_error",
+      "first_header": "client_object.safe:1:1: error: $TMPDIR/missing-object-type/provider_object.safei.json: objects[].type must be an object"
+    },
+    "missing_subprogram_type": {
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/interfaces/client_types.safe",
+          "--interface-search-dir",
+          "$TMPDIR/missing-subprogram-type"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "client_types.safe:1:1: error: $TMPDIR/missing-subprogram-type/provider_types.safei.json: subprograms[].return_type must be an object\n  |\n  | 1 | with provider_types;\n  |   | ^\n  |\n",
+        "stdout": ""
+      },
+      "check_diag": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/interfaces/client_types.safe",
+          "--interface-search-dir",
+          "$TMPDIR/missing-subprogram-type"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"$TMPDIR/missing-subprogram-type/provider_types.safei.json: subprograms[].return_type must be an object\",\"path\":\"tests/interfaces/client_types.safe\",\"span\":{\"start_line\":1,\"start_col\":1,\"end_line\":1,\"end_col\":1},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/interfaces/client_types.safe",
+          "--out-dir",
+          "$TMPDIR/missing-subprogram-type-emit-failure/out",
+          "--interface-dir",
+          "$TMPDIR/missing-subprogram-type-emit-failure/iface",
+          "--interface-search-dir",
+          "$TMPDIR/missing-subprogram-type"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "client_types.safe:1:1: error: $TMPDIR/missing-subprogram-type/provider_types.safei.json: subprograms[].return_type must be an object\n  |\n  | 1 | with provider_types;\n  |   | ^\n  |\n",
+        "stdout": ""
+      },
+      "expected_reason": "source_frontend_error",
+      "first_header": "client_types.safe:1:1: error: $TMPDIR/missing-subprogram-type/provider_types.safei.json: subprograms[].return_type must be an object"
+    },
+    "qualified_channel_missing_interface": {
+      "ast": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "ast",
+          "tests/negative/neg_qualified_channel_reference.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_qualified_channel_reference.safe:7:1: error: missing dependency interface for package `remote_package`\n  |\n  | 7 | with Remote_Package;\n  |   | ^~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_qualified_channel_reference.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_qualified_channel_reference.safe:7:1: error: missing dependency interface for package `remote_package`\n  |\n  | 7 | with Remote_Package;\n  |   | ^~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "check_diag": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/negative/neg_qualified_channel_reference.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"missing dependency interface for package `remote_package`\",\"path\":\"tests/negative/neg_qualified_channel_reference.safe\",\"span\":{\"start_line\":7,\"start_col\":1,\"end_line\":7,\"end_col\":20},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/negative/neg_qualified_channel_reference.safe",
+          "--out-dir",
+          "$TMPDIR/qualified-channel-missing-interface-emit-failure/out",
+          "--interface-dir",
+          "$TMPDIR/qualified-channel-missing-interface-emit-failure/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_qualified_channel_reference.safe:7:1: error: missing dependency interface for package `remote_package`\n  |\n  | 7 | with Remote_Package;\n  |   | ^~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "expected_reason": "source_frontend_error",
+      "first_header": "neg_qualified_channel_reference.safe:7:1: error: missing dependency interface for package `remote_package`"
+    },
+    "qualified_channel_missing_with": {
+      "ast": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "ast",
+          "tests/negative/neg_channel_package_not_withd.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_channel_package_not_withd.safe:10:15: error: unknown channel `Missing_Package.Data_Ch`\n  |\n  | 10 |          send Missing_Package.Data_Ch, 1;\n  |    |               ^~~~~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_channel_package_not_withd.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_channel_package_not_withd.safe:10:15: error: unknown channel `Missing_Package.Data_Ch`\n  |\n  | 10 |          send Missing_Package.Data_Ch, 1;\n  |    |               ^~~~~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "check_diag": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/negative/neg_channel_package_not_withd.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"unknown channel `Missing_Package.Data_Ch`\",\"path\":\"tests/negative/neg_channel_package_not_withd.safe\",\"span\":{\"start_line\":10,\"start_col\":15,\"end_line\":10,\"end_col\":37},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/negative/neg_channel_package_not_withd.safe",
+          "--out-dir",
+          "$TMPDIR/qualified-channel-missing-with-emit-failure/out",
+          "--interface-dir",
+          "$TMPDIR/qualified-channel-missing-with-emit-failure/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_channel_package_not_withd.safe:10:15: error: unknown channel `Missing_Package.Data_Ch`\n  |\n  | 10 |          send Missing_Package.Data_Ch, 1;\n  |    |               ^~~~~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "expected_reason": "source_frontend_error",
+      "first_header": "neg_channel_package_not_withd.safe:10:15: error: unknown channel `Missing_Package.Data_Ch`"
+    },
+    "unknown_imported_member": {
+      "ast": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "ast",
+          "tests/negative/neg_unknown_imported_member.safe",
+          "--interface-search-dir",
+          "$TMPDIR/channel-provider/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_unknown_imported_member.safe:12:15: error: unknown channel `Provider_Channel.Unknown_Ch`\n  |\n  | 12 |          send Provider_Channel.Unknown_Ch, 1;\n  |    |               ^~~~~~~~~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_unknown_imported_member.safe",
+          "--interface-search-dir",
+          "$TMPDIR/channel-provider/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_unknown_imported_member.safe:12:15: error: unknown channel `Provider_Channel.Unknown_Ch`\n  |\n  | 12 |          send Provider_Channel.Unknown_Ch, 1;\n  |    |               ^~~~~~~~~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "check_diag": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/negative/neg_unknown_imported_member.safe",
+          "--interface-search-dir",
+          "$TMPDIR/channel-provider/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"unknown channel `Provider_Channel.Unknown_Ch`\",\"path\":\"tests/negative/neg_unknown_imported_member.safe\",\"span\":{\"start_line\":12,\"start_col\":15,\"end_line\":12,\"end_col\":41},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/negative/neg_unknown_imported_member.safe",
+          "--out-dir",
+          "$TMPDIR/unknown-imported-member-emit-failure/out",
+          "--interface-dir",
+          "$TMPDIR/unknown-imported-member-emit-failure/iface",
+          "--interface-search-dir",
+          "$TMPDIR/channel-provider/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_unknown_imported_member.safe:12:15: error: unknown channel `Provider_Channel.Unknown_Ch`\n  |\n  | 12 |          send Provider_Channel.Unknown_Ch, 1;\n  |    |               ^~~~~~~~~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "expected_reason": "source_frontend_error",
+      "first_header": "neg_unknown_imported_member.safe:12:15: error: unknown channel `Provider_Channel.Unknown_Ch`"
+    },
+    "wrong_format_interface": {
+      "ast": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "ast",
+          "tests/interfaces/client_types.safe",
+          "--interface-search-dir",
+          "$TMPDIR/wrong-format"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "client_types.safe:1:1: error: $TMPDIR/wrong-format/provider_types.safei.json: format must be safei-v1\n  |\n  | 1 | with provider_types;\n  |   | ^\n  |\n",
+        "stdout": ""
+      },
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/interfaces/client_types.safe",
+          "--interface-search-dir",
+          "$TMPDIR/wrong-format"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "client_types.safe:1:1: error: $TMPDIR/wrong-format/provider_types.safei.json: format must be safei-v1\n  |\n  | 1 | with provider_types;\n  |   | ^\n  |\n",
+        "stdout": ""
+      },
+      "check_diag": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/interfaces/client_types.safe",
+          "--interface-search-dir",
+          "$TMPDIR/wrong-format"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"$TMPDIR/wrong-format/provider_types.safei.json: format must be safei-v1\",\"path\":\"tests/interfaces/client_types.safe\",\"span\":{\"start_line\":1,\"start_col\":1,\"end_line\":1,\"end_col\":1},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/interfaces/client_types.safe",
+          "--out-dir",
+          "$TMPDIR/wrong-format-interface-emit-failure/out",
+          "--interface-dir",
+          "$TMPDIR/wrong-format-interface-emit-failure/iface",
+          "--interface-search-dir",
+          "$TMPDIR/wrong-format"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "client_types.safe:1:1: error: $TMPDIR/wrong-format/provider_types.safei.json: format must be safei-v1\n  |\n  | 1 | with provider_types;\n  |   | ^\n  |\n",
+        "stdout": ""
+      },
+      "expected_reason": "source_frontend_error",
+      "first_header": "client_types.safe:1:1: error: $TMPDIR/wrong-format/provider_types.safei.json: format must be safei-v1"
+    }
+  },
+  "positive_roundtrips": {
+    "channel": {
+      "client": {
+        "ast": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "ast",
+            "tests/interfaces/client_channel.safe",
+            "--interface-search-dir",
+            "$TMPDIR/channel-provider/iface"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "<2892 chars>",
+          "stdout_sha256": "ce694403e62a5d1a0bcd78e6af1e6573fb0978156e8ce3a92a5c84d806b2e39e"
+        },
+        "check": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "tests/interfaces/client_channel.safe",
+            "--interface-search-dir",
+            "$TMPDIR/channel-provider/iface"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": ""
+        },
+        "emit": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "emit",
+            "tests/interfaces/client_channel.safe",
+            "--out-dir",
+            "$TMPDIR/channel-client/out",
+            "--interface-dir",
+            "$TMPDIR/channel-client/iface",
+            "--interface-search-dir",
+            "$TMPDIR/channel-provider/iface"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": ""
+        },
+        "files": {
+          "ast": "out/client_channel.ast.json",
+          "mir": "out/client_channel.mir.json",
+          "safei": "iface/client_channel.safei.json",
+          "typed": "out/client_channel.typed.json"
+        },
+        "hashes": {
+          "ast": "2fc36eaaeda0b69f6bb9360b1730cbcec94fdeb913c7a421b1ade3e31a4a0788",
+          "mir": "f7d9f5e84a8861213acc5c0c107a0bfb32d76fd71d906f17a41acf0dad3603d7",
+          "safei": "10826a279d3773addc827c0369720075f445bf87fc851e8898bd3943378b7cac",
+          "typed": "a060e7509102ad65c8b0e5a982fcbe237b488184e9be263f92ec650d2c8ee5d4"
+        },
+        "mir_summary": {
+          "graph_names": [
+            "Sender"
+          ],
+          "package_name": "Client_Channel",
+          "source_path": "tests/interfaces/client_channel.safe",
+          "type_names": [
+            "Provider_Channel.Message"
+          ]
+        },
+        "safei_summary": {
+          "channel_names": [],
+          "channel_summary_names": [],
+          "dependencies": [
+            "Provider_Channel"
+          ],
+          "effect_summary_names": [],
+          "object_names": [],
+          "package_name": "Client_Channel",
+          "subprogram_names": [],
+          "subtype_names": [],
+          "type_names": []
+        },
+        "typed_summary": {
+          "package_name": "Client_Channel",
+          "public_declaration_names": [],
+          "type_names": [
+            "Provider_Channel.Message"
+          ]
+        },
+        "validators": {
+          "analyze_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "analyze-mir",
+              "--diag-json",
+              "$TMPDIR/channel-client/out/client_channel.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+          },
+          "ast": {
+            "command": [
+              "python3",
+              "scripts/validate_ast_output.py",
+              "$TMPDIR/channel-client/out/client_channel.ast.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "$TMPDIR/channel-client/out/client_channel.ast.json: OK\n"
+          },
+          "output_contracts": {
+            "command": [
+              "python3",
+              "scripts/validate_output_contracts.py",
+              "--ast",
+              "$TMPDIR/channel-client/out/client_channel.ast.json",
+              "--typed",
+              "$TMPDIR/channel-client/out/client_channel.typed.json",
+              "--mir",
+              "$TMPDIR/channel-client/out/client_channel.mir.json",
+              "--safei",
+              "$TMPDIR/channel-client/iface/client_channel.safei.json",
+              "--source-path",
+              "tests/interfaces/client_channel.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "output contracts: OK (client_channel.ast.json, client_channel.typed.json, client_channel.mir.json, client_channel.safei.json)\n"
+          },
+          "validate_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "validate-mir",
+              "$TMPDIR/channel-client/out/client_channel.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "validate-mir: OK ($TMPDIR/channel-client/out/client_channel.mir.json)\n"
+          }
+        }
+      },
+      "provider": {
+        "emit": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "emit",
+            "tests/interfaces/provider_channel.safe",
+            "--out-dir",
+            "$TMPDIR/channel-provider/out",
+            "--interface-dir",
+            "$TMPDIR/channel-provider/iface"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": ""
+        },
+        "files": {
+          "ast": "out/provider_channel.ast.json",
+          "mir": "out/provider_channel.mir.json",
+          "safei": "iface/provider_channel.safei.json",
+          "typed": "out/provider_channel.typed.json"
+        },
+        "hashes": {
+          "ast": "2cf8bcf2624d851236e0308d4d9b30b25c9596e05c06d140724e9710226084c4",
+          "mir": "07b0ea871653e27a8cb9a1550fd73bd1f67f3533639af389040b15c4e64ed81b",
+          "safei": "63f39f599af7c242f25807f205acc233e67d79fa650c873b9cc5a7f29dcad6f1",
+          "typed": "9d8cac6eaa156240bd75b97e0c1d531eb44a12a7f9b29c92558f0714567ba13c"
+        },
+        "mir_summary": {
+          "graph_names": [],
+          "package_name": "Provider_Channel",
+          "source_path": "tests/interfaces/provider_channel.safe",
+          "type_names": [
+            "Message"
+          ]
+        },
+        "safei_summary": {
+          "channel_names": [
+            "Data_Ch"
+          ],
+          "channel_summary_names": [],
+          "dependencies": [],
+          "effect_summary_names": [],
+          "object_names": [],
+          "package_name": "Provider_Channel",
+          "subprogram_names": [],
+          "subtype_names": [],
+          "type_names": [
+            "Message"
+          ]
+        },
+        "typed_summary": {
+          "package_name": "Provider_Channel",
+          "public_declaration_names": [
+            "Message"
+          ],
+          "type_names": [
+            "Message"
+          ]
+        },
+        "validators": {
+          "analyze_mir": {
+            "reason": "no_local_graphs",
+            "skipped": true
+          },
+          "ast": {
+            "command": [
+              "python3",
+              "scripts/validate_ast_output.py",
+              "$TMPDIR/channel-provider/out/provider_channel.ast.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "$TMPDIR/channel-provider/out/provider_channel.ast.json: OK\n"
+          },
+          "output_contracts": {
+            "command": [
+              "python3",
+              "scripts/validate_output_contracts.py",
+              "--ast",
+              "$TMPDIR/channel-provider/out/provider_channel.ast.json",
+              "--typed",
+              "$TMPDIR/channel-provider/out/provider_channel.typed.json",
+              "--mir",
+              "$TMPDIR/channel-provider/out/provider_channel.mir.json",
+              "--safei",
+              "$TMPDIR/channel-provider/iface/provider_channel.safei.json",
+              "--source-path",
+              "tests/interfaces/provider_channel.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "output contracts: OK (provider_channel.ast.json, provider_channel.typed.json, provider_channel.mir.json, provider_channel.safei.json)\n"
+          },
+          "validate_mir": {
+            "reason": "no_local_graphs",
+            "skipped": true
+          }
+        }
+      }
+    },
+    "object": {
+      "client": {
+        "ast": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "ast",
+            "tests/interfaces/client_object.safe",
+            "--interface-search-dir",
+            "$TMPDIR/object-provider/iface"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "<2411 chars>",
+          "stdout_sha256": "94d02bd9c433f57ac1b3ff5181ad171836003f10995e3e7644c72df35429c5fb"
+        },
+        "check": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "tests/interfaces/client_object.safe",
+            "--interface-search-dir",
+            "$TMPDIR/object-provider/iface"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": ""
+        },
+        "emit": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "emit",
+            "tests/interfaces/client_object.safe",
+            "--out-dir",
+            "$TMPDIR/object-client/out",
+            "--interface-dir",
+            "$TMPDIR/object-client/iface",
+            "--interface-search-dir",
+            "$TMPDIR/object-provider/iface"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": ""
+        },
+        "files": {
+          "ast": "out/client_object.ast.json",
+          "mir": "out/client_object.mir.json",
+          "safei": "iface/client_object.safei.json",
+          "typed": "out/client_object.typed.json"
+        },
+        "hashes": {
+          "ast": "bb1055879a96db2792925df6a4f21129abd225d3d5773dce515f72c799d9bbaa",
+          "mir": "750debfbb7a2bf400fb2f29d9a7379fd5575a10b16d5faa10c42d23f58232735",
+          "safei": "c6fab1adc575aaa556b296b2682a56f1b793f991c3b7b794ba7e1e511f249f91",
+          "typed": "21b4feaa1476d3118bb0b276c7fc2c0224eeea4e1411b46b9643855cea3a1eeb"
+        },
+        "mir_summary": {
+          "graph_names": [],
+          "package_name": "Client_Object",
+          "source_path": "tests/interfaces/client_object.safe",
+          "type_names": [
+            "Provider_Object.Count"
+          ]
+        },
+        "safei_summary": {
+          "channel_names": [],
+          "channel_summary_names": [],
+          "dependencies": [
+            "Provider_Object"
+          ],
+          "effect_summary_names": [],
+          "object_names": [],
+          "package_name": "Client_Object",
+          "subprogram_names": [],
+          "subtype_names": [],
+          "type_names": []
+        },
+        "typed_summary": {
+          "package_name": "Client_Object",
+          "public_declaration_names": [],
+          "type_names": [
+            "Provider_Object.Count"
+          ]
+        },
+        "validators": {
+          "analyze_mir": {
+            "reason": "no_local_graphs",
+            "skipped": true
+          },
+          "ast": {
+            "command": [
+              "python3",
+              "scripts/validate_ast_output.py",
+              "$TMPDIR/object-client/out/client_object.ast.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "$TMPDIR/object-client/out/client_object.ast.json: OK\n"
+          },
+          "output_contracts": {
+            "command": [
+              "python3",
+              "scripts/validate_output_contracts.py",
+              "--ast",
+              "$TMPDIR/object-client/out/client_object.ast.json",
+              "--typed",
+              "$TMPDIR/object-client/out/client_object.typed.json",
+              "--mir",
+              "$TMPDIR/object-client/out/client_object.mir.json",
+              "--safei",
+              "$TMPDIR/object-client/iface/client_object.safei.json",
+              "--source-path",
+              "tests/interfaces/client_object.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "output contracts: OK (client_object.ast.json, client_object.typed.json, client_object.mir.json, client_object.safei.json)\n"
+          },
+          "validate_mir": {
+            "reason": "no_local_graphs",
+            "skipped": true
+          }
+        }
+      },
+      "provider": {
+        "emit": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "emit",
+            "tests/interfaces/provider_object.safe",
+            "--out-dir",
+            "$TMPDIR/object-provider/out",
+            "--interface-dir",
+            "$TMPDIR/object-provider/iface"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": ""
+        },
+        "files": {
+          "ast": "out/provider_object.ast.json",
+          "mir": "out/provider_object.mir.json",
+          "safei": "iface/provider_object.safei.json",
+          "typed": "out/provider_object.typed.json"
+        },
+        "hashes": {
+          "ast": "36eced619f38c33c5b142873a27d0247ceecd8cf86e65666ee4f37a520ba2e21",
+          "mir": "d961032dbace50bb7d036793f2abb93480456a3a8335636e41e67d9bbbf7d02c",
+          "safei": "bb344c5b75d8fa1456b4e42d7dcdfaed7eca4844c93803439ceab988a5298fce",
+          "typed": "700d775f81e8cb8be3825adf489cf40a41f4c31dad306dd16ece57824f53d9da"
+        },
+        "mir_summary": {
+          "graph_names": [],
+          "package_name": "Provider_Object",
+          "source_path": "tests/interfaces/provider_object.safe",
+          "type_names": [
+            "Count"
+          ]
+        },
+        "safei_summary": {
+          "channel_names": [],
+          "channel_summary_names": [],
+          "dependencies": [],
+          "effect_summary_names": [],
+          "object_names": [
+            "Seed"
+          ],
+          "package_name": "Provider_Object",
+          "subprogram_names": [],
+          "subtype_names": [],
+          "type_names": [
+            "Count"
+          ]
+        },
+        "typed_summary": {
+          "package_name": "Provider_Object",
+          "public_declaration_names": [
+            "Count",
+            "Seed"
+          ],
+          "type_names": [
+            "Count"
+          ]
+        },
+        "validators": {
+          "analyze_mir": {
+            "reason": "no_local_graphs",
+            "skipped": true
+          },
+          "ast": {
+            "command": [
+              "python3",
+              "scripts/validate_ast_output.py",
+              "$TMPDIR/object-provider/out/provider_object.ast.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "$TMPDIR/object-provider/out/provider_object.ast.json: OK\n"
+          },
+          "output_contracts": {
+            "command": [
+              "python3",
+              "scripts/validate_output_contracts.py",
+              "--ast",
+              "$TMPDIR/object-provider/out/provider_object.ast.json",
+              "--typed",
+              "$TMPDIR/object-provider/out/provider_object.typed.json",
+              "--mir",
+              "$TMPDIR/object-provider/out/provider_object.mir.json",
+              "--safei",
+              "$TMPDIR/object-provider/iface/provider_object.safei.json",
+              "--source-path",
+              "tests/interfaces/provider_object.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "output contracts: OK (provider_object.ast.json, provider_object.typed.json, provider_object.mir.json, provider_object.safei.json)\n"
+          },
+          "validate_mir": {
+            "reason": "no_local_graphs",
+            "skipped": true
+          }
+        }
+      }
+    },
+    "types": {
+      "client": {
+        "ast": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "ast",
+            "tests/interfaces/client_types.safe",
+            "--interface-search-dir",
+            "$TMPDIR/types-provider/iface"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "<7939 chars>",
+          "stdout_sha256": "b72fe89c16267b36ebfb865d4d6ddfe355f0246df9335f599573d9b3e148ad59"
+        },
+        "check": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "tests/interfaces/client_types.safe",
+            "--interface-search-dir",
+            "$TMPDIR/types-provider/iface"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": ""
+        },
+        "emit": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "emit",
+            "tests/interfaces/client_types.safe",
+            "--out-dir",
+            "$TMPDIR/types-client/out",
+            "--interface-dir",
+            "$TMPDIR/types-client/iface",
+            "--interface-search-dir",
+            "$TMPDIR/types-provider/iface"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": ""
+        },
+        "files": {
+          "ast": "out/client_types.ast.json",
+          "mir": "out/client_types.mir.json",
+          "safei": "iface/client_types.safei.json",
+          "typed": "out/client_types.typed.json"
+        },
+        "hashes": {
+          "ast": "64bc7a2bffd82081362e4b3be2aae7b8be6791d49671dd5185644aebc80da8c1",
+          "mir": "c579de89d360fae5b531e7bee0c0d4a31b64ff1c3f708a509e44103a75894b40",
+          "safei": "ee5c08a537e09a57188c0ed986ba7ea1ef863890d1d3a039e7088fe30f3c8d23",
+          "typed": "292b7bf65b8252cf415d3601917abdded61c8ab495a9abe95797fe2488c0dd6b"
+        },
+        "mir_summary": {
+          "graph_names": [],
+          "package_name": "Client_Types",
+          "source_path": "tests/interfaces/client_types.safe",
+          "type_names": [
+            "Handle_Ref",
+            "Provider_Types.Count",
+            "Provider_Types.Handle",
+            "Provider_Types.Small_Count"
+          ]
+        },
+        "safei_summary": {
+          "channel_names": [],
+          "channel_summary_names": [],
+          "dependencies": [
+            "provider_types"
+          ],
+          "effect_summary_names": [],
+          "object_names": [],
+          "package_name": "Client_Types",
+          "subprogram_names": [],
+          "subtype_names": [],
+          "type_names": []
+        },
+        "typed_summary": {
+          "package_name": "Client_Types",
+          "public_declaration_names": [],
+          "type_names": [
+            "Handle_Ref",
+            "Provider_Types.Count",
+            "Provider_Types.Handle",
+            "Provider_Types.Small_Count"
+          ]
+        },
+        "validators": {
+          "analyze_mir": {
+            "reason": "no_local_graphs",
+            "skipped": true
+          },
+          "ast": {
+            "command": [
+              "python3",
+              "scripts/validate_ast_output.py",
+              "$TMPDIR/types-client/out/client_types.ast.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "$TMPDIR/types-client/out/client_types.ast.json: OK\n"
+          },
+          "output_contracts": {
+            "command": [
+              "python3",
+              "scripts/validate_output_contracts.py",
+              "--ast",
+              "$TMPDIR/types-client/out/client_types.ast.json",
+              "--typed",
+              "$TMPDIR/types-client/out/client_types.typed.json",
+              "--mir",
+              "$TMPDIR/types-client/out/client_types.mir.json",
+              "--safei",
+              "$TMPDIR/types-client/iface/client_types.safei.json",
+              "--source-path",
+              "tests/interfaces/client_types.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "output contracts: OK (client_types.ast.json, client_types.typed.json, client_types.mir.json, client_types.safei.json)\n"
+          },
+          "validate_mir": {
+            "reason": "no_local_graphs",
+            "skipped": true
+          }
+        }
+      },
+      "provider": {
+        "emit": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "emit",
+            "tests/interfaces/provider_types.safe",
+            "--out-dir",
+            "$TMPDIR/types-provider/out",
+            "--interface-dir",
+            "$TMPDIR/types-provider/iface"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": ""
+        },
+        "files": {
+          "ast": "out/provider_types.ast.json",
+          "mir": "out/provider_types.mir.json",
+          "safei": "iface/provider_types.safei.json",
+          "typed": "out/provider_types.typed.json"
+        },
+        "hashes": {
+          "ast": "dd61f126f075fd4f70a015040d7da25fc4cd46a731262ad8a8e1736e8ce6a82b",
+          "mir": "9bf2772ee800398ff679097e5f3514523746d57b72bf8987edcca40a8f92d32c",
+          "safei": "b0b945cb8c6674b0940582dd5bb101de771ea6a9a90eea50a2a3fdb30dbc0609",
+          "typed": "1b793326bab1a04904edb382f053c31df4802dd709b31ef0a5571eef29745632"
+        },
+        "mir_summary": {
+          "graph_names": [
+            "Next"
+          ],
+          "package_name": "Provider_Types",
+          "source_path": "tests/interfaces/provider_types.safe",
+          "type_names": [
+            "Count",
+            "Handle",
+            "Small_Count"
+          ]
+        },
+        "safei_summary": {
+          "channel_names": [],
+          "channel_summary_names": [
+            "Next"
+          ],
+          "dependencies": [],
+          "effect_summary_names": [
+            "Next"
+          ],
+          "object_names": [],
+          "package_name": "Provider_Types",
+          "subprogram_names": [
+            "Next"
+          ],
+          "subtype_names": [
+            "Small_Count"
+          ],
+          "type_names": [
+            "Count",
+            "Handle"
+          ]
+        },
+        "typed_summary": {
+          "package_name": "Provider_Types",
+          "public_declaration_names": [
+            "Count",
+            "Handle",
+            "Small_Count",
+            "Next"
+          ],
+          "type_names": [
+            "Count",
+            "Handle",
+            "Small_Count"
+          ]
+        },
+        "validators": {
+          "analyze_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "analyze-mir",
+              "--diag-json",
+              "$TMPDIR/types-provider/out/provider_types.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+          },
+          "ast": {
+            "command": [
+              "python3",
+              "scripts/validate_ast_output.py",
+              "$TMPDIR/types-provider/out/provider_types.ast.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "$TMPDIR/types-provider/out/provider_types.ast.json: OK\n"
+          },
+          "output_contracts": {
+            "command": [
+              "python3",
+              "scripts/validate_output_contracts.py",
+              "--ast",
+              "$TMPDIR/types-provider/out/provider_types.ast.json",
+              "--typed",
+              "$TMPDIR/types-provider/out/provider_types.typed.json",
+              "--mir",
+              "$TMPDIR/types-provider/out/provider_types.mir.json",
+              "--safei",
+              "$TMPDIR/types-provider/iface/provider_types.safei.json",
+              "--source-path",
+              "tests/interfaces/provider_types.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "output contracts: OK (provider_types.ast.json, provider_types.typed.json, provider_types.mir.json, provider_types.safei.json)\n"
+          },
+          "validate_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "validate-mir",
+              "$TMPDIR/types-provider/out/provider_types.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "validate-mir: OK ($TMPDIR/types-provider/out/provider_types.mir.json)\n"
+          }
+        }
+      },
+      "provider_contract": {
+        "channel_summary_names": [
+          "Next"
+        ],
+        "client_imported_type_names": [
+          "Provider_Types.Count",
+          "Provider_Types.Handle",
+          "Provider_Types.Small_Count"
+        ],
+        "effect_summary_names": [
+          "Next"
+        ],
+        "subprogram_names": [
+          "Next"
+        ],
+        "type_names": [
+          "Count",
+          "Handle"
+        ]
+      },
+      "repeat_emit": {
+        "hashes": {
+          "ast": "64bc7a2bffd82081362e4b3be2aae7b8be6791d49671dd5185644aebc80da8c1",
+          "mir": "c579de89d360fae5b531e7bee0c0d4a31b64ff1c3f708a509e44103a75894b40",
+          "safei": "ee5c08a537e09a57188c0ed986ba7ea1ef863890d1d3a039e7088fe30f3c8d23",
+          "typed": "292b7bf65b8252cf415d3601917abdded61c8ab495a9abe95797fe2488c0dd6b"
+        },
+        "runs": [
+          {
+            "command": [
+              "compiler_impl/bin/safec",
+              "emit",
+              "tests/interfaces/client_types.safe",
+              "--out-dir",
+              "$TMPDIR/repeat-a/out",
+              "--interface-dir",
+              "$TMPDIR/repeat-a/iface",
+              "--interface-search-dir",
+              "$TMPDIR/types-provider/iface"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": ""
+          },
+          {
+            "command": [
+              "compiler_impl/bin/safec",
+              "emit",
+              "tests/interfaces/client_types.safe",
+              "--out-dir",
+              "$TMPDIR/repeat-b/out",
+              "--interface-dir",
+              "$TMPDIR/repeat-b/iface",
+              "--interface-search-dir",
+              "$TMPDIR/types-provider/iface"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stderr": "",
+            "stdout": ""
+          }
+        ]
+      }
+    }
+  },
+  "repeat_sha256": "dc22e07be4e7a500dfa83abeb67b83d3e538db2ad471f877dfdb0f696f4b384a",
+  "report_sha256": "dc22e07be4e7a500dfa83abeb67b83d3e538db2ad471f877dfdb0f696f4b384a",
+  "search_order": {
+    "failure": {
+      "command": [
+        "compiler_impl/bin/safec",
+        "check",
+        "tests/interfaces/client_channel.safe",
+        "--interface-search-dir",
+        "$TMPDIR/search-order-second",
+        "--interface-search-dir",
+        "$TMPDIR/search-order-first"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 1,
+      "stderr": "client_channel.safe:8:15: error: unknown channel `Provider_Channel.Data_Ch`\n  |\n  | 8 |          send Provider_Channel.Data_Ch, 1;\n  |   |               ^~~~~~~~~~~~~~~~~~~~~~~~\n  |\n",
+      "stdout": ""
+    },
+    "failure_diag": {
+      "command": [
+        "compiler_impl/bin/safec",
+        "check",
+        "--diag-json",
+        "tests/interfaces/client_channel.safe",
+        "--interface-search-dir",
+        "$TMPDIR/search-order-second",
+        "--interface-search-dir",
+        "$TMPDIR/search-order-first"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 1,
+      "stderr": "",
+      "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"unknown channel `Provider_Channel.Data_Ch`\",\"path\":\"tests/interfaces/client_channel.safe\",\"span\":{\"start_line\":8,\"start_col\":15,\"end_line\":8,\"end_col\":38},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+    },
+    "success": {
+      "command": [
+        "compiler_impl/bin/safec",
+        "check",
+        "tests/interfaces/client_channel.safe",
+        "--interface-search-dir",
+        "$TMPDIR/search-order-first",
+        "--interface-search-dir",
+        "$TMPDIR/search-order-second"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": ""
+    }
+  },
+  "status": "ok",
+  "supporting_interfaces": {
+    "record_object_provider": {
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/interfaces/provider_record_object.safe",
+          "--out-dir",
+          "$TMPDIR/record-object-provider/out",
+          "--interface-dir",
+          "$TMPDIR/record-object-provider/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "files": {
+        "ast": "out/provider_record_object.ast.json",
+        "mir": "out/provider_record_object.mir.json",
+        "safei": "iface/provider_record_object.safei.json",
+        "typed": "out/provider_record_object.typed.json"
+      },
+      "hashes": {
+        "ast": "e3755eb5b2786dfda65630da41b58388c13a67f4316cfe21053bc48192fa8c22",
+        "mir": "eb5012b05a208ac15a020818af8d426535da08c8c5f1965993e2afbfbad4330f",
+        "safei": "7d5f2d679eef6a769664c1a09575f4ccdadff71b668adf527a569d55f15634d5",
+        "typed": "1f45f82992dace62a4d7905157cc3050fa16da735e4a8115a7c2b1e87aea37f3"
+      },
+      "mir_payload": {
+        "channels": [],
+        "format": "mir-v2",
+        "graphs": [],
+        "package_name": "Provider_Record_Object",
+        "source_path": "tests/interfaces/provider_record_object.safe",
+        "types": [
+          {
+            "fields": {
+              "Value": "Integer"
+            },
+            "kind": "record",
+            "name": "Seed_Info"
+          }
+        ]
+      },
+      "mir_summary": {
+        "graph_names": [],
+        "package_name": "Provider_Record_Object",
+        "source_path": "tests/interfaces/provider_record_object.safe",
+        "type_names": [
+          "Seed_Info"
+        ]
+      },
+      "safei_payload": {
+        "channel_access_summaries": [],
+        "channels": [],
+        "dependencies": [],
+        "effect_summaries": [],
+        "executables": [],
+        "format": "safei-v1",
+        "objects": [
+          {
+            "name": "State",
+            "span": {
+              "end_col": 28,
+              "end_line": 7,
+              "start_col": 11,
+              "start_line": 7
+            },
+            "type": {
+              "fields": {
+                "Value": "Integer"
+              },
+              "kind": "record",
+              "name": "Seed_Info"
+            }
+          }
+        ],
+        "package_name": "Provider_Record_Object",
+        "public_declarations": [
+          {
+            "kind": "TypeDeclaration",
+            "name": "Seed_Info",
+            "signature": "Seed_Info",
+            "span": {
+              "end_col": 14,
+              "end_line": 5,
+              "start_col": 11,
+              "start_line": 3
+            }
+          },
+          {
+            "kind": "ObjectDeclaration",
+            "name": "State",
+            "signature": "State",
+            "span": {
+              "end_col": 28,
+              "end_line": 7,
+              "start_col": 11,
+              "start_line": 7
+            }
+          }
+        ],
+        "subprograms": [],
+        "subtypes": [],
+        "types": [
+          {
+            "fields": {
+              "Value": "Integer"
+            },
+            "kind": "record",
+            "name": "Seed_Info"
+          }
+        ]
+      },
+      "safei_summary": {
+        "channel_names": [],
+        "channel_summary_names": [],
+        "dependencies": [],
+        "effect_summary_names": [],
+        "object_names": [
+          "State"
+        ],
+        "package_name": "Provider_Record_Object",
+        "subprogram_names": [],
+        "subtype_names": [],
+        "type_names": [
+          "Seed_Info"
+        ]
+      },
+      "typed_payload": {
+        "ast": {
+          "context_clause": {
+            "node_type": "ContextClause",
+            "with_clauses": []
+          },
+          "node_type": "CompilationUnit",
+          "package_unit": {
+            "end_name": "Provider_Record_Object",
+            "items": [
+              {
+                "item": {
+                  "discriminant_part": null,
+                  "is_public": true,
+                  "name": "Seed_Info",
+                  "node_type": "TypeDeclaration",
+                  "span": {
+                    "end_col": 14,
+                    "end_line": 5,
+                    "start_col": 11,
+                    "start_line": 3
+                  },
+                  "type_definition": {
+                    "is_limited": false,
+                    "is_private": false,
+                    "node_type": "RecordTypeDefinition",
+                    "record_definition": {
+                      "component_list": {
+                        "components": [
+                          {
+                            "item": {
+                              "component_definition": {
+                                "is_aliased": false,
+                                "node_type": "ComponentDefinition",
+                                "span": {
+                                  "end_col": 21,
+                                  "end_line": 4,
+                                  "start_col": 15,
+                                  "start_line": 4
+                                },
+                                "type_spec": {
+                                  "constraint": null,
+                                  "is_not_null": false,
+                                  "node_type": "SubtypeIndication",
+                                  "span": {
+                                    "end_col": 21,
+                                    "end_line": 4,
+                                    "start_col": 15,
+                                    "start_line": 4
+                                  },
+                                  "subtype_mark": {
+                                    "identifier": "Integer",
+                                    "node_type": "DirectName",
+                                    "span": {
+                                      "end_col": 21,
+                                      "end_line": 4,
+                                      "start_col": 15,
+                                      "start_line": 4
+                                    }
+                                  }
+                                }
+                              },
+                              "default_expression": null,
+                              "names": [
+                                "Value"
+                              ],
+                              "node_type": "ComponentDeclaration",
+                              "span": {
+                                "end_col": 22,
+                                "end_line": 4,
+                                "start_col": 7,
+                                "start_line": 4
+                              }
+                            },
+                            "kind": "ComponentDeclaration",
+                            "node_type": "ComponentItem",
+                            "span": {
+                              "end_col": 22,
+                              "end_line": 4,
+                              "start_col": 7,
+                              "start_line": 4
+                            }
+                          }
+                        ],
+                        "is_null": false,
+                        "node_type": "ComponentList",
+                        "span": {
+                          "end_col": 14,
+                          "end_line": 5,
+                          "start_col": 11,
+                          "start_line": 3
+                        },
+                        "variant_part": null
+                      },
+                      "is_null_record": false,
+                      "node_type": "RecordDefinition",
+                      "span": {
+                        "end_col": 14,
+                        "end_line": 5,
+                        "start_col": 11,
+                        "start_line": 3
+                      }
+                    },
+                    "span": {
+                      "end_col": 14,
+                      "end_line": 5,
+                      "start_col": 11,
+                      "start_line": 3
+                    }
+                  }
+                },
+                "kind": "BasicDeclaration",
+                "node_type": "PackageItem",
+                "span": {
+                  "end_col": 14,
+                  "end_line": 5,
+                  "start_col": 11,
+                  "start_line": 3
+                }
+              },
+              {
+                "item": {
+                  "initializer": null,
+                  "is_aliased": false,
+                  "is_constant": false,
+                  "is_public": true,
+                  "names": [
+                    "State"
+                  ],
+                  "node_type": "ObjectDeclaration",
+                  "object_type": {
+                    "constraint": null,
+                    "is_not_null": false,
+                    "node_type": "SubtypeIndication",
+                    "span": {
+                      "end_col": 27,
+                      "end_line": 7,
+                      "start_col": 19,
+                      "start_line": 7
+                    },
+                    "subtype_mark": {
+                      "identifier": "Seed_Info",
+                      "node_type": "DirectName",
+                      "span": {
+                        "end_col": 27,
+                        "end_line": 7,
+                        "start_col": 19,
+                        "start_line": 7
+                      }
+                    }
+                  },
+                  "span": {
+                    "end_col": 28,
+                    "end_line": 7,
+                    "start_col": 11,
+                    "start_line": 7
+                  }
+                },
+                "kind": "BasicDeclaration",
+                "node_type": "PackageItem",
+                "span": {
+                  "end_col": 28,
+                  "end_line": 7,
+                  "start_col": 11,
+                  "start_line": 7
+                }
+              }
+            ],
+            "name": "Provider_Record_Object",
+            "node_type": "PackageUnit",
+            "span": {
+              "end_col": 27,
+              "end_line": 9,
+              "start_col": 1,
+              "start_line": 1
+            }
+          },
+          "span": {
+            "end_col": 27,
+            "end_line": 9,
+            "start_col": 1,
+            "start_line": 1
+          }
+        },
+        "channels": [],
+        "executables": [],
+        "format": "typed-v2",
+        "package_end_name": "Provider_Record_Object",
+        "package_name": "Provider_Record_Object",
+        "public_declarations": [
+          {
+            "kind": "TypeDeclaration",
+            "name": "Seed_Info",
+            "signature": "Seed_Info",
+            "span": {
+              "end_col": 14,
+              "end_line": 5,
+              "start_col": 11,
+              "start_line": 3
+            }
+          },
+          {
+            "kind": "ObjectDeclaration",
+            "name": "State",
+            "signature": "State",
+            "span": {
+              "end_col": 28,
+              "end_line": 7,
+              "start_col": 11,
+              "start_line": 7
+            }
+          }
+        ],
+        "tasks": [],
+        "types": [
+          {
+            "fields": {
+              "Value": "Integer"
+            },
+            "kind": "record",
+            "name": "Seed_Info"
+          }
+        ]
+      },
+      "typed_summary": {
+        "package_name": "Provider_Record_Object",
+        "public_declaration_names": [
+          "Seed_Info",
+          "State"
+        ],
+        "type_names": [
+          "Seed_Info"
+        ]
+      },
+      "validators": {
+        "analyze_mir": {
+          "reason": "no_local_graphs",
+          "skipped": true
+        },
+        "ast": {
+          "command": [
+            "python3",
+            "scripts/validate_ast_output.py",
+            "$TMPDIR/record-object-provider/out/provider_record_object.ast.json"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "$TMPDIR/record-object-provider/out/provider_record_object.ast.json: OK\n"
+        },
+        "output_contracts": {
+          "command": [
+            "python3",
+            "scripts/validate_output_contracts.py",
+            "--ast",
+            "$TMPDIR/record-object-provider/out/provider_record_object.ast.json",
+            "--typed",
+            "$TMPDIR/record-object-provider/out/provider_record_object.typed.json",
+            "--mir",
+            "$TMPDIR/record-object-provider/out/provider_record_object.mir.json",
+            "--safei",
+            "$TMPDIR/record-object-provider/iface/provider_record_object.safei.json",
+            "--source-path",
+            "tests/interfaces/provider_record_object.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "output contracts: OK (provider_record_object.ast.json, provider_record_object.typed.json, provider_record_object.mir.json, provider_record_object.safei.json)\n"
+        },
+        "validate_mir": {
+          "reason": "no_local_graphs",
+          "skipped": true
+        }
+      }
+    }
+  },
+  "task": "PR08.3"
+}

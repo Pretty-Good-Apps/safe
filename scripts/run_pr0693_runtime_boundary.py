@@ -292,7 +292,7 @@ def generate_report(*, safec: Path, python: str, validation_env: dict[str, str])
         safei_payload = load_json(emit_files[f"iface/{EMIT_SUCCESS.stem.lower()}.safei.json"])
         require(typed_payload.get("format") == "typed-v2", "emit success: expected typed-v2")
         require(mir_payload.get("format") == "mir-v2", "emit success: expected mir-v2")
-        require(safei_payload.get("format") == "safei-v0", "emit success: expected safei-v0")
+        require(safei_payload.get("format") == "safei-v1", "emit success: expected safei-v1")
         require_no_blocked_spawns(blocked_log, temp_root=temp_root, label="emit success")
 
         negative_emit_root = temp_root / "emit-failure"

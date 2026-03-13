@@ -1,6 +1,6 @@
 # Frontend Architecture Baseline
 
-This document is the canonical prose baseline for the Safe compiler frontend after PR07.
+This document is the canonical prose baseline for the Safe compiler frontend after PR08.3.
 
 ## Live Ada-Native Commands
 
@@ -21,13 +21,16 @@ The current frontend supports the exact current Rule 5 fixture corpus, sequentia
 
 PR08.2 adds the accepted local-only concurrency checking slice for single-package tasks, channels, channel operations, select, and relative delay.
 
+PR08.3 adds explicit dependency-interface lookup plus `safei-v1` publication/consumption for imported public types, subtypes, channels, objects, and subprogram signatures.
+
 That means the current frontend baseline covers:
 
 - the frozen Rule 5 floating-point corpus
 - sequential ownership checking
 - the current boolean result-record discriminant pattern
 - local-only concurrency checking for accepted single-package task/channel/select/delay sources
-- AST, `typed-v2`, `mir-v2`, and `safei-v0` emission for that same subset
+- imported package-qualified resolution through explicit `--interface-search-dir` inputs and `safei-v1`
+- AST, `typed-v2`, `mir-v2`, and `safei-v1` emission for that same subset
 - MIR validation and MIR analysis for the same subset
 
 The following surfaces remain explicitly out of scope for the current frontend baseline:
@@ -36,7 +39,7 @@ The following surfaces remain explicitly out of scope for the current frontend b
 - general discriminants
 - discriminant constraints
 - access discriminants
-- cross-package tasks/channels/concurrency analysis beyond the local PR08.2 slice
+- cross-package ownership/channel-ceiling analysis beyond the PR08.3 interface slice
 - broader Ada/SPARK emission work
 
 ## No-Python Doctrine

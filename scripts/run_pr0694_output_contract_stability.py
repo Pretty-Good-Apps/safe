@@ -231,7 +231,7 @@ def run_emit_case(
         typed_public = typed_payload["public_declarations"]
         safei_public = safei_payload["public_declarations"]
         require(typed_public, "public_interface: typed-v2 public_declarations must be non-empty")
-        require(safei_public, "public_interface: safei-v0 public_declarations must be non-empty")
+        require(safei_public, "public_interface: safei-v1 public_declarations must be non-empty")
         require(
             [item["name"] for item in typed_public] == expected_public_names,
             "public_interface: typed-v2 public declaration ordering drifted",
@@ -242,15 +242,15 @@ def run_emit_case(
         )
         require(
             [item["name"] for item in safei_public] == expected_public_names,
-            "public_interface: safei-v0 public declaration ordering drifted",
+            "public_interface: safei-v1 public declaration ordering drifted",
         )
         require(
             [item["kind"] for item in safei_public] == expected_public_kinds,
-            "public_interface: safei-v0 public declaration kinds drifted",
+            "public_interface: safei-v1 public declaration kinds drifted",
         )
         require(
             typed_public == safei_public,
-            "public_interface: public declarations must match between typed-v2 and safei-v0",
+            "public_interface: public declarations must match between typed-v2 and safei-v1",
         )
         require(
             typed_exec_names == ["Identity"],

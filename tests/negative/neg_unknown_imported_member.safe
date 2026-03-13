@@ -1,0 +1,16 @@
+-- Test: neg_unknown_imported_member
+-- Description: Reject package-qualified references that are absent from the imported interface.
+-- Expected: REJECT source_frontend_error
+
+with Provider_Channel;
+
+package Unknown_Imported_Member_Test is
+
+   task Sender is
+   begin
+      loop
+         send Provider_Channel.Unknown_Ch, 1;
+      end loop;
+   end Sender;
+
+end Unknown_Imported_Member_Test;

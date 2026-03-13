@@ -1,0 +1,16 @@
+-- Test: neg_imported_object_assignment
+-- Description: Imported package-qualified objects remain read-only in PR08.3.
+-- Expected: REJECT unsupported_source_construct
+
+with Provider_Object;
+
+package Imported_Object_Assignment_Test is
+
+   task Writer is
+   begin
+      loop
+         Provider_Object.Seed = 4;
+      end loop;
+   end Writer;
+
+end Imported_Object_Assignment_Test;

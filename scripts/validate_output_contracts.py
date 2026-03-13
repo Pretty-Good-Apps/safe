@@ -76,6 +76,20 @@ def validate_decl_list(items: Any, path: str) -> list[dict[str, Any]]:
     return result
 
 
+def validate_string_list(items: Any, path: str) -> list[str]:
+    result: list[str] = []
+    for index, item in enumerate(require_list(items, path)):
+        result.append(require_string(item, f"{path}[{index}]"))
+    return result
+
+
+def validate_type_descriptor_list(items: Any, path: str) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for index, item in enumerate(require_list(items, path)):
+        result.append(validate_type_descriptor(item, f"{path}[{index}]"))
+    return result
+
+
 def validate_optional_typed_channels(value: Any, path: str) -> list[dict[str, Any]]:
     if value is None:
         return []
@@ -89,6 +103,10 @@ def validate_optional_typed_channels(value: Any, path: str) -> list[dict[str, An
         validate_span(entry.get("span"), f"{path}[{index}].span")
         result.append(entry)
     return result
+
+
+def validate_typed_channels(value: Any, path: str) -> list[dict[str, Any]]:
+    return validate_optional_typed_channels(require_list(value, path), path)
 
 
 def validate_optional_typed_tasks(value: Any, path: str) -> list[dict[str, Any]]:
@@ -280,17 +298,134 @@ def validate_mir_payload(payload: Any, *, path: str, expected_source_path: str) 
     return mir
 
 
+def validate_safei_object_list(items: Any, path: str) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for index, item in enumerate(require_list(items, path)):
+        entry = require_mapping(item, f"{path}[{index}]")
+        require_string(entry.get("name"), f"{path}[{index}].name")
+        validate_type_descriptor(entry.get("type"), f"{path}[{index}].type")
+        validate_span(entry.get("span"), f"{path}[{index}].span")
+        result.append(entry)
+    return result
+
+
+def validate_safei_params(items: Any, path: str) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for index, item in enumerate(require_list(items, path)):
+        entry = require_mapping(item, f"{path}[{index}]")
+        require_string(entry.get("name"), f"{path}[{index}].name")
+        require_string(entry.get("mode"), f"{path}[{index}].mode")
+        validate_type_descriptor(entry.get("type"), f"{path}[{index}].type")
+        validate_span(entry.get("span"), f"{path}[{index}].span")
+        result.append(entry)
+    return result
+
+
+def validate_safei_subprograms(items: Any, path: str) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for index, item in enumerate(require_list(items, path)):
+        entry = require_mapping(item, f"{path}[{index}]")
+        require_string(entry.get("name"), f"{path}[{index}].name")
+        require_string(entry.get("kind"), f"{path}[{index}].kind")
+        require_string(entry.get("signature"), f"{path}[{index}].signature")
+        validate_safei_params(entry.get("params"), f"{path}[{index}].params")
+        has_return_type = require_boolean(entry.get("has_return_type"), f"{path}[{index}].has_return_type")
+        require_boolean(entry.get("return_is_access_def"), f"{path}[{index}].return_is_access_def")
+        if has_return_type:
+            if "return_type" not in entry:
+                fail(f"{path}[{index}].return_type is required when has_return_type is true")
+            validate_type_descriptor(entry.get("return_type"), f"{path}[{index}].return_type")
+        elif entry.get("return_type") is not None:
+            fail(f"{path}[{index}].return_type must be null when has_return_type is false")
+        validate_span(entry.get("span"), f"{path}[{index}].span")
+        result.append(entry)
+    return result
+
+
+def validate_safei_depends(items: Any, path: str) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for index, item in enumerate(require_list(items, path)):
+        entry = require_mapping(item, f"{path}[{index}]")
+        require_string(entry.get("output_name"), f"{path}[{index}].output_name")
+        validate_string_list(entry.get("inputs"), f"{path}[{index}].inputs")
+        result.append(entry)
+    return result
+
+
+def validate_safei_effect_summaries(items: Any, path: str) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for index, item in enumerate(require_list(items, path)):
+        entry = require_mapping(item, f"{path}[{index}]")
+        require_string(entry.get("name"), f"{path}[{index}].name")
+        require_string(entry.get("signature"), f"{path}[{index}].signature")
+        validate_string_list(entry.get("reads"), f"{path}[{index}].reads")
+        validate_string_list(entry.get("writes"), f"{path}[{index}].writes")
+        validate_string_list(entry.get("inputs"), f"{path}[{index}].inputs")
+        validate_string_list(entry.get("outputs"), f"{path}[{index}].outputs")
+        validate_safei_depends(entry.get("depends"), f"{path}[{index}].depends")
+        result.append(entry)
+    return result
+
+
+def validate_safei_channel_access_summaries(items: Any, path: str) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for index, item in enumerate(require_list(items, path)):
+        entry = require_mapping(item, f"{path}[{index}]")
+        require_string(entry.get("name"), f"{path}[{index}].name")
+        require_string(entry.get("signature"), f"{path}[{index}].signature")
+        validate_string_list(entry.get("channels"), f"{path}[{index}].channels")
+        result.append(entry)
+    return result
+
+
 def validate_safei_payload(payload: Any, *, path: str) -> dict[str, Any]:
     safei = require_mapping(payload, path)
-    if safei.get("format") != "safei-v0":
-        fail(f"{path}.format must be safei-v0")
-    for field in ("package_name", "executables", "public_declarations"):
+    if safei.get("format") != "safei-v1":
+        fail(f"{path}.format must be safei-v1")
+    for field in (
+        "package_name",
+        "dependencies",
+        "executables",
+        "public_declarations",
+        "types",
+        "subtypes",
+        "channels",
+        "objects",
+        "subprograms",
+        "effect_summaries",
+        "channel_access_summaries",
+    ):
         if field not in safei:
             fail(f"{path}.{field} is required")
 
     require_string(safei.get("package_name"), f"{path}.package_name")
-    validate_decl_list(safei.get("executables"), f"{path}.executables")
-    validate_decl_list(safei.get("public_declarations"), f"{path}.public_declarations")
+    validate_string_list(safei.get("dependencies"), f"{path}.dependencies")
+    executables = validate_decl_list(safei.get("executables"), f"{path}.executables")
+    public_declarations = validate_decl_list(safei.get("public_declarations"), f"{path}.public_declarations")
+    validate_type_descriptor_list(safei.get("types"), f"{path}.types")
+    validate_type_descriptor_list(safei.get("subtypes"), f"{path}.subtypes")
+    validate_typed_channels(safei.get("channels"), f"{path}.channels")
+    validate_safei_object_list(safei.get("objects"), f"{path}.objects")
+    subprograms = validate_safei_subprograms(safei.get("subprograms"), f"{path}.subprograms")
+    effect_summaries = validate_safei_effect_summaries(
+        safei.get("effect_summaries"), f"{path}.effect_summaries"
+    )
+    channel_summaries = validate_safei_channel_access_summaries(
+        safei.get("channel_access_summaries"), f"{path}.channel_access_summaries"
+    )
+
+    executable_names = {entry["name"] for entry in executables}
+    subprogram_names = {entry["name"] for entry in subprograms}
+    for summary in effect_summaries:
+        if summary["name"] not in subprogram_names and summary["name"] not in executable_names:
+            fail(f"{path}.effect_summaries contains unknown subprogram {summary['name']!r}")
+    for summary in channel_summaries:
+        if summary["name"] not in subprogram_names and summary["name"] not in executable_names:
+            fail(f"{path}.channel_access_summaries contains unknown subprogram {summary['name']!r}")
+
+    for entry in public_declarations:
+        if "signature" not in entry:
+            fail(f"{path}.public_declarations entries must include signatures")
     return safei
 
 

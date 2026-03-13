@@ -336,7 +336,7 @@
       "hashes": {
         "ast": "494af0e238431f1849523e22b9784f00906968203d7917705888fdf25b26d8e0",
         "mir": "db1b0af354f3443870ce3b551a503f19bcf0496a8554ac358ceddec57719fd36",
-        "safei": "af4704141bdb136aa486f601c6bcd080264b41a473db19c14210cd6890ab1f57",
+        "safei": "9e02cb0a7ee34c751f63882e5ec006b9906bd601fbcf0aa937eb1ab54be6529e",
         "typed": "845b9fa2ccf0ea2c541a526b8f1afbd1b4eb322db5f01b2ced53e06aa182cc78"
       },
       "sample": "tests/positive/channel_pingpong.safe"
@@ -345,7 +345,7 @@
       "hashes": {
         "ast": "4e4e5f041d32e26070c24bec985ff1299ac43685e52f4db1297d14a1c37505b2",
         "mir": "462ba463451d9384d2d4f9f106c012ee84481bada5a147fb15daf7533f89fdbe",
-        "safei": "4b4051cf5940d828ccd3c90fde781b9b6f2479545495f0826132bbcbbb0582b9",
+        "safei": "a62658ab02d19efcbc96d7c95df1665eaa82b4f0293b391e59a99b3aa0721a02",
         "typed": "bb798dc4a282ec76f3dc6ad4629a31016871d3801ed3b35d5e2e9e48493c6e10"
       },
       "sample": "tests/concurrency/select_with_delay.safe"
@@ -1293,7 +1293,7 @@
         ],
         "cwd": "$REPO_ROOT",
         "returncode": 1,
-        "stderr": "neg_qualified_channel_reference.safe:16:15: error: package-qualified channel references are outside the current PR08.1 concurrency subset\n  |\n  | 16 |          send Remote_Package.Data_Ch, 1;\n  |    |               ^~~~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stderr": "neg_qualified_channel_reference.safe:7:1: error: missing dependency interface for package `remote_package`\n  |\n  | 7 | with Remote_Package;\n  |   | ^~~~~~~~~~~~~~~~~~~~\n  |\n",
         "stdout": ""
       },
       "check": {
@@ -1304,7 +1304,7 @@
         ],
         "cwd": "$REPO_ROOT",
         "returncode": 1,
-        "stderr": "neg_qualified_channel_reference.safe:16:15: error: package-qualified channel references are outside the current PR08.1 concurrency subset\n  |\n  | 16 |          send Remote_Package.Data_Ch, 1;\n  |    |               ^~~~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stderr": "neg_qualified_channel_reference.safe:7:1: error: missing dependency interface for package `remote_package`\n  |\n  | 7 | with Remote_Package;\n  |   | ^~~~~~~~~~~~~~~~~~~~\n  |\n",
         "stdout": ""
       },
       "check_diag_json": {
@@ -1317,7 +1317,7 @@
         "cwd": "$REPO_ROOT",
         "returncode": 1,
         "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"unsupported_source_construct\",\"message\":\"package-qualified channel references are outside the current PR08.1 concurrency subset\",\"path\":\"tests/negative/neg_qualified_channel_reference.safe\",\"span\":{\"start_line\":16,\"start_col\":15,\"end_line\":16,\"end_col\":36},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"missing dependency interface for package `remote_package`\",\"path\":\"tests/negative/neg_qualified_channel_reference.safe\",\"span\":{\"start_line\":7,\"start_col\":1,\"end_line\":7,\"end_col\":20},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
       },
       "emit": {
         "command": [
@@ -1331,24 +1331,24 @@
         ],
         "cwd": "$REPO_ROOT",
         "returncode": 1,
-        "stderr": "neg_qualified_channel_reference.safe:16:15: error: package-qualified channel references are outside the current PR08.1 concurrency subset\n  |\n  | 16 |          send Remote_Package.Data_Ch, 1;\n  |    |               ^~~~~~~~~~~~~~~~~~~~~~\n  |\n",
+        "stderr": "neg_qualified_channel_reference.safe:7:1: error: missing dependency interface for package `remote_package`\n  |\n  | 7 | with Remote_Package;\n  |   | ^~~~~~~~~~~~~~~~~~~~\n  |\n",
         "stdout": ""
       },
       "emit_artifacts": {
         "iface_files": [],
         "out_files": []
       },
-      "expected_reason": "unsupported_source_construct",
+      "expected_reason": "source_frontend_error",
       "first_diagnostic": {
         "highlight_span": null,
-        "message": "package-qualified channel references are outside the current PR08.1 concurrency subset",
+        "message": "missing dependency interface for package `remote_package`",
         "path": "tests/negative/neg_qualified_channel_reference.safe",
-        "reason": "unsupported_source_construct",
+        "reason": "source_frontend_error",
         "span": {
-          "end_col": 36,
-          "end_line": 16,
-          "start_col": 15,
-          "start_line": 16
+          "end_col": 20,
+          "end_line": 7,
+          "start_col": 1,
+          "start_line": 7
         }
       },
       "sample": "tests/negative/neg_qualified_channel_reference.safe"
@@ -2232,8 +2232,8 @@
       "sample": "tests/concurrency/select_with_delay.safe"
     }
   ],
-  "repeat_sha256": "e3e2bfb9d5cea52d9e6130f08b8ea5356e68bda327a79eb438baa142e9e232cc",
-  "report_sha256": "e3e2bfb9d5cea52d9e6130f08b8ea5356e68bda327a79eb438baa142e9e232cc",
+  "repeat_sha256": "f54de6723a7af93dc8774764aca53c8f9ed32a960f9b12d4277a333c8d26e884",
+  "report_sha256": "f54de6723a7af93dc8774764aca53c8f9ed32a960f9b12d4277a333c8d26e884",
   "status": "ok",
   "task": "PR08.1"
 }
