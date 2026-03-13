@@ -24,8 +24,6 @@ deferred beyond `PR10`.
   `PR08.4`
 - Emitter placeholder for "PR09/PR10 discoveries"
   Rationale: `PR09` and `PR10` are tracked milestones, not post-PR10 overflow
-- Named-number follow-on work stays under `PR08.3b`
-  Rationale: named numbers are the next tracked milestone, not a post-PR10 item
 
 ## Removed Spec-Excluded Items
 
@@ -94,6 +92,8 @@ deferred beyond `PR10`.
 - Ada-side Bronze regression harness independent of Python evidence
   re-derivation
   Source validation: `PR08.2` review fallout
+- Named-number declarations and imported named-number values
+  Source validation: roadmap decision after `PR08.3a`, `spec/03-single-file-packages.md`
 
 ## Priority Count Delta
 
@@ -101,5 +101,5 @@ deferred beyond `PR10`.
 |----------|----------:|----------:|------:|
 | `blocking-if-needed` | 21 | 14 | -7 |
 | `nice-to-have` | 9 | 3 | -6 |
-| `long-term` | 33 | 13 | -20 |
-| **Total** | **63** | **30** | **-33** |
+| `long-term` | 33 | 14 | -19 |
+| **Total** | **63** | **31** | **-32** |

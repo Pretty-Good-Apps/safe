@@ -8,7 +8,7 @@ This document is the overflow ledger for work that is intentionally deferred
 Items belong here only if they are:
 
 - still open
-- not already tracked by `PR08.3b`, `PR08.4`, `PR09`, or `PR10`
+- not already tracked by `PR08.4`, `PR09`, or `PR10`
 - not already fixed in the current repo
 - not explicitly excluded by the current spec unless they remain an active
   future language or specification topic
@@ -76,6 +76,7 @@ before PR10, and not better owned by `docs/syntax_proposals.md`.
 
 | Item | Source | Area | Priority |
 |------|--------|------|----------|
+| Named-number declarations and imported named-number values through `safei-v1`, beyond the ordinary-constant subset shipped in PR08.3a | `spec/03-single-file-packages.md` section `3.3.1`, roadmap decision after `PR08.3a` | `resolver` | `long-term` |
 | String and character literals | `PR03`, `compiler_impl/src/safe_frontend-check_parse.adb` | `parser` | `blocking-if-needed` |
 | Case statements | `spec/02-restrictions.md` paragraph 28, current unsupported surface | `parser` | `blocking-if-needed` |
 | Task declarative parts beyond object declarations | `PR08.1` boundary | `resolver` | `long-term` |
@@ -115,8 +116,8 @@ before PR10, and not better owned by `docs/syntax_proposals.md`.
 |----------|------:|
 | `blocking-if-needed` | 14 |
 | `nice-to-have` | 3 |
-| `long-term` | 13 |
-| **Total** | **30** |
+| `long-term` | 14 |
+| **Total** | **31** |
 
 See [`docs/post_pr10_scope_audit.md`](post_pr10_scope_audit.md) for the audit
 record that removed fixed items, pre-PR10 tracked work, spec-excluded rows, and

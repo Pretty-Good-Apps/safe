@@ -3,7 +3,7 @@
   "updated_at": "2026-03-13T06:05:00Z",
   "frozen_spec_sha": "468cf72332724b04b7c193b4d2a3b02f1584125d",
   "active_task_id": null,
-  "next_task_id": "PR08.3b",
+  "next_task_id": "PR08.4",
   "repo_facts": {
     "tests": {
       "positive": 41,
@@ -524,22 +524,6 @@
       "unblock_condition": ""
     },
     {
-      "id": "PR08.3b",
-      "title": "Named numbers",
-      "status": "planned",
-      "depends_on": ["PR08.3a"],
-      "acceptance": [
-        "Named-number declarations are supported on the live Ada-native path as a distinct declaration form from ordinary constants.",
-        "safei-v1 grows additively with named_numbers[] rather than overloading objects[].",
-        "Provider/client fixtures prove imported named numbers work in package-qualified static contexts.",
-        "Named-number interface payloads remain deterministic and validator-covered without bumping safei-v1 again.",
-        "A dedicated PR08.3b gate and report cover imported named numbers and keep committed evidence up to date."
-      ],
-      "evidence": [],
-      "blockers": [],
-      "unblock_condition": ""
-    },
-    {
       "id": "PR08.4",
       "title": "Transitive concurrency integration and baseline flip",
       "status": "planned",
@@ -558,9 +542,9 @@
       "id": "PR08",
       "title": "Concurrency legality and Bronze summaries",
       "status": "planned",
-      "depends_on": ["PR08.3b", "PR08.4"],
+      "depends_on": ["PR08.4"],
       "acceptance": [
-        "PR08.1 through PR08.4, plus PR08.3a and PR08.3b, complete the concurrency frontend, local analysis, interface contracts, constant/named-number interface coverage, and transitive integration work on the live Ada-native path.",
+        "PR08.1 through PR08.4, plus PR08.3a, complete the concurrency frontend, local analysis, interface contracts, ordinary-constant interface coverage, and transitive integration work on the live Ada-native path.",
         "The supported frontend subset expands from the PR07 sequential baseline to the PR08 concurrency baseline without reviving deleted legacy packages."
       ],
       "evidence": [],

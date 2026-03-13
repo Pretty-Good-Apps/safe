@@ -3,7 +3,7 @@
 - **Schema version:** `1`
 - **Frozen spec SHA:** `468cf72332724b04b7c193b4d2a3b02f1584125d`
 - **Active task:** `none`
-- **Next task:** `PR08.3b`
+- **Next task:** `PR08.4`
 - **Updated at:** `2026-03-13T06:05:00Z`
 
 ## Repo Facts
@@ -48,9 +48,8 @@
 | PR08.2 | done | PR08.1 | 1 |
 | PR08.3 | done | PR08.2 | 1 |
 | PR08.3a | done | PR08.3 | 1 |
-| PR08.3b | planned | PR08.3a | 0 |
 | PR08.4 | planned | PR08.3 | 0 |
-| PR08 | planned | PR08.3b, PR08.4 | 0 |
+| PR08 | planned | PR08.4 | 0 |
 | PR09 | planned | PR08 | 0 |
 | PR10 | planned | PR09 | 0 |
 
@@ -456,18 +455,6 @@
 - **Evidence:**
   - `execution/reports/pr083a-public-constants-report.json`
 
-### PR08.3b — Named numbers
-
-- **Status:** `planned`
-- **Depends on:** PR08.3a
-- **Blockers:** none
-- **Acceptance:**
-  - Named-number declarations are supported on the live Ada-native path as a distinct declaration form from ordinary constants.
-  - safei-v1 grows additively with named_numbers[] rather than overloading objects[].
-  - Provider/client fixtures prove imported named numbers work in package-qualified static contexts.
-  - Named-number interface payloads remain deterministic and validator-covered without bumping safei-v1 again.
-  - A dedicated PR08.3b gate and report cover imported named numbers and keep committed evidence up to date.
-
 ### PR08.4 — Transitive concurrency integration and baseline flip
 
 - **Status:** `planned`
@@ -482,10 +469,10 @@
 ### PR08 — Concurrency legality and Bronze summaries
 
 - **Status:** `planned`
-- **Depends on:** PR08.3b, PR08.4
+- **Depends on:** PR08.4
 - **Blockers:** none
 - **Acceptance:**
-  - PR08.1 through PR08.4, plus PR08.3a and PR08.3b, complete the concurrency frontend, local analysis, interface contracts, constant/named-number interface coverage, and transitive integration work on the live Ada-native path.
+  - PR08.1 through PR08.4, plus PR08.3a, complete the concurrency frontend, local analysis, interface contracts, ordinary-constant interface coverage, and transitive integration work on the live Ada-native path.
   - The supported frontend subset expands from the PR07 sequential baseline to the PR08 concurrency baseline without reviving deleted legacy packages.
 
 ### PR09 — Ada/SPARK emission and snapshot refresh
