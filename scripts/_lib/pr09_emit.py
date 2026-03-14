@@ -35,26 +35,8 @@ def require_safec() -> Path:
     return require_repo_command(COMPILER_ROOT / "bin" / "safec", "safec")
 
 
-def gprbuild_command() -> str:
-    try:
-        return find_command("gprbuild")
-    except FileNotFoundError:
-        direct_fallbacks = (
-            Path.home() / ".alire" / "bin" / "gprbuild",
-            Path.home() / ".local" / "bin" / "gprbuild",
-            Path.home() / ".alire" / "libexec" / "spark" / "bin" / "gprbuild",
-        )
-        for fallback in direct_fallbacks:
-            if fallback.exists():
-                return str(fallback)
-        toolchain_bins = sorted(
-            (Path.home() / ".local" / "share" / "alire" / "toolchains").glob(
-                "*/bin/gprbuild"
-            )
-        )
-        if toolchain_bins:
-            return str(toolchain_bins[-1])
-        raise
+def alr_command() -> str:
+    return find_command("alr", Path.home() / "bin" / "alr")
 
 
 def python_command() -> str:
@@ -248,13 +230,16 @@ def compile_emitted_ada(
     )
     return run(
         [
-            gprbuild_command(),
+            alr_command(),
+            "exec",
+            "--",
+            "gprbuild",
             "-c",
             "-P",
             str(gpr_path),
             emitted_body_file(ada_dir).name,
         ],
-        cwd=ada_dir,
+        cwd=COMPILER_ROOT,
         env=env,
         temp_root=temp_root,
     )
