@@ -12,4 +12,3 @@ end record;
    procedure Transfer with Global => null;
 
 end Ownership_Move;
-

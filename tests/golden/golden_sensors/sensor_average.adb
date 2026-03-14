@@ -14,4 +14,3 @@ package body Sensor_Average is
    end Average;
 
 end Sensor_Average;
-

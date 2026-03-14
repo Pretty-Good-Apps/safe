@@ -24,24 +24,24 @@
             "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
           },
           "sensor_average.adb": {
-            "sha256": "6c379267ae5bcd654527ae9dcd7444bb7abc4d05d631b2e888a0807fe28ffe41"
+            "sha256": "7135cc711a6f61516102e07e132dde005b00be95a6fc355239f761ddb0d1cbad"
           },
           "sensor_average.ads": {
-            "sha256": "0f2efca66d7a0446034e7f9edd5d00ea17b5786f267da4cce8ba813fedfc8e11"
+            "sha256": "b2c94dfa2474bcfd1f8f238dd54b7cc52993e97720b6ee03570b425ea5d5581a"
           }
         },
         "json_and_interface": {
           "rule1_averaging.ast.json": {
-            "sha256": "dbae133412a790cd20087f74eb7ebd42afa5486fde06e9e224cb7dd2fbd63c20"
+            "sha256": "4b574eaa6a04f21e5e63e5b172b0f9c38eae1d6aafa83c3007cd6627182eccec"
           },
           "rule1_averaging.mir.json": {
-            "sha256": "7bc2e128abc2e28cd3ae2cade71a2fd1c2d899aad1a33cc94ea348e0ca040599"
+            "sha256": "16bd00adfd0777b7649aa3003744b4f3e1236fcf7e6f428155d3e715518acec6"
           },
           "rule1_averaging.safei.json": {
-            "sha256": "be516ef3fbf394c7b8ca41690b9e5587947f1ea0e58cc2f6ba6cf5eb507c2728"
+            "sha256": "79da78203aaefe19279824118c38f4a6443cbbec24b9af69b2ff494f8fe87ddb"
           },
           "rule1_averaging.typed.json": {
-            "sha256": "89f00af9c23f95841df2fe271f320def58d9d28ac408ac5677e6b82f04e1b706"
+            "sha256": "6dc0be2990a6e8f4c79522732e7de9cdb56b7f336aa170f502d58654034233d1"
           }
         }
       },
@@ -77,10 +77,10 @@
       "determinism": {
         "ada": {
           "accumulator.adb": {
-            "sha256": "5cc4910ed7491c615dbdaf8cf5652e3dff27d19ecb6c94a46792849e78942949"
+            "sha256": "40bf75431cc932fd94d5fafc857b567c30b26117731f9b228184341c74a770dc"
           },
           "accumulator.ads": {
-            "sha256": "93c09e4d8e6b6503ffefbaba7931ff5c4e30d5505c22e57ba0edb0ff594aa102"
+            "sha256": "58632dbfe3a707c5578e584e282b20404212138a7b720fb797254690304a2f48"
           },
           "safe_runtime.ads": {
             "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
@@ -88,16 +88,16 @@
         },
         "json_and_interface": {
           "rule1_accumulate.ast.json": {
-            "sha256": "1651ff9a2cdb7407a6914b0999a585f8cff71cb04bf0db45db32108065657cc3"
+            "sha256": "e1d1e4b8fc43b1f7d10a3f20c56df585c5e07eac6781af2506a3e541ffedc6e0"
           },
           "rule1_accumulate.mir.json": {
-            "sha256": "18f42a4b1aed89d8d55ed43c0d08096c62026a85f5ce25476154763cffcef785"
+            "sha256": "2d5aa84aa18fd5eec01836cac154facb96b55b0500b82e27ee22aeedba0ac1b1"
           },
           "rule1_accumulate.safei.json": {
-            "sha256": "91371a725e316604652698208c9e49269894bd9463790e4fc1a7a20bc39d8ad9"
+            "sha256": "c68258bd525b1ddc5683359b1926282f3b2ea25e201a3e12eb8a70e8988aaa3e"
           },
           "rule1_accumulate.typed.json": {
-            "sha256": "13aaa4cc6139c8c0f30510a57c3fa37336e97ba4eef35294f9a42fce4ffba74e"
+            "sha256": "241ab2c2beb194a5ec6f17b0195941b25460fb5cea386f6b68fee8c3fac7c09f"
           }
         }
       },
@@ -133,10 +133,10 @@
       "determinism": {
         "ada": {
           "safe_parameters.adb": {
-            "sha256": "22c69204463d09ae2bc0320b6077887f8f2036f47e30a40348d5adbd3aad3da8"
+            "sha256": "1f2082a7858976419ba70ae94a2939ad36bd8f8ee091a72c8ceaa418f9a21658"
           },
           "safe_parameters.ads": {
-            "sha256": "15d49312fbc78af4ea970121f429c9228bb9b67742944c0f15e69a77708fb22c"
+            "sha256": "b40b9316eb5ffbfa5be460e417977225ea34204c0ed5f7647adf6a9d5adba103"
           },
           "safe_runtime.ads": {
             "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
@@ -144,16 +144,16 @@
         },
         "json_and_interface": {
           "rule1_parameter.ast.json": {
-            "sha256": "3183e3a4991ff0347dc42e9e45471a135c4bbccf5e4920ed3ef026f033bf8f7c"
+            "sha256": "5dc1698639bb4945fd58344a92380b7119a2b62f5a4e846fd76fb3706e17cf61"
           },
           "rule1_parameter.mir.json": {
-            "sha256": "49ac2cb6719232ea3218fae33359e0e039492ebf42b057cb06f718d4e1f66122"
+            "sha256": "ca17d0ffaec6d582f7cc37e5ab956d22f9c985401d87f48cde523a9e7f32ef0e"
           },
           "rule1_parameter.safei.json": {
-            "sha256": "982e636d49e67c50527cc794db75b10b8404415f9cd2a64c199122cd77c64398"
+            "sha256": "4db04369b263d9a265b6192624e450bc01e624474952c048712b51f5b8010834"
           },
           "rule1_parameter.typed.json": {
-            "sha256": "04075807367bf4e51080dc2ead42dd651bfbdf10001bb3847471c999b21f3bf3"
+            "sha256": "a1dd8bb1fa9c5b9d468bafa4e3c57ddaf81ae1afad49a81566cec706b3a6be99"
           }
         }
       },
@@ -189,10 +189,10 @@
       "determinism": {
         "ada": {
           "safe_return.adb": {
-            "sha256": "5e5076846305fb6583c4c8dcf1b68693da42cdd4b1033740177d18cead0eba81"
+            "sha256": "7d56e56a368c968ff9590db6e488456e44873aaf2bd7f48654dc71b8a4c92497"
           },
           "safe_return.ads": {
-            "sha256": "b021287768beb73434dac7d6f6f7781fef920bd6930a1da72bcb8e6a579507f2"
+            "sha256": "50c600215fa5d7ec9860d624d053c4f9cd8f1d88cc9f4ca5f0f03d67f5390a3d"
           },
           "safe_runtime.ads": {
             "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
@@ -200,16 +200,16 @@
         },
         "json_and_interface": {
           "rule1_return.ast.json": {
-            "sha256": "baa1d5a79839acd49f2fc5a8049e10ad3d400bedb9bd7f6acbf3d065f21e6d03"
+            "sha256": "7b936600d49f8049afad033806e110134c8b241939c31a62fd70e237922b3b78"
           },
           "rule1_return.mir.json": {
-            "sha256": "6344c6134b7c7b58f77e596b31fa618aa39a38901e2a60a151e4883d24fffeae"
+            "sha256": "eb1c20e763d0fd1b5f802718f03e0e51d515f602b8b9cb63fe5c86493b0487d6"
           },
           "rule1_return.safei.json": {
-            "sha256": "53324d20dde0cc19ef1e96c9d975c72cd6a20cdf3ee0d02ea0451e4c3bd80790"
+            "sha256": "014cd7a2b58b7a753ebc949336f46c8c2d9d8de37189fba9d711d1c59f136065"
           },
           "rule1_return.typed.json": {
-            "sha256": "8e75bbb4efae192c093dc915c4fb180705aec142f2fcc6a63915c13450baea20"
+            "sha256": "6faad2eee032643386f4df60467be0524dc3e9376b12c9e0f404bc61c0c4a19d"
           }
         }
       },
@@ -245,10 +245,10 @@
       "determinism": {
         "ada": {
           "safe_conversion.adb": {
-            "sha256": "520511a72981077981aef09fcb970ba5ab3c7ed62552145cd5aaf8bf3cbb8238"
+            "sha256": "54adae81d0364859b6ac1f7bfb4f41d9bb44d41a47f48de169815927450b4c68"
           },
           "safe_conversion.ads": {
-            "sha256": "33791402cae4e4185e2e2f677917a5d638baa2d84e2b1a281d10f9fcc1811693"
+            "sha256": "ee72fabd41c16d3a4a17272b124cc96b29c3d8300cb8fcfc1b70f1fda68a0378"
           },
           "safe_runtime.ads": {
             "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
@@ -256,16 +256,16 @@
         },
         "json_and_interface": {
           "rule1_conversion.ast.json": {
-            "sha256": "576547a78b96f973002beff0571890b2b68307795f5e4c55ff463a00433850b7"
+            "sha256": "fbf804b369dbbdffc008cc6b319ccaf05ee0b78cc3dd93f67c21fa0b8a03e48e"
           },
           "rule1_conversion.mir.json": {
-            "sha256": "ae0c94407c70bcf722f264f4d8a1cc0262acc937c41042f2f0b12f85166b1a09"
+            "sha256": "e3ceccb17a6b15a51f8aeb7c4df4a7edd112b92d29fd419557834dc0039a33eb"
           },
           "rule1_conversion.safei.json": {
-            "sha256": "6bd9f8f4bdd513105a97392d2a497f9129acc5cc9fdb0ed5923ffef770205167"
+            "sha256": "964878a6570b3435f2c1a6e9d0002462e4125efbe660d466ab7c0388a2a5cfad"
           },
           "rule1_conversion.typed.json": {
-            "sha256": "2902c1d9529b2870f0ba158a2d1e0bee42f344febbbefeccbb339ac2928681e5"
+            "sha256": "a12b46d9c0c0de5085d4345ae1aaa0b98e3d93c64d50846771ebabb1d3d95715"
           }
         }
       },
@@ -286,6 +286,6 @@
     "PR09a emits compile-valid Ada/SPARK skeleton output on the rule1 subset.",
     "safe_runtime.ads remains byte-identical to companion/templates/safe_runtime.ads."
   ],
-  "repeat_sha256": "c59f24c3e6f871341d688a860932a1aa361f450de07b1ce6e328da1f427d21fc",
-  "report_sha256": "c59f24c3e6f871341d688a860932a1aa361f450de07b1ce6e328da1f427d21fc"
+  "repeat_sha256": "e5861414cd50acfc17c5f1c09436affe47b7da5349ff0c6e6c1e1826b424f8fe",
+  "report_sha256": "e5861414cd50acfc17c5f1c09436affe47b7da5349ff0c6e6c1e1826b424f8fe"
 }

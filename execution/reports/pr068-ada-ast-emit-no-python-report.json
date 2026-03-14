@@ -26,16 +26,16 @@
   "deterministic": true,
   "deterministic_outputs": {
     "tests/positive/rule2_binary_search.safe": {
-      "iface/rule2_binary_search.safei.json": "d0a45bdc66522b274a9c67bca10528f755682161554b6308e5b021035b474a4c",
-      "out/rule2_binary_search.ast.json": "2ad9a390149c6f97832bc851c9b629c25d0edc3fb8f41a2c351c25b18f8b3bcd",
-      "out/rule2_binary_search.mir.json": "a58f277bdcfaed01d1f04ea600218c9ecd6298b324e794cdf09b99b8714173d2",
-      "out/rule2_binary_search.typed.json": "485ea2e66cb34bbabfe7ccf8e6cf5689de546ac6ef6cd4d3e6ef863ed990e1c7"
+      "iface/rule2_binary_search.safei.json": "1313762ddb7bb6ee079a053403e0da7adc34bca3b40d8aceb632e990b89efa06",
+      "out/rule2_binary_search.ast.json": "8be5388c0d93d0a069c083cb5ed210ef111abd5c7bbae6cd689b0fe9da19fc51",
+      "out/rule2_binary_search.mir.json": "b64c4cd083526e86a4a84eef432a0dc05e098a81bff98c595687e635286c5264",
+      "out/rule2_binary_search.typed.json": "11ae1dec406b00e2168de8641f9c5d1b119a2e6e8e83ebe66d958e392ddb66f5"
     },
     "tests/positive/rule4_conditional.safe": {
-      "iface/rule4_conditional.safei.json": "9e4779ddb3c599f80d1845d9effbe54bd0a2a48bc3bbe19234901628d8d91659",
-      "out/rule4_conditional.ast.json": "03c0e4a5b7a2a576a4f9651ef9edb475a5ecbc17a8c403e5e461304fe8c3cd8c",
-      "out/rule4_conditional.mir.json": "410f3cec1e4c6b6be6e3d96f3f17c4d62ffeda190033067e295eaae03f1dce16",
-      "out/rule4_conditional.typed.json": "2e85711a22460b0fae2afed59fe9b05762fdb7ca2cfd2b35347f4aeda9ef15f6"
+      "iface/rule4_conditional.safei.json": "206b289a0f8ed8a59c8c5b9d124c1f6fadfefdfc72c5a990bc86daa5fcc06ccb",
+      "out/rule4_conditional.ast.json": "e4b8853131f89c517a03fabc6d9aaa99fed975e49f90414b345fd6d0d3e45de2",
+      "out/rule4_conditional.mir.json": "d83689f9ad6039884a8d6116fd8375c934155feeea2fd281c6d75490a48b9a21",
+      "out/rule4_conditional.typed.json": "f37c886175b0272949212a30ec0bf1d4109367681adfd3fa764c35840caa5913"
     }
   },
   "emit_no_python": {
@@ -657,10 +657,10 @@
           "stdout": ""
         },
         "hashes": {
-          "iface/rule2_binary_search.safei.json": "d0a45bdc66522b274a9c67bca10528f755682161554b6308e5b021035b474a4c",
-          "out/rule2_binary_search.ast.json": "2ad9a390149c6f97832bc851c9b629c25d0edc3fb8f41a2c351c25b18f8b3bcd",
-          "out/rule2_binary_search.mir.json": "a58f277bdcfaed01d1f04ea600218c9ecd6298b324e794cdf09b99b8714173d2",
-          "out/rule2_binary_search.typed.json": "485ea2e66cb34bbabfe7ccf8e6cf5689de546ac6ef6cd4d3e6ef863ed990e1c7"
+          "iface/rule2_binary_search.safei.json": "1313762ddb7bb6ee079a053403e0da7adc34bca3b40d8aceb632e990b89efa06",
+          "out/rule2_binary_search.ast.json": "8be5388c0d93d0a069c083cb5ed210ef111abd5c7bbae6cd689b0fe9da19fc51",
+          "out/rule2_binary_search.mir.json": "b64c4cd083526e86a4a84eef432a0dc05e098a81bff98c595687e635286c5264",
+          "out/rule2_binary_search.typed.json": "11ae1dec406b00e2168de8641f9c5d1b119a2e6e8e83ebe66d958e392ddb66f5"
         },
         "mir_analysis": {
           "command": [
@@ -759,10 +759,10 @@
           "stdout": ""
         },
         "hashes": {
-          "iface/rule4_conditional.safei.json": "9e4779ddb3c599f80d1845d9effbe54bd0a2a48bc3bbe19234901628d8d91659",
-          "out/rule4_conditional.ast.json": "03c0e4a5b7a2a576a4f9651ef9edb475a5ecbc17a8c403e5e461304fe8c3cd8c",
-          "out/rule4_conditional.mir.json": "410f3cec1e4c6b6be6e3d96f3f17c4d62ffeda190033067e295eaae03f1dce16",
-          "out/rule4_conditional.typed.json": "2e85711a22460b0fae2afed59fe9b05762fdb7ca2cfd2b35347f4aeda9ef15f6"
+          "iface/rule4_conditional.safei.json": "206b289a0f8ed8a59c8c5b9d124c1f6fadfefdfc72c5a990bc86daa5fcc06ccb",
+          "out/rule4_conditional.ast.json": "e4b8853131f89c517a03fabc6d9aaa99fed975e49f90414b345fd6d0d3e45de2",
+          "out/rule4_conditional.mir.json": "d83689f9ad6039884a8d6116fd8375c934155feeea2fd281c6d75490a48b9a21",
+          "out/rule4_conditional.typed.json": "f37c886175b0272949212a30ec0bf1d4109367681adfd3fa764c35840caa5913"
         },
         "mir_analysis": {
           "command": [
@@ -821,8 +821,8 @@
       "python3.11": "$TMPDIR/python-mask/python3.11"
     }
   },
-  "repeat_sha256": "5321c6c4dee84dd1be23f021be1758d4d4dff6d4ceecbd517272c9843dfdfd1a",
-  "report_sha256": "5321c6c4dee84dd1be23f021be1758d4d4dff6d4ceecbd517272c9843dfdfd1a",
+  "repeat_sha256": "fb5dad460923a6437fddb1553838c8f1ded3551639a20579b8d816204a244b0e",
+  "report_sha256": "fb5dad460923a6437fddb1553838c8f1ded3551639a20579b8d816204a244b0e",
   "runtime_rule": {
     "banned_tokens_absent": [
       "Run_Backend",

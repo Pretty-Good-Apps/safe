@@ -11,4 +11,3 @@ is
             Depends => (Average'Result => Data);
 
 end Sensor_Average;
-

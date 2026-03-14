@@ -1,7 +1,9 @@
-with Ada.Exceptions;
-with Ada.IO_Exceptions;
 with Ada.Characters.Handling;
 with Ada.Directories;
+with Ada.Exceptions;
+with Ada.IO_Exceptions;
+with Ada.Streams;
+with Ada.Streams.Stream_IO;
 with Ada.Strings.Fixed;
 with Ada.Text_IO;
 with Safe_Frontend.Ada_Emit;
@@ -65,11 +67,32 @@ package body Safe_Frontend.Driver is
    end Source_Stem;
 
    procedure Write_File (Path : String; Contents : String) is
-      File : Ada.Text_IO.File_Type;
+      package AS renames Ada.Streams;
+      package SIO renames Ada.Streams.Stream_IO;
+      File : SIO.File_Type;
    begin
-      Ada.Text_IO.Create (File => File, Mode => Ada.Text_IO.Out_File, Name => Path);
-      Ada.Text_IO.Put (File, Contents);
-      Ada.Text_IO.Close (File);
+      --  Emit exact bytes so generated artifacts match the committed
+      --  snapshots/templates without text-mode newline translation.
+      SIO.Create (File => File, Mode => SIO.Out_File, Name => Path);
+      if Contents'Length > 0 then
+         declare
+            Data : AS.Stream_Element_Array
+              (1 .. AS.Stream_Element_Offset (Contents'Length));
+         begin
+            for Index in Contents'Range loop
+               Data (AS.Stream_Element_Offset (Index - Contents'First + 1)) :=
+                 AS.Stream_Element (Character'Pos (Contents (Index)));
+            end loop;
+            SIO.Write (File, Data);
+         end;
+      end if;
+      SIO.Close (File);
+   exception
+      when others =>
+         if SIO.Is_Open (File) then
+            SIO.Close (File);
+         end if;
+         raise;
    end Write_File;
 
    procedure Delete_If_Exists (Path : String) is
@@ -79,6 +102,8 @@ package body Safe_Frontend.Driver is
       end if;
    exception
       when Ada.IO_Exceptions.Name_Error =>
+         null;
+      when others =>
          null;
    end Delete_If_Exists;
 

@@ -38,4 +38,3 @@ is
    task Consumer;
 
 end Pipeline;
-

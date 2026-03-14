@@ -214,10 +214,10 @@ package body Safe_Frontend.Ada_Emit is
       State    : in out Emit_State);
 
    function Safe_Runtime_Text return String is
-     (Runtime_Template (Runtime_Template'First .. Runtime_Template'Last - 1));
+     (Runtime_Template);
 
    function Gnat_Adc_Text return String is
-     (Gnat_Adc_Contents (Gnat_Adc_Contents'First .. Gnat_Adc_Contents'Last - 1));
+     (Gnat_Adc_Contents);
 
    procedure Raise_Unsupported
      (Span    : FT.Source_Span;

@@ -104,24 +104,24 @@
       "determinism": {
         "ada": {
           "emitter_surface_record.adb": {
-            "sha256": "80b7653339f25737b50e975f7c47a323d1446c9af8c915fb10023dfd00a1fca1"
+            "sha256": "1cb464dfe1347eb6a2c5ef71d40462d20a549fb5145e6db9fda83e7606f0e627"
           },
           "emitter_surface_record.ads": {
-            "sha256": "53c3c5226ffb8a874595673fc208c1ec28b37d6569118beb360e819facaaaf33"
+            "sha256": "f2fde886a83f1132c8a56669221e79131c5bb5a1ebce2c61813b217948b276c8"
           }
         },
         "json_and_interface": {
           "emitter_surface_record.ast.json": {
-            "sha256": "c5fa15ad73c98e3ab89511db8bd164d1675eb4669ee1a6fef9a99215c7cac86c"
+            "sha256": "7b2dae058af4d3a94ff9ca101509fffe922164ebec0df8b6260e0ea19043ed4c"
           },
           "emitter_surface_record.mir.json": {
-            "sha256": "84af171cb814d8cc25afba41f4e7a48c03b44c3acb988b2f58f8c18eb18fcab0"
+            "sha256": "f6b5fbfa32014be16c5e89ad926758f4290f1cf2b9a7f1311c63a29dc78f3ed7"
           },
           "emitter_surface_record.safei.json": {
-            "sha256": "7934ff93ab9b96ff4b7cfb7955c36e4140a050c0e336ff4bc5992442d47e98ef"
+            "sha256": "ff8ab0aa4f1ce5f825ea64c6649aedf7f5a69990da7f0715a1d5afb891efd373"
           },
           "emitter_surface_record.typed.json": {
-            "sha256": "937f10c2bcf00187dd14b9f4603a551b03d1b84e2194bc9938ac3e1019e2d8a2"
+            "sha256": "89bbb212b5b3bfd6029f880a250c1191f5f27b65e4e89240c524ec882984bb03"
           }
         }
       },
@@ -162,24 +162,24 @@
       "determinism": {
         "ada": {
           "emitter_surface_proc.adb": {
-            "sha256": "4eb3905f4f328f61aa6f0caefeef1b50ee1f00820b199bc75c6941a08fbc2c0b"
+            "sha256": "1b789e59d504bad5b1f10d9ee101adbdb65cd3a0a0e6bf110985b329bafc8ca6"
           },
           "emitter_surface_proc.ads": {
-            "sha256": "7c9236b9ea40e3879eededd73ee4f960dbe2b25ba4f68e2dc010fdba6a5ddd2c"
+            "sha256": "1d78193ed3112e01e85490fb5fbf82edc7e267093d10403d823eb154f71024ba"
           }
         },
         "json_and_interface": {
           "emitter_surface_proc.ast.json": {
-            "sha256": "bcacd86770434c438d68130d07c31e219ab3990965b1e5aa41bf14be579e1434"
+            "sha256": "3809f447cfa42c3a9a24bb794f066861cb3dc2e16506cccc55a73cad76a869bf"
           },
           "emitter_surface_proc.mir.json": {
-            "sha256": "fc165f54f606bec89721c3dca8c714973e8dbef623bf4d6fc853aaae357fa46b"
+            "sha256": "b714f93e60ada423e8ec2ca60e8aae87d395382c9275dbd965b4bf137347a410"
           },
           "emitter_surface_proc.safei.json": {
-            "sha256": "1e859ec35d004d6fe1bc543179707e47a23d6af1083e979245a64d51e2068d1b"
+            "sha256": "f3a3cab075fc2591ff338de17a93432ebf16b09d4fd7d79985bda8d5863f05e0"
           },
           "emitter_surface_proc.typed.json": {
-            "sha256": "b0f6a27f3e7c3b258edae187f3e9dec5a9b50a2a5cc7cd6afba64e8d6fb0ef90"
+            "sha256": "f1fb61cf9341c0387f99c55dac78a25ae54aac5b06dc6779da702ce07b573e5d"
           }
         }
       },
@@ -196,12 +196,12 @@
       }
     }
   ],
-  "repeat_sha256": "d0426e8c47e7a8cd6a8e0400af83c552370566b33c6805d06c5f2b45e5d2180c",
-  "report_sha256": "d0426e8c47e7a8cd6a8e0400af83c552370566b33c6805d06c5f2b45e5d2180c",
+  "repeat_sha256": "a8c3d7296aa61ada3e283472161960d9893a13b3cfc9b7afad0375737f7a4d8c",
+  "report_sha256": "a8c3d7296aa61ada3e283472161960d9893a13b3cfc9b7afad0375737f7a4d8c",
   "shared_support_files_preserved": {
     "after": {
-      "emitter_surface_record.adb": "80b7653339f25737b50e975f7c47a323d1446c9af8c915fb10023dfd00a1fca1",
-      "emitter_surface_record.ads": "53c3c5226ffb8a874595673fc208c1ec28b37d6569118beb360e819facaaaf33",
+      "emitter_surface_record.adb": "1cb464dfe1347eb6a2c5ef71d40462d20a549fb5145e6db9fda83e7606f0e627",
+      "emitter_surface_record.ads": "f2fde886a83f1132c8a56669221e79131c5bb5a1ebce2c61813b217948b276c8",
       "gnat.adc": "118c2a7c221218305dcebf64872ca17035609286cb225a41fe528d2d89409f4c",
       "safe_runtime.ads": "758ab91b32e877d42186fce700fafd56a7f8190e42b8a2fb630af1885ce9fea5"
     },

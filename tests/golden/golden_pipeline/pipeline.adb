@@ -93,4 +93,3 @@ package body Pipeline is
    end Consumer;
 
 end Pipeline;
-

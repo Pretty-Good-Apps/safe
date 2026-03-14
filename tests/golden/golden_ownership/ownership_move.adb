@@ -19,4 +19,3 @@ package body Ownership_Move is
    end Transfer;
 
 end Ownership_Move;
-
