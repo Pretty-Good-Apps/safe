@@ -1,0 +1,191 @@
+{
+  "deterministic": true,
+  "fixtures": [
+    {
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/channel_pingpong-a/ada/build.gpr",
+          "ping_pong.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "determinism": {
+        "ada": {
+          "gnat.adc": {
+            "sha256": "02f745f7b4743057317a8e6b81f29ef7431b7672dc8d5cdc4ea5550036d82daf"
+          },
+          "ping_pong.adb": {
+            "sha256": "0765e0e7c7ec86a22bdf1134ce7c367ec256fe81ac6f0e4b12587ee858ce7068"
+          },
+          "ping_pong.ads": {
+            "sha256": "9828c7dfa4c274ba90135130728330cd5342607595589eb3c1a9da2cbb7db9e1"
+          },
+          "safe_runtime.ads": {
+            "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+          }
+        },
+        "json_and_interface": {
+          "channel_pingpong.ast.json": {
+            "sha256": "7cbbcc90704828943428c7cb779165ae3bac2ad022311dea9820d5d7d60668eb"
+          },
+          "channel_pingpong.mir.json": {
+            "sha256": "d6a6c4d717477f84711cbe3ccc707fb8e266c188c1637144d12aa26de974aeea"
+          },
+          "channel_pingpong.safei.json": {
+            "sha256": "0bb256934df8ddf469eb2ce8bc5766706cb053b8e291ebefdca39afea97e4ef7"
+          },
+          "channel_pingpong.typed.json": {
+            "sha256": "c84ac22373b3983a47675315f01db42d78321b6a3aee87875429be55bddca623"
+          }
+        }
+      },
+      "fixture": "tests/positive/channel_pingpong.safe",
+      "gnat_adc": {
+        "content": "pragma Partition_Elaboration_Policy(Sequential);\npragma Profile(Jorvik);\n",
+        "path": "gnat.adc"
+      },
+      "structural_assertions": {
+        "ping_pong.adb": [
+          ".Send (",
+          ".Receive ("
+        ],
+        "ping_pong.ads": [
+          "protected type",
+          "task "
+        ]
+      }
+    },
+    {
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/channel_pipeline-a/ada/build.gpr",
+          "pipeline.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "determinism": {
+        "ada": {
+          "gnat.adc": {
+            "sha256": "02f745f7b4743057317a8e6b81f29ef7431b7672dc8d5cdc4ea5550036d82daf"
+          },
+          "pipeline.adb": {
+            "sha256": "8e5fa2d527d0003935f4e65a36162499935f47f230e686ce7c754384a9b145c4"
+          },
+          "pipeline.ads": {
+            "sha256": "83e39535b65ee91fa26e8ee9ff6d06997081df9ca6d083176a709100895cdcc5"
+          },
+          "safe_runtime.ads": {
+            "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+          }
+        },
+        "json_and_interface": {
+          "channel_pipeline.ast.json": {
+            "sha256": "6d0c09243cc019ea66c645660ad6ec1a6bca588af9ae207df8b7fc84df5d708e"
+          },
+          "channel_pipeline.mir.json": {
+            "sha256": "9d81b9da9d388dc8b8780e8aa8735a07adfa85df523ab16fd8954e11cbb4d50c"
+          },
+          "channel_pipeline.safei.json": {
+            "sha256": "e2b0967a69f49c77a451576e3307728b9c2dc2624ffe4d090d15ef0efe89c2f3"
+          },
+          "channel_pipeline.typed.json": {
+            "sha256": "15ef296f5f0b7d03f007ce449e0afbe5b31ec84aa971adc04512babfbf3de772"
+          }
+        }
+      },
+      "fixture": "tests/positive/channel_pipeline.safe",
+      "gnat_adc": {
+        "content": "pragma Partition_Elaboration_Policy(Sequential);\npragma Profile(Jorvik);\n",
+        "path": "gnat.adc"
+      },
+      "structural_assertions": {
+        "pipeline.adb": [
+          ".Send (",
+          ".Receive ("
+        ],
+        "pipeline.ads": [
+          "protected type",
+          "task "
+        ]
+      }
+    },
+    {
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/select_with_delay-a/ada/build.gpr",
+          "select_with_delay.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "determinism": {
+        "ada": {
+          "gnat.adc": {
+            "sha256": "02f745f7b4743057317a8e6b81f29ef7431b7672dc8d5cdc4ea5550036d82daf"
+          },
+          "safe_runtime.ads": {
+            "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+          },
+          "select_with_delay.adb": {
+            "sha256": "6010d793328ef890bb660e3cf3a09d02e68c4e9389b085c0369d0a4d2f06f528"
+          },
+          "select_with_delay.ads": {
+            "sha256": "9f308aac832401e1339316e2f6befb0343307ed5efa6fd5ce539e971858dfc3f"
+          }
+        },
+        "json_and_interface": {
+          "select_with_delay.ast.json": {
+            "sha256": "1877780d9e4d17a2e8b81e819a8d8f9210c688ecdb67751de13fdbe7b9dc8762"
+          },
+          "select_with_delay.mir.json": {
+            "sha256": "377a71ab132f7f58bc4651c0af6ee10b6157406d6eb3b5b4cfa7ec09717a173a"
+          },
+          "select_with_delay.safei.json": {
+            "sha256": "ef83ccae5b4de061970b39722a5537c2472b326102f111943b7904478a322917"
+          },
+          "select_with_delay.typed.json": {
+            "sha256": "2bcd6eeed543a831ec1c2c0a908f1a256bd952198822f0ee08c1953a8fd63745"
+          }
+        }
+      },
+      "fixture": "tests/concurrency/select_with_delay.safe",
+      "gnat_adc": {
+        "content": "pragma Partition_Elaboration_Policy(Sequential);\npragma Profile(Jorvik);\n",
+        "path": "gnat.adc"
+      },
+      "structural_assertions": {
+        "select_with_delay.adb": [
+          "select",
+          "delay 0.05;",
+          ".Receive ("
+        ],
+        "select_with_delay.ads": [
+          "protected type",
+          "task "
+        ]
+      }
+    }
+  ],
+  "repeat_sha256": "35970dfb25b038c37e8e101ba1d174625fdf5d37c045f1f01cb34afb83ad8c60",
+  "report_sha256": "35970dfb25b038c37e8e101ba1d174625fdf5d37c045f1f01cb34afb83ad8c60"
+}

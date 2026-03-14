@@ -1,6 +1,6 @@
 # SafeC Frontend
 
-This workspace hosts the current Safe compiler frontend baseline established by PR08 on top of the PR06.9.x hardening series.
+This workspace hosts the current Safe compiler frontend baseline established by PR08 on top of the PR06.9.x hardening series, plus the PR09 Ada/SPARK emission layer on top of that baseline.
 
 ## Current Boundary
 
@@ -11,7 +11,7 @@ This workspace hosts the current Safe compiler frontend baseline established by 
 - `safec analyze-mir --diag-json <file.mir.json>` writes `diagnostics-v0` JSON for a `mir-v2` input.
 - `safec check <file.safe> [--interface-search-dir <dir>]...` runs the Ada-native check pipeline for the currently supported subset and exits nonzero if diagnostics are emitted.
 - `safec check --diag-json <file.safe> [--interface-search-dir <dir>]...` writes `diagnostics-v0` JSON for the Ada-native check pipeline.
-- `safec emit <file.safe> --out-dir <dir> --interface-dir <dir> [--interface-search-dir <dir>]...` writes the current frontend artifacts for downstream inspection and regression checks.
+- `safec emit <file.safe> --out-dir <dir> --interface-dir <dir> [--ada-out-dir <dir>] [--interface-search-dir <dir>]...` writes the current frontend artifacts for downstream inspection and regression checks, and optionally emits Ada/SPARK artifacts for the current PR09 subset.
 
 The current frontend supports the exact current Rule 5 fixture corpus, sequential ownership, the current boolean result-record discriminant pattern, the local-only PR08.1/PR08.2 concurrency slice for single-package task declarations, channel declarations, send, receive, try_send, try_receive, select, and relative delay, the PR08.3 interface-contract slice for imported package-qualified resolution through explicit dependency interfaces, the PR08.3a additive constant slice for ordinary object constants plus imported integer/boolean constant values in the currently supported static-expression sites, and the PR08.4 transitive integration slice for imported-summary consumption, cross-package ownership/channel-ceiling analysis, and imported-call ownership semantics.
 
@@ -19,6 +19,7 @@ That current boundary includes:
 
 - schema-true AST emission for the implemented subset
 - `typed-v2`, self-sufficient `mir-v2`, and `safei-v1` emission for that subset
+- deterministic Ada/SPARK emission through `--ada-out-dir` for the current PR09 subset
 - Ada-native MIR validation and MIR analysis for that subset
 - Ada-native `check` over the exact current Rule 5 fixture corpus, the sequential ownership corpus, the current boolean result-record discriminant pattern, and the accepted local-only concurrency corpus
 
@@ -27,6 +28,10 @@ All current user-facing `safec` commands are Ada-native for that supported surfa
 PR06.9.12 is a cliff-detection gate, not a benchmark commitment, for that current frontend subset.
 
 See [`../docs/frontend_architecture_baseline.md`](../docs/frontend_architecture_baseline.md) for the canonical frontend boundary and [`../docs/frontend_scale_limits.md`](../docs/frontend_scale_limits.md) for the current cliff-detection scale policy.
+For a host-local end-to-end walkthrough from Safe source to a runnable native
+binary, see [`../docs/safec_end_to_end_cli_tutorial.md`](../docs/safec_end_to_end_cli_tutorial.md).
+On macOS, local emitted-Ada executable builds should use a generated project
+file with the same linker `syslibroot` pattern as `safec.gpr`.
 
 ## Current Doctrine
 
@@ -46,6 +51,7 @@ The old shallow `Ast` / `Parser` / `Semantics` / `Mir` chain was deleted in PR06
 The only live frontend path is now the Ada-native `Check_*` plus `Mir_*` pipeline, with `Lexer`, `Source`, `Types`, `Diagnostics`, and `Json` supporting that path.
 
 PR08 extends the live `Check_*` + `Mir_*` pipeline, and the current frontend baseline is now PR08.
+PR09 layers deterministic Ada/SPARK emission on top of that frontend baseline through the optional `--ada-out-dir` path.
 
 Unsupported-feature classification rule:
 - `unsupported_source_construct` means the Ada-native frontend recognized a construct that is outside the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern.
@@ -70,7 +76,7 @@ dependency explicitly rather than allowing it to spread by default.
   Notes: the synthetic EOF token is intentionally omitted so the dump remains source-derived.
   Compatibility: incompatible changes require a new format tag.
 
-`safec emit` currently writes four JSON artifacts:
+`safec emit` always writes four JSON artifacts:
 
 - `<stem>.ast.json`
   Format: parser AST shaped to the contract in `compiler/ast_schema.json`.
@@ -103,6 +109,54 @@ dependency explicitly rather than allowing it to spread by default.
   Public subprogram entries carry structured parameter and return-type descriptors, and the summary arrays are populated from the local Bronze pass for public subprograms. PR08.3a extends `objects[]` additively with `is_constant` plus optional `static_value_kind` / `static_value` for the supported integer and boolean constant subset. PR08.4 extends public `channels[]` additively with optional `required_ceiling` so provider channel ceilings can compose with client task priorities.
 
 `safei-v1` is the versioned dependency-interface contract for cross-unit resolution. It carries structured public declarations, local Bronze-derived effect/channel summaries, and additive object constant metadata while remaining the base for later named-number extensions. If the schema changes incompatibly, the format tag must change as well.
+
+When `--ada-out-dir <dir>` is provided, `safec emit` additionally writes deterministic Ada/SPARK artifacts for the current PR09 subset:
+
+- `<unit>.ads`
+  Contents: package spec with `pragma SPARK_Mode (On);`, source-ordered public declarations, and currently supported public aspects.
+
+- `<unit>.adb`
+  Contents: package body for the current supported emitter subset, including arithmetic lowering, ownership/deallocation lowering, and concurrency lowering on the supported PR08 subset.
+
+- `safe_runtime.ads` (optional)
+  Emitted when wide-integer lowering is required.
+  Contract: must remain byte-identical to `../companion/templates/safe_runtime.ads`.
+
+- `gnat.adc` (optional)
+  Emitted when concurrency constructs are present.
+  Contents:
+  - `pragma Partition_Elaboration_Policy(Sequential);`
+  - `pragma Profile(Jorvik);`
+
+Managed artifact set for `safec emit`:
+
+- Always managed:
+  - `<stem>.ast.json`
+  - `<stem>.typed.json`
+  - `<stem>.mir.json`
+  - `<stem>.safei.json`
+- Managed only when `--ada-out-dir <dir>` is provided:
+  - `<unit>.ads`
+  - `<unit>.adb`
+  - optional `safe_runtime.ads`
+  - optional `gnat.adc`
+
+`safec emit` outcome contract:
+
+- Exit `0` (`Exit_Success`)
+  - Full success.
+  - All managed artifacts for the invocation are written deterministically.
+  - Optional Ada support files (`safe_runtime.ads`, `gnat.adc`) are written when needed and otherwise preserved if already present in the target Ada output directory.
+
+- Exit `1` (`Exit_Diagnostics`)
+  - Source/frontend/analyzer diagnostics, including `unsupported_source_construct`.
+  - Diagnostics are reported before any artifact writes, so the managed artifact set is left untouched.
+
+- Exit `3` (`Exit_Internal`)
+  - Internal compiler failures, including serialization or filesystem I/O failures.
+  - The driver computes all managed artifact text before beginning filesystem mutation.
+  - If an Ada artifact write fails after `--ada-out-dir <dir>` was requested, the driver removes the managed unit files for that invocation (`<unit>.ads`, `<unit>.adb`) before returning.
+  - JSON/interface writes remain direct writes rather than a transactional multi-directory commit.
 
 ## Verification
 
@@ -256,6 +310,60 @@ python3 scripts/run_pr08_frontend_baseline.py
 ```
 
 That gate reruns the PR08 milestone gates, verifies tracker/dashboard/docs all describe PR08 as the supported frontend baseline, and records results in `execution/reports/pr08-frontend-baseline-report.json`.
+
+The PR09a emitter surface gate is:
+
+```bash
+cd compiler_impl && $HOME/bin/alr build
+python3 scripts/run_pr09a_emitter_surface.py
+```
+
+That gate validates deterministic package skeleton emission on the slice-1 subset, compiles the emitted Ada, proves unsupported emitter-only constructs fail without partial output, and records results in `execution/reports/pr09a-emitter-surface-report.json`.
+
+The PR09a arithmetic MVP gate is:
+
+```bash
+cd compiler_impl && $HOME/bin/alr build
+python3 scripts/run_pr09a_emitter_mvp.py
+```
+
+That gate validates deterministic Rule 1 arithmetic emission, compile-only Ada/SPARK output on the PR09a subset, `Safe_Runtime.Wide_Integer` lowering, narrowing assertions, and `safe_runtime.ads` byte identity against the companion template, then records results in `execution/reports/pr09a-emitter-mvp-report.json`.
+
+The PR09b sequential semantics gate is:
+
+```bash
+cd compiler_impl && $HOME/bin/alr build
+python3 scripts/run_pr09b_sequential_semantics.py
+```
+
+That gate validates deterministic emitted ownership/deallocation shapes plus public `Global` / `Depends` / `Initializes` aspects on the supported sequential subset, compiles the emitted Ada, and records results in `execution/reports/pr09b-sequential-semantics-report.json`.
+
+The PR09b concurrency output gate is:
+
+```bash
+cd compiler_impl && $HOME/bin/alr build
+python3 scripts/run_pr09b_concurrency_output.py
+```
+
+That gate validates deterministic task/channel/select lowering on the supported PR08 concurrency subset, compiles emitted Ada with `gnat.adc` applied explicitly, checks the fixed `gnat.adc` content, and records results in `execution/reports/pr09b-concurrency-output-report.json`.
+
+The PR09b snapshot refresh gate is:
+
+```bash
+cd compiler_impl && $HOME/bin/alr build
+python3 scripts/run_pr09b_snapshot_refresh.py
+```
+
+That gate compares emitted Ada artifacts against the committed golden directories under `tests/golden/`, proves the retired monolithic `.ada` snapshots are gone, and records results in `execution/reports/pr09b-snapshot-refresh-report.json`.
+
+The PR09 Ada-emission baseline gate is:
+
+```bash
+cd compiler_impl && $HOME/bin/alr build
+python3 scripts/run_pr09_ada_emission_baseline.py
+```
+
+That gate reruns the PR09 slice gates, verifies tracker/dashboard/docs describe PR09 as complete with `PR10` next, and records results in `execution/reports/pr09-ada-emission-baseline-report.json`.
 
 To enforce the local pre-push gate chain in this clone, enable the tracked hook once:
 

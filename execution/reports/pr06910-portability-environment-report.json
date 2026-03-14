@@ -24,6 +24,7 @@
       "(?<![A-Za-z0-9_.-])(?:\\.{1,2}/|[^\\\"'\\s]+/)+python3\\.\\d+(?![A-Za-z0-9_.-])"
     ],
     "runtime_source_files": [
+      "compiler_impl/src/safe_frontend-ada_emit.adb",
       "compiler_impl/src/safe_frontend-check_emit.adb",
       "compiler_impl/src/safe_frontend-check_lower.adb",
       "compiler_impl/src/safe_frontend-check_model.adb",
@@ -45,6 +46,7 @@
       "compiler_impl/src/safe_frontend-source.adb",
       "compiler_impl/src/safe_frontend-types.adb",
       "compiler_impl/src/safec.adb",
+      "compiler_impl/src/safe_frontend-ada_emit.ads",
       "compiler_impl/src/safe_frontend-check_emit.ads",
       "compiler_impl/src/safe_frontend-check_lower.ads",
       "compiler_impl/src/safe_frontend-check_model.ads",
@@ -69,6 +71,7 @@
     ],
     "runtime_source_violations": [],
     "scripts_scanned": [
+      "scripts/_lib/pr09_emit.py",
       "scripts/run_local_pre_push.py",
       "scripts/run_pr068_ada_ast_emit_no_python.py",
       "scripts/run_pr06910_portability_environment.py",
@@ -77,6 +80,12 @@
       "scripts/run_pr082_local_concurrency_analysis.py",
       "scripts/run_pr083_interface_contracts.py",
       "scripts/run_pr083a_public_constants.py",
+      "scripts/run_pr09_ada_emission_baseline.py",
+      "scripts/run_pr09a_emitter_mvp.py",
+      "scripts/run_pr09a_emitter_surface.py",
+      "scripts/run_pr09b_concurrency_output.py",
+      "scripts/run_pr09b_sequential_semantics.py",
+      "scripts/run_pr09b_snapshot_refresh.py",
       "scripts/validate_execution_state.py"
     ],
     "shell_assumption_violations": [],
@@ -97,8 +106,8 @@
     "execution/reports/pr068-ada-ast-emit-no-python-report.json",
     "execution/reports/pr06910-portability-environment-report.json"
   ],
-  "repeat_sha256": "72c0905cb63ca329bd9edd1a9e20e5a22a9b2b5d738f88e7f8260d69f9ed1e47",
-  "report_sha256": "72c0905cb63ca329bd9edd1a9e20e5a22a9b2b5d738f88e7f8260d69f9ed1e47",
+  "repeat_sha256": "2d475a4e25225bbae8653311b53a13741efe97a1084cb755f5572f16ac416071",
+  "report_sha256": "2d475a4e25225bbae8653311b53a13741efe97a1084cb755f5572f16ac416071",
   "reruns": {
     "ast_emit_no_python": {
       "command": [
@@ -147,6 +156,6 @@
     "cwd": "$REPO_ROOT",
     "result": "OK",
     "returncode": 0,
-    "tests_ran": 74
+    "tests_ran": 80
   }
 }

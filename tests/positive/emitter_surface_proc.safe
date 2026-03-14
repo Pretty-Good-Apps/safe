@@ -1,0 +1,17 @@
+-- Test: emitter_surface_proc
+-- Description: Minimal PR09 surface fixture for procedure emission.
+--   Exercises parameter rendering, local declarations, and direct assignment
+--   on the non-arithmetic slice.
+-- Expected: ACCEPT
+
+package Emitter_Surface_Proc is
+
+   type Small is range 0 .. 5;
+
+   procedure Copy (Input : Small; Output : out Small) is
+      Local : Small = Input;
+   begin
+      Output = Local;
+   end Copy;
+
+end Emitter_Surface_Proc;

@@ -1,9 +1,12 @@
-with Ada.Exceptions;
-with Ada.IO_Exceptions;
 with Ada.Characters.Handling;
 with Ada.Directories;
+with Ada.Exceptions;
+with Ada.IO_Exceptions;
+with Ada.Streams;
+with Ada.Streams.Stream_IO;
 with Ada.Strings.Fixed;
 with Ada.Text_IO;
+with Safe_Frontend.Ada_Emit;
 with Safe_Frontend.Check_Emit;
 with Safe_Frontend.Check_Lower;
 with Safe_Frontend.Check_Parse;
@@ -21,6 +24,7 @@ with Safe_Frontend.Source;
 with Safe_Frontend.Types;
 
 package body Safe_Frontend.Driver is
+   package AE renames Safe_Frontend.Ada_Emit;
    package CE renames Safe_Frontend.Check_Emit;
    package CL renames Safe_Frontend.Check_Lower;
    package CP renames Safe_Frontend.Check_Parse;
@@ -63,12 +67,109 @@ package body Safe_Frontend.Driver is
    end Source_Stem;
 
    procedure Write_File (Path : String; Contents : String) is
-      File : Ada.Text_IO.File_Type;
+      package AS renames Ada.Streams;
+      package SIO renames Ada.Streams.Stream_IO;
+      File : SIO.File_Type;
    begin
-      Ada.Text_IO.Create (File => File, Mode => Ada.Text_IO.Out_File, Name => Path);
-      Ada.Text_IO.Put (File, Contents);
-      Ada.Text_IO.Close (File);
+      --  Emit exact bytes so generated artifacts match the committed
+      --  snapshots/templates without text-mode newline translation.
+      SIO.Create (File => File, Mode => SIO.Out_File, Name => Path);
+      if Contents'Length > 0 then
+         declare
+            Data : AS.Stream_Element_Array
+              (1 .. AS.Stream_Element_Offset (Contents'Length));
+         begin
+            for Index in Contents'Range loop
+               Data (AS.Stream_Element_Offset (Index - Contents'First + 1)) :=
+                 AS.Stream_Element (Character'Pos (Contents (Index)));
+            end loop;
+            SIO.Write (File, Data);
+         end;
+      end if;
+      SIO.Close (File);
+   exception
+      when others =>
+         if SIO.Is_Open (File) then
+            SIO.Close (File);
+         end if;
+         raise;
    end Write_File;
+
+   procedure Best_Effort_Delete (Path : String) is
+   begin
+      if Ada.Directories.Exists (Path) then
+         Ada.Directories.Delete_File (Path);
+      end if;
+   exception
+      when others =>
+         null;
+   end Best_Effort_Delete;
+
+   procedure Write_Shared_Support_File
+     (Path     : String;
+      Contents : String) is
+      Temp_Path   : constant String := Path & ".safec-tmp";
+      Backup_Path : constant String := Path & ".safec-bak";
+      Had_Target  : constant Boolean := Ada.Directories.Exists (Path);
+   begin
+      Best_Effort_Delete (Temp_Path);
+      Best_Effort_Delete (Backup_Path);
+
+      Write_File (Temp_Path, Contents);
+
+      if Had_Target then
+         Ada.Directories.Rename (Old_Name => Path, New_Name => Backup_Path);
+      end if;
+
+      begin
+         Ada.Directories.Rename (Old_Name => Temp_Path, New_Name => Path);
+      exception
+         when others =>
+            Best_Effort_Delete (Temp_Path);
+            if Had_Target and then Ada.Directories.Exists (Backup_Path) then
+               begin
+                  Ada.Directories.Rename (Old_Name => Backup_Path, New_Name => Path);
+               exception
+                  when others =>
+                     null;
+               end;
+            end if;
+            raise;
+      end;
+
+      Best_Effort_Delete (Backup_Path);
+   exception
+      when others =>
+         Best_Effort_Delete (Temp_Path);
+         raise;
+   end Write_Shared_Support_File;
+
+   procedure Delete_If_Exists
+     (Path           : String;
+      Cleanup_Failed : in out Boolean) is
+   begin
+      if Ada.Directories.Exists (Path) then
+         Ada.Directories.Delete_File (Path);
+      end if;
+   exception
+      when Ada.IO_Exceptions.Name_Error =>
+         null;
+      when others =>
+         Cleanup_Failed := True;
+   end Delete_If_Exists;
+
+   procedure Cleanup_Ada_Artifacts
+     (Ada_Out_Dir : String;
+      Ada_Stem    : String;
+      Cleanup_Failed : in out Boolean) is
+   begin
+      Delete_If_Exists
+        (Ada_Out_Dir & "/" & Ada_Stem & ".ads",
+         Cleanup_Failed);
+      Delete_If_Exists
+        (Ada_Out_Dir & "/" & Ada_Stem & ".adb",
+         Cleanup_Failed);
+   end Cleanup_Ada_Artifacts;
 
    function Failure_Exit_Code (Result : Lex_Result) return Integer is
    begin
@@ -440,6 +541,7 @@ package body Safe_Frontend.Driver is
      (Path          : String;
       Out_Dir       : String;
       Interface_Dir : String;
+      Ada_Out_Dir   : String := "";
       Search_Dirs   : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector)
       return Integer
    is
@@ -464,6 +566,10 @@ package body Safe_Frontend.Driver is
          Mir_Result : constant Safe_Frontend.Mir_Analyze.Analyze_Result :=
            Safe_Frontend.Mir_Analyze.Analyze (Mir_Doc);
          Stem       : constant String := Source_Stem (Path);
+         Ast_Text   : constant String := CE.Ast_Json (Pipeline.Parsed, Pipeline.Resolved);
+         Typed_Text : constant String := CE.Typed_Json (Pipeline.Parsed, Pipeline.Resolved);
+         Mir_Text   : constant String := Safe_Frontend.Mir_Write.To_Json (Mir_Doc);
+         Safei_Text : constant String := CE.Interface_Json (Pipeline.Parsed, Pipeline.Resolved, Bronze);
       begin
          if not Mir_Result.Success then
             Ada.Text_IO.Put_Line
@@ -481,21 +587,92 @@ package body Safe_Frontend.Driver is
             return Safe_Frontend.Exit_Diagnostics;
          end if;
 
-         Ada.Directories.Create_Path (Out_Dir);
-         Ada.Directories.Create_Path (Interface_Dir);
-         Write_File
-           (Out_Dir & "/" & Stem & ".ast.json",
-            CE.Ast_Json (Pipeline.Parsed, Pipeline.Resolved));
-         Write_File
-           (Out_Dir & "/" & Stem & ".typed.json",
-            CE.Typed_Json (Pipeline.Parsed, Pipeline.Resolved));
-         Write_File
-           (Out_Dir & "/" & Stem & ".mir.json",
-            Safe_Frontend.Mir_Write.To_Json (Mir_Doc));
-         Write_File
-           (Interface_Dir & "/" & Stem & ".safei.json",
-            CE.Interface_Json (Pipeline.Parsed, Pipeline.Resolved, Bronze));
-         return Safe_Frontend.Exit_Success;
+         declare
+            Ada_Result : constant AE.Artifact_Result :=
+              (if Ada_Out_Dir'Length > 0
+               then AE.Emit (Pipeline.Resolved, Mir_Doc, Bronze)
+               else (Success => True,
+                     Unit_Name => FT.To_UString (""),
+                     Spec_Text => FT.To_UString (""),
+                     Body_Text => FT.To_UString (""),
+                     Needs_Safe_Runtime => False,
+                     Needs_Gnat_Adc => False));
+            Safe_Runtime : constant String :=
+              (if Ada_Out_Dir'Length > 0 and then Ada_Result.Success and then Ada_Result.Needs_Safe_Runtime
+               then AE.Safe_Runtime_Text
+               else "");
+            Gnat_Adc     : constant String :=
+              (if Ada_Out_Dir'Length > 0 and then Ada_Result.Success and then Ada_Result.Needs_Gnat_Adc
+               then AE.Gnat_Adc_Text
+               else "");
+         begin
+            if not Ada_Result.Success then
+               return
+                 Emit_Check_Diagnostics
+                   (Singleton (Ada_Result.Diagnostic),
+                    FT.To_String (Pipeline.Lexed.Input.Content),
+                    Path,
+                    False);
+            end if;
+
+            Ada.Directories.Create_Path (Out_Dir);
+            Ada.Directories.Create_Path (Interface_Dir);
+            if Ada_Out_Dir'Length > 0 then
+               Ada.Directories.Create_Path (Ada_Out_Dir);
+            end if;
+            Write_File
+              (Out_Dir & "/" & Stem & ".ast.json",
+               Ast_Text);
+            Write_File
+              (Out_Dir & "/" & Stem & ".typed.json",
+               Typed_Text);
+            Write_File
+              (Out_Dir & "/" & Stem & ".mir.json",
+               Mir_Text);
+            Write_File
+              (Interface_Dir & "/" & Stem & ".safei.json",
+               Safei_Text);
+            if Ada_Out_Dir'Length > 0 then
+               declare
+                  Ada_Stem : constant String := AE.Unit_File_Stem (FT.To_String (Ada_Result.Unit_Name));
+               begin
+                  begin
+                     Write_File
+                       (Ada_Out_Dir & "/" & Ada_Stem & ".ads",
+                        FT.To_String (Ada_Result.Spec_Text));
+                     Write_File
+                       (Ada_Out_Dir & "/" & Ada_Stem & ".adb",
+                        FT.To_String (Ada_Result.Body_Text));
+                     if Ada_Result.Needs_Safe_Runtime then
+                        Write_Shared_Support_File
+                          (Ada_Out_Dir & "/safe_runtime.ads",
+                           Safe_Runtime);
+                     end if;
+                     if Ada_Result.Needs_Gnat_Adc then
+                        Write_Shared_Support_File
+                          (Ada_Out_Dir & "/gnat.adc",
+                           Gnat_Adc);
+                     end if;
+                  exception
+                     when others =>
+                        declare
+                           Cleanup_Failed : Boolean := False;
+                        begin
+                           Cleanup_Ada_Artifacts (Ada_Out_Dir, Ada_Stem, Cleanup_Failed);
+                           if Cleanup_Failed then
+                              Ada.Text_IO.Put_Line
+                                (Ada.Text_IO.Current_Error,
+                                 "emit: WARNING: failed to remove one or more partially written Ada artifacts from `"
+                                 & Ada_Out_Dir
+                                 & "`");
+                           end if;
+                        end;
+                        raise;
+                  end;
+               end;
+            end if;
+            return Safe_Frontend.Exit_Success;
+         end;
       end;
    exception
       when Error : others =>

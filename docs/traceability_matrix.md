@@ -91,9 +91,9 @@ generated artifact, test file(s), and implementation status.
 | 43 | `2.1.13.p91:4a433f78` | 2.1.13 | 91 | Conformance | N/A | -- | stubbed |
 | 44 | `2.2.p93:301d16b8` | 2.2 | 93 | Conformance | N/A | -- | stubbed |
 | 45 | `2.7.p124:ef993f07` | 2.7 | 124 | Conformance | N/A | -- | stubbed |
-| 46 | `2.3.2.p96a:0eaf48aa` | 2.3.2 | 96a | Memory-safety | Safe_PO.Check_Owned_For_Move, Safe_Model.Ownership_State, Safe_Model.Make_Channel, Safe_Model.Is_Borrowable, Safe_Model.Is_Movable | ownership_move.safe, rule4_linked_list.safe, neg_own_double_move.safe, golden_ownership.ada, diag_double_move.txt | stubbed |
-| 47 | `2.3.2.p96c:0b45de01` | 2.3.2 | 96c | Memory-safety | Safe_PO.Check_Not_Moved, Safe_Model.Ownership_State, Safe_Model.Make_Channel | ownership_move.safe, neg_own_double_move.safe, neg_own_use_after_move.safe, neg_rule4_moved.safe, golden_ownership.ada, diag_double_move.txt | stubbed |
-| 48 | `2.3.2.p97a:8d0214d5` | 2.3.2 | 97a | Memory-safety | N/A | ownership_move.safe, golden_ownership.ada | stubbed |
+| 46 | `2.3.2.p96a:0eaf48aa` | 2.3.2 | 96a | Memory-safety | Safe_PO.Check_Owned_For_Move, Safe_Model.Ownership_State, Safe_Model.Make_Channel, Safe_Model.Is_Borrowable, Safe_Model.Is_Movable | ownership_move.safe, rule4_linked_list.safe, neg_own_double_move.safe, golden_ownership/, diag_double_move.txt | stubbed |
+| 47 | `2.3.2.p96c:0b45de01` | 2.3.2 | 96c | Memory-safety | Safe_PO.Check_Not_Moved, Safe_Model.Ownership_State, Safe_Model.Make_Channel | ownership_move.safe, neg_own_double_move.safe, neg_own_use_after_move.safe, neg_rule4_moved.safe, golden_ownership/, diag_double_move.txt | stubbed |
+| 48 | `2.3.2.p97a:8d0214d5` | 2.3.2 | 97a | Memory-safety | N/A | ownership_move.safe, golden_ownership/ | stubbed |
 | 49 | `2.3.2.p97a-diag:dc259149` | 2.3.2 | 97a-diag | Memory-safety | N/A | -- | stubbed |
 | 50 | `2.3.3.p99b:47108b45` | 2.3.3 | 99b | Memory-safety | Safe_PO.Check_Borrow_Exclusive, Safe_Model.Ownership_State, Safe_Model.Make_Channel, Safe_Model.Is_Observable, Safe_Model.Is_Borrowable | ownership_borrow.safe, neg_own_borrow_conflict.safe | stubbed |
 | 51 | `2.3.3.p100a:ba849e66` | 2.3.3 | 100a | Memory-safety | N/A | ownership_borrow.safe | stubbed |
@@ -102,7 +102,7 @@ generated artifact, test file(s), and implementation status.
 | 54 | `2.3.4a.p102b:2ed757bd` | 2.3.4a | 102b | Memory-safety | Safe_Model.Ownership_State, Safe_Model.Make_Channel | neg_rule4_freed.safe | stubbed |
 | 55 | `2.3.4a.p102b-diag:ddab22c8` | 2.3.4a | 102b-diag | Memory-safety | N/A | neg_rule4_freed.safe | stubbed |
 | 56 | `2.3.5.p103a:520dc0d4` | 2.3.5 | 103a | Memory-safety | N/A | rule4_factory.safe | stubbed |
-| 57 | `2.3.5.p104:d9f9b8d9` | 2.3.5 | 104 | Memory-safety | N/A | golden_ownership.ada | stubbed |
+| 57 | `2.3.5.p104:d9f9b8d9` | 2.3.5 | 104 | Memory-safety | N/A | golden_ownership/ | stubbed |
 | 58 | `2.3.5.p104a:b70c1d15` | 2.3.5 | 104a | Memory-safety | N/A | -- | stubbed |
 | 59 | `2.3.5.p105:d4a9cdb4` | 2.3.5 | 105 | Memory-safety | N/A | -- | stubbed |
 | 60 | `2.3.5.p106:bae12394` | 2.3.5 | 106 | Memory-safety | N/A | -- | stubbed |
@@ -113,8 +113,8 @@ generated artifact, test file(s), and implementation status.
 | 65 | `2.3.8.p111c:819cc398` | 2.3.8 | 111c | Memory-safety | N/A | -- | stubbed |
 | 66 | `2.3.8.p113:75fcd707` | 2.3.8 | 113 | Silver-AoRTE | N/A | -- | stubbed |
 | 67 | `2.3.8.p109-end:5d18703e` | 2.3.8 | 109-end | Silver-AoRTE | N/A | -- | stubbed |
-| 68 | `2.8.1.p126:812b54a8` | 2.8.1 | 126 | Silver-AoRTE | Safe_PO.Safe_Div, Safe_Model.Range64 | rule1_accumulate.safe, rule1_averaging.safe, rule2_binary_search.safe, rule3_average.safe, neg_rule1_overflow.safe, golden_sensors.ada, diag_overflow.txt | stubbed |
-| 69 | `2.8.1.p127:d5d93439` | 2.8.1 | 127 | Silver-AoRTE | Safe_PO.Narrow_Assignment, Safe_PO.Narrow_Parameter, Safe_PO.Narrow_Return, Safe_PO.Narrow_Indexing, Safe_PO.Narrow_Conversion, Safe_Model.Range64 | rule1_accumulate.safe, rule1_averaging.safe, rule1_conversion.safe, rule1_parameter.safe, rule1_return.safe, rule3_percent.safe, neg_rule1_index_fail.safe, neg_rule1_narrow_fail.safe, neg_rule1_param_fail.safe, neg_rule1_return_fail.safe, golden_sensors.ada | stubbed |
+| 68 | `2.8.1.p126:812b54a8` | 2.8.1 | 126 | Silver-AoRTE | Safe_PO.Safe_Div, Safe_Model.Range64 | rule1_accumulate.safe, rule1_averaging.safe, rule2_binary_search.safe, rule3_average.safe, neg_rule1_overflow.safe, golden_sensors/, diag_overflow.txt | stubbed |
+| 69 | `2.8.1.p127:d5d93439` | 2.8.1 | 127 | Silver-AoRTE | Safe_PO.Narrow_Assignment, Safe_PO.Narrow_Parameter, Safe_PO.Narrow_Return, Safe_PO.Narrow_Indexing, Safe_PO.Narrow_Conversion, Safe_Model.Range64 | rule1_accumulate.safe, rule1_averaging.safe, rule1_conversion.safe, rule1_parameter.safe, rule1_return.safe, rule3_percent.safe, neg_rule1_index_fail.safe, neg_rule1_narrow_fail.safe, neg_rule1_param_fail.safe, neg_rule1_return_fail.safe, golden_sensors/ | stubbed |
 | 70 | `2.8.1.p128:d2e83ca8` | 2.8.1 | 128 | Silver-AoRTE | Safe_Model.Range64, Safe_Model.Excludes_Zero | -- | stubbed |
 | 71 | `2.8.1.p129:9f3b1394` | 2.8.1 | 129 | Silver-AoRTE | N/A | rule1_accumulate.safe, neg_rule1_overflow.safe, diag_overflow.txt | stubbed |
 | 72 | `2.8.1.p130:2289e5b2` | 2.8.1 | 130 | Silver-AoRTE | Safe_PO.Narrow_Assignment, Safe_PO.Narrow_Parameter, Safe_PO.Narrow_Conversion | rule1_conversion.safe, rule1_parameter.safe, neg_rule1_narrow_fail.safe, neg_rule1_param_fail.safe | stubbed |
@@ -163,7 +163,7 @@ generated artifact, test file(s), and implementation status.
 
 | # | Clause ID | Section | Para | Target | Artifact | Test File(s) | Status |
 |---|-----------|---------|------|--------|----------|-------------|--------|
-| 1 | `4.1.p2:78f022f7` | 4.1 | 2 | Race-freedom | N/A | channel_pingpong.safe, channel_pipeline.safe, golden_pipeline.ada | stubbed |
+| 1 | `4.1.p2:78f022f7` | 4.1 | 2 | Race-freedom | N/A | channel_pingpong.safe, channel_pipeline.safe, golden_pipeline/ | stubbed |
 | 2 | `4.1.p3:542e0dee` | 4.1 | 3 | Race-freedom | N/A | -- | stubbed |
 | 3 | `4.1.p4:016e5737` | 4.1 | 4 | Conformance | N/A | -- | stubbed |
 | 4 | `4.1.p5:4e4afebc` | 4.1 | 5 | Race-freedom | N/A | -- | stubbed |
@@ -174,23 +174,23 @@ generated artifact, test file(s), and implementation status.
 | 9 | `4.1.p11:2460c5cb` | 4.1 | 11 | Determinism | N/A | -- | stubbed |
 | 10 | `4.2.p13:4f888b03` | 4.2 | 13 | Conformance | N/A | -- | stubbed |
 | 11 | `4.2.p14:a35bd0fa` | 4.2 | 14 | Conformance | N/A | -- | stubbed |
-| 12 | `4.2.p15:b5b29b0e` | 4.2 | 15 | Conformance | Safe_PO.Check_Channel_Capacity_Positive, Safe_Model.Channel_State | channel_pingpong.safe, channel_pipeline.safe, neg_chan_empty_recv.safe, neg_chan_full_send.safe, neg_chan_zero_cap.safe, golden_pipeline.ada | stubbed |
-| 13 | `4.2.p20:8aa1a21e` | 4.2 | 20 | Determinism | Safe_Model.Channel_State | channel_pingpong.safe, channel_pipeline.safe, golden_pipeline.ada, fifo_ordering.safe | stubbed |
+| 12 | `4.2.p15:b5b29b0e` | 4.2 | 15 | Conformance | Safe_PO.Check_Channel_Capacity_Positive, Safe_Model.Channel_State | channel_pingpong.safe, channel_pipeline.safe, neg_chan_empty_recv.safe, neg_chan_full_send.safe, neg_chan_zero_cap.safe, golden_pipeline/ | stubbed |
+| 13 | `4.2.p20:8aa1a21e` | 4.2 | 20 | Determinism | Safe_Model.Channel_State | channel_pingpong.safe, channel_pipeline.safe, golden_pipeline/, fifo_ordering.safe | stubbed |
 | 14 | `4.2.p21:c6a92460` | 4.2 | 21 | Race-freedom | N/A | -- | stubbed |
 | 15 | `4.2.p21a:16ec46cb` | 4.2 | 21a | Race-freedom | N/A | -- | stubbed |
 | 16 | `4.3.p23:197d9a49` | 4.3 | 23 | Conformance | N/A | -- | stubbed |
 | 17 | `4.3.p24:9e47ed4c` | 4.3 | 24 | Conformance | N/A | -- | stubbed |
 | 18 | `4.3.p25:961abe5a` | 4.3 | 25 | Conformance | N/A | -- | stubbed |
 | 19 | `4.3.p26:3a9449c1` | 4.3 | 26 | Conformance | N/A | -- | stubbed |
-| 20 | `4.3.p27:ef0ce6bd` | 4.3 | 27 | Race-freedom | Safe_PO.Check_Channel_Not_Full, Safe_Model.Channel_State | channel_pingpong.safe, channel_pipeline.safe, neg_chan_full_send.safe, golden_pipeline.ada, fifo_ordering.safe, multi_task_channel.safe | stubbed |
+| 20 | `4.3.p27:ef0ce6bd` | 4.3 | 27 | Race-freedom | Safe_PO.Check_Channel_Not_Full, Safe_Model.Channel_State | channel_pingpong.safe, channel_pipeline.safe, neg_chan_full_send.safe, golden_pipeline/, fifo_ordering.safe, multi_task_channel.safe | stubbed |
 | 21 | `4.3.p27a:8ed3c1d4` | 4.3 | 27a | Memory-safety | N/A | -- | stubbed |
-| 22 | `4.3.p28:ea6bd13c` | 4.3 | 28 | Race-freedom | Safe_PO.Check_Channel_Not_Empty, Safe_Model.Channel_State | channel_pingpong.safe, channel_pipeline.safe, neg_chan_empty_recv.safe, golden_pipeline.ada, fifo_ordering.safe, multi_task_channel.safe | stubbed |
+| 22 | `4.3.p28:ea6bd13c` | 4.3 | 28 | Race-freedom | Safe_PO.Check_Channel_Not_Empty, Safe_Model.Channel_State | channel_pingpong.safe, channel_pipeline.safe, neg_chan_empty_recv.safe, golden_pipeline/, fifo_ordering.safe, multi_task_channel.safe | stubbed |
 | 23 | `4.3.p28a:4cb19779` | 4.3 | 28a | Memory-safety | N/A | -- | stubbed |
 | 24 | `4.3.p29:f792d704` | 4.3 | 29 | Race-freedom | Safe_PO.Check_Channel_Not_Full | try_send_ownership.safe | stubbed |
 | 25 | `4.3.p29a:8d3f2225` | 4.3 | 29a | Memory-safety | N/A | try_send_ownership.safe | stubbed |
 | 26 | `4.3.p29b:7121ccd7` | 4.3 | 29b | Memory-safety | N/A | try_send_ownership.safe | stubbed |
 | 27 | `4.3.p30:62619161` | 4.3 | 30 | Memory-safety | N/A | -- | stubbed |
-| 28 | `4.3.p31:a7297e97` | 4.3 | 31 | Race-freedom | Safe_Model.Channel_State | channel_pipeline.safe, golden_pipeline.ada, multi_task_channel.safe | stubbed |
+| 28 | `4.3.p31:a7297e97` | 4.3 | 31 | Race-freedom | Safe_Model.Channel_State | channel_pipeline.safe, golden_pipeline/, multi_task_channel.safe | stubbed |
 | 29 | `4.3.p31a:a621d08c` | 4.3 | 31a | Memory-safety | N/A | -- | stubbed |
 | 30 | `4.4.p33:7a94ab51` | 4.4 | 33 | Conformance | N/A | select_priority.safe, select_with_delay.safe, select_delay_local_scope.safe | stubbed |
 | 31 | `4.4.p34:f0f83b83` | 4.4 | 34 | Conformance | N/A | -- | stubbed |
@@ -225,7 +225,7 @@ generated artifact, test file(s), and implementation status.
 | 7 | `5.3.1.p12a:047a8410` | 5.3.1 | 12a | Silver-AoRTE | N/A | -- | stubbed |
 | 8 | `5.3.2.p15:1ab3314c` | 5.3.2 | 15 | Silver-AoRTE | Safe_Model.Range64 | -- | stubbed |
 | 9 | `5.3.2.p16:2e323902` | 5.3.2 | 16 | Silver-AoRTE | N/A | -- | stubbed |
-| 10 | `5.3.6.p25:e8253bd7` | 5.3.6 | 25 | Silver-AoRTE | Safe_PO.Narrow_Assignment, Safe_PO.Narrow_Return | rule1_averaging.safe, rule1_return.safe, neg_rule1_return_fail.safe, golden_sensors.ada | stubbed |
+| 10 | `5.3.6.p25:e8253bd7` | 5.3.6 | 25 | Silver-AoRTE | Safe_PO.Narrow_Assignment, Safe_PO.Narrow_Return | rule1_averaging.safe, rule1_return.safe, neg_rule1_return_fail.safe, golden_sensors/ | stubbed |
 | 11 | `5.3.6.p26:9ca2c786` | 5.3.6 | 26 | Silver-AoRTE | N/A | neg_rule1_narrow_fail.safe | stubbed |
 | 12 | `5.3.7.p27:e63b291b` | 5.3.7 | 27 | Silver-AoRTE | N/A | -- | stubbed |
 | 13 | `5.3.7a.p28a:5936dbea` | 5.3.7a | 28a | Silver-AoRTE | Safe_PO.FP_Not_NaN | -- | stubbed |
@@ -309,8 +309,8 @@ For each D27 Rule (1-5), the related clause IDs, `safe_po` procedures, test file
 
 | Clause ID | Section | Artifact | Test File(s) | Status |
 |-----------|---------|----------|-------------|--------|
-| `2.8.1.p126:812b54a8` | 2.8.1 | Safe_PO.Safe_Div, Safe_Model.Range64 | rule1_accumulate.safe, rule1_averaging.safe, rule2_binary_search.safe, rule3_average.safe, neg_rule1_overflow.safe, golden_sensors.ada, diag_overflow.txt | stubbed |
-| `2.8.1.p127:d5d93439` | 2.8.1 | Safe_PO.Narrow_Assignment, Safe_PO.Narrow_Parameter, Safe_PO.Narrow_Return, Safe_PO.Narrow_Indexing, Safe_PO.Narrow_Conversion, Safe_Model.Range64 | rule1_accumulate.safe, rule1_averaging.safe, rule1_conversion.safe, rule1_parameter.safe, rule1_return.safe, rule3_percent.safe, neg_rule1_index_fail.safe, neg_rule1_narrow_fail.safe, neg_rule1_param_fail.safe, neg_rule1_return_fail.safe, golden_sensors.ada | stubbed |
+| `2.8.1.p126:812b54a8` | 2.8.1 | Safe_PO.Safe_Div, Safe_Model.Range64 | rule1_accumulate.safe, rule1_averaging.safe, rule2_binary_search.safe, rule3_average.safe, neg_rule1_overflow.safe, golden_sensors/, diag_overflow.txt | stubbed |
+| `2.8.1.p127:d5d93439` | 2.8.1 | Safe_PO.Narrow_Assignment, Safe_PO.Narrow_Parameter, Safe_PO.Narrow_Return, Safe_PO.Narrow_Indexing, Safe_PO.Narrow_Conversion, Safe_Model.Range64 | rule1_accumulate.safe, rule1_averaging.safe, rule1_conversion.safe, rule1_parameter.safe, rule1_return.safe, rule3_percent.safe, neg_rule1_index_fail.safe, neg_rule1_narrow_fail.safe, neg_rule1_param_fail.safe, neg_rule1_return_fail.safe, golden_sensors/ | stubbed |
 | `2.8.1.p128:d2e83ca8` | 2.8.1 | Safe_Model.Range64, Safe_Model.Excludes_Zero | -- | stubbed |
 | `2.8.1.p129:9f3b1394` | 2.8.1 | N/A | rule1_accumulate.safe, neg_rule1_overflow.safe, diag_overflow.txt | stubbed |
 | `2.8.1.p130:2289e5b2` | 2.8.1 | Safe_PO.Narrow_Assignment, Safe_PO.Narrow_Parameter, Safe_PO.Narrow_Conversion | rule1_conversion.safe, rule1_parameter.safe, neg_rule1_narrow_fail.safe, neg_rule1_param_fail.safe | stubbed |
@@ -570,9 +570,9 @@ affected POs/models, severity, and related spec references.
 
 | Test File | Clause References |
 |-----------|-------------------|
-| golden_ownership.ada | `2.3.2.p96a:0eaf48aa`, `2.3.2.p96c:0b45de01`, `2.3.2.p97a:8d0214d5`, `2.3.5.p104:d9f9b8d9` |
-| golden_pipeline.ada | `4.1.p2:78f022f7`, `4.2.p15:b5b29b0e`, `4.3.p27:ef0ce6bd`, `4.3.p28:ea6bd13c`, `4.2.p20:8aa1a21e`, `4.3.p31:a7297e97` |
-| golden_sensors.ada | `2.8.1.p126:812b54a8`, `2.8.1.p127:d5d93439`, `5.3.6.p25:e8253bd7` |
+| golden_ownership/ | `2.3.2.p96a:0eaf48aa`, `2.3.2.p96c:0b45de01`, `2.3.2.p97a:8d0214d5`, `2.3.5.p104:d9f9b8d9` |
+| golden_pipeline/ | `4.1.p2:78f022f7`, `4.2.p15:b5b29b0e`, `4.3.p27:ef0ce6bd`, `4.3.p28:ea6bd13c`, `4.2.p20:8aa1a21e`, `4.3.p31:a7297e97` |
+| golden_sensors/ | `2.8.1.p126:812b54a8`, `2.8.1.p127:d5d93439`, `5.3.6.p25:e8253bd7` |
 
 ### `concurrency/`
 

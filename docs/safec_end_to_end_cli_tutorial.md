@@ -1,0 +1,261 @@
+# SafeC End-to-End CLI Tutorial
+
+This is a small host-local walkthrough for testing the current `safec`
+compiler end to end after it has already been built.
+
+It is intentionally practical rather than portable:
+
+- it assumes you are running from this repository checkout
+- it assumes the Ada toolchain is available through Alire on this host
+- it relies on the same macOS linker `syslibroot` pattern used by `compiler_impl/safec.gpr`
+
+The walkthrough below uses a small typed-channel package so the emitted Ada
+includes `gnat.adc` and actually exercises the local Jorvik link path.
+
+Instead of asking you to type every command by hand, it writes a small
+host-local build script that does the full flow:
+
+1. writes a Safe package with a typed channel plus two tasks
+2. runs `safec check`
+3. emits JSON plus Ada/SPARK with `safec emit --ada-out-dir`
+4. validates and analyzes the emitted MIR
+5. writes a tiny Ada driver plus a macOS-aware `build.gpr`
+6. builds and runs the resulting native binary
+
+## 1. Start From the Repo Root
+
+```bash
+cd /path/to/safe
+export REPO_ROOT="$(pwd)"
+```
+
+The compiler binary should already exist at:
+
+```bash
+compiler_impl/bin/safec
+```
+
+If you need to rebuild it first:
+
+```bash
+cd compiler_impl
+$HOME/bin/alr build
+cd ..
+```
+
+## 2. Create a Temporary Work Area
+
+```bash
+BASE_TMP="${TMPDIR%/}"
+[ -d "$BASE_TMP" ] || BASE_TMP=/tmp
+WORK="$(mktemp -d "$BASE_TMP"/safec-e2e.XXXXXX)"
+mkdir -p "$WORK/out" "$WORK/iface" "$WORK/ada"
+```
+
+## 3. The Safe Sample the Script Will Build
+
+The script below writes this package:
+
+```ada
+package Typed_Channel_Demo is
+
+   type Message is range 0 .. 1000;
+
+   channel Data_Ch : Message capacity 1;
+   Result : Message = 0;
+
+   task Producer is
+   begin
+      loop
+         send Data_Ch, 41;
+         delay 0.05;
+      end loop;
+   end Producer;
+
+   task Consumer is
+      Input : Message;
+   begin
+      loop
+         receive Data_Ch, Input;
+         Result = Input + 1;
+      end loop;
+   end Consumer;
+
+end Typed_Channel_Demo;
+```
+
+Why this is useful:
+
+- `Data_Ch` is a real typed channel carrying `Message`
+- the emitted Ada includes `gnat.adc`, so the build uses `pragma Profile(Jorvik);`
+- the package exposes `Result`, so a tiny Ada driver can print the observed
+  channel output
+
+## 4. Write the Automation Script
+
+Save this as `"$WORK/run_typed_channel_demo.sh"`:
+
+```bash
+cat > "$WORK/run_typed_channel_demo.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="${REPO_ROOT:?set REPO_ROOT to your safe checkout root before running this script}"
+SAFEC="$REPO_ROOT/compiler_impl/bin/safec"
+ALR_BIN="${ALR_BIN:-$HOME/bin/alr}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+OUT_DIR="$SCRIPT_DIR/out"
+IFACE_DIR="$SCRIPT_DIR/iface"
+ADA_DIR="$SCRIPT_DIR/ada"
+SOURCE="$SCRIPT_DIR/typed_channel_demo.safe"
+
+mkdir -p "$OUT_DIR" "$IFACE_DIR" "$ADA_DIR"
+
+cat > "$SOURCE" <<'SAFE'
+package Typed_Channel_Demo is
+
+   type Message is range 0 .. 1000;
+
+   channel Data_Ch : Message capacity 1;
+
+   Result : Message = 0;
+
+   task Producer is
+   begin
+      loop
+         send Data_Ch, 41;
+         delay 0.05;
+      end loop;
+   end Producer;
+
+   task Consumer is
+      Input : Message;
+   begin
+      loop
+         receive Data_Ch, Input;
+         Result = Input + 1;
+      end loop;
+   end Consumer;
+
+end Typed_Channel_Demo;
+SAFE
+
+"$SAFEC" check "$SOURCE"
+
+"$SAFEC" emit \
+  "$SOURCE" \
+  --out-dir "$OUT_DIR" \
+  --interface-dir "$IFACE_DIR" \
+  --ada-out-dir "$ADA_DIR"
+
+"$SAFEC" validate-mir "$OUT_DIR/typed_channel_demo.mir.json"
+"$SAFEC" analyze-mir "$OUT_DIR/typed_channel_demo.mir.json"
+
+test -f "$ADA_DIR/gnat.adc"
+
+cat > "$ADA_DIR/main.adb" <<'ADA'
+with Ada.Text_IO; use Ada.Text_IO;
+with GNAT.OS_Lib;
+with Typed_Channel_Demo;
+
+procedure Main is
+begin
+   delay 0.2;
+   Put_Line ("Typed channel result =" & Integer'Image (Integer (Typed_Channel_Demo.Result)));
+   GNAT.OS_Lib.OS_Exit (0);
+end Main;
+ADA
+
+cat > "$ADA_DIR/build.gpr" <<'GPR'
+project Build is
+   Sdk_Root := External ("SDKROOT", "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk");
+   for Source_Dirs use (".");
+   for Object_Dir use "obj";
+
+   package Compiler is
+      for Default_Switches ("Ada") use ("-gnatec=gnat.adc");
+   end Compiler;
+
+   package Linker is
+      for Default_Switches ("Ada") use ("-Wl,-syslibroot," & Sdk_Root);
+   end Linker;
+end Build;
+GPR
+
+export SDKROOT="${SDKROOT:-$(xcrun --show-sdk-path)}"
+
+(
+   cd "$REPO_ROOT/compiler_impl"
+   "$ALR_BIN" exec -- gprbuild -P "$ADA_DIR/build.gpr" main.adb
+)
+
+"$ADA_DIR/obj/main"
+EOF
+
+chmod +x "$WORK/run_typed_channel_demo.sh"
+```
+
+## 5. Run the Script
+
+```bash
+"$WORK/run_typed_channel_demo.sh"
+```
+
+Expected output:
+
+```text
+Typed channel result = 42
+```
+
+You should also now have:
+
+```text
+$WORK/out/typed_channel_demo.ast.json
+$WORK/out/typed_channel_demo.typed.json
+$WORK/out/typed_channel_demo.mir.json
+$WORK/iface/typed_channel_demo.safei.json
+$WORK/ada/typed_channel_demo.ads
+$WORK/ada/typed_channel_demo.adb
+$WORK/ada/safe_runtime.ads
+$WORK/ada/gnat.adc
+$WORK/ada/main.adb
+$WORK/ada/build.gpr
+```
+
+## 6. Why the Driver Calls `OS_Exit`
+
+The current Safe task subset requires each task body to keep its single outer
+loop. That is why the sample tasks do not terminate on their own.
+
+For this host-local tutorial, the handwritten Ada driver waits briefly for the
+channel traffic to settle, prints the observed package-global result, and then
+calls `GNAT.OS_Lib.OS_Exit (0)` so the process terminates cleanly instead of
+waiting forever on the library-level tasks.
+
+That exit pattern is just for the tutorial driver. The emitted Safe package
+itself still follows the current PR08/PR09 task model.
+
+## 7. What This Proves
+
+If all of the steps above pass, you have exercised the current compiler stack
+end to end on this host:
+
+- Safe source parsing and semantic checking
+- MIR emission and validation
+- `safei-v1` interface emission
+- PR09 Ada/SPARK emission
+- emitted `gnat.adc` generation for a real typed-channel package
+- host-local Ada compilation of the emitted package plus handwritten driver
+- execution of a native binary linked through the local Jorvik configuration
+- use of the macOS linker `syslibroot` fix needed by this host toolchain
+
+## Notes
+
+- This is a host-local smoke path, not a replacement for the repo gates.
+- The PR09 CI gates are intentionally compile-only; the explicit native link and
+  execution step here goes beyond what CI currently enforces.
+- This tutorial is macOS-specific and depends on the local Alire GNAT
+  toolchain plus the linker `syslibroot` project stanza.
+- If you want a minimal emission-only sample instead, use
+  `tests/positive/emitter_surface_proc.safe`.

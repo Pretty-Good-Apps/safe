@@ -25,6 +25,13 @@
       "scripts/run_pr082_local_concurrency_analysis.py",
       "scripts/run_pr083_interface_contracts.py",
       "scripts/run_pr083a_public_constants.py",
+      "scripts/_lib/pr09_emit.py",
+      "scripts/run_pr09a_emitter_surface.py",
+      "scripts/run_pr09a_emitter_mvp.py",
+      "scripts/run_pr09b_sequential_semantics.py",
+      "scripts/run_pr09b_concurrency_output.py",
+      "scripts/run_pr09b_snapshot_refresh.py",
+      "scripts/run_pr09_ada_emission_baseline.py",
       "scripts/run_local_pre_push.py",
       "scripts/validate_execution_state.py",
       "scripts/validate_ast_output.py",
@@ -62,7 +69,13 @@
       "scripts/run_pr081_local_concurrency_frontend.py",
       "scripts/run_pr082_local_concurrency_analysis.py",
       "scripts/run_pr083_interface_contracts.py",
-      "scripts/run_pr083a_public_constants.py"
+      "scripts/run_pr083a_public_constants.py",
+      "scripts/run_pr09a_emitter_surface.py",
+      "scripts/run_pr09a_emitter_mvp.py",
+      "scripts/run_pr09b_sequential_semantics.py",
+      "scripts/run_pr09b_concurrency_output.py",
+      "scripts/run_pr09b_snapshot_refresh.py",
+      "scripts/run_pr09_ada_emission_baseline.py"
     ],
     "safe_source_readers": [
       {
@@ -110,23 +123,23 @@
   ],
   "referenced_deterministic_reports": {
     "build_reproducibility": {
-      "repeat_sha256": "6bf1780f1c2335ce7df02d403a40379f4364be73e5c6b8e7199e9ce6c6ef3d3b",
+      "repeat_sha256": "5a98f2db95a9c4dc6027496000b4fa22229dbac2ab28b172c52b587580097739",
       "report_path": "execution/reports/pr0699-build-reproducibility-report.json",
-      "report_sha256": "6bf1780f1c2335ce7df02d403a40379f4364be73e5c6b8e7199e9ce6c6ef3d3b"
+      "report_sha256": "5a98f2db95a9c4dc6027496000b4fa22229dbac2ab28b172c52b587580097739"
     },
     "frontend_smoke": {
-      "repeat_sha256": "53e5a7de4e159b7c20a3ccc9e63d48efa059a1c45acdac88ee83059d7ab70caa",
+      "repeat_sha256": "80d6827f5a41c28626f50dc113594795f2216057504f11de8f5139cc31bb75ed",
       "report_path": "execution/reports/pr00-pr04-frontend-smoke.json",
-      "report_sha256": "53e5a7de4e159b7c20a3ccc9e63d48efa059a1c45acdac88ee83059d7ab70caa"
+      "report_sha256": "80d6827f5a41c28626f50dc113594795f2216057504f11de8f5139cc31bb75ed"
     }
   },
-  "repeat_sha256": "6b623f5434d562356f025f90717c2b307c773c1c751f735de76b297a9c25326d",
-  "report_sha256": "6b623f5434d562356f025f90717c2b307c773c1c751f735de76b297a9c25326d",
+  "repeat_sha256": "8395501198e8aa44614ba67f1b52e04fbebdd05f9aa5ae5fa33fef852d4818ac",
+  "report_sha256": "8395501198e8aa44614ba67f1b52e04fbebdd05f9aa5ae5fa33fef852d4818ac",
   "reruns": {
     "gate_quality": {
-      "repeat_sha256": "d42897fbb62a4cc182193119b7572de11323de8f3ced6ac08756f6534a51c7bc",
+      "repeat_sha256": "1e92f36eb6170aa8f65dd9b9d558110ce628503e4c29712320c44f2df0cac366",
       "report_path": "execution/reports/pr0697-gate-quality-report.json",
-      "report_sha256": "d42897fbb62a4cc182193119b7572de11323de8f3ced6ac08756f6534a51c7bc",
+      "report_sha256": "1e92f36eb6170aa8f65dd9b9d558110ce628503e4c29712320c44f2df0cac366",
       "run": {
         "command": [
           "python3",
@@ -139,9 +152,9 @@
       }
     },
     "portability_environment": {
-      "repeat_sha256": "72c0905cb63ca329bd9edd1a9e20e5a22a9b2b5d738f88e7f8260d69f9ed1e47",
+      "repeat_sha256": "2d475a4e25225bbae8653311b53a13741efe97a1084cb755f5572f16ac416071",
       "report_path": "execution/reports/pr06910-portability-environment-report.json",
-      "report_sha256": "72c0905cb63ca329bd9edd1a9e20e5a22a9b2b5d738f88e7f8260d69f9ed1e47",
+      "report_sha256": "2d475a4e25225bbae8653311b53a13741efe97a1084cb755f5572f16ac416071",
       "run": {
         "command": [
           "python3",
@@ -154,9 +167,9 @@
       }
     },
     "runtime_boundary": {
-      "repeat_sha256": "62dfe467d4bd9d47bd84b337790080a6467fb78c3a0b2fee69206d9e5658c270",
+      "repeat_sha256": "8e7166b46475fef09f8ac00b8e273747534093612bf06889ddeffd1f1e7251bf",
       "report_path": "execution/reports/pr0693-runtime-boundary-report.json",
-      "report_sha256": "62dfe467d4bd9d47bd84b337790080a6467fb78c3a0b2fee69206d9e5658c270",
+      "report_sha256": "8e7166b46475fef09f8ac00b8e273747534093612bf06889ddeffd1f1e7251bf",
       "run": {
         "command": [
           "python3",
@@ -195,6 +208,6 @@
     "cwd": "$REPO_ROOT",
     "result": "OK",
     "returncode": 0,
-    "tests_ran": 74
+    "tests_ran": 80
   }
 }

@@ -381,8 +381,8 @@
       "python3.11": "$TMPDIR/python-mask/python3.11"
     }
   },
-  "repeat_sha256": "62dfe467d4bd9d47bd84b337790080a6467fb78c3a0b2fee69206d9e5658c270",
-  "report_sha256": "62dfe467d4bd9d47bd84b337790080a6467fb78c3a0b2fee69206d9e5658c270",
+  "repeat_sha256": "8e7166b46475fef09f8ac00b8e273747534093612bf06889ddeffd1f1e7251bf",
+  "report_sha256": "8e7166b46475fef09f8ac00b8e273747534093612bf06889ddeffd1f1e7251bf",
   "runtime_rule": {
     "legacy_backend_path": "compiler_impl/backend/pr05_backend.py",
     "legacy_backend_present": false,
@@ -391,6 +391,7 @@
       "GNAT.OS_Lib.OS_Exit"
     ],
     "scanned_files": [
+      "compiler_impl/src/safe_frontend-ada_emit.adb",
       "compiler_impl/src/safe_frontend-check_emit.adb",
       "compiler_impl/src/safe_frontend-check_lower.adb",
       "compiler_impl/src/safe_frontend-check_model.adb",
@@ -411,6 +412,7 @@
       "compiler_impl/src/safe_frontend-mir_write.adb",
       "compiler_impl/src/safe_frontend-source.adb",
       "compiler_impl/src/safe_frontend-types.adb",
+      "compiler_impl/src/safe_frontend-ada_emit.ads",
       "compiler_impl/src/safe_frontend-check_emit.ads",
       "compiler_impl/src/safe_frontend-check_lower.ads",
       "compiler_impl/src/safe_frontend-check_model.ads",

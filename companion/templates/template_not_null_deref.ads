@@ -3,7 +3,7 @@
 --  Clause: SAFE@468cf72:spec/02-restrictions.md#2.8.4.p136:fa5e94b7
 --  Clause: SAFE@468cf72:spec/05-assurance.md#5.3.1.p12:99a94209
 --  Reference: compiler/translation_rules.md Section 7
---  Reference: tests/golden/golden_ownership.ada
+--  Reference: tests/golden/golden_ownership/
 --
 --  Demonstrates the compiler emission pattern for not-null dereference:
 --    1. Before every dereference, assert the pointer is not null

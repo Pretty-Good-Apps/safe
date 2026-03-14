@@ -4,7 +4,7 @@
 --  Clause: SAFE@468cf72:spec/05-assurance.md#5.4.1.p32:90d4f527
 --  Clause: SAFE@468cf72:spec/05-assurance.md#5.4.1.p33:0fc25399
 --  Reference: compiler/translation_rules.md Section 6
---  Reference: tests/golden/golden_pipeline.ada
+--  Reference: tests/golden/golden_pipeline/
 --
 --  Demonstrates the compiler emission pattern for task-variable ownership.
 --  Each mutable variable accessed by a task must be exclusively owned by

@@ -51,7 +51,7 @@ Correctly maps `Sensor_Value` subtype (0..1000) to `Range64` model type. No othe
 | 2.8.1.p130 | Range check at narrowing | `Narrow_Return`, `Narrow_Assignment` calls |
 | 5.3.6.p25 | Silver AoRTE for narrowing | Proven by GNATprove |
 
-### B. Golden File Comparison (`golden_sensors.ada`)
+### B. Golden File Comparison (`golden_sensors/`)
 
 #### B1. Structural Alignment — PASS
 
@@ -148,7 +148,7 @@ Template uses loop invariants (SPARK-idiomatic) instead of per-iteration asserti
 | 4.3.p28 | Receive requires not empty | `Check_Channel_Not_Empty` + Pre |
 | 4.3.p31 | FIFO ordering | `Buffer(Tail'Old) = Item` / `Item = Buffer'Old(Head'Old)` |
 
-### B. Golden File Comparison (`golden_pipeline.ada`)
+### B. Golden File Comparison (`golden_pipeline/`)
 
 #### B1. Structural Alignment — PASS (with documented divergence)
 
@@ -251,7 +251,7 @@ The (False, True) combination maps to Moved, which is safe since it cannot be re
 | 2.3.2.p97a | Move transfers ownership | `Move` postcondition (Target.Value = Source.Value'Old) |
 | 2.3.5.p104 | Scope-exit deallocation | Referenced; exercised in `template_scope_dealloc` |
 
-### B. Golden File Comparison (`golden_ownership.ada`)
+### B. Golden File Comparison (`golden_ownership/`)
 
 #### B1. Structural Alignment — PASS (with documented divergence)
 

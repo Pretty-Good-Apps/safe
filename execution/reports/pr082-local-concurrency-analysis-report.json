@@ -532,7 +532,7 @@
         "cwd": "$REPO_ROOT",
         "returncode": 1,
         "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"task_variable_ownership\",\"message\":\"package global 'Shared' is accessed by multiple tasks\",\"path\":\"tests/negative/neg_task_shared_subprogram_global.safe\",\"span\":{\"start_line\":10,\"start_col\":4,\"end_line\":10,\"end_col\":24},\"highlight_span\":{\"start_line\":10,\"start_col\":4,\"end_line\":10,\"end_col\":24},\"notes\":[\"tasks accessing 'Shared': A, B\",\"earliest local use at 19:7\"],\"suggestions\":[]}]}\n"
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"task_variable_ownership\",\"message\":\"package global 'Shared' is accessed by multiple tasks\",\"path\":\"tests/negative/neg_task_shared_subprogram_global.safe\",\"span\":{\"start_line\":10,\"start_col\":4,\"end_line\":10,\"end_col\":24},\"highlight_span\":{\"start_line\":10,\"start_col\":4,\"end_line\":10,\"end_col\":24},\"notes\":[\"tasks accessing 'Shared': A, B\",\"earliest local use at 25:10\"],\"suggestions\":[]}]}\n"
       },
       "expected_reason": "task_variable_ownership",
       "first_diagnostic": {
@@ -1784,8 +1784,8 @@
       }
     }
   ],
-  "repeat_sha256": "75cc5a700d3843c1478c145051b84394fbe97929fef96818a437cd8578b850c0",
-  "report_sha256": "75cc5a700d3843c1478c145051b84394fbe97929fef96818a437cd8578b850c0",
+  "repeat_sha256": "346323eff402741eba4a1dea2f569d7a4b43bdc91d43032daf206d6edb4b94b6",
+  "report_sha256": "346323eff402741eba4a1dea2f569d7a4b43bdc91d43032daf206d6edb4b94b6",
   "sequential_positive_regression_cases": [
     {
       "check": {

@@ -58,7 +58,10 @@ class ValidateExecutionStateTests(unittest.TestCase):
                 directory = tests_root / name
                 directory.mkdir()
                 for index in range(count):
-                    (directory / f"case_{index}.safe").write_text("", encoding="utf-8")
+                    if name == "golden":
+                        (directory / f"case_{index}").mkdir()
+                    else:
+                        (directory / f"case_{index}.safe").write_text("", encoding="utf-8")
 
             tracker = {
                 "repo_facts": {

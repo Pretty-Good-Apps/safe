@@ -1,0 +1,27 @@
+-- Test: ownership_early_return
+-- Description: Early return cleans up owned values from nested scopes.
+--   A function returns from inside a nested declare block while both the
+--   block and the enclosing subprogram own access values.
+-- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.2.p96a:0eaf48aa
+-- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.4a.p102a:2ed757bd
+-- Expected: ACCEPT
+
+package Ownership_Early_Return is
+
+   type Payload is record
+      Value : Integer;
+   end record;
+
+   type Payload_Ptr is access Payload;
+
+   function Read_And_Exit return Integer is
+      Outer : Payload_Ptr = new ((Value = 7) as Payload);
+   begin
+      declare
+         Inner : Payload_Ptr = new ((Value = 9) as Payload);
+      begin
+         return Outer.all.Value;
+      end;
+   end Read_And_Exit;
+
+end Ownership_Early_Return;

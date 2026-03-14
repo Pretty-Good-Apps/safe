@@ -15,6 +15,8 @@ The live user-facing compiler commands are:
 
 All of those commands are Ada-native runtime surfaces for the current implemented subset.
 
+PR09 adds deterministic Ada/SPARK emission on top of that PR08 frontend baseline through `safec emit --ada-out-dir`, without widening the accepted frontend-analysis subset.
+
 ## Current Supported Subset
 
 The current frontend supports the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern.
@@ -47,7 +49,7 @@ The following surfaces remain explicitly out of scope for the current frontend b
 - discriminant constraints
 - access discriminants
 - named numbers and richer constant folding beyond the PR08.3a constant slice
-- broader Ada/SPARK emission work
+- broader proof-ready Ada/SPARK emission work beyond the current PR09 subset
 
 ## No-Python Doctrine
 

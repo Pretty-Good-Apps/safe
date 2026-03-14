@@ -1,0 +1,285 @@
+{
+  "deterministic": true,
+  "fixtures": [
+    {
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/rule1_averaging-a/ada/build.gpr",
+          "sensor_average.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "determinism": {
+        "ada": {
+          "safe_runtime.ads": {
+            "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+          },
+          "sensor_average.adb": {
+            "sha256": "7135cc711a6f61516102e07e132dde005b00be95a6fc355239f761ddb0d1cbad"
+          },
+          "sensor_average.ads": {
+            "sha256": "b2c94dfa2474bcfd1f8f238dd54b7cc52993e97720b6ee03570b425ea5d5581a"
+          }
+        },
+        "json_and_interface": {
+          "rule1_averaging.ast.json": {
+            "sha256": "4b574eaa6a04f21e5e63e5b172b0f9c38eae1d6aafa83c3007cd6627182eccec"
+          },
+          "rule1_averaging.mir.json": {
+            "sha256": "16bd00adfd0777b7649aa3003744b4f3e1236fcf7e6f428155d3e715518acec6"
+          },
+          "rule1_averaging.safei.json": {
+            "sha256": "79da78203aaefe19279824118c38f4a6443cbbec24b9af69b2ff494f8fe87ddb"
+          },
+          "rule1_averaging.typed.json": {
+            "sha256": "6dc0be2990a6e8f4c79522732e7de9cdb56b7f336aa170f502d58654034233d1"
+          }
+        }
+      },
+      "fixture": "tests/positive/rule1_averaging.safe",
+      "safe_runtime": {
+        "emitted": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a",
+        "template": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+      },
+      "structural_assertions": {
+        "sensor_average.adb": [
+          "Safe_Runtime.Wide_Integer",
+          "pragma Assert"
+        ]
+      }
+    },
+    {
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/rule1_accumulate-a/ada/build.gpr",
+          "accumulator.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "determinism": {
+        "ada": {
+          "accumulator.adb": {
+            "sha256": "40bf75431cc932fd94d5fafc857b567c30b26117731f9b228184341c74a770dc"
+          },
+          "accumulator.ads": {
+            "sha256": "58632dbfe3a707c5578e584e282b20404212138a7b720fb797254690304a2f48"
+          },
+          "safe_runtime.ads": {
+            "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+          }
+        },
+        "json_and_interface": {
+          "rule1_accumulate.ast.json": {
+            "sha256": "e1d1e4b8fc43b1f7d10a3f20c56df585c5e07eac6781af2506a3e541ffedc6e0"
+          },
+          "rule1_accumulate.mir.json": {
+            "sha256": "2d5aa84aa18fd5eec01836cac154facb96b55b0500b82e27ee22aeedba0ac1b1"
+          },
+          "rule1_accumulate.safei.json": {
+            "sha256": "c68258bd525b1ddc5683359b1926282f3b2ea25e201a3e12eb8a70e8988aaa3e"
+          },
+          "rule1_accumulate.typed.json": {
+            "sha256": "241ab2c2beb194a5ec6f17b0195941b25460fb5cea386f6b68fee8c3fac7c09f"
+          }
+        }
+      },
+      "fixture": "tests/positive/rule1_accumulate.safe",
+      "safe_runtime": {
+        "emitted": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a",
+        "template": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+      },
+      "structural_assertions": {
+        "accumulator.adb": [
+          "Safe_Runtime.Wide_Integer",
+          "pragma Assert"
+        ]
+      }
+    },
+    {
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/rule1_parameter-a/ada/build.gpr",
+          "safe_parameters.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "determinism": {
+        "ada": {
+          "safe_parameters.adb": {
+            "sha256": "1f2082a7858976419ba70ae94a2939ad36bd8f8ee091a72c8ceaa418f9a21658"
+          },
+          "safe_parameters.ads": {
+            "sha256": "a3c079a4dbb81674e247fe94aa8a590ca211075ef8e7ee764fec324dc6bb3c6c"
+          },
+          "safe_runtime.ads": {
+            "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+          }
+        },
+        "json_and_interface": {
+          "rule1_parameter.ast.json": {
+            "sha256": "5dc1698639bb4945fd58344a92380b7119a2b62f5a4e846fd76fb3706e17cf61"
+          },
+          "rule1_parameter.mir.json": {
+            "sha256": "ca17d0ffaec6d582f7cc37e5ab956d22f9c985401d87f48cde523a9e7f32ef0e"
+          },
+          "rule1_parameter.safei.json": {
+            "sha256": "4db04369b263d9a265b6192624e450bc01e624474952c048712b51f5b8010834"
+          },
+          "rule1_parameter.typed.json": {
+            "sha256": "a1dd8bb1fa9c5b9d468bafa4e3c57ddaf81ae1afad49a81566cec706b3a6be99"
+          }
+        }
+      },
+      "fixture": "tests/positive/rule1_parameter.safe",
+      "safe_runtime": {
+        "emitted": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a",
+        "template": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+      },
+      "structural_assertions": {
+        "safe_parameters.adb": [
+          "Safe_Runtime.Wide_Integer",
+          "pragma Assert"
+        ],
+        "safe_parameters.ads": [
+          "Depends =>",
+          "Output => Raw"
+        ]
+      }
+    },
+    {
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/rule1_return-a/ada/build.gpr",
+          "safe_return.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "determinism": {
+        "ada": {
+          "safe_return.adb": {
+            "sha256": "7d56e56a368c968ff9590db6e488456e44873aaf2bd7f48654dc71b8a4c92497"
+          },
+          "safe_return.ads": {
+            "sha256": "50c600215fa5d7ec9860d624d053c4f9cd8f1d88cc9f4ca5f0f03d67f5390a3d"
+          },
+          "safe_runtime.ads": {
+            "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+          }
+        },
+        "json_and_interface": {
+          "rule1_return.ast.json": {
+            "sha256": "7b936600d49f8049afad033806e110134c8b241939c31a62fd70e237922b3b78"
+          },
+          "rule1_return.mir.json": {
+            "sha256": "eb1c20e763d0fd1b5f802718f03e0e51d515f602b8b9cb63fe5c86493b0487d6"
+          },
+          "rule1_return.safei.json": {
+            "sha256": "014cd7a2b58b7a753ebc949336f46c8c2d9d8de37189fba9d711d1c59f136065"
+          },
+          "rule1_return.typed.json": {
+            "sha256": "6faad2eee032643386f4df60467be0524dc3e9376b12c9e0f404bc61c0c4a19d"
+          }
+        }
+      },
+      "fixture": "tests/positive/rule1_return.safe",
+      "safe_runtime": {
+        "emitted": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a",
+        "template": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+      },
+      "structural_assertions": {
+        "safe_return.adb": [
+          "Safe_Runtime.Wide_Integer",
+          "pragma Assert"
+        ]
+      }
+    },
+    {
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/rule1_conversion-a/ada/build.gpr",
+          "safe_conversion.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "determinism": {
+        "ada": {
+          "safe_conversion.adb": {
+            "sha256": "54adae81d0364859b6ac1f7bfb4f41d9bb44d41a47f48de169815927450b4c68"
+          },
+          "safe_conversion.ads": {
+            "sha256": "ee72fabd41c16d3a4a17272b124cc96b29c3d8300cb8fcfc1b70f1fda68a0378"
+          },
+          "safe_runtime.ads": {
+            "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+          }
+        },
+        "json_and_interface": {
+          "rule1_conversion.ast.json": {
+            "sha256": "fbf804b369dbbdffc008cc6b319ccaf05ee0b78cc3dd93f67c21fa0b8a03e48e"
+          },
+          "rule1_conversion.mir.json": {
+            "sha256": "e3ceccb17a6b15a51f8aeb7c4df4a7edd112b92d29fd419557834dc0039a33eb"
+          },
+          "rule1_conversion.safei.json": {
+            "sha256": "964878a6570b3435f2c1a6e9d0002462e4125efbe660d466ab7c0388a2a5cfad"
+          },
+          "rule1_conversion.typed.json": {
+            "sha256": "a12b46d9c0c0de5085d4345ae1aaa0b98e3d93c64d50846771ebabb1d3d95715"
+          }
+        }
+      },
+      "fixture": "tests/positive/rule1_conversion.safe",
+      "safe_runtime": {
+        "emitted": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a",
+        "template": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+      },
+      "structural_assertions": {
+        "safe_conversion.adb": [
+          "Safe_Runtime.Wide_Integer",
+          "pragma Assert"
+        ]
+      }
+    }
+  ],
+  "notes": [
+    "PR09a emits compile-valid Ada/SPARK skeleton output on the rule1 subset.",
+    "safe_runtime.ads remains byte-identical to companion/templates/safe_runtime.ads."
+  ],
+  "repeat_sha256": "7db8228c1f71a5fedb52e3907cf7c1e3a14aa63198dc0d4bd59e241148838548",
+  "report_sha256": "7db8228c1f71a5fedb52e3907cf7c1e3a14aa63198dc0d4bd59e241148838548"
+}

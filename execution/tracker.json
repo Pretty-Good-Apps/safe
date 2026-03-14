@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-03-13T21:27:32Z",
+  "updated_at": "2026-03-14T13:55:27Z",
   "frozen_spec_sha": "468cf72332724b04b7c193b4d2a3b02f1584125d",
   "active_task_id": null,
-  "next_task_id": "PR09",
+  "next_task_id": "PR10",
   "repo_facts": {
     "tests": {
-      "positive": 41,
-      "negative": 75,
+      "positive": 44,
+      "negative": 76,
       "golden": 3,
       "concurrency": 12,
       "diagnostics_golden": 17,
-      "total": 148
+      "total": 152
     }
   },
   "tasks": [
@@ -558,14 +558,21 @@
     {
       "id": "PR09",
       "title": "Ada/SPARK emission and snapshot refresh",
-      "status": "planned",
+      "status": "done",
       "depends_on": ["PR08"],
       "acceptance": [
         "PR09a emitter MVP is deterministic on a narrow subset.",
         "PR09b replaces historical golden Ada snapshots once emitter output is stable.",
         "Concurrency-enabled output includes gnat.adc with sequential elaboration and Jorvik profile pragmas."
       ],
-      "evidence": [],
+      "evidence": [
+        "execution/reports/pr09a-emitter-surface-report.json",
+        "execution/reports/pr09a-emitter-mvp-report.json",
+        "execution/reports/pr09b-sequential-semantics-report.json",
+        "execution/reports/pr09b-concurrency-output-report.json",
+        "execution/reports/pr09b-snapshot-refresh-report.json",
+        "execution/reports/pr09-ada-emission-baseline-report.json"
+      ],
       "blockers": [],
       "unblock_condition": ""
     },

@@ -1,0 +1,159 @@
+{
+  "deterministic": true,
+  "fixtures": [
+    {
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/ownership_early_return-a/ada/build.gpr",
+          "ownership_early_return.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "determinism": {
+        "ada": {
+          "ownership_early_return.adb": {
+            "sha256": "903ce1a4ef43c28cc02e6b753ae8cd2eb16a25aa17f2f104852e983de9df8e05"
+          },
+          "ownership_early_return.ads": {
+            "sha256": "faff7ffedb117504d83b025e5262085f56e03381b18b41c7a1169affaf3689f4"
+          }
+        },
+        "json_and_interface": {
+          "ownership_early_return.ast.json": {
+            "sha256": "8c7986cb98ac33ddc7b5c937beb3e7061c30675912f4a9aec8e977e6e0591f51"
+          },
+          "ownership_early_return.mir.json": {
+            "sha256": "476af164036c6e53018ef60979655a4a208dbfaa22dd4c6939c3adec42cbc762"
+          },
+          "ownership_early_return.safei.json": {
+            "sha256": "9f59c7663bb62f6eb58209eaaa84eb442950c0401b44f574cff3a33016123b0d"
+          },
+          "ownership_early_return.typed.json": {
+            "sha256": "0a292487391fbdff4fce1507a49916747839ff7d2fe55a649be48b03cd212127"
+          }
+        }
+      },
+      "fixture": "tests/positive/ownership_early_return.safe",
+      "structural_assertions": {
+        "ownership_early_return.adb": [
+          "Free_Payload_Ptr (Inner);",
+          "Free_Payload_Ptr (Outer);"
+        ],
+        "ownership_early_return.ads": [
+          "Global => null"
+        ]
+      }
+    },
+    {
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/ownership_move-a/ada/build.gpr",
+          "ownership_move.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "determinism": {
+        "ada": {
+          "ownership_move.adb": {
+            "sha256": "caee9e45b7ccdc187fa930571e9c155c760425ac3968206ad5145f47758d89df"
+          },
+          "ownership_move.ads": {
+            "sha256": "76046e138c42551c25e2982f1db7ff51e44b74419162f694d9af4961e0943bc2"
+          }
+        },
+        "json_and_interface": {
+          "ownership_move.ast.json": {
+            "sha256": "a18caa0e2f68ab7f564ec9dadc0b4dfd9de020accb199cc3299232e79a70b1b0"
+          },
+          "ownership_move.mir.json": {
+            "sha256": "5be09acaa76f5cae66b2dee891af655a1419220e1b093a4b1dbc08e31191b9a9"
+          },
+          "ownership_move.safei.json": {
+            "sha256": "5d6dddc870c194b8e1f056a29512015db0bf97344300bd62d4bfa3636d244406"
+          },
+          "ownership_move.typed.json": {
+            "sha256": "dda89d3417719a820f141417837f537ecdee9e969e668379cb288167a96fbe58"
+          }
+        }
+      },
+      "fixture": "tests/positive/ownership_move.safe",
+      "structural_assertions": {
+        "ownership_move.adb": [
+          "Source := null;",
+          "Ada.Unchecked_Deallocation"
+        ],
+        "ownership_move.ads": [
+          "Global => null"
+        ]
+      }
+    },
+    {
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/rule4_linked_list-a/ada/build.gpr",
+          "safe_linked_list.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "determinism": {
+        "ada": {
+          "safe_linked_list.adb": {
+            "sha256": "f7eb0c42ad386bdecb0f4864d9f9b59d087c1f6b9c0cb1d93ee4f81e42a7aa63"
+          },
+          "safe_linked_list.ads": {
+            "sha256": "68d9bc67cf3e590fb9ad2d95d06712e70e18434d1a248ff9713e4a1d3ecedcd3"
+          },
+          "safe_runtime.ads": {
+            "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+          }
+        },
+        "json_and_interface": {
+          "rule4_linked_list.ast.json": {
+            "sha256": "85f10db8479bbefb4718f46ad07081a8345836daaf0c1c38a3de57a2aa2d5ae7"
+          },
+          "rule4_linked_list.mir.json": {
+            "sha256": "9f48186630c23ab6ea1dad41256baa1c8a1241101bc6b2c07ea8c7ed12b1a964"
+          },
+          "rule4_linked_list.safei.json": {
+            "sha256": "a103ce8567345b45ff12967974e753a9db28bae0586f4037fbf4778f770a114c"
+          },
+          "rule4_linked_list.typed.json": {
+            "sha256": "0be4b6d0577b5db666de1756031217d84e52b8bf0f53bf3b7490d47efe87056c"
+          }
+        }
+      },
+      "fixture": "tests/positive/rule4_linked_list.safe",
+      "structural_assertions": {
+        "safe_linked_list.adb": [
+          "Current.all.Next"
+        ],
+        "safe_linked_list.ads": [
+          "Global => null"
+        ]
+      }
+    }
+  ],
+  "repeat_sha256": "281b8823dfde307483b510cea95b47455417128ea9326f9efa6c6eae11c6344f",
+  "report_sha256": "281b8823dfde307483b510cea95b47455417128ea9326f9efa6c6eae11c6344f"
+}
