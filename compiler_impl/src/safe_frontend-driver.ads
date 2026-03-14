@@ -21,6 +21,7 @@ package Safe_Frontend.Driver is
      (Path          : String;
       Out_Dir       : String;
       Interface_Dir : String;
+      Ada_Out_Dir   : String := "";
       Search_Dirs   : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector)
       return Integer;
 end Safe_Frontend.Driver;

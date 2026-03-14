@@ -34,22 +34,22 @@ All required files exist and are properly configured.
 | `docs/gnatprove_profile.md` | EXISTS | 436 | GNATprove configuration policy |
 | `docs/traceability_matrix.md` | EXISTS | 652 | 205 normative clauses mapped to artifacts |
 | `compiler/translation_rules.md` | EXISTS | 1466 | Safe-to-Ada translation reference (14 sections) |
-| `tests/golden/golden_sensors.ada` | EXISTS | 60 | D27 Rule 1: wide arithmetic averaging |
-| `tests/golden/golden_ownership.ada` | EXISTS | 65 | Section 2.3: ownership move + deallocation |
-| `tests/golden/golden_pipeline.ada` | EXISTS | 125 | Section 4.2-4.3: channel FIFO + task declarations |
+| `tests/golden/golden_sensors/` | EXISTS | 60 | D27 Rule 1: wide arithmetic averaging |
+| `tests/golden/golden_ownership/` | EXISTS | 65 | Section 2.3: ownership move + deallocation |
+| `tests/golden/golden_pipeline/` | EXISTS | 125 | Section 4.2-4.3: channel FIFO + task declarations |
 
 ## 2. Template Inventory
 
 | # | Template | Emission Pattern | PO Hooks | Clause IDs | Golden |
 |---|----------|-----------------|----------|------------|--------|
-| 1 | `template_wide_arithmetic` | Wide intermediate arithmetic + narrowing | `Narrow_Return`, `Narrow_Assignment` | 2.8.1.p126-p130, 5.3.6.p25 | golden_sensors.ada |
-| 2 | `template_division_nonzero` | Division/mod/rem with nonzero guard | `Nonzero`, `Safe_Div`, `Safe_Mod`, `Safe_Rem` | 2.8.3.p133-p134, 5.3.1.p12 | golden_sensors.ada |
-| 3 | `template_ownership_move` | Ownership move: copy + null source | `Check_Owned_For_Move`, `Check_Not_Moved` | 2.3.2.p96a-p97a, 2.3.5.p104 | golden_ownership.ada |
-| 4 | `template_scope_dealloc` | Scope-exit deallocation in reverse order | `Check_Owned_For_Move`, `Check_Not_Moved` | 2.3.5.p104, 2.3.2.p96c | golden_ownership.ada |
-| 5 | `template_not_null_deref` | Not-null assertion before dereference | `Not_Null_Ptr`, `Safe_Deref` | 2.8.4.p136, 5.3.1.p12 | golden_ownership.ada |
-| 6 | `template_channel_fifo` | Bounded FIFO: send/receive/capacity | `Check_Channel_Not_Full/Empty/Capacity_Positive` | 4.2.p15-p20, 4.3.p27-p31 | golden_pipeline.ada |
-| 7 | `template_task_decl` | Task-variable exclusive ownership | `Check_Exclusive_Ownership` | 4.5.p45, 5.4.1.p32-p33 | golden_pipeline.ada |
-| 8 | `template_index_safety` | Safe array indexing with bounds proof | `Safe_Index`, `Narrow_Indexing` | 2.8.2.p131-p132, 5.3.1.p12 | golden_sensors.ada |
+| 1 | `template_wide_arithmetic` | Wide intermediate arithmetic + narrowing | `Narrow_Return`, `Narrow_Assignment` | 2.8.1.p126-p130, 5.3.6.p25 | golden_sensors/ |
+| 2 | `template_division_nonzero` | Division/mod/rem with nonzero guard | `Nonzero`, `Safe_Div`, `Safe_Mod`, `Safe_Rem` | 2.8.3.p133-p134, 5.3.1.p12 | golden_sensors/ |
+| 3 | `template_ownership_move` | Ownership move: copy + null source | `Check_Owned_For_Move`, `Check_Not_Moved` | 2.3.2.p96a-p97a, 2.3.5.p104 | golden_ownership/ |
+| 4 | `template_scope_dealloc` | Scope-exit deallocation in reverse order | `Check_Owned_For_Move`, `Check_Not_Moved` | 2.3.5.p104, 2.3.2.p96c | golden_ownership/ |
+| 5 | `template_not_null_deref` | Not-null assertion before dereference | `Not_Null_Ptr`, `Safe_Deref` | 2.8.4.p136, 5.3.1.p12 | golden_ownership/ |
+| 6 | `template_channel_fifo` | Bounded FIFO: send/receive/capacity | `Check_Channel_Not_Full/Empty/Capacity_Positive` | 4.2.p15-p20, 4.3.p27-p31 | golden_pipeline/ |
+| 7 | `template_task_decl` | Task-variable exclusive ownership | `Check_Exclusive_Ownership` | 4.5.p45, 5.4.1.p32-p33 | golden_pipeline/ |
+| 8 | `template_index_safety` | Safe array indexing with bounds proof | `Safe_Index`, `Narrow_Indexing` | 2.8.2.p131-p132, 5.3.1.p12 | golden_sensors/ |
 
 ## 3. Proof / VC Summary
 

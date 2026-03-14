@@ -1,0 +1,188 @@
+{
+  "deterministic": true,
+  "fixtures": [
+    {
+      "compile": {
+        "command": [
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/channel_pingpong-a/ada/build.gpr",
+          "ping_pong.adb"
+        ],
+        "cwd": "$TMPDIR/channel_pingpong-a/ada",
+        "returncode": 0,
+        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
+        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          ping_pong.adb\n   [Ada]          safe_runtime.ads\n"
+      },
+      "determinism": {
+        "ada": {
+          "gnat.adc": {
+            "sha256": "02f745f7b4743057317a8e6b81f29ef7431b7672dc8d5cdc4ea5550036d82daf"
+          },
+          "ping_pong.adb": {
+            "sha256": "70b960c9f6c05a97c5d236b852feb1d23a6ece3169bfd2b521d87535bf807d94"
+          },
+          "ping_pong.ads": {
+            "sha256": "96b3d41f42e76417d534f7f63c341ed240e1fdc3446c212bd81a20399bc71119"
+          },
+          "safe_runtime.ads": {
+            "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+          }
+        },
+        "json_and_interface": {
+          "channel_pingpong.ast.json": {
+            "sha256": "494af0e238431f1849523e22b9784f00906968203d7917705888fdf25b26d8e0"
+          },
+          "channel_pingpong.mir.json": {
+            "sha256": "2f07d27e533d98bf87efc9338a513c992da527d33c6112e6c40aca99460acdb2"
+          },
+          "channel_pingpong.safei.json": {
+            "sha256": "9e02cb0a7ee34c751f63882e5ec006b9906bd601fbcf0aa937eb1ab54be6529e"
+          },
+          "channel_pingpong.typed.json": {
+            "sha256": "845b9fa2ccf0ea2c541a526b8f1afbd1b4eb322db5f01b2ced53e06aa182cc78"
+          }
+        }
+      },
+      "fixture": "tests/positive/channel_pingpong.safe",
+      "gnat_adc": {
+        "content": "pragma Partition_Elaboration_Policy(Sequential);\npragma Profile(Jorvik);\n",
+        "path": "gnat.adc"
+      },
+      "structural_assertions": {
+        "ping_pong.adb": [
+          ".Send (",
+          ".Receive ("
+        ],
+        "ping_pong.ads": [
+          "protected type",
+          "task "
+        ]
+      }
+    },
+    {
+      "compile": {
+        "command": [
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/channel_pipeline-a/ada/build.gpr",
+          "pipeline.adb"
+        ],
+        "cwd": "$TMPDIR/channel_pipeline-a/ada",
+        "returncode": 0,
+        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
+        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          pipeline.adb\n   [Ada]          safe_runtime.ads\n"
+      },
+      "determinism": {
+        "ada": {
+          "gnat.adc": {
+            "sha256": "02f745f7b4743057317a8e6b81f29ef7431b7672dc8d5cdc4ea5550036d82daf"
+          },
+          "pipeline.adb": {
+            "sha256": "6cb05c4928e42c813533eebaf4281a15358172bd8621cf2c95a2e7608dc252ef"
+          },
+          "pipeline.ads": {
+            "sha256": "36b449b2226306e5acb472a9401c1690cc74e2071161d6b265690371c2b3c7f9"
+          },
+          "safe_runtime.ads": {
+            "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+          }
+        },
+        "json_and_interface": {
+          "channel_pipeline.ast.json": {
+            "sha256": "dbba9f701428a3157a3bef22e7c9414535d069fa39b06360e674ad679d50de56"
+          },
+          "channel_pipeline.mir.json": {
+            "sha256": "af0b9ead6231acece881faaa0ff1a97e79a99f2a095375a9e2e7a206a32362c0"
+          },
+          "channel_pipeline.safei.json": {
+            "sha256": "1e483f68713670a0e2d090f2926f18e4ec5dc8c0803ca1bfeb1e6e935f8e979a"
+          },
+          "channel_pipeline.typed.json": {
+            "sha256": "2807c8b2ddfd63b6a3b4a0e1c6f5d36143980231619c894779fb1cc27009157e"
+          }
+        }
+      },
+      "fixture": "tests/positive/channel_pipeline.safe",
+      "gnat_adc": {
+        "content": "pragma Partition_Elaboration_Policy(Sequential);\npragma Profile(Jorvik);\n",
+        "path": "gnat.adc"
+      },
+      "structural_assertions": {
+        "pipeline.adb": [
+          ".Send (",
+          ".Receive ("
+        ],
+        "pipeline.ads": [
+          "protected type",
+          "task "
+        ]
+      }
+    },
+    {
+      "compile": {
+        "command": [
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/select_with_delay-a/ada/build.gpr",
+          "select_with_delay.adb"
+        ],
+        "cwd": "$TMPDIR/select_with_delay-a/ada",
+        "returncode": 0,
+        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
+        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          select_with_delay.adb\n   [Ada]          safe_runtime.ads\n"
+      },
+      "determinism": {
+        "ada": {
+          "gnat.adc": {
+            "sha256": "02f745f7b4743057317a8e6b81f29ef7431b7672dc8d5cdc4ea5550036d82daf"
+          },
+          "safe_runtime.ads": {
+            "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+          },
+          "select_with_delay.adb": {
+            "sha256": "ed3bbc597ef6dd1e2c899334e09be0aa68fd55b886f57dd7bb8a5077e09c482e"
+          },
+          "select_with_delay.ads": {
+            "sha256": "23b48a70e6518b1399cd3b85a532b34fed2aef467cdf945938c2005683a5bed9"
+          }
+        },
+        "json_and_interface": {
+          "select_with_delay.ast.json": {
+            "sha256": "4e4e5f041d32e26070c24bec985ff1299ac43685e52f4db1297d14a1c37505b2"
+          },
+          "select_with_delay.mir.json": {
+            "sha256": "0bbb0d25021f5767ff7d3e3de40347acacb4ec48aa74ec5e2237660c42334986"
+          },
+          "select_with_delay.safei.json": {
+            "sha256": "a62658ab02d19efcbc96d7c95df1665eaa82b4f0293b391e59a99b3aa0721a02"
+          },
+          "select_with_delay.typed.json": {
+            "sha256": "bb798dc4a282ec76f3dc6ad4629a31016871d3801ed3b35d5e2e9e48493c6e10"
+          }
+        }
+      },
+      "fixture": "tests/concurrency/select_with_delay.safe",
+      "gnat_adc": {
+        "content": "pragma Partition_Elaboration_Policy(Sequential);\npragma Profile(Jorvik);\n",
+        "path": "gnat.adc"
+      },
+      "structural_assertions": {
+        "select_with_delay.adb": [
+          "select",
+          "delay 0.05;",
+          ".Receive ("
+        ],
+        "select_with_delay.ads": [
+          "protected type",
+          "task "
+        ]
+      }
+    }
+  ],
+  "repeat_sha256": "9ced7c6575558908a6f20e3a4095f04b12e1eb3d41613c082f8c05db77df679f",
+  "report_sha256": "9ced7c6575558908a6f20e3a4095f04b12e1eb3d41613c082f8c05db77df679f"
+}

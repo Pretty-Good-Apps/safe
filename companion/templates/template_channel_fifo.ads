@@ -6,11 +6,11 @@
 --  Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p28:ea6bd13c
 --  Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p31:a7297e97
 --  Reference: compiler/translation_rules.md Section 4
---  Reference: tests/golden/golden_pipeline.ada
+--  Reference: tests/golden/golden_pipeline/
 --
 --  Demonstrates the compiler emission pattern for channel operations.
 --  In emitted code, channels become protected objects with ceiling
---  priority (see golden_pipeline.ada). This template verifies the
+--  priority (see golden_pipeline/). This template verifies the
 --  functional invariants the protected object must maintain:
 --    - Channel capacity is positive at construction
 --    - Send only when not full

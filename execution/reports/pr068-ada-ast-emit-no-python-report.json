@@ -821,8 +821,8 @@
       "python3.11": "$TMPDIR/python-mask/python3.11"
     }
   },
-  "repeat_sha256": "3ac6aecdd2caf5dbf0b64279699a5cca119ba62706320505889f7a636df5e226",
-  "report_sha256": "3ac6aecdd2caf5dbf0b64279699a5cca119ba62706320505889f7a636df5e226",
+  "repeat_sha256": "5321c6c4dee84dd1be23f021be1758d4d4dff6d4ceecbd517272c9843dfdfd1a",
+  "report_sha256": "5321c6c4dee84dd1be23f021be1758d4d4dff6d4ceecbd517272c9843dfdfd1a",
   "runtime_rule": {
     "banned_tokens_absent": [
       "Run_Backend",
@@ -834,6 +834,7 @@
     "driver": "compiler_impl/src/safe_frontend-driver.adb",
     "legacy_backend_removed": true,
     "scanned_files": [
+      "compiler_impl/src/safe_frontend-ada_emit.adb",
       "compiler_impl/src/safe_frontend-check_emit.adb",
       "compiler_impl/src/safe_frontend-check_lower.adb",
       "compiler_impl/src/safe_frontend-check_model.adb",
@@ -854,6 +855,7 @@
       "compiler_impl/src/safe_frontend-mir_write.adb",
       "compiler_impl/src/safe_frontend-source.adb",
       "compiler_impl/src/safe_frontend-types.adb",
+      "compiler_impl/src/safe_frontend-ada_emit.ads",
       "compiler_impl/src/safe_frontend-check_emit.ads",
       "compiler_impl/src/safe_frontend-check_lower.ads",
       "compiler_impl/src/safe_frontend-check_model.ads",

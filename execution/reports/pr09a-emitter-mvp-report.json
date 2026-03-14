@@ -1,0 +1,276 @@
+{
+  "deterministic": true,
+  "fixtures": [
+    {
+      "compile": {
+        "command": [
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/rule1_averaging-a/ada/build.gpr",
+          "sensor_average.adb"
+        ],
+        "cwd": "$TMPDIR/rule1_averaging-a/ada",
+        "returncode": 0,
+        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
+        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          sensor_average.adb\n   [Ada]          safe_runtime.ads\n"
+      },
+      "determinism": {
+        "ada": {
+          "safe_runtime.ads": {
+            "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+          },
+          "sensor_average.adb": {
+            "sha256": "e759ef30128530aee73149655a3dde1feb67cc5e226d6dcfc8ce4134e7554654"
+          },
+          "sensor_average.ads": {
+            "sha256": "0f2efca66d7a0446034e7f9edd5d00ea17b5786f267da4cce8ba813fedfc8e11"
+          }
+        },
+        "json_and_interface": {
+          "rule1_averaging.ast.json": {
+            "sha256": "dbae133412a790cd20087f74eb7ebd42afa5486fde06e9e224cb7dd2fbd63c20"
+          },
+          "rule1_averaging.mir.json": {
+            "sha256": "7bc2e128abc2e28cd3ae2cade71a2fd1c2d899aad1a33cc94ea348e0ca040599"
+          },
+          "rule1_averaging.safei.json": {
+            "sha256": "be516ef3fbf394c7b8ca41690b9e5587947f1ea0e58cc2f6ba6cf5eb507c2728"
+          },
+          "rule1_averaging.typed.json": {
+            "sha256": "89f00af9c23f95841df2fe271f320def58d9d28ac408ac5677e6b82f04e1b706"
+          }
+        }
+      },
+      "fixture": "tests/positive/rule1_averaging.safe",
+      "safe_runtime": {
+        "emitted": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a",
+        "template": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+      },
+      "structural_assertions": {
+        "sensor_average.adb": [
+          "Safe_Runtime.Wide_Integer",
+          "pragma Assert"
+        ]
+      }
+    },
+    {
+      "compile": {
+        "command": [
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/rule1_accumulate-a/ada/build.gpr",
+          "accumulator.adb"
+        ],
+        "cwd": "$TMPDIR/rule1_accumulate-a/ada",
+        "returncode": 0,
+        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
+        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          accumulator.adb\n   [Ada]          safe_runtime.ads\n"
+      },
+      "determinism": {
+        "ada": {
+          "accumulator.adb": {
+            "sha256": "df7eabd9eb55ba86d15f3ca71098107b7a923d2e03484998249c24523422e980"
+          },
+          "accumulator.ads": {
+            "sha256": "93c09e4d8e6b6503ffefbaba7931ff5c4e30d5505c22e57ba0edb0ff594aa102"
+          },
+          "safe_runtime.ads": {
+            "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+          }
+        },
+        "json_and_interface": {
+          "rule1_accumulate.ast.json": {
+            "sha256": "1651ff9a2cdb7407a6914b0999a585f8cff71cb04bf0db45db32108065657cc3"
+          },
+          "rule1_accumulate.mir.json": {
+            "sha256": "18f42a4b1aed89d8d55ed43c0d08096c62026a85f5ce25476154763cffcef785"
+          },
+          "rule1_accumulate.safei.json": {
+            "sha256": "91371a725e316604652698208c9e49269894bd9463790e4fc1a7a20bc39d8ad9"
+          },
+          "rule1_accumulate.typed.json": {
+            "sha256": "13aaa4cc6139c8c0f30510a57c3fa37336e97ba4eef35294f9a42fce4ffba74e"
+          }
+        }
+      },
+      "fixture": "tests/positive/rule1_accumulate.safe",
+      "safe_runtime": {
+        "emitted": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a",
+        "template": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+      },
+      "structural_assertions": {
+        "accumulator.adb": [
+          "Safe_Runtime.Wide_Integer",
+          "pragma Assert"
+        ]
+      }
+    },
+    {
+      "compile": {
+        "command": [
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/rule1_parameter-a/ada/build.gpr",
+          "safe_parameters.adb"
+        ],
+        "cwd": "$TMPDIR/rule1_parameter-a/ada",
+        "returncode": 0,
+        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
+        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          safe_parameters.adb\n   [Ada]          safe_runtime.ads\n"
+      },
+      "determinism": {
+        "ada": {
+          "safe_parameters.adb": {
+            "sha256": "22c69204463d09ae2bc0320b6077887f8f2036f47e30a40348d5adbd3aad3da8"
+          },
+          "safe_parameters.ads": {
+            "sha256": "15d49312fbc78af4ea970121f429c9228bb9b67742944c0f15e69a77708fb22c"
+          },
+          "safe_runtime.ads": {
+            "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+          }
+        },
+        "json_and_interface": {
+          "rule1_parameter.ast.json": {
+            "sha256": "3183e3a4991ff0347dc42e9e45471a135c4bbccf5e4920ed3ef026f033bf8f7c"
+          },
+          "rule1_parameter.mir.json": {
+            "sha256": "49ac2cb6719232ea3218fae33359e0e039492ebf42b057cb06f718d4e1f66122"
+          },
+          "rule1_parameter.safei.json": {
+            "sha256": "982e636d49e67c50527cc794db75b10b8404415f9cd2a64c199122cd77c64398"
+          },
+          "rule1_parameter.typed.json": {
+            "sha256": "04075807367bf4e51080dc2ead42dd651bfbdf10001bb3847471c999b21f3bf3"
+          }
+        }
+      },
+      "fixture": "tests/positive/rule1_parameter.safe",
+      "safe_runtime": {
+        "emitted": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a",
+        "template": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+      },
+      "structural_assertions": {
+        "safe_parameters.adb": [
+          "Safe_Runtime.Wide_Integer",
+          "pragma Assert"
+        ]
+      }
+    },
+    {
+      "compile": {
+        "command": [
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/rule1_return-a/ada/build.gpr",
+          "safe_return.adb"
+        ],
+        "cwd": "$TMPDIR/rule1_return-a/ada",
+        "returncode": 0,
+        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
+        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          safe_return.adb\n   [Ada]          safe_runtime.ads\n"
+      },
+      "determinism": {
+        "ada": {
+          "safe_return.adb": {
+            "sha256": "5e5076846305fb6583c4c8dcf1b68693da42cdd4b1033740177d18cead0eba81"
+          },
+          "safe_return.ads": {
+            "sha256": "b021287768beb73434dac7d6f6f7781fef920bd6930a1da72bcb8e6a579507f2"
+          },
+          "safe_runtime.ads": {
+            "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+          }
+        },
+        "json_and_interface": {
+          "rule1_return.ast.json": {
+            "sha256": "baa1d5a79839acd49f2fc5a8049e10ad3d400bedb9bd7f6acbf3d065f21e6d03"
+          },
+          "rule1_return.mir.json": {
+            "sha256": "6344c6134b7c7b58f77e596b31fa618aa39a38901e2a60a151e4883d24fffeae"
+          },
+          "rule1_return.safei.json": {
+            "sha256": "53324d20dde0cc19ef1e96c9d975c72cd6a20cdf3ee0d02ea0451e4c3bd80790"
+          },
+          "rule1_return.typed.json": {
+            "sha256": "8e75bbb4efae192c093dc915c4fb180705aec142f2fcc6a63915c13450baea20"
+          }
+        }
+      },
+      "fixture": "tests/positive/rule1_return.safe",
+      "safe_runtime": {
+        "emitted": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a",
+        "template": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+      },
+      "structural_assertions": {
+        "safe_return.adb": [
+          "Safe_Runtime.Wide_Integer",
+          "pragma Assert"
+        ]
+      }
+    },
+    {
+      "compile": {
+        "command": [
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/rule1_conversion-a/ada/build.gpr",
+          "safe_conversion.adb"
+        ],
+        "cwd": "$TMPDIR/rule1_conversion-a/ada",
+        "returncode": 0,
+        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
+        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          safe_conversion.adb\n   [Ada]          safe_runtime.ads\n"
+      },
+      "determinism": {
+        "ada": {
+          "safe_conversion.adb": {
+            "sha256": "b69aafc376fd3d1847d33e6c083e6a256f333c8ba6d2a3bd3c09746f3dc4e8a9"
+          },
+          "safe_conversion.ads": {
+            "sha256": "33791402cae4e4185e2e2f677917a5d638baa2d84e2b1a281d10f9fcc1811693"
+          },
+          "safe_runtime.ads": {
+            "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+          }
+        },
+        "json_and_interface": {
+          "rule1_conversion.ast.json": {
+            "sha256": "576547a78b96f973002beff0571890b2b68307795f5e4c55ff463a00433850b7"
+          },
+          "rule1_conversion.mir.json": {
+            "sha256": "ae0c94407c70bcf722f264f4d8a1cc0262acc937c41042f2f0b12f85166b1a09"
+          },
+          "rule1_conversion.safei.json": {
+            "sha256": "6bd9f8f4bdd513105a97392d2a497f9129acc5cc9fdb0ed5923ffef770205167"
+          },
+          "rule1_conversion.typed.json": {
+            "sha256": "2902c1d9529b2870f0ba158a2d1e0bee42f344febbbefeccbb339ac2928681e5"
+          }
+        }
+      },
+      "fixture": "tests/positive/rule1_conversion.safe",
+      "safe_runtime": {
+        "emitted": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a",
+        "template": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+      },
+      "structural_assertions": {
+        "safe_conversion.adb": [
+          "Safe_Runtime.Wide_Integer",
+          "pragma Assert"
+        ]
+      }
+    }
+  ],
+  "notes": [
+    "PR09a emits compile-valid Ada/SPARK skeleton output on the rule1 subset.",
+    "safe_runtime.ads remains byte-identical to companion/templates/safe_runtime.ads."
+  ],
+  "repeat_sha256": "15ae3552c851678cbccb4fc97f5fcdffc6cc6872b5025bf8024ad8bb74b4aca7",
+  "report_sha256": "15ae3552c851678cbccb4fc97f5fcdffc6cc6872b5025bf8024ad8bb74b4aca7"
+}

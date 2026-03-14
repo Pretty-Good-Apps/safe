@@ -63,6 +63,23 @@ class RunLocalPrePushTests(unittest.TestCase):
         self.assertIn("Run run_pr084_transitive_concurrency_integration.py", labels)
         self.assertIn("Run run_pr08_frontend_baseline.py", labels)
 
+    def test_gate_scripts_for_branch_maps_known_pr09_branch(self) -> None:
+        self.assertEqual(
+            gate_scripts_for_branch("codex/pr09-ada-emission"),
+            ("scripts/run_pr09_ada_emission_baseline.py",),
+        )
+
+    def test_build_steps_include_pr09_baseline_gate(self) -> None:
+        steps = build_steps(
+            branch="codex/pr09-ada-emission",
+            python="python3",
+            alr="alr",
+            git="git",
+            include_diff=False,
+        )
+        labels = [step.label for step in steps]
+        self.assertIn("Run run_pr09_ada_emission_baseline.py", labels)
+
     def test_build_steps_skips_unmapped_non_pr08_branch(self) -> None:
         self.assertEqual(
             build_steps(

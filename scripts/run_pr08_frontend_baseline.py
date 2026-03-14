@@ -70,7 +70,10 @@ def generate_report(
 ) -> dict[str, Any]:
     tracker = load_tracker()
     task_map = {task["id"]: task for task in tracker["tasks"]}
-    require(tracker.get("next_task_id") == "PR09", "tracker next_task_id must advance to PR09")
+    require(
+        tracker.get("next_task_id") in {"PR09", "PR10"},
+        "tracker next_task_id must remain at or beyond PR09 for the PR08 baseline",
+    )
     require(task_map["PR08.4"]["status"] == "done", "PR08.4 must be marked done")
     require(task_map["PR08"]["status"] == "done", "PR08 umbrella task must be marked done")
     require(
@@ -89,7 +92,11 @@ def generate_report(
         dashboard_text == rendered_dashboard["stdout"],
         "execution/dashboard.md must match scripts/render_execution_status.py output",
     )
-    require_contains(dashboard_text, "- **Next task:** `PR09`", "execution/dashboard.md")
+    require_contains(
+        dashboard_text,
+        f"- **Next task:** `{tracker['next_task_id']}`",
+        "execution/dashboard.md",
+    )
     require_contains(dashboard_text, "| PR08.4 | done | PR08.3 | 1 |", "execution/dashboard.md")
     require_contains(dashboard_text, "| PR08 | done | PR08.4 | 1 |", "execution/dashboard.md")
 

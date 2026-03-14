@@ -1,0 +1,60 @@
+{
+  "deterministic": true,
+  "docs": {
+    "compiler_readme": "compiler_impl/README.md",
+    "dashboard_synced": true,
+    "frontend_baseline": "docs/frontend_architecture_baseline.md",
+    "readme": "README.md"
+  },
+  "repeat_sha256": "00e96c80e9a24edbaa4318f5fb169235f02084d0670f62b9df34ef5efff8d3fd",
+  "report_sha256": "00e96c80e9a24edbaa4318f5fb169235f02084d0670f62b9df34ef5efff8d3fd",
+  "retired_snapshots_absent": [
+    "tests/golden/golden_sensors.ada",
+    "tests/golden/golden_ownership.ada",
+    "tests/golden/golden_pipeline.ada"
+  ],
+  "slice_reports": [
+    {
+      "deterministic": true,
+      "report_sha256": "60289b07c1dfea4c376397050cb107062fba8db1702beaaca15214d558bbf6c8",
+      "script": "scripts/run_pr09a_emitter_surface.py",
+      "stdout": "pr09a emitter surface: OK ($TMPDIR/run_pr09a_emitter_surface.json)\n"
+    },
+    {
+      "deterministic": true,
+      "report_sha256": "15ae3552c851678cbccb4fc97f5fcdffc6cc6872b5025bf8024ad8bb74b4aca7",
+      "script": "scripts/run_pr09a_emitter_mvp.py",
+      "stdout": "pr09a emitter MVP: OK ($TMPDIR/run_pr09a_emitter_mvp.json)\n"
+    },
+    {
+      "deterministic": true,
+      "report_sha256": "ddac1dced0c883ab4d32e739bd7e16f03f04a9a9a1ff2de89921e3bf950d2d33",
+      "script": "scripts/run_pr09b_sequential_semantics.py",
+      "stdout": "pr09b sequential semantics: OK ($TMPDIR/run_pr09b_sequential_semantics.json)\n"
+    },
+    {
+      "deterministic": true,
+      "report_sha256": "9ced7c6575558908a6f20e3a4095f04b12e1eb3d41613c082f8c05db77df679f",
+      "script": "scripts/run_pr09b_concurrency_output.py",
+      "stdout": "pr09b concurrency output: OK ($TMPDIR/run_pr09b_concurrency_output.json)\n"
+    },
+    {
+      "deterministic": true,
+      "report_sha256": "776d97ffd356281879a7590daeb6ced67e08320b234eeea59e40183d886929d0",
+      "script": "scripts/run_pr09b_snapshot_refresh.py",
+      "stdout": "pr09b snapshot refresh: OK ($TMPDIR/run_pr09b_snapshot_refresh.json)\n"
+    }
+  ],
+  "tracker": {
+    "next_task_id": "PR10",
+    "pr09_evidence": [
+      "execution/reports/pr09a-emitter-surface-report.json",
+      "execution/reports/pr09a-emitter-mvp-report.json",
+      "execution/reports/pr09b-sequential-semantics-report.json",
+      "execution/reports/pr09b-concurrency-output-report.json",
+      "execution/reports/pr09b-snapshot-refresh-report.json",
+      "execution/reports/pr09-ada-emission-baseline-report.json"
+    ],
+    "pr09_status": "done"
+  }
+}

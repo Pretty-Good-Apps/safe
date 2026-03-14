@@ -5,7 +5,7 @@
 --  Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.2.p97a:8d0214d5
 --  Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.5.p104:d9f9b8d9
 --  Reference: compiler/translation_rules.md Section 7
---  Reference: tests/golden/golden_ownership.ada
+--  Reference: tests/golden/golden_ownership/
 --
 --  Demonstrates the compiler emission pattern for ownership move:
 --    1. Source must be Owned (Check_Owned_For_Move)

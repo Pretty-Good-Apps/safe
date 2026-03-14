@@ -4,7 +4,7 @@
 --  Clause: SAFE@468cf72:spec/02-restrictions.md#2.8.2.p132:8613ecf4
 --  Clause: SAFE@468cf72:spec/05-assurance.md#5.3.1.p12:99a94209
 --  Reference: compiler/translation_rules.md Section 8
---  Reference: tests/golden/golden_sensors.ada
+--  Reference: tests/golden/golden_sensors/
 --
 --  Demonstrates the compiler emission pattern for safe array indexing.
 --  The index expression in an indexed component must be provably within

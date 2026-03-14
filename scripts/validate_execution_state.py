@@ -288,6 +288,12 @@ PORTABILITY_TEMPDIR_SCRIPTS = [
     "scripts/run_pr082_local_concurrency_analysis.py",
     "scripts/run_pr083_interface_contracts.py",
     "scripts/run_pr083a_public_constants.py",
+    "scripts/run_pr09a_emitter_surface.py",
+    "scripts/run_pr09a_emitter_mvp.py",
+    "scripts/run_pr09b_sequential_semantics.py",
+    "scripts/run_pr09b_concurrency_output.py",
+    "scripts/run_pr09b_snapshot_refresh.py",
+    "scripts/run_pr09_ada_emission_baseline.py",
 ]
 PORTABILITY_PATH_LOOKUP_SCRIPTS = [
     "scripts/run_pr0693_runtime_boundary.py",
@@ -297,6 +303,8 @@ PORTABILITY_PATH_LOOKUP_SCRIPTS = [
     "scripts/run_pr082_local_concurrency_analysis.py",
     "scripts/run_pr083_interface_contracts.py",
     "scripts/run_pr083a_public_constants.py",
+    "scripts/_lib/pr09_emit.py",
+    "scripts/run_pr09_ada_emission_baseline.py",
     "scripts/run_local_pre_push.py",
 ]
 GLUE_SAFETY_AUDITED_SCRIPTS = [
@@ -323,6 +331,13 @@ GLUE_SAFETY_AUDITED_SCRIPTS = [
     "scripts/run_pr082_local_concurrency_analysis.py",
     "scripts/run_pr083_interface_contracts.py",
     "scripts/run_pr083a_public_constants.py",
+    "scripts/_lib/pr09_emit.py",
+    "scripts/run_pr09a_emitter_surface.py",
+    "scripts/run_pr09a_emitter_mvp.py",
+    "scripts/run_pr09b_sequential_semantics.py",
+    "scripts/run_pr09b_concurrency_output.py",
+    "scripts/run_pr09b_snapshot_refresh.py",
+    "scripts/run_pr09_ada_emission_baseline.py",
     "scripts/run_local_pre_push.py",
     "scripts/validate_execution_state.py",
     "scripts/validate_ast_output.py",
@@ -353,6 +368,12 @@ GLUE_SAFETY_REPORT_SCRIPTS = [
     "scripts/run_pr082_local_concurrency_analysis.py",
     "scripts/run_pr083_interface_contracts.py",
     "scripts/run_pr083a_public_constants.py",
+    "scripts/run_pr09a_emitter_surface.py",
+    "scripts/run_pr09a_emitter_mvp.py",
+    "scripts/run_pr09b_sequential_semantics.py",
+    "scripts/run_pr09b_concurrency_output.py",
+    "scripts/run_pr09b_snapshot_refresh.py",
+    "scripts/run_pr09_ada_emission_baseline.py",
 ]
 GLUE_SAFETY_PATH_COMMANDS = ("python3", "alr", "git")
 GLUE_SAFETY_ALLOWED_SAFE_SOURCE_READERS = {
@@ -536,7 +557,11 @@ def count_test_files(
     distribution = {}
     total = 0
     for subdir in subdirs:
-        count = len([entry for entry in (tests_root / subdir).iterdir() if entry.is_file()])
+        entries = list((tests_root / subdir).iterdir())
+        if subdir == "golden":
+            count = len([entry for entry in entries if entry.is_dir()])
+        else:
+            count = len([entry for entry in entries if entry.is_file()])
         distribution[subdir] = count
         total += count
     distribution["total"] = total

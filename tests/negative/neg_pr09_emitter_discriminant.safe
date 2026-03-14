@@ -1,0 +1,16 @@
+-- Test: neg_pr09_emitter_discriminant
+-- Description: Emitter-only unsupported discriminated record case.
+--   The frontend accepts the source, but PR09 Ada emission intentionally
+--   rejects discriminated/variant record output until a later slice.
+-- Expected: REJECT unsupported_source_construct
+
+package PR09_Emitter_Discriminant is
+
+   type Result (OK : Boolean = False) is record
+      case OK is
+         when True  then Value : Integer;
+         when False then Error : Integer;
+      end case;
+   end record;
+
+end PR09_Emitter_Discriminant;

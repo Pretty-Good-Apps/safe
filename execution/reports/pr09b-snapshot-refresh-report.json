@@ -1,0 +1,57 @@
+{
+  "deterministic": true,
+  "repeat_sha256": "776d97ffd356281879a7590daeb6ced67e08320b234eeea59e40183d886929d0",
+  "report_sha256": "776d97ffd356281879a7590daeb6ced67e08320b234eeea59e40183d886929d0",
+  "retired_snapshots_absent": [
+    "tests/golden/golden_sensors.ada",
+    "tests/golden/golden_ownership.ada",
+    "tests/golden/golden_pipeline.ada"
+  ],
+  "snapshots": [
+    {
+      "fixture": "tests/positive/rule1_averaging.safe",
+      "golden_dir": "tests/golden/golden_sensors",
+      "hashes": {
+        "safe_runtime.ads": {
+          "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+        },
+        "sensor_average.adb": {
+          "sha256": "e759ef30128530aee73149655a3dde1feb67cc5e226d6dcfc8ce4134e7554654"
+        },
+        "sensor_average.ads": {
+          "sha256": "0f2efca66d7a0446034e7f9edd5d00ea17b5786f267da4cce8ba813fedfc8e11"
+        }
+      }
+    },
+    {
+      "fixture": "tests/positive/ownership_move.safe",
+      "golden_dir": "tests/golden/golden_ownership",
+      "hashes": {
+        "ownership_move.adb": {
+          "sha256": "81447f6dee0d93d148e4ab10a1438d836cb8b06b94e16c9abee519f309cc30ae"
+        },
+        "ownership_move.ads": {
+          "sha256": "b365da5d40b493330d7bd3caf3ac68f6afcad6e4cbe268a32af621783c947dcb"
+        }
+      }
+    },
+    {
+      "fixture": "tests/positive/channel_pipeline.safe",
+      "golden_dir": "tests/golden/golden_pipeline",
+      "hashes": {
+        "gnat.adc": {
+          "sha256": "02f745f7b4743057317a8e6b81f29ef7431b7672dc8d5cdc4ea5550036d82daf"
+        },
+        "pipeline.adb": {
+          "sha256": "6cb05c4928e42c813533eebaf4281a15358172bd8621cf2c95a2e7608dc252ef"
+        },
+        "pipeline.ads": {
+          "sha256": "36b449b2226306e5acb472a9401c1690cc74e2071161d6b265690371c2b3c7f9"
+        },
+        "safe_runtime.ads": {
+          "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+        }
+      }
+    }
+  ]
+}

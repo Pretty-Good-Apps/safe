@@ -30,9 +30,9 @@
       }
     },
     "gate_quality": {
-      "repeat_sha256": "d42897fbb62a4cc182193119b7572de11323de8f3ced6ac08756f6534a51c7bc",
+      "repeat_sha256": "d29450725b4f79a3b1537f45db095e02d7f886825f617f8318183d64a46a76d6",
       "report_path": "execution/reports/pr0697-gate-quality-report.json",
-      "report_sha256": "d42897fbb62a4cc182193119b7572de11323de8f3ced6ac08756f6534a51c7bc",
+      "report_sha256": "d29450725b4f79a3b1537f45db095e02d7f886825f617f8318183d64a46a76d6",
       "run": {
         "command": [
           "python3",
@@ -45,9 +45,9 @@
       }
     },
     "legacy_package_cleanup": {
-      "repeat_sha256": "93f3dac25b04d8a829cd2c43b0b379ac46bd2222371dd8e54021ff8d731d715d",
+      "repeat_sha256": "79ea1419901a7de3866a948ee576fbfcdf04ddfc9703c5e331ba4a37190df0bc",
       "report_path": "execution/reports/pr0698-legacy-package-cleanup-report.json",
-      "report_sha256": "93f3dac25b04d8a829cd2c43b0b379ac46bd2222371dd8e54021ff8d731d715d",
+      "report_sha256": "79ea1419901a7de3866a948ee576fbfcdf04ddfc9703c5e331ba4a37190df0bc",
       "run": {
         "command": [
           "python3",
@@ -61,8 +61,8 @@
     }
   },
   "deterministic": true,
-  "repeat_sha256": "6bf1780f1c2335ce7df02d403a40379f4364be73e5c6b8e7199e9ce6c6ef3d3b",
-  "report_sha256": "6bf1780f1c2335ce7df02d403a40379f4364be73e5c6b8e7199e9ce6c6ef3d3b",
+  "repeat_sha256": "c9e855730f07e552c9f36b1c61677f9167c068a2f51ce464d6968bd3e10128cd",
+  "report_sha256": "c9e855730f07e552c9f36b1c61677f9167c068a2f51ce464d6968bd3e10128cd",
   "status": "ok",
   "task": "PR06.9.9"
 }

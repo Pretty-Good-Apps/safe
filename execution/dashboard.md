@@ -3,17 +3,17 @@
 - **Schema version:** `1`
 - **Frozen spec SHA:** `468cf72332724b04b7c193b4d2a3b02f1584125d`
 - **Active task:** `none`
-- **Next task:** `PR09`
-- **Updated at:** `2026-03-13T21:27:32Z`
+- **Next task:** `PR10`
+- **Updated at:** `2026-03-14T03:19:10Z`
 
 ## Repo Facts
 
-- `tests/positive`: 41
-- `tests/negative`: 75
+- `tests/positive`: 43
+- `tests/negative`: 76
 - `tests/golden`: 3
 - `tests/concurrency`: 12
 - `tests/diagnostics_golden`: 17
-- **Total test files:** 148
+- **Total test corpus entries:** 151
 
 ## Task Ledger
 
@@ -50,7 +50,7 @@
 | PR08.3a | done | PR08.3 | 1 |
 | PR08.4 | done | PR08.3 | 1 |
 | PR08 | done | PR08.4 | 1 |
-| PR09 | planned | PR08 | 0 |
+| PR09 | done | PR08 | 6 |
 | PR10 | planned | PR09 | 0 |
 
 ## Acceptance Snapshot
@@ -481,13 +481,20 @@
 
 ### PR09 — Ada/SPARK emission and snapshot refresh
 
-- **Status:** `planned`
+- **Status:** `done`
 - **Depends on:** PR08
 - **Blockers:** none
 - **Acceptance:**
   - PR09a emitter MVP is deterministic on a narrow subset.
   - PR09b replaces historical golden Ada snapshots once emitter output is stable.
   - Concurrency-enabled output includes gnat.adc with sequential elaboration and Jorvik profile pragmas.
+- **Evidence:**
+  - `execution/reports/pr09a-emitter-surface-report.json`
+  - `execution/reports/pr09a-emitter-mvp-report.json`
+  - `execution/reports/pr09b-sequential-semantics-report.json`
+  - `execution/reports/pr09b-concurrency-output-report.json`
+  - `execution/reports/pr09b-snapshot-refresh-report.json`
+  - `execution/reports/pr09-ada-emission-baseline-report.json`
 
 ### PR10 — GNATprove flow/prove gate on emitted output
 

@@ -53,7 +53,7 @@ def render_dashboard(tracker: Dict[str, Any]) -> str:
         f"- `tests/golden`: {tests['golden']}",
         f"- `tests/concurrency`: {tests['concurrency']}",
         f"- `tests/diagnostics_golden`: {tests['diagnostics_golden']}",
-        f"- **Total test files:** {tests['total']}",
+        f"- **Total test corpus entries:** {tests['total']}",
         "",
         "## Task Ledger",
         "",

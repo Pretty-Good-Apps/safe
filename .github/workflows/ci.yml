@@ -853,6 +853,198 @@ jobs:
         working-directory: .
         run: git diff --exit-code execution/reports/pr08-frontend-baseline-report.json
 
+  pr09a-emitter-surface:
+    name: PR09a Emitter Surface
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: "3.11"
+
+      - name: Install Alire
+        uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
+        with:
+          version: 2.1.0
+          toolchain: gnat_native gprbuild
+
+      - name: Build compiler frontend
+        working-directory: .
+        run: cd compiler_impl && alr build
+
+      - name: Run PR09a emitter surface gate
+        working-directory: .
+        run: python3 scripts/run_pr09a_emitter_surface.py
+
+      - name: Verify committed PR09a emitter surface evidence is up to date
+        working-directory: .
+        run: git diff --exit-code execution/reports/pr09a-emitter-surface-report.json
+
+  pr09a-emitter-mvp:
+    name: PR09a Emitter MVP
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: "3.11"
+
+      - name: Install Alire
+        uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
+        with:
+          version: 2.1.0
+          toolchain: gnat_native gprbuild
+
+      - name: Build compiler frontend
+        working-directory: .
+        run: cd compiler_impl && alr build
+
+      - name: Run PR09a emitter MVP gate
+        working-directory: .
+        run: python3 scripts/run_pr09a_emitter_mvp.py
+
+      - name: Verify committed PR09a emitter MVP evidence is up to date
+        working-directory: .
+        run: git diff --exit-code execution/reports/pr09a-emitter-mvp-report.json
+
+  pr09b-sequential-semantics:
+    name: PR09b Sequential Semantics
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: "3.11"
+
+      - name: Install Alire
+        uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
+        with:
+          version: 2.1.0
+          toolchain: gnat_native gprbuild
+
+      - name: Build compiler frontend
+        working-directory: .
+        run: cd compiler_impl && alr build
+
+      - name: Run PR09b sequential semantics gate
+        working-directory: .
+        run: python3 scripts/run_pr09b_sequential_semantics.py
+
+      - name: Verify committed PR09b sequential evidence is up to date
+        working-directory: .
+        run: git diff --exit-code execution/reports/pr09b-sequential-semantics-report.json
+
+  pr09b-concurrency-output:
+    name: PR09b Concurrency Output
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: "3.11"
+
+      - name: Install Alire
+        uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
+        with:
+          version: 2.1.0
+          toolchain: gnat_native gprbuild
+
+      - name: Build compiler frontend
+        working-directory: .
+        run: cd compiler_impl && alr build
+
+      - name: Run PR09b concurrency output gate
+        working-directory: .
+        run: python3 scripts/run_pr09b_concurrency_output.py
+
+      - name: Verify committed PR09b concurrency evidence is up to date
+        working-directory: .
+        run: git diff --exit-code execution/reports/pr09b-concurrency-output-report.json
+
+  pr09b-snapshot-refresh:
+    name: PR09b Snapshot Refresh
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: "3.11"
+
+      - name: Install Alire
+        uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
+        with:
+          version: 2.1.0
+          toolchain: gnat_native gprbuild
+
+      - name: Build compiler frontend
+        working-directory: .
+        run: cd compiler_impl && alr build
+
+      - name: Run PR09b snapshot refresh gate
+        working-directory: .
+        run: python3 scripts/run_pr09b_snapshot_refresh.py
+
+      - name: Verify committed PR09b snapshot evidence is up to date
+        working-directory: .
+        run: git diff --exit-code execution/reports/pr09b-snapshot-refresh-report.json
+
+  pr09-ada-emission-baseline:
+    name: PR09 Ada Emission Baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: "3.11"
+
+      - name: Install Alire
+        uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
+        with:
+          version: 2.1.0
+          toolchain: gnat_native gprbuild
+
+      - name: Build compiler frontend
+        working-directory: .
+        run: cd compiler_impl && alr build
+
+      - name: Run PR09 Ada emission baseline gate
+        working-directory: .
+        run: python3 scripts/run_pr09_ada_emission_baseline.py
+
+      - name: Verify committed PR09 baseline evidence is up to date
+        working-directory: .
+        run: git diff --exit-code execution/reports/pr09-ada-emission-baseline-report.json
+
   spark-verify:
     name: Build & Verify SPARK Companion
     runs-on: ubuntu-latest

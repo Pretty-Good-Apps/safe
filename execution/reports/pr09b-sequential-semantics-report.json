@@ -1,0 +1,107 @@
+{
+  "deterministic": true,
+  "fixtures": [
+    {
+      "compile": {
+        "command": [
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/ownership_move-a/ada/build.gpr",
+          "ownership_move.adb"
+        ],
+        "cwd": "$TMPDIR/ownership_move-a/ada",
+        "returncode": 0,
+        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
+        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          ownership_move.adb\n"
+      },
+      "determinism": {
+        "ada": {
+          "ownership_move.adb": {
+            "sha256": "81447f6dee0d93d148e4ab10a1438d836cb8b06b94e16c9abee519f309cc30ae"
+          },
+          "ownership_move.ads": {
+            "sha256": "b365da5d40b493330d7bd3caf3ac68f6afcad6e4cbe268a32af621783c947dcb"
+          }
+        },
+        "json_and_interface": {
+          "ownership_move.ast.json": {
+            "sha256": "a89d0205df4fcc2581e0adee1a4bd5f4443a1dcc6e7772a0cfa45979ba95be18"
+          },
+          "ownership_move.mir.json": {
+            "sha256": "bbe32aded06074811006482dd43fa4d9227be3ee951b8c915659f5c70aa64b91"
+          },
+          "ownership_move.safei.json": {
+            "sha256": "b20c3338f1879102e03a02b7effdd0172d77b29eda25f38f6d2f79f4046f0dc3"
+          },
+          "ownership_move.typed.json": {
+            "sha256": "f6c6f891d8baeaafbb7dd8edef311f953b461712bc4a408a9e4e6350cd99aef9"
+          }
+        }
+      },
+      "fixture": "tests/positive/ownership_move.safe",
+      "structural_assertions": {
+        "ownership_move.adb": [
+          "Source := null;",
+          "Ada.Unchecked_Deallocation"
+        ],
+        "ownership_move.ads": [
+          "Global => null"
+        ]
+      }
+    },
+    {
+      "compile": {
+        "command": [
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/rule4_linked_list-a/ada/build.gpr",
+          "safe_linked_list.adb"
+        ],
+        "cwd": "$TMPDIR/rule4_linked_list-a/ada",
+        "returncode": 0,
+        "stderr": "safe_linked_list.adb:19:07: warning: unreachable code [enabled by default]\nsafe_linked_list.adb:36:07: warning: unreachable code [enabled by default]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
+        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          safe_linked_list.adb\n   [Ada]          safe_runtime.ads\n"
+      },
+      "determinism": {
+        "ada": {
+          "safe_linked_list.adb": {
+            "sha256": "717efa6cd0c38a4aa72a58936b1466700c70ed10abde1d5d6d262a4aadfe95bb"
+          },
+          "safe_linked_list.ads": {
+            "sha256": "7927673bff3b40f193a9d3e1027a4570b04ce98f36f94fdd5fccb745e0594962"
+          },
+          "safe_runtime.ads": {
+            "sha256": "1e2fcc19815107411c19daec797fc78f9a1f5357527b26c5611e8b5ab6b76b3a"
+          }
+        },
+        "json_and_interface": {
+          "rule4_linked_list.ast.json": {
+            "sha256": "f9faf79121fdd63684f80f39adc055a02fdad1b398f16f30c707602531ade959"
+          },
+          "rule4_linked_list.mir.json": {
+            "sha256": "790049a1122282da572af9b6a929e1a3bca9d9249f2cab6533475367e4add587"
+          },
+          "rule4_linked_list.safei.json": {
+            "sha256": "71285e592bbc510a8dd8d9e39452db63d538be561e5595cf6f072d89a25990dd"
+          },
+          "rule4_linked_list.typed.json": {
+            "sha256": "49de8ed4fb34f574e974a8650f5a3cc5456f8601228850f1e46289bb7b053688"
+          }
+        }
+      },
+      "fixture": "tests/positive/rule4_linked_list.safe",
+      "structural_assertions": {
+        "safe_linked_list.adb": [
+          "Current.all.Next"
+        ],
+        "safe_linked_list.ads": [
+          "Global => null"
+        ]
+      }
+    }
+  ],
+  "repeat_sha256": "ddac1dced0c883ab4d32e739bd7e16f03f04a9a9a1ff2de89921e3bf950d2d33",
+  "report_sha256": "ddac1dced0c883ab4d32e739bd7e16f03f04a9a9a1ff2de89921e3bf950d2d33"
+}
