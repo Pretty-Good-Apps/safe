@@ -87,13 +87,16 @@
       ],
       "compile": {
         "command": [
+          "alr",
+          "exec",
+          "--",
           "gprbuild",
           "-c",
           "-P",
           "$TMPDIR/emitter_surface_record-a/ada/build.gpr",
           "emitter_surface_record.adb"
         ],
-        "cwd": "$TMPDIR/emitter_surface_record-a/ada",
+        "cwd": "$REPO_ROOT/compiler_impl",
         "returncode": 0,
         "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
         "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          emitter_surface_record.adb\n"
@@ -142,13 +145,16 @@
       ],
       "compile": {
         "command": [
+          "alr",
+          "exec",
+          "--",
           "gprbuild",
           "-c",
           "-P",
           "$TMPDIR/emitter_surface_proc-a/ada/build.gpr",
           "emitter_surface_proc.adb"
         ],
-        "cwd": "$TMPDIR/emitter_surface_proc-a/ada",
+        "cwd": "$REPO_ROOT/compiler_impl",
         "returncode": 0,
         "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
         "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          emitter_surface_proc.adb\n"
@@ -190,8 +196,8 @@
       }
     }
   ],
-  "repeat_sha256": "c25bc8e5f3c57d2e0d685048c028b9b62f20bc5b0cbe271723ce44b1b7a35100",
-  "report_sha256": "c25bc8e5f3c57d2e0d685048c028b9b62f20bc5b0cbe271723ce44b1b7a35100",
+  "repeat_sha256": "d0426e8c47e7a8cd6a8e0400af83c552370566b33c6805d06c5f2b45e5d2180c",
+  "report_sha256": "d0426e8c47e7a8cd6a8e0400af83c552370566b33c6805d06c5f2b45e5d2180c",
   "shared_support_files_preserved": {
     "after": {
       "emitter_surface_record.adb": "80b7653339f25737b50e975f7c47a323d1446c9af8c915fb10023dfd00a1fca1",

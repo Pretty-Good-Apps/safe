@@ -4,13 +4,16 @@
     {
       "compile": {
         "command": [
+          "alr",
+          "exec",
+          "--",
           "gprbuild",
           "-c",
           "-P",
           "$TMPDIR/channel_pingpong-a/ada/build.gpr",
           "ping_pong.adb"
         ],
-        "cwd": "$TMPDIR/channel_pingpong-a/ada",
+        "cwd": "$REPO_ROOT/compiler_impl",
         "returncode": 0,
         "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
         "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          ping_pong.adb\n   [Ada]          safe_runtime.ads\n"
@@ -64,13 +67,16 @@
     {
       "compile": {
         "command": [
+          "alr",
+          "exec",
+          "--",
           "gprbuild",
           "-c",
           "-P",
           "$TMPDIR/channel_pipeline-a/ada/build.gpr",
           "pipeline.adb"
         ],
-        "cwd": "$TMPDIR/channel_pipeline-a/ada",
+        "cwd": "$REPO_ROOT/compiler_impl",
         "returncode": 0,
         "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
         "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          pipeline.adb\n   [Ada]          safe_runtime.ads\n"
@@ -124,13 +130,16 @@
     {
       "compile": {
         "command": [
+          "alr",
+          "exec",
+          "--",
           "gprbuild",
           "-c",
           "-P",
           "$TMPDIR/select_with_delay-a/ada/build.gpr",
           "select_with_delay.adb"
         ],
-        "cwd": "$TMPDIR/select_with_delay-a/ada",
+        "cwd": "$REPO_ROOT/compiler_impl",
         "returncode": 0,
         "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
         "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          select_with_delay.adb\n   [Ada]          safe_runtime.ads\n"
@@ -183,6 +192,6 @@
       }
     }
   ],
-  "repeat_sha256": "180b220a72795997a125dba0681a09edb3a928213e9eb0317372fc0df3dba4a4",
-  "report_sha256": "180b220a72795997a125dba0681a09edb3a928213e9eb0317372fc0df3dba4a4"
+  "repeat_sha256": "742e3b48a4629cdfc5bb23c608c1fe313d955c4798d5c12c298d79083f47bb25",
+  "report_sha256": "742e3b48a4629cdfc5bb23c608c1fe313d955c4798d5c12c298d79083f47bb25"
 }

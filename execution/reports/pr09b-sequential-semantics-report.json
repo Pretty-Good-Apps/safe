@@ -4,13 +4,16 @@
     {
       "compile": {
         "command": [
+          "alr",
+          "exec",
+          "--",
           "gprbuild",
           "-c",
           "-P",
           "$TMPDIR/ownership_move-a/ada/build.gpr",
           "ownership_move.adb"
         ],
-        "cwd": "$TMPDIR/ownership_move-a/ada",
+        "cwd": "$REPO_ROOT/compiler_impl",
         "returncode": 0,
         "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
         "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          ownership_move.adb\n"
@@ -53,13 +56,16 @@
     {
       "compile": {
         "command": [
+          "alr",
+          "exec",
+          "--",
           "gprbuild",
           "-c",
           "-P",
           "$TMPDIR/rule4_linked_list-a/ada/build.gpr",
           "safe_linked_list.adb"
         ],
-        "cwd": "$TMPDIR/rule4_linked_list-a/ada",
+        "cwd": "$REPO_ROOT/compiler_impl",
         "returncode": 0,
         "stderr": "safe_linked_list.adb:19:07: warning: unreachable code [enabled by default]\nsafe_linked_list.adb:36:07: warning: unreachable code [enabled by default]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
         "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          safe_linked_list.adb\n   [Ada]          safe_runtime.ads\n"
@@ -102,6 +108,6 @@
       }
     }
   ],
-  "repeat_sha256": "9bcd90b2360e6a40eab3fcdd1a31fd349d939206b2c2152121ef52343ee14724",
-  "report_sha256": "9bcd90b2360e6a40eab3fcdd1a31fd349d939206b2c2152121ef52343ee14724"
+  "repeat_sha256": "66b78a1af54214a524c3c45e256f2b70d3924732292a270538cfd6c0a1feb681",
+  "report_sha256": "66b78a1af54214a524c3c45e256f2b70d3924732292a270538cfd6c0a1feb681"
 }

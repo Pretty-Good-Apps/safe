@@ -4,13 +4,16 @@
     {
       "compile": {
         "command": [
+          "alr",
+          "exec",
+          "--",
           "gprbuild",
           "-c",
           "-P",
           "$TMPDIR/rule1_averaging-a/ada/build.gpr",
           "sensor_average.adb"
         ],
-        "cwd": "$TMPDIR/rule1_averaging-a/ada",
+        "cwd": "$REPO_ROOT/compiler_impl",
         "returncode": 0,
         "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
         "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          sensor_average.adb\n   [Ada]          safe_runtime.ads\n"
@@ -57,13 +60,16 @@
     {
       "compile": {
         "command": [
+          "alr",
+          "exec",
+          "--",
           "gprbuild",
           "-c",
           "-P",
           "$TMPDIR/rule1_accumulate-a/ada/build.gpr",
           "accumulator.adb"
         ],
-        "cwd": "$TMPDIR/rule1_accumulate-a/ada",
+        "cwd": "$REPO_ROOT/compiler_impl",
         "returncode": 0,
         "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
         "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          accumulator.adb\n   [Ada]          safe_runtime.ads\n"
@@ -110,13 +116,16 @@
     {
       "compile": {
         "command": [
+          "alr",
+          "exec",
+          "--",
           "gprbuild",
           "-c",
           "-P",
           "$TMPDIR/rule1_parameter-a/ada/build.gpr",
           "safe_parameters.adb"
         ],
-        "cwd": "$TMPDIR/rule1_parameter-a/ada",
+        "cwd": "$REPO_ROOT/compiler_impl",
         "returncode": 0,
         "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
         "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          safe_parameters.adb\n   [Ada]          safe_runtime.ads\n"
@@ -163,13 +172,16 @@
     {
       "compile": {
         "command": [
+          "alr",
+          "exec",
+          "--",
           "gprbuild",
           "-c",
           "-P",
           "$TMPDIR/rule1_return-a/ada/build.gpr",
           "safe_return.adb"
         ],
-        "cwd": "$TMPDIR/rule1_return-a/ada",
+        "cwd": "$REPO_ROOT/compiler_impl",
         "returncode": 0,
         "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
         "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          safe_return.adb\n   [Ada]          safe_runtime.ads\n"
@@ -216,13 +228,16 @@
     {
       "compile": {
         "command": [
+          "alr",
+          "exec",
+          "--",
           "gprbuild",
           "-c",
           "-P",
           "$TMPDIR/rule1_conversion-a/ada/build.gpr",
           "safe_conversion.adb"
         ],
-        "cwd": "$TMPDIR/rule1_conversion-a/ada",
+        "cwd": "$REPO_ROOT/compiler_impl",
         "returncode": 0,
         "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
         "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          safe_conversion.adb\n   [Ada]          safe_runtime.ads\n"
@@ -271,6 +286,6 @@
     "PR09a emits compile-valid Ada/SPARK skeleton output on the rule1 subset.",
     "safe_runtime.ads remains byte-identical to companion/templates/safe_runtime.ads."
   ],
-  "repeat_sha256": "097880f25d4eeaa53124f4ddfdd69bbb6e65e6ead3e1d1d5868e7a39683699bf",
-  "report_sha256": "097880f25d4eeaa53124f4ddfdd69bbb6e65e6ead3e1d1d5868e7a39683699bf"
+  "repeat_sha256": "c59f24c3e6f871341d688a860932a1aa361f450de07b1ce6e328da1f427d21fc",
+  "report_sha256": "c59f24c3e6f871341d688a860932a1aa361f450de07b1ce6e328da1f427d21fc"
 }
