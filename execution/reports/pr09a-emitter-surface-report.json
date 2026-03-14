@@ -97,9 +97,7 @@
           "emitter_surface_record.adb"
         ],
         "cwd": "$REPO_ROOT/compiler_impl",
-        "returncode": 0,
-        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
-        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          emitter_surface_record.adb\n"
+        "returncode": 0
       },
       "determinism": {
         "ada": {
@@ -155,9 +153,7 @@
           "emitter_surface_proc.adb"
         ],
         "cwd": "$REPO_ROOT/compiler_impl",
-        "returncode": 0,
-        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
-        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          emitter_surface_proc.adb\n"
+        "returncode": 0
       },
       "determinism": {
         "ada": {
@@ -196,8 +192,8 @@
       }
     }
   ],
-  "repeat_sha256": "a8c3d7296aa61ada3e283472161960d9893a13b3cfc9b7afad0375737f7a4d8c",
-  "report_sha256": "a8c3d7296aa61ada3e283472161960d9893a13b3cfc9b7afad0375737f7a4d8c",
+  "repeat_sha256": "f36b45bc2e26eb95ee945730116760c2b9d5a94b4d2cedfd98b6b20aee1bb69a",
+  "report_sha256": "f36b45bc2e26eb95ee945730116760c2b9d5a94b4d2cedfd98b6b20aee1bb69a",
   "shared_support_files_preserved": {
     "after": {
       "emitter_surface_record.adb": "1cb464dfe1347eb6a2c5ef71d40462d20a549fb5145e6db9fda83e7606f0e627",

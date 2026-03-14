@@ -228,7 +228,7 @@ def compile_emitted_ada(
         ),
         encoding="utf-8",
     )
-    return run(
+    result = run(
         [
             alr_command(),
             "exec",
@@ -243,6 +243,11 @@ def compile_emitted_ada(
         env=env,
         temp_root=temp_root,
     )
+    return {
+        "command": result["command"],
+        "cwd": result["cwd"],
+        "returncode": result["returncode"],
+    }
 
 
 def emit_with_determinism(

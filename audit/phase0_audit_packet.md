@@ -34,9 +34,9 @@ All required files exist and are properly configured.
 | `docs/gnatprove_profile.md` | EXISTS | 436 | GNATprove configuration policy |
 | `docs/traceability_matrix.md` | EXISTS | 652 | 205 normative clauses mapped to artifacts |
 | `compiler/translation_rules.md` | EXISTS | 1466 | Safe-to-Ada translation reference (14 sections) |
-| `tests/golden/golden_sensors/` | EXISTS | 60 | D27 Rule 1: wide arithmetic averaging |
-| `tests/golden/golden_ownership/` | EXISTS | 65 | Section 2.3: ownership move + deallocation |
-| `tests/golden/golden_pipeline/` | EXISTS | 125 | Section 4.2-4.3: channel FIFO + task declarations |
+| `tests/golden/golden_sensors/` | EXISTS | N/A (directory) | D27 Rule 1: wide arithmetic averaging |
+| `tests/golden/golden_ownership/` | EXISTS | N/A (directory) | Section 2.3: ownership move + deallocation |
+| `tests/golden/golden_pipeline/` | EXISTS | N/A (directory) | Section 4.2-4.3: channel FIFO + task declarations |
 
 ## 2. Template Inventory
 

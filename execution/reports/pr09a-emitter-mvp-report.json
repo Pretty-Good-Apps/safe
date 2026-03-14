@@ -14,9 +14,7 @@
           "sensor_average.adb"
         ],
         "cwd": "$REPO_ROOT/compiler_impl",
-        "returncode": 0,
-        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
-        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          sensor_average.adb\n   [Ada]          safe_runtime.ads\n"
+        "returncode": 0
       },
       "determinism": {
         "ada": {
@@ -70,9 +68,7 @@
           "accumulator.adb"
         ],
         "cwd": "$REPO_ROOT/compiler_impl",
-        "returncode": 0,
-        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
-        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          accumulator.adb\n   [Ada]          safe_runtime.ads\n"
+        "returncode": 0
       },
       "determinism": {
         "ada": {
@@ -126,9 +122,7 @@
           "safe_parameters.adb"
         ],
         "cwd": "$REPO_ROOT/compiler_impl",
-        "returncode": 0,
-        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
-        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          safe_parameters.adb\n   [Ada]          safe_runtime.ads\n"
+        "returncode": 0
       },
       "determinism": {
         "ada": {
@@ -182,9 +176,7 @@
           "safe_return.adb"
         ],
         "cwd": "$REPO_ROOT/compiler_impl",
-        "returncode": 0,
-        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
-        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          safe_return.adb\n   [Ada]          safe_runtime.ads\n"
+        "returncode": 0
       },
       "determinism": {
         "ada": {
@@ -238,9 +230,7 @@
           "safe_conversion.adb"
         ],
         "cwd": "$REPO_ROOT/compiler_impl",
-        "returncode": 0,
-        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
-        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          safe_conversion.adb\n   [Ada]          safe_runtime.ads\n"
+        "returncode": 0
       },
       "determinism": {
         "ada": {
@@ -286,6 +276,6 @@
     "PR09a emits compile-valid Ada/SPARK skeleton output on the rule1 subset.",
     "safe_runtime.ads remains byte-identical to companion/templates/safe_runtime.ads."
   ],
-  "repeat_sha256": "e5861414cd50acfc17c5f1c09436affe47b7da5349ff0c6e6c1e1826b424f8fe",
-  "report_sha256": "e5861414cd50acfc17c5f1c09436affe47b7da5349ff0c6e6c1e1826b424f8fe"
+  "repeat_sha256": "15c99e480de0da2df15ebed8f59cebc442a3a41d421860159ff1b03fce03fb23",
+  "report_sha256": "15c99e480de0da2df15ebed8f59cebc442a3a41d421860159ff1b03fce03fb23"
 }

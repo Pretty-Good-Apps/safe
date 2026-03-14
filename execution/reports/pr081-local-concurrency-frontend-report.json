@@ -334,19 +334,19 @@
   "deterministic_emit": [
     {
       "hashes": {
-        "ast": "494af0e238431f1849523e22b9784f00906968203d7917705888fdf25b26d8e0",
-        "mir": "2f07d27e533d98bf87efc9338a513c992da527d33c6112e6c40aca99460acdb2",
-        "safei": "9e02cb0a7ee34c751f63882e5ec006b9906bd601fbcf0aa937eb1ab54be6529e",
-        "typed": "845b9fa2ccf0ea2c541a526b8f1afbd1b4eb322db5f01b2ced53e06aa182cc78"
+        "ast": "7cbbcc90704828943428c7cb779165ae3bac2ad022311dea9820d5d7d60668eb",
+        "mir": "d6a6c4d717477f84711cbe3ccc707fb8e266c188c1637144d12aa26de974aeea",
+        "safei": "0bb256934df8ddf469eb2ce8bc5766706cb053b8e291ebefdca39afea97e4ef7",
+        "typed": "c84ac22373b3983a47675315f01db42d78321b6a3aee87875429be55bddca623"
       },
       "sample": "tests/positive/channel_pingpong.safe"
     },
     {
       "hashes": {
-        "ast": "4e4e5f041d32e26070c24bec985ff1299ac43685e52f4db1297d14a1c37505b2",
-        "mir": "0bbb0d25021f5767ff7d3e3de40347acacb4ec48aa74ec5e2237660c42334986",
-        "safei": "a62658ab02d19efcbc96d7c95df1665eaa82b4f0293b391e59a99b3aa0721a02",
-        "typed": "bb798dc4a282ec76f3dc6ad4629a31016871d3801ed3b35d5e2e9e48493c6e10"
+        "ast": "1877780d9e4d17a2e8b81e819a8d8f9210c688ecdb67751de13fdbe7b9dc8762",
+        "mir": "377a71ab132f7f58bc4651c0af6ee10b6157406d6eb3b5b4cfa7ec09717a173a",
+        "safei": "ef83ccae5b4de061970b39722a5537c2472b326102f111943b7904478a322917",
+        "typed": "2bcd6eeed543a831ec1c2c0a908f1a256bd952198822f0ee08c1953a8fd63745"
       },
       "sample": "tests/concurrency/select_with_delay.safe"
     }
@@ -2232,8 +2232,8 @@
       "sample": "tests/concurrency/select_with_delay.safe"
     }
   ],
-  "repeat_sha256": "dbd58eca326a558e518c502b9db902c5b97edfd740005df214104e46984a7c2e",
-  "report_sha256": "dbd58eca326a558e518c502b9db902c5b97edfd740005df214104e46984a7c2e",
+  "repeat_sha256": "fe7f8eff5a96cc5754fe3f44fb33094583d53b1fb1b826f773481ff0b8688ee1",
+  "report_sha256": "fe7f8eff5a96cc5754fe3f44fb33094583d53b1fb1b826f773481ff0b8688ee1",
   "status": "ok",
   "task": "PR08.1"
 }

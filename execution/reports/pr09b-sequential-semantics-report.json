@@ -14,9 +14,7 @@
           "ownership_move.adb"
         ],
         "cwd": "$REPO_ROOT/compiler_impl",
-        "returncode": 0,
-        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
-        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          ownership_move.adb\n"
+        "returncode": 0
       },
       "determinism": {
         "ada": {
@@ -66,9 +64,7 @@
           "safe_linked_list.adb"
         ],
         "cwd": "$REPO_ROOT/compiler_impl",
-        "returncode": 0,
-        "stderr": "safe_linked_list.adb:19:07: warning: unreachable code [enabled by default]\nsafe_linked_list.adb:36:07: warning: unreachable code [enabled by default]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
-        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          safe_linked_list.adb\n   [Ada]          safe_runtime.ads\n"
+        "returncode": 0
       },
       "determinism": {
         "ada": {
@@ -108,6 +104,6 @@
       }
     }
   ],
-  "repeat_sha256": "8a596df56264cedc7d7a1d27f835b3444eb2c77626888257983b96299044c71e",
-  "report_sha256": "8a596df56264cedc7d7a1d27f835b3444eb2c77626888257983b96299044c71e"
+  "repeat_sha256": "e4809a71c2589be69665600825a4419575c36a77b6ed2a7fb16ffae0b74d4f14",
+  "report_sha256": "e4809a71c2589be69665600825a4419575c36a77b6ed2a7fb16ffae0b74d4f14"
 }

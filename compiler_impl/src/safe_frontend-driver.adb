@@ -95,7 +95,9 @@ package body Safe_Frontend.Driver is
          raise;
    end Write_File;
 
-   procedure Delete_If_Exists (Path : String) is
+   procedure Delete_If_Exists
+     (Path           : String;
+      Cleanup_Failed : in out Boolean) is
    begin
       if Ada.Directories.Exists (Path) then
          Ada.Directories.Delete_File (Path);
@@ -104,15 +106,20 @@ package body Safe_Frontend.Driver is
       when Ada.IO_Exceptions.Name_Error =>
          null;
       when others =>
-         null;
+         Cleanup_Failed := True;
    end Delete_If_Exists;
 
    procedure Cleanup_Ada_Artifacts
      (Ada_Out_Dir : String;
-      Ada_Stem    : String) is
+      Ada_Stem    : String;
+      Cleanup_Failed : in out Boolean) is
    begin
-      Delete_If_Exists (Ada_Out_Dir & "/" & Ada_Stem & ".ads");
-      Delete_If_Exists (Ada_Out_Dir & "/" & Ada_Stem & ".adb");
+      Delete_If_Exists
+        (Ada_Out_Dir & "/" & Ada_Stem & ".ads",
+         Cleanup_Failed);
+      Delete_If_Exists
+        (Ada_Out_Dir & "/" & Ada_Stem & ".adb",
+         Cleanup_Failed);
    end Cleanup_Ada_Artifacts;
 
    function Failure_Exit_Code (Result : Lex_Result) return Integer is
@@ -595,7 +602,18 @@ package body Safe_Frontend.Driver is
                   end if;
                exception
                   when others =>
-                     Cleanup_Ada_Artifacts (Ada_Out_Dir, Ada_Stem);
+                     declare
+                        Cleanup_Failed : Boolean := False;
+                     begin
+                        Cleanup_Ada_Artifacts (Ada_Out_Dir, Ada_Stem, Cleanup_Failed);
+                        if Cleanup_Failed then
+                           Ada.Text_IO.Put_Line
+                             (Ada.Text_IO.Current_Error,
+                              "emit: WARNING: failed to remove one or more partially written Ada artifacts from `"
+                              & Ada_Out_Dir
+                              & "`");
+                        end if;
+                     end;
                      raise;
                end;
             end;

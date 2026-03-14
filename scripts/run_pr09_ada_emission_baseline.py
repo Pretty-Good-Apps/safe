@@ -119,7 +119,7 @@ def generate_report(*, env: dict[str, str]) -> dict[str, object]:
         )
         require_contains(
             readme_text,
-            "Known `codex/pr08...` and `codex/pr09...` branches fail closed until the mapping is updated.",
+            "Unknown milestone branches fail closed until the mapping is updated.",
             "README.md",
         )
 

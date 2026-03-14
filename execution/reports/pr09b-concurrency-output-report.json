@@ -14,9 +14,7 @@
           "ping_pong.adb"
         ],
         "cwd": "$REPO_ROOT/compiler_impl",
-        "returncode": 0,
-        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
-        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          ping_pong.adb\n   [Ada]          safe_runtime.ads\n"
+        "returncode": 0
       },
       "determinism": {
         "ada": {
@@ -77,9 +75,7 @@
           "pipeline.adb"
         ],
         "cwd": "$REPO_ROOT/compiler_impl",
-        "returncode": 0,
-        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
-        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          pipeline.adb\n   [Ada]          safe_runtime.ads\n"
+        "returncode": 0
       },
       "determinism": {
         "ada": {
@@ -140,9 +136,7 @@
           "select_with_delay.adb"
         ],
         "cwd": "$REPO_ROOT/compiler_impl",
-        "returncode": 0,
-        "stderr": "clang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\nclang: warning: overriding deployment version from '16.0' to '26.0' [-Woverriding-deployment-version]\n",
-        "stdout": "Setup\n   [mkdir]        object directory for project Build\nCompile\n   [Ada]          select_with_delay.adb\n   [Ada]          safe_runtime.ads\n"
+        "returncode": 0
       },
       "determinism": {
         "ada": {
@@ -192,6 +186,6 @@
       }
     }
   ],
-  "repeat_sha256": "b70ec1584c2a8190b162ec4665de931ae55031b989627f857c4b87e20b692ddc",
-  "report_sha256": "b70ec1584c2a8190b162ec4665de931ae55031b989627f857c4b87e20b692ddc"
+  "repeat_sha256": "35970dfb25b038c37e8e101ba1d174625fdf5d37c045f1f01cb34afb83ad8c60",
+  "report_sha256": "35970dfb25b038c37e8e101ba1d174625fdf5d37c045f1f01cb34afb83ad8c60"
 }
