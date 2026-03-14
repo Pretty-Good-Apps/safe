@@ -1,0 +1,41 @@
+-- Test: channel_access_type
+-- Description: Named access types are valid channel element types.
+--   Emitted channel buffer defaults must use null for named access element
+--   types rather than applying scalar 'First initialization.
+-- Expected: ACCEPT
+
+package Channel_Access_Type is
+
+   type Payload is record
+      Value : Integer;
+   end record;
+
+   type Payload_Ptr is access Payload;
+
+   channel Data_Ch : Payload_Ptr capacity 1;
+
+   task Sender with Priority = 10 is
+      Item : Payload_Ptr;
+   begin
+      loop
+         Item = new ((Value = 0) as Payload);
+         send Data_Ch, Item;
+         delay 0.001;
+      end loop;
+   end Sender;
+
+   task Receiver with Priority = 10 is
+      Item : Payload_Ptr;
+   begin
+      loop
+         receive Data_Ch, Item;
+         if Item == null then
+            delay 0.001;
+         else
+            delay 0.001;
+         end if;
+         Item = null;
+      end loop;
+   end Receiver;
+
+end Channel_Access_Type;

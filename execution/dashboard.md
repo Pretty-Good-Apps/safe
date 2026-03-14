@@ -4,16 +4,16 @@
 - **Frozen spec SHA:** `468cf72332724b04b7c193b4d2a3b02f1584125d`
 - **Active task:** `none`
 - **Next task:** `none`
-- **Updated at:** `2026-03-14T18:40:06Z`
+- **Updated at:** `2026-03-14T23:16:26Z`
 
 ## Repo Facts
 
 - `tests/positive`: 44
 - `tests/negative`: 76
 - `tests/golden`: 3
-- `tests/concurrency`: 12
+- `tests/concurrency`: 13
 - `tests/diagnostics_golden`: 17
-- **Total test corpus entries:** 152
+- **Total test corpus entries:** 153
 
 ## Task Ledger
 

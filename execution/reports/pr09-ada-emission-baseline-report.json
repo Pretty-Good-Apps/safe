@@ -6,8 +6,8 @@
     "frontend_baseline": "docs/frontend_architecture_baseline.md",
     "readme": "README.md"
   },
-  "repeat_sha256": "04b4133c9cb9a80a4e29a5b5f510afa29dd03db8133926d2d0ee130c231cbda9",
-  "report_sha256": "04b4133c9cb9a80a4e29a5b5f510afa29dd03db8133926d2d0ee130c231cbda9",
+  "repeat_sha256": "afd0b968d70712a646b22f394429a883c83f7dfbbf4c1f93d9894dbfe51bd144",
+  "report_sha256": "afd0b968d70712a646b22f394429a883c83f7dfbbf4c1f93d9894dbfe51bd144",
   "retired_snapshots_absent": [
     "tests/golden/golden_sensors.ada",
     "tests/golden/golden_ownership.ada",
@@ -34,7 +34,7 @@
     },
     {
       "deterministic": true,
-      "report_sha256": "d758dde4a219dde001ee429547e8a853abd2b589207943502577af954df22c76",
+      "report_sha256": "3ec342d6215e0c161425204bb1c4f4875de3db5ef1013d52d1859f75e769bdf1",
       "script": "scripts/run_pr09b_concurrency_output.py",
       "stdout": "pr09b concurrency output: OK ($TMPDIR/run_pr09b_concurrency_output.json)\n"
     },

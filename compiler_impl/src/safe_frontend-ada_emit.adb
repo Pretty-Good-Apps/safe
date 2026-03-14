@@ -161,6 +161,7 @@ package body Safe_Frontend.Ada_Emit is
    function Is_Access_Type (Info : GM.Type_Descriptor) return Boolean;
    function Is_Owner_Access (Info : GM.Type_Descriptor) return Boolean;
    function Default_Value_Expr (Type_Name : String) return String;
+   function Default_Value_Expr (Info : GM.Type_Descriptor) return String;
    function Render_Type_Name (Info : GM.Type_Descriptor) return String;
    function Render_Type_Name
      (Unit     : CM.Resolved_Unit;
@@ -766,24 +767,23 @@ package body Safe_Frontend.Ada_Emit is
       Document : GM.Mir_Document;
       Name     : String) return GM.Type_Descriptor
    is
-      Result : GM.Type_Descriptor := (others => <>);
    begin
       for Item of Unit.Types loop
          if FT.To_String (Item.Name) = Name then
-            Result := Item;
+            return Item;
          end if;
       end loop;
       for Item of Unit.Imported_Types loop
          if FT.To_String (Item.Name) = Name then
-            Result := Item;
+            return Item;
          end if;
       end loop;
       for Item of Document.Types loop
          if FT.To_String (Item.Name) = Name then
-            Result := Item;
+            return Item;
          end if;
       end loop;
-      return Result;
+      return (others => <>);
    end Lookup_Type;
 
    function Has_Type
@@ -867,6 +867,16 @@ package body Safe_Frontend.Ada_Emit is
          return "null";
       end if;
       return Type_Name & "'First";
+   end Default_Value_Expr;
+
+   function Default_Value_Expr (Info : GM.Type_Descriptor) return String is
+      Type_Name : constant String := Render_Type_Name (Info);
+      Kind      : constant String := FT.To_String (Info.Kind);
+   begin
+      if Kind = "access" then
+         return "null";
+      end if;
+      return Default_Value_Expr (Type_Name);
    end Default_Value_Expr;
 
    function Lookup_Channel
@@ -2608,90 +2618,108 @@ package body Safe_Frontend.Ada_Emit is
             when CM.Stmt_Select =>
                State.Needs_Gnat_Adc := True;
                declare
-                  Has_Channel_Arms : Boolean := False;
-                  Has_Delay_Arm    : Boolean := False;
+                  Channel_Arm_Count : Natural := 0;
+                  Delay_Arm_Count   : Natural := 0;
                begin
                   for Arm of Item.Arms loop
                      if Arm.Kind = CM.Select_Arm_Channel then
-                        Has_Channel_Arms := True;
+                        Channel_Arm_Count := Channel_Arm_Count + 1;
                      elsif Arm.Kind = CM.Select_Arm_Delay then
-                        Has_Delay_Arm := True;
+                        Delay_Arm_Count := Delay_Arm_Count + 1;
                      end if;
                   end loop;
 
-                  if not Has_Channel_Arms then
+                  if Channel_Arm_Count = 0 then
                      Raise_Unsupported
                        (State,
                         Item.Span,
                         "select without channel arms is not supported in Ada emission");
                   end if;
 
-                  Append_Line (Buffer, "declare", Depth);
-                  Append_Line (Buffer, "Select_Done : Boolean := False;", Depth + 1);
-                  Append_Line (Buffer, "begin", Depth);
-
-                  if Has_Delay_Arm then
-                     Append_Line (Buffer, "for Select_Iter in 1 .. 50 loop", Depth + 1);
-                     Append_Line (Buffer, "exit when Select_Done;", Depth + 2);
-                  else
-                     Append_Line (Buffer, "loop", Depth + 1);
-                  end if;
-
-                  for Arm of Item.Arms loop
-                     if Arm.Kind = CM.Select_Arm_Channel then
-                        Append_Line (Buffer, "if not Select_Done then", Depth + 2);
-                        Append_Line (Buffer, "declare", Depth + 3);
-                        Append_Line
-                          (Buffer,
-                           FT.To_String (Arm.Channel_Data.Variable_Name)
-                           & " : "
-                           & Render_Type_Name (Arm.Channel_Data.Type_Info)
-                           & ";",
-                           Depth + 4);
-                        Append_Line (Buffer, "Arm_Success : Boolean;", Depth + 4);
-                        Append_Line (Buffer, "begin", Depth + 3);
-                        Append_Line
-                          (Buffer,
-                           Render_Expr (Unit, Document, Arm.Channel_Data.Channel_Name, State)
-                           & ".Try_Receive ("
-                           & FT.To_String (Arm.Channel_Data.Variable_Name)
-                           & ", Arm_Success);",
-                           Depth + 4);
-                        Append_Line (Buffer, "if Arm_Success then", Depth + 4);
-                        Append_Line (Buffer, "Select_Done := True;", Depth + 5);
-                        Render_Statements
-                          (Buffer,
-                           Unit,
-                           Document,
-                           Arm.Channel_Data.Statements,
-                           State,
-                           Depth + 5,
-                           Return_Type);
-                        Append_Line (Buffer, "end if;", Depth + 4);
-                        Append_Line (Buffer, "end;", Depth + 3);
-                        Append_Line (Buffer, "end if;", Depth + 2);
-                     elsif Arm.Kind /= CM.Select_Arm_Delay then
+                  if Delay_Arm_Count > 0 then
+                     if Delay_Arm_Count /= 1 then
                         Raise_Unsupported
                           (State,
-                           Arm.Span,
-                           "unsupported select arm in Ada emission");
+                           Item.Span,
+                           "select with delay supports exactly one delay arm in Ada emission");
                      end if;
-                  end loop;
 
-                  if Has_Delay_Arm then
-                     Append_Line (Buffer, "if not Select_Done then", Depth + 2);
+                     Append_Line (Buffer, "declare", Depth);
+                     Append_Line (Buffer, "Select_Done : Boolean := False;", Depth + 1);
+                     for Arm of Item.Arms loop
+                        if Arm.Kind = CM.Select_Arm_Delay then
+                           Append_Line
+                             (Buffer,
+                              "Select_Polls : constant Positive :="
+                              & ASCII.LF
+                              & Indentation (Depth + 2)
+                              & "(if "
+                              & Render_Expr (Unit, Document, Arm.Delay_Data.Duration_Expr, State)
+                              & " <= 0.0"
+                              & ASCII.LF
+                              & Indentation (Depth + 3)
+                              & "then 1"
+                              & ASCII.LF
+                              & Indentation (Depth + 3)
+                              & "else Positive (Long_Float'Ceiling (1000.0 * Long_Float ("
+                              & Render_Expr (Unit, Document, Arm.Delay_Data.Duration_Expr, State)
+                              & "))));",
+                              Depth + 1);
+                           exit;
+                        end if;
+                     end loop;
+                     Append_Line (Buffer, "begin", Depth);
+                     Append_Line (Buffer, "for Select_Iter in 0 .. Select_Polls loop", Depth + 1);
+                     Append_Line (Buffer, "exit when Select_Done;", Depth + 2);
+                     Append_Line (Buffer, "if Select_Iter > 0 then", Depth + 2);
                      Append_Line (Buffer, "delay 0.001;", Depth + 3);
                      Append_Line (Buffer, "end if;", Depth + 2);
+
+                     for Arm of Item.Arms loop
+                        if Arm.Kind = CM.Select_Arm_Channel then
+                           Append_Line (Buffer, "if not Select_Done then", Depth + 2);
+                           Append_Line (Buffer, "declare", Depth + 3);
+                           Append_Line
+                             (Buffer,
+                              FT.To_String (Arm.Channel_Data.Variable_Name)
+                              & " : "
+                              & Render_Type_Name (Arm.Channel_Data.Type_Info)
+                              & ";",
+                              Depth + 4);
+                           Append_Line (Buffer, "Arm_Success : Boolean;", Depth + 4);
+                           Append_Line (Buffer, "begin", Depth + 3);
+                           Append_Line
+                             (Buffer,
+                              Render_Expr (Unit, Document, Arm.Channel_Data.Channel_Name, State)
+                              & ".Try_Receive ("
+                              & FT.To_String (Arm.Channel_Data.Variable_Name)
+                              & ", Arm_Success);",
+                              Depth + 4);
+                           Append_Line (Buffer, "if Arm_Success then", Depth + 4);
+                           Append_Line (Buffer, "Select_Done := True;", Depth + 5);
+                           Render_Statements
+                             (Buffer,
+                              Unit,
+                              Document,
+                              Arm.Channel_Data.Statements,
+                              State,
+                              Depth + 5,
+                              Return_Type);
+                           Append_Line (Buffer, "end if;", Depth + 4);
+                           Append_Line (Buffer, "end;", Depth + 3);
+                           Append_Line (Buffer, "end if;", Depth + 2);
+                        elsif Arm.Kind /= CM.Select_Arm_Delay then
+                           Raise_Unsupported
+                             (State,
+                              Arm.Span,
+                              "unsupported select arm in Ada emission");
+                        end if;
+                     end loop;
+
                      Append_Line (Buffer, "end loop;", Depth + 1);
                      for Arm of Item.Arms loop
                         if Arm.Kind = CM.Select_Arm_Delay then
                            Append_Line (Buffer, "if not Select_Done then", Depth + 1);
-                           Append_Line
-                             (Buffer,
-                              "delay "
-                              & Render_Expr (Unit, Document, Arm.Delay_Data.Duration_Expr, State)
-                              & ";",
-                              Depth + 2);
                            Render_Statements
                              (Buffer,
                               Unit,
@@ -2704,13 +2732,59 @@ package body Safe_Frontend.Ada_Emit is
                            exit;
                         end if;
                      end loop;
+                     Append_Line (Buffer, "end;", Depth);
                   else
+                     Append_Line (Buffer, "declare", Depth);
+                     Append_Line (Buffer, "Select_Done : Boolean := False;", Depth + 1);
+                     Append_Line (Buffer, "begin", Depth);
+                     Append_Line (Buffer, "loop", Depth + 1);
+
+                     for Arm of Item.Arms loop
+                        if Arm.Kind = CM.Select_Arm_Channel then
+                           Append_Line (Buffer, "if not Select_Done then", Depth + 2);
+                           Append_Line (Buffer, "declare", Depth + 3);
+                           Append_Line
+                             (Buffer,
+                              FT.To_String (Arm.Channel_Data.Variable_Name)
+                              & " : "
+                              & Render_Type_Name (Arm.Channel_Data.Type_Info)
+                              & ";",
+                              Depth + 4);
+                           Append_Line (Buffer, "Arm_Success : Boolean;", Depth + 4);
+                           Append_Line (Buffer, "begin", Depth + 3);
+                           Append_Line
+                             (Buffer,
+                              Render_Expr (Unit, Document, Arm.Channel_Data.Channel_Name, State)
+                              & ".Try_Receive ("
+                              & FT.To_String (Arm.Channel_Data.Variable_Name)
+                              & ", Arm_Success);",
+                              Depth + 4);
+                           Append_Line (Buffer, "if Arm_Success then", Depth + 4);
+                           Append_Line (Buffer, "Select_Done := True;", Depth + 5);
+                           Render_Statements
+                             (Buffer,
+                              Unit,
+                              Document,
+                              Arm.Channel_Data.Statements,
+                              State,
+                              Depth + 5,
+                              Return_Type);
+                           Append_Line (Buffer, "end if;", Depth + 4);
+                           Append_Line (Buffer, "end;", Depth + 3);
+                           Append_Line (Buffer, "end if;", Depth + 2);
+                        elsif Arm.Kind /= CM.Select_Arm_Delay then
+                           Raise_Unsupported
+                             (State,
+                              Arm.Span,
+                              "unsupported select arm in Ada emission");
+                        end if;
+                     end loop;
+
                      Append_Line (Buffer, "exit when Select_Done;", Depth + 2);
                      Append_Line (Buffer, "delay 0.001;", Depth + 2);
                      Append_Line (Buffer, "end loop;", Depth + 1);
+                     Append_Line (Buffer, "end;", Depth);
                   end if;
-
-                  Append_Line (Buffer, "end;", Depth);
                end;
             when CM.Stmt_Delay =>
                State.Needs_Gnat_Adc := True;
@@ -2781,13 +2855,13 @@ package body Safe_Frontend.Ada_Emit is
          2);
       Append_Line (Buffer, "private", 1);
       Append_Line
-        (Buffer,
-         "Buffer : "
-         & Buffer_Type
-         & " := (others => "
-         & Default_Value_Expr (Element_Type)
-         & ");",
-         2);
+         (Buffer,
+          "Buffer : "
+          & Buffer_Type
+          & " := (others => "
+          & Default_Value_Expr (Channel.Element_Type)
+          & ");",
+          2);
       Append_Line (Buffer, "Head   : " & Index_Subtype & " := " & Index_Subtype & "'First;", 2);
       Append_Line (Buffer, "Tail   : " & Index_Subtype & " := " & Index_Subtype & "'First;", 2);
       Append_Line (Buffer, "Count  : " & Count_Subtype & " := 0;", 2);
@@ -2865,10 +2939,10 @@ package body Safe_Frontend.Ada_Emit is
       Append_Line (Buffer, "Count := Count - 1;", 4);
       Append_Line (Buffer, "Success := True;", 4);
       Append_Line (Buffer, "else", 3);
-      Append_Line
-        (Buffer,
-         "Value := " & Default_Value_Expr (Element_Type) & ";",
-         4);
+         Append_Line
+           (Buffer,
+            "Value := " & Default_Value_Expr (Channel.Element_Type) & ";",
+            4);
       Append_Line (Buffer, "Success := False;", 4);
       Append_Line (Buffer, "end if;", 3);
       Append_Line (Buffer, "end Try_Receive;", 2);

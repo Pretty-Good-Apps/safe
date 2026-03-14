@@ -33,6 +33,7 @@ FIXTURES = [
     REPO_ROOT / "tests" / "positive" / "channel_pingpong.safe",
     REPO_ROOT / "tests" / "positive" / "channel_pipeline.safe",
     REPO_ROOT / "tests" / "concurrency" / "select_with_delay.safe",
+    REPO_ROOT / "tests" / "concurrency" / "channel_access_type.safe",
 ]
 EXPECTED_GNAT_ADC = (
     "pragma Partition_Elaboration_Policy(Sequential);\n"
@@ -72,7 +73,9 @@ def generate_report(*, safec: Path, env: dict[str, str]) -> dict[str, object]:
             spec_path = body_path.with_suffix(".ads")
             fragments = ["protected type", "task "]
             if fixture.name == "select_with_delay.safe":
-                body_fragments = ["Try_Receive (", "Select_Done", "delay 0.05;"]
+                body_fragments = ["Select_Polls", "Try_Receive (", "delay 0.001;"]
+            elif fixture.name == "channel_access_type.safe":
+                body_fragments = [".Send (", ".Receive (", "null"]
             else:
                 body_fragments = [".Send (", ".Receive ("]
             fixtures.append(
