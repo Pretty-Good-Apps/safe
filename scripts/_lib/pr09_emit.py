@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import json
 import os
-import textwrap
+import sys
 from pathlib import Path
 from typing import Any
 
 from .harness_common import (
+    DEFAULT_MACOS_SDKROOT,
     REPO_ROOT,
     display_path,
     find_command,
@@ -150,6 +151,60 @@ def emitted_spec_file(ada_dir: Path) -> Path:
     return candidates[0]
 
 
+def emitted_ada_project_text(
+    *,
+    has_gnat_adc: bool,
+    platform_name: str = sys.platform,
+) -> str:
+    lines = [
+        "project Build is",
+    ]
+    if platform_name == "darwin":
+        lines.append(
+            f'   Sdk_Root := External ("SDKROOT", "{DEFAULT_MACOS_SDKROOT}");'
+        )
+    lines.extend(
+        [
+            '   for Source_Dirs use (".");',
+            '   for Object_Dir use "obj";',
+        ]
+    )
+    if has_gnat_adc:
+        lines.extend(
+            [
+                "   package Compiler is",
+                '      for Default_Switches ("Ada") use ("-gnatec=gnat.adc");',
+                "   end Compiler;",
+            ]
+        )
+    if platform_name == "darwin":
+        lines.extend(
+            [
+                "   package Linker is",
+                '      for Default_Switches ("Ada") use ("-Wl,-syslibroot," & Sdk_Root);',
+                "   end Linker;",
+            ]
+        )
+    lines.append("end Build;")
+    return "\n".join(lines) + "\n"
+
+
+def write_emitted_ada_project(
+    ada_dir: Path,
+    *,
+    platform_name: str = sys.platform,
+) -> Path:
+    gpr_path = ada_dir / "build.gpr"
+    gpr_path.write_text(
+        emitted_ada_project_text(
+            has_gnat_adc=(ada_dir / "gnat.adc").exists(),
+            platform_name=platform_name,
+        ),
+        encoding="utf-8",
+    )
+    return gpr_path
+
+
 def compare_dirs(left: Path, right: Path) -> dict[str, dict[str, str]]:
     left_files = list_files(left)
     right_files = list_files(right)
@@ -212,28 +267,7 @@ def compile_emitted_ada(
     env: dict[str, str],
     temp_root: Path,
 ) -> dict[str, Any]:
-    gpr_path = ada_dir / "build.gpr"
-    if (ada_dir / "gnat.adc").exists():
-        compiler_pkg = textwrap.dedent(
-            """\
-               package Compiler is
-                  for Default_Switches ("Ada") use ("-gnatec=gnat.adc");
-               end Compiler;
-            """
-        )
-    else:
-        compiler_pkg = ""
-    gpr_path.write_text(
-        textwrap.dedent(
-            f"""\
-            project Build is
-               for Source_Dirs use (".");
-               for Object_Dir use "obj";
-            {compiler_pkg}end Build;
-            """
-        ),
-        encoding="utf-8",
-    )
+    gpr_path = write_emitted_ada_project(ada_dir)
     result = run(
         [
             alr_command(),
