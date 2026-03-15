@@ -34,6 +34,22 @@ class HarnessCommonTests(unittest.TestCase):
             ["scripts/run_frontend_smoke.py", "$TMPDIR/out/result.json", "--flag"],
         )
 
+    def test_normalize_argv_rewrites_equals_style_absolute_paths(self) -> None:
+        temp_root = Path("/tmp/example-root")
+        argv = [
+            f"-gnatec={temp_root / 'ada' / 'gnat.adc'}",
+            f"--report={hc.REPO_ROOT / 'execution' / 'reports' / 'sample.json'}",
+            "--mode=prove",
+        ]
+        self.assertEqual(
+            hc.normalize_argv(argv, temp_root=temp_root),
+            [
+                "-gnatec=$TMPDIR/ada/gnat.adc",
+                "--report=execution/reports/sample.json",
+                "--mode=prove",
+            ],
+        )
+
     def test_find_command_uses_fallback(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             fallback = Path(temp_dir) / "fake-tool"

@@ -105,8 +105,6 @@ def generate_report() -> dict[str, object]:
 
     selected_corpus = selected_emitted_corpus()
     expected_fixtures = [f"`{item['fixture']}`" for item in selected_corpus]
-    expected_coverage = set(EXPECTED_COVERAGE)
-    require(expected_coverage == EXPECTED_COVERAGE, "internal expected coverage must remain stable")
 
     matrix_text = MATRIX_PATH.read_text(encoding="utf-8")
     matrix_fixtures = extract_bullets_after(
