@@ -16,6 +16,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 GPR_FILE="${REPO_ROOT}/${GPR_FILE:-companion/gen/companion.gpr}"
 PROVE_OUT="${REPO_ROOT}/${PROVE_OUT:-companion/gen/obj/gnatprove}"
 EXTRACTED="${REPO_ROOT}/companion/assumptions_extracted.txt"
+GENERATED_NOTE="deterministic committed extract; wall-clock time omitted"
 
 echo "================================================================"
 echo "  Extract GNATprove Assumptions"
@@ -32,7 +33,7 @@ if [[ ! -d "${PROVE_OUT}" ]]; then
     echo "         Creating empty baseline assumptions file."
     {
         echo "# Safe Companion -- Extracted Assumptions"
-        echo "# Generated: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+        echo "# Generated: ${GENERATED_NOTE}"
         echo "# Source: (no GNATprove output available)"
         echo "#"
         echo "# This file is empty because GNATprove has not been run."
@@ -51,7 +52,7 @@ echo ""
 
 {
     echo "# Safe Companion -- Extracted Assumptions"
-    echo "# Generated: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+    echo "# Generated: ${GENERATED_NOTE}"
     echo "# Source: ${PROVE_OUT#"${REPO_ROOT}"/}"
     echo "#"
     echo "# This file lists all assumptions extracted from GNATprove output."

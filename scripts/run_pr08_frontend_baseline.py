@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -55,6 +56,24 @@ def require_absent(text: str, snippet: str, label: str) -> None:
     require(snippet not in text, f"{label}: did not expect {snippet!r}")
 
 
+def parse_task_id(value: object) -> tuple[int, int | None] | None:
+    if not isinstance(value, str):
+        return None
+    match = re.fullmatch(r"PR(\d+)(?:\.(\d+)[A-Za-z0-9]*)?", value)
+    if match is None:
+        return None
+    major = int(match.group(1))
+    minor = int(match.group(2)) if match.group(2) is not None else None
+    return (major, minor)
+
+
+def next_task_is_at_or_beyond_pr09(value: object) -> bool:
+    if value is None:
+        return True
+    parsed = parse_task_id(value)
+    return parsed is not None and parsed[0] >= 9
+
+
 def run_subgates(*, python: str) -> dict[str, Any]:
     results: dict[str, Any] = {}
     for script in SUBGATE_SCRIPTS:
@@ -70,10 +89,7 @@ def generate_report(
 ) -> dict[str, Any]:
     tracker = load_tracker()
     task_map = {task["id"]: task for task in tracker["tasks"]}
-    require(
-        tracker.get("next_task_id") in {"PR09", "PR10", None},
-        "tracker next_task_id must remain at or beyond PR09 for the PR08 baseline",
-    )
+    require(next_task_is_at_or_beyond_pr09(tracker.get("next_task_id")), "tracker next_task_id must remain at or beyond PR09 for the PR08 baseline")
     require(task_map["PR08.4"]["status"] == "done", "PR08.4 must be marked done")
     require(task_map["PR08"]["status"] == "done", "PR08 umbrella task must be marked done")
     require(
@@ -92,11 +108,14 @@ def generate_report(
         dashboard_text == rendered_dashboard["stdout"],
         "execution/dashboard.md must match scripts/render_execution_status.py output",
     )
+    next_task_match = re.search(
+        r"- \*\*Next task:\*\* `(PR\d+(?:\.[0-9]+[A-Za-z0-9]*)?|none)`",
+        dashboard_text,
+    )
     require(
-        "- **Next task:** `PR09`" in dashboard_text
-        or "- **Next task:** `PR10`" in dashboard_text
-        or "- **Next task:** `none`" in dashboard_text,
-        "execution/dashboard.md: expected PR09/PR10 as next task until completion, then none",
+        next_task_match is not None
+        and next_task_is_at_or_beyond_pr09(None if next_task_match.group(1) == "none" else next_task_match.group(1)),
+        "execution/dashboard.md: expected PR09-or-later as next task until completion, then none",
     )
     require_contains(dashboard_text, "| PR08.4 | done | PR08.3 | 1 |", "execution/dashboard.md")
     require_contains(dashboard_text, "| PR08 | done | PR08.4 | 1 |", "execution/dashboard.md")

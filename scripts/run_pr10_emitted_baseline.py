@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -51,6 +52,24 @@ def require_contains(text: str, snippet: str, label: str) -> None:
     require(snippet in text, f"{label}: expected to contain {snippet!r}")
 
 
+def parse_task_id(value: object) -> tuple[int, int | None] | None:
+    if not isinstance(value, str):
+        return None
+    match = re.fullmatch(r"PR(\d+)(?:\.(\d+)[A-Za-z0-9]*)?", value)
+    if match is None:
+        return None
+    major = int(match.group(1))
+    minor = int(match.group(2)) if match.group(2) is not None else None
+    return (major, minor)
+
+
+def next_task_is_at_or_beyond_pr10(value: object) -> bool:
+    if value is None:
+        return True
+    parsed = parse_task_id(value)
+    return parsed is not None and parsed[0] >= 10
+
+
 def generate_report(*, env: dict[str, str]) -> dict[str, object]:
     python = find_command("python3")
     with tempfile.TemporaryDirectory(prefix="pr10-baseline-") as temp_root_str:
@@ -76,7 +95,10 @@ def generate_report(*, env: dict[str, str]) -> dict[str, object]:
 
         tracker = load_tracker()
         task_map = {task["id"]: task for task in tracker["tasks"]}  # type: ignore[index]
-        require(tracker.get("next_task_id") is None, "tracker next_task_id must be null once PR10 is complete")
+        require(
+            next_task_is_at_or_beyond_pr10(tracker.get("next_task_id")),
+            "tracker next_task_id must remain at or beyond PR10 for the PR10 baseline",
+        )
         require(task_map["PR10"]["status"] == "done", "PR10 must be marked done")
         require(
             task_map["PR10"]["evidence"] == EXPECTED_EVIDENCE,
@@ -89,7 +111,17 @@ def generate_report(*, env: dict[str, str]) -> dict[str, object]:
             dashboard_text == rendered_dashboard["stdout"],
             "execution/dashboard.md must match scripts/render_execution_status.py output",
         )
-        require_contains(dashboard_text, "- **Next task:** `none`", "execution/dashboard.md")
+        next_task_match = re.search(
+            r"- \*\*Next task:\*\* `(PR\d+(?:\.[0-9]+[A-Za-z0-9]*)?|none)`",
+            dashboard_text,
+        )
+        require(
+            next_task_match is not None
+            and next_task_is_at_or_beyond_pr10(
+                None if next_task_match.group(1) == "none" else next_task_match.group(1)
+            ),
+            "execution/dashboard.md: expected PR10-or-later as next task until milestone completion, then none",
+        )
         require_contains(dashboard_text, "| PR10 | done | PR09 | 4 |", "execution/dashboard.md")
 
         baseline_text = FRONTEND_BASELINE_PATH.read_text(encoding="utf-8")
@@ -106,9 +138,11 @@ def generate_report(*, env: dict[str, str]) -> dict[str, object]:
         post_pr10_text = POST_PR10_SCOPE_PATH.read_text(encoding="utf-8")
         require_contains(
             post_pr10_text,
-            "Emitted-output GNATprove coverage beyond the selected PR10 sequential corpus",
+            "Faithful source-level `select ... or delay ...` semantics beyond the current emitted polling-based lowering",
             "docs/post_pr10_scope.md",
         )
+        require_contains(post_pr10_text, "PS-018", "docs/post_pr10_scope.md")
+        require_contains(post_pr10_text, "PS-019", "docs/post_pr10_scope.md")
 
         readme_text = README_PATH.read_text(encoding="utf-8")
         require_contains(
@@ -130,7 +164,7 @@ def generate_report(*, env: dict[str, str]) -> dict[str, object]:
         )
         require_contains(
             compiler_readme_text,
-            "no next tracked milestone",
+            "later tracked milestones may exist",
             "compiler_impl/README.md",
         )
 

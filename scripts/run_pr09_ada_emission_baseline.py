@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -59,6 +60,24 @@ def require_contains(text: str, snippet: str, label: str) -> None:
     require(snippet in text, f"{label}: expected to contain {snippet!r}")
 
 
+def parse_task_id(value: object) -> tuple[int, int | None] | None:
+    if not isinstance(value, str):
+        return None
+    match = re.fullmatch(r"PR(\d+)(?:\.(\d+)[A-Za-z0-9]*)?", value)
+    if match is None:
+        return None
+    major = int(match.group(1))
+    minor = int(match.group(2)) if match.group(2) is not None else None
+    return (major, minor)
+
+
+def next_task_is_at_or_beyond_pr10(value: object) -> bool:
+    if value is None:
+        return True
+    parsed = parse_task_id(value)
+    return parsed is not None and parsed[0] >= 10
+
+
 def generate_report(*, env: dict[str, str]) -> dict[str, object]:
     python = find_command("python3")
     with tempfile.TemporaryDirectory(prefix="pr09-baseline-") as temp_root_str:
@@ -83,10 +102,7 @@ def generate_report(*, env: dict[str, str]) -> dict[str, object]:
             )
         tracker = load_tracker()
         task_map = {task["id"]: task for task in tracker["tasks"]}
-        require(
-            tracker.get("next_task_id") in ("PR10", None),
-            "tracker next_task_id must be PR10 until PR10 is complete, then null",
-        )
+        require(next_task_is_at_or_beyond_pr10(tracker.get("next_task_id")), "tracker next_task_id must remain at or beyond PR10 for the PR09 baseline")
         require(task_map["PR09"]["status"] == "done", "PR09 must be marked done")
         require(
             task_map["PR09"]["evidence"] == EXPECTED_EVIDENCE,
@@ -99,10 +115,16 @@ def generate_report(*, env: dict[str, str]) -> dict[str, object]:
             dashboard_text == rendered_dashboard["stdout"],
             "execution/dashboard.md must match scripts/render_execution_status.py output",
         )
+        next_task_match = re.search(
+            r"- \*\*Next task:\*\* `(PR\d+(?:\.[0-9]+[A-Za-z0-9]*)?|none)`",
+            dashboard_text,
+        )
         require(
-            "- **Next task:** `PR10`" in dashboard_text
-            or "- **Next task:** `none`" in dashboard_text,
-            "execution/dashboard.md: expected PR10 as next task until completion, then none",
+            next_task_match is not None
+            and next_task_is_at_or_beyond_pr10(
+                None if next_task_match.group(1) == "none" else next_task_match.group(1)
+            ),
+            "execution/dashboard.md: expected PR10-or-later as next task until milestone completion, then none",
         )
         require_contains(dashboard_text, "| PR09 | done | PR08 | 6 |", "execution/dashboard.md")
 

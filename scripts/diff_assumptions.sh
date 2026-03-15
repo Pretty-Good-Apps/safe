@@ -28,6 +28,12 @@ echo ""
 
 DRIFT_DETECTED=0
 
+normalize_summary() {
+    # GNATprove's prover-attribution percentages can drift across toolchains
+    # without any change to proved/justified/unproved counts.
+    sed -E 's/\([^)]*\)/(normalized)/g'
+}
+
 # -----------------------------------------------------------------------
 # Part A: Verify assumptions.yaml baseline
 # -----------------------------------------------------------------------
@@ -66,11 +72,13 @@ if [[ ! -f "${PROVE_OUT}" ]]; then
 else
     # Extract the summary block (from "Summary of SPARK" through "Total" line)
     CURRENT_SUMMARY=$(sed -n '/^Summary of SPARK/,/^Total/p' "${PROVE_OUT}")
+    NORMALIZED_CURRENT_SUMMARY=$(printf '%s\n' "${CURRENT_SUMMARY}" | normalize_summary)
 
     if [[ -f "${PROVE_GOLDEN}" ]]; then
         GOLDEN_SUMMARY=$(cat "${PROVE_GOLDEN}")
+        NORMALIZED_GOLDEN_SUMMARY=$(printf '%s\n' "${GOLDEN_SUMMARY}" | normalize_summary)
 
-        if [[ "${CURRENT_SUMMARY}" == "${GOLDEN_SUMMARY}" ]]; then
+        if [[ "${NORMALIZED_CURRENT_SUMMARY}" == "${NORMALIZED_GOLDEN_SUMMARY}" ]]; then
             echo "Proof summary: MATCHES golden baseline."
             echo ""
         else
