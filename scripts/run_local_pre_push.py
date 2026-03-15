@@ -51,6 +51,7 @@ PRIMARY_GATE_SCRIPTS = {
         "scripts/run_emitted_hardening_regressions.py",
         "scripts/run_pr101_comprehensive_audit.py",
     ),
+    "codex/pr101": ("scripts/run_pr101_comprehensive_audit.py",),
 }
 
 
