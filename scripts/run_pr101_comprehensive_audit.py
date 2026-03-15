@@ -52,6 +52,12 @@ EXPECTED_PR101_ACCEPTANCE = [
 EXPECTED_PR101_EVIDENCE = [
     "execution/reports/pr101-comprehensive-audit-report.json",
 ]
+EXPECTED_PR104_ACCEPTANCE = [
+    "Pure-Python regression tests cover scripts/run_pr101_comprehensive_audit.py parsing helpers (split_table_row, parse_findings, parse_residuals, parse_summary_counts), including malformed-table cases and multi-target target-cell parsing.",
+    "The emitted proof and audit harnesses verify explicit gnat.adc application and fail deterministically if concurrency compile/flow/prove commands lose the concrete -gnatec=<ada_dir>/gnat.adc argument.",
+    "The GNATprove evidence path documents and enforces the repo's proof-repeatability policy for emitted gates, including the current --steps=0 plus bounded-timeout profile and an explicit statement about whether committed session artifacts are part of the reproducibility contract.",
+    "A dedicated PR10.4 gate, report, and CI job keep the hardened evidence path and parser-regression surface under committed deterministic coverage.",
+]
 ALLOWED_DISPOSITIONS = {
     "fix-in-pr101",
     "promote-to-pr10x",
@@ -76,7 +82,7 @@ EXPECTED_AUDIT_SNIPPETS = [
     "`scripts/run_emitted_hardening_regressions.py`",
     "`PR10.2` — Rule 5 proof-boundary closure and loop-termination diagnostics",
     "`PR10.3` — Sequential emitted proof-corpus expansion beyond the frozen PR10 subset",
-    "`PR10.4` — GNATprove evidence and parser hardening",
+    "`PR10.4` — GNATprove evidence and parser hardening, including audit-parser regression tests, explicit `gnat.adc` sentinels, and proof-repeatability policy",
     "`PR10.5` — Ada emitter maintenance hardening",
 ]
 EXPECTED_MATRIX_SNIPPETS = [
@@ -383,6 +389,10 @@ def build_report(*, baseline_truth: dict[str, Any]) -> dict[str, Any]:
         require(task_id in task_map, f"tracker must define promoted task {task_id}")
         require(task_map[task_id]["status"] == "planned", f"{task_id} must remain planned")
         require(task_map[task_id]["depends_on"] == ["PR10.1"], f"{task_id} must depend on PR10.1")
+    require(
+        task_map["PR10.4"]["acceptance"] == EXPECTED_PR104_ACCEPTANCE,
+        "PR10.4 acceptance text must match the tightened parser/evidence hardening scope",
+    )
 
     rendered_dashboard = run([find_command("python3"), "scripts/render_execution_status.py"], cwd=REPO_ROOT, env=ensure_sdkroot(os.environ.copy()))
     dashboard_text = DASHBOARD_PATH.read_text(encoding="utf-8")
