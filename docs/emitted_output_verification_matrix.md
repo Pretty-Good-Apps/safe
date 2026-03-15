@@ -73,6 +73,10 @@ PR10 proof representatives: `rule2_binary_search.safe`, `rule3_average.safe`,
 | Other currently emitted concurrency fixtures outside the PR10 corpus | current PR08 concurrency subset beyond the three PR10 proof fixtures | Additional accepted concurrency emission remains outside the selected PR10 proof representatives. | yes | yes | yes | no | no | Jorvik/Ravenscar runtime behaviour plus runtime timing remain external | yes |
 | I/O seams outside pure emitted packages | runtime wrapper boundaries | Wrapper integration obligations are tracked separately from pure emitted-package proof. | n/a | n/a | n/a | no | no | wrapper/runtime mechanisms and interface contracts | yes |
 
+The Rule 5 row above reflects the frozen PR10 representative only. Broader
+floating-point computed-divisor proof shaping remains tracked in
+[`docs/post_pr10_scope.md`](post_pr10_scope.md).
+
 ## PR10 Assurance Policy
 
 Inside the selected emitted corpus, PR10 uses an **all-proved-only** policy:
