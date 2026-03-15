@@ -631,7 +631,8 @@
       "status": "planned",
       "depends_on": ["PR10.1"],
       "acceptance": [
-        "At least one named sequential emitted corpus beyond the frozen PR10 representatives passes compile, GNATprove flow, and GNATprove prove under the all-proved-only policy.",
+        "The first PR10.3 ownership expansion corpus consists of tests/positive/ownership_borrow.safe, tests/positive/ownership_observe.safe, tests/positive/ownership_observe_access.safe, tests/positive/ownership_return.safe, tests/positive/ownership_inout.safe, and tests/positive/ownership_early_return.safe, and that named set may not be silently shrunk.",
+        "Those six ownership fixtures pass compile, GNATprove flow, and GNATprove prove under the all-proved-only policy.",
         "docs/emitted_output_verification_matrix.md and related audit/docs surfaces distinguish the frozen PR10 claim from post-PR10 supplemental proved sequential fixtures.",
         "A dedicated PR10.3 gate, report, and CI wiring keep the expanded sequential proof corpus deterministic and evidence-backed."
       ],
@@ -648,6 +649,20 @@
         "The emitted proof gates consume a stricter evidence path for GNATprove results, with malformed-output regression coverage and deterministic failure on format drift.",
         "Audit and emitted-output gates verify explicit gnat.adc application and proof-summary/report stability without relying on unchecked textual assumptions.",
         "A dedicated PR10.4 gate, report, and CI job keep the hardened evidence path under committed deterministic coverage."
+      ],
+      "evidence": [],
+      "blockers": [],
+      "unblock_condition": ""
+    },
+    {
+      "id": "PR10.5",
+      "title": "Ada emitter maintenance hardening",
+      "status": "planned",
+      "depends_on": ["PR10.1"],
+      "acceptance": [
+        "The three broad Constraint_Error catch-alls in compiler_impl/src/safe_frontend-ada_emit.adb are removed or narrowed so malformed-state failures are not collapsed into generic emitter internal errors.",
+        "Unreachable post-Raise_Unsupported fallback returns are removed, integer-type classification is made subtype-aware, name-based type lookup/render helpers are unified, and the duplicated Render_Object_Decl_Text bodies are consolidated into one shared implementation path.",
+        "A dedicated PR10.5 gate, report, and CI job keep the emitter-maintenance refactor deterministic and evidence-backed."
       ],
       "evidence": [],
       "blockers": [],

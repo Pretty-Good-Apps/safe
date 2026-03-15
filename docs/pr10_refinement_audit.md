@@ -30,6 +30,7 @@ The committed report is
 |----|------|--------------|------------------|----------|-------------|--------|-------|
 | `PR101-001` | `tooling` | `scripts/run_pr10_emitted_baseline.py`; `compiler_impl/README.md` | The PR10 umbrella gate correctly proves PR10 completion, but its older “no next tracked milestone” assumption becomes stale once later milestones exist. | PR10 umbrella script; compiler workspace README gate description | `fix-in-pr101` | `scripts/run_pr10_emitted_baseline.py`; `compiler_impl/README.md` | Make PR10 forward-stable like the PR09 baseline: later tracked milestones are allowed as long as PR10 stays done with the canonical evidence list. |
 | `PR101-002` | `docs` | `README.md`; `compiler_impl/README.md`; `.github/workflows/ci.yml` | Once PR10.1 exists, the canonical docs and CI summary need an explicit audit link and job description so the post-PR10 story is discoverable. | README doc guide and CI summary; compiler workspace README gate list; workflow job topology | `fix-in-pr101` | `README.md`; `compiler_impl/README.md`; `.github/workflows/ci.yml` | Add the canonical audit doc, gate description, and CI job without changing the frozen PR10 selected-corpus claim. |
+| `PR101-045` | `docs` | `docs/tutorial.md` | The tutorial still claims there is no compiler implementation and no compiler yet, which directly contradicts the Ada-native `safec` frontend and emitted-output proof gates that have existed since the PR06 series. | `docs/tutorial.md` line 9; `docs/tutorial.md` line 282; current CLI and proof-tutorial docs | `fix-in-pr101` | `docs/tutorial.md` | Correct the two stale pre-compiler-era statements and point readers to the end-to-end CLI tutorial without changing the bounded-tooling message. |
 
 ### Static Evaluation and Numeric Analysis
 
@@ -68,6 +69,16 @@ The committed report is
 | `PR101-023` | `resolver` | `docs/frontend_architecture_baseline.md` | General discriminants remain outside the supported frontend baseline. | Frontend baseline docs; current parser/resolver surface | `retain-in-post-pr10` | `PS-014` | Blocking-if-needed. |
 | `PR101-024` | `resolver` | `docs/frontend_architecture_baseline.md` | Discriminant constraints remain outside the supported frontend baseline. | Frontend baseline docs; current parser/resolver surface | `retain-in-post-pr10` | `PS-015` | Blocking-if-needed. |
 
+### Emitter Implementation Quality and Open Review Debt
+
+| ID | Area | Claim source | Observed reality | Evidence | Disposition | Target | Notes |
+|----|------|--------------|------------------|----------|-------------|--------|-------|
+| `PR101-046` | `emitter` | PR54 review; `compiler_impl/src/safe_frontend-ada_emit.adb` | `Join_Names` still catches `Constraint_Error` broadly and maps it to a generic internal failure instead of letting the concrete malformed-state cause surface more narrowly. | `safe_frontend-ada_emit.adb` `Join_Names` exception handler | `promote-to-pr10x` | `PR10.5` | Track as emitter-maintenance hardening rather than silently carrying the review debt forward. |
+| `PR101-047` | `emitter` | PR54 review; `compiler_impl/src/safe_frontend-ada_emit.adb` | Both `Render_Cleanup` overloads still catch `Constraint_Error` broadly and collapse distinct malformed-declaration failures into the same generic internal error path. | `safe_frontend-ada_emit.adb` `Render_Cleanup` overload exception handlers | `promote-to-pr10x` | `PR10.5` | Keep the two cleanup overloads in scope together so the maintenance task closes the whole pattern. |
+| `PR101-048` | `emitter` | PR54 review; `compiler_impl/src/safe_frontend-ada_emit.adb` | The emitter still contains unreachable fallback returns after `Raise_Unsupported`, which adds dead code noise to unsupported paths and obscures intent during review. | `safe_frontend-ada_emit.adb` `Render_Type_Decl`; `Render_Expr`; similar unsupported-path returns | `promote-to-pr10x` | `PR10.5` | Treat as deterministic cleanup work within the emitter-maintenance milestone. |
+| `PR101-049` | `emitter` | PR54 review; `compiler_impl/src/safe_frontend-ada_emit.adb`; `docs/emitted_output_verification_matrix.md` | `Is_Integer_Type` still treats every subtype descriptor as integer, which is too coarse for a name that is used to drive emitted numeric lowering decisions. | `safe_frontend-ada_emit.adb` `Is_Integer_Type (Info)` implementation | `promote-to-pr10x` | `PR10.5` | This is maintenance debt unless and until it produces a user-visible mis-lowering; track it explicitly now. |
+| `PR101-050` | `emitter` | PR54 review; `compiler_impl/src/safe_frontend-ada_emit.adb` | Name-based type rendering still duplicates lookup paths, and the resolved/non-resolved `Render_Object_Decl_Text` overloads still carry near-identical bodies. | `safe_frontend-ada_emit.adb` `Is_Integer_Type (Name)`; `Render_Type_Name (Name)`; duplicated `Render_Object_Decl_Text` bodies | `promote-to-pr10x` | `PR10.5` | Track the lookup unification and object-declaration rendering consolidation together as one refactor surface. |
+
 ### Tooling, Interface UX, and Assurance
 
 | ID | Area | Claim source | Observed reality | Evidence | Disposition | Target | Notes |
@@ -82,6 +93,7 @@ The committed report is
 | `PR101-032` | `tooling` | `spec/00-front-matter.md` section `0.8`; interface and MIR code | The repo has stable `safei-v1` and `mir-v2` artifacts, but not a fully stabilised normative interchange-format policy. | Existing artifacts plus retained normative-policy gap | `retain-in-post-pr10` | `PS-021` | Long-term documentation/policy work. |
 | `PR101-033` | `tooling` | `spec/00-front-matter.md` section `0.8` | Performance targets are still intentionally undefined. | Spec TBD register | `retain-in-post-pr10` | `PS-022` | Long-term. |
 | `PR101-034` | `tooling` | `docs/spark_container_compatibility.md` | SPARK container compatibility gaps remain open. | Existing compatibility memo | `retain-in-post-pr10` | `PS-023` | Long-term. |
+| `PR101-051` | `tooling` | `docs/emitted_output_verification_matrix.md`; `execution/tracker.json`; ownership fixtures under `tests/positive/` | The ownership follow-on proof surface is still only implicit in the generic sequential-expansion wording, even though the repo already has a concrete six-fixture ownership set beyond `ownership_move`. | `ownership_borrow.safe`; `ownership_observe.safe`; `ownership_observe_access.safe`; `ownership_return.safe`; `ownership_inout.safe`; `ownership_early_return.safe`; current PR10.3 tracker text | `promote-to-pr10x` | `PR10.3` | Make the ownership set the first explicit, non-shrinkable PR10.3 target instead of leaving it buried inside a catch-all sequential expansion claim. |
 
 ### Spec and Language TBDs
 
@@ -103,8 +115,9 @@ The committed report is
 The PR10.1 audit promotes the following evidence-ready follow-on tasks:
 
 - `PR10.2` — Rule 5 proof-boundary closure and loop-termination diagnostics
-- `PR10.3` — Sequential emitted proof-corpus expansion beyond the frozen PR10 subset
+- `PR10.3` — Sequential emitted proof-corpus expansion beyond the frozen PR10 subset, beginning with the six ownership fixtures
 - `PR10.4` — GNATprove evidence and parser hardening
+- `PR10.5` — Ada emitter maintenance hardening
 
 `next_task_id` advances to `PR10.2`.
 

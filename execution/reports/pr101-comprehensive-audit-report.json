@@ -1,12 +1,12 @@
 {
   "artifact_hashes": {
-    "audit_doc": "d9823291a9d7f3b8c8a278a6f5e96006a3861332aa18de053e08e08517499d1a",
+    "audit_doc": "e65a5b3a24ed6af23841f1261e58a539ac177cab2100e9af94cff57a717a9c01",
     "compiler_readme": "05188ccfcaf9e0c14a02927b175159b64bc8d3c26016eaef18a51d5f61581ecc",
-    "dashboard": "1b297cd28a02e69a029757553b6852d0302646bc7304e0049d0d4b8c2aed89f6",
-    "matrix": "3c695e9c7c63643f96eaaa8092edff788c5bd3bc327278ba2055de6886503b4b",
+    "dashboard": "98d26dd2501e2dc1ad88b862100c001acde6f2ef1977b1ad9e577c601ab52fe2",
+    "matrix": "04e41ccf34950e1a8755ace5af678107d131390d646392b8fa9a09eb092ad1d6",
     "post_pr10_scope": "b06e77c19375ac71491ade442bb98ef18fe6266802949e61b6ef568dc6141a26",
     "readme": "18b4c914ca6f68eb7a01bc1d5e63687926fae68b35fdd4450811a453587c6c9d",
-    "tracker": "85abfac8d0fe98ad8106c821d86f63c980aa1c67e4fa40f8309917a426d4dcb2",
+    "tracker": "fced9db19817df057e5202e80281a9b056f894e802901a870c74451fbab35215",
     "workflow": "3aff563110e3a3d27fa2ba15a28f839645cf569b8fc511ba7dff16e6f20fe695"
   },
   "audited_surfaces": [
@@ -231,6 +231,11 @@
       "target": "README.md; compiler_impl/README.md; .github/workflows/ci.yml"
     },
     {
+      "disposition": "fix-in-pr101",
+      "id": "PR101-045",
+      "target": "docs/tutorial.md"
+    },
+    {
       "disposition": "close-as-fixed",
       "id": "PR101-013",
       "target": "n/a"
@@ -255,21 +260,22 @@
   "finding_counts": {
     "by_area": {
       "analyzer": 8,
-      "docs": 2,
+      "docs": 3,
+      "emitter": 5,
       "language-design": 3,
       "parser": 2,
       "resolver": 6,
       "spec": 11,
-      "tooling": 12
+      "tooling": 13
     },
     "by_disposition": {
       "close-as-fixed": 2,
       "close-as-pretracked": 1,
-      "fix-in-pr101": 3,
-      "promote-to-pr10x": 5,
+      "fix-in-pr101": 4,
+      "promote-to-pr10x": 11,
       "retain-in-post-pr10": 33
     },
-    "total": 44
+    "total": 51
   },
   "promoted_follow_on_candidates": [
     {
@@ -283,7 +289,8 @@
     },
     {
       "finding_ids": [
-        "PR101-027"
+        "PR101-027",
+        "PR101-051"
       ],
       "task": "PR10.3",
       "title": "Sequential emitted proof-corpus expansion beyond PR10"
@@ -294,10 +301,21 @@
       ],
       "task": "PR10.4",
       "title": "GNATprove evidence and parser hardening"
+    },
+    {
+      "finding_ids": [
+        "PR101-046",
+        "PR101-047",
+        "PR101-048",
+        "PR101-049",
+        "PR101-050"
+      ],
+      "task": "PR10.5",
+      "title": "Ada emitter maintenance hardening"
     }
   ],
-  "repeat_sha256": "30932ce98c2493979bc518e040d32ac698fddbbaf3ef1548e42361d0ac816bc5",
-  "report_sha256": "30932ce98c2493979bc518e040d32ac698fddbbaf3ef1548e42361d0ac816bc5",
+  "repeat_sha256": "9c9ce171c8b0fa684565f34fff305bdb81445cc6f82f19257469eaf362b22046",
+  "report_sha256": "9c9ce171c8b0fa684565f34fff305bdb81445cc6f82f19257469eaf362b22046",
   "retained_post_pr10_residuals": [
     {
       "area": "resolver",
@@ -486,6 +504,12 @@
         "status": "planned"
       },
       "PR10.4": {
+        "depends_on": [
+          "PR10.1"
+        ],
+        "status": "planned"
+      },
+      "PR10.5": {
         "depends_on": [
           "PR10.1"
         ],

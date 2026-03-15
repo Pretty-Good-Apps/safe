@@ -36,6 +36,7 @@ WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 MATRIX_PATH = REPO_ROOT / "docs" / "emitted_output_verification_matrix.md"
 POST_PR10_SCOPE_PATH = REPO_ROOT / "docs" / "post_pr10_scope.md"
 AUDIT_DOC_PATH = REPO_ROOT / "docs" / "pr10_refinement_audit.md"
+TUTORIAL_PATH = REPO_ROOT / "docs" / "tutorial.md"
 
 BASELINE_SCRIPTS = [
     REPO_ROOT / "scripts" / "run_pr08_frontend_baseline.py",
@@ -60,7 +61,7 @@ ALLOWED_DISPOSITIONS = {
     "close-as-spec-excluded",
     "close-as-pretracked",
 }
-PROMOTED_TASKS = ("PR10.2", "PR10.3", "PR10.4")
+PROMOTED_TASKS = ("PR10.2", "PR10.3", "PR10.4", "PR10.5")
 RETAINED_PRIORITY_COUNTS = {
     "blocking-if-needed": 14,
     "nice-to-have": 3,
@@ -76,9 +77,13 @@ EXPECTED_AUDIT_SNIPPETS = [
     "`PR10.2` — Rule 5 proof-boundary closure and loop-termination diagnostics",
     "`PR10.3` — Sequential emitted proof-corpus expansion beyond the frozen PR10 subset",
     "`PR10.4` — GNATprove evidence and parser hardening",
+    "`PR10.5` — Ada emitter maintenance hardening",
 ]
 EXPECTED_MATRIX_SNIPPETS = [
     "frontend Silver ownership analysis is the mechanism that prevents use-after-free",
+    "Post-PR10 ownership proof-expansion set",
+    "ownership_borrow.safe",
+    "ownership_early_return.safe",
     "PR10.3",
     "PS-007",
     "PS-019",
@@ -107,6 +112,12 @@ EXPECTED_WORKFLOW_SNIPPETS = [
 ]
 EXPECTED_PRE_PUSH_SNIPPETS = [
     "\"scripts/run_pr101_comprehensive_audit.py\"",
+]
+EXPECTED_TUTORIAL_SNIPPETS = [
+    "Ada-native `safec` frontend plus emitted-output proof",
+    "docs/safec_end_to_end_cli_tutorial.md",
+    "working compiler frontend",
+    "proof pipeline",
 ]
 
 
@@ -401,6 +412,18 @@ def build_report(*, baseline_truth: dict[str, Any]) -> dict[str, Any]:
     for snippet in EXPECTED_MATRIX_SNIPPETS:
         require_contains(matrix_text, snippet, "docs/emitted_output_verification_matrix.md")
 
+    tutorial_text = TUTORIAL_PATH.read_text(encoding="utf-8")
+    for snippet in EXPECTED_TUTORIAL_SNIPPETS:
+        require_contains(tutorial_text, snippet, "docs/tutorial.md")
+    require(
+        "There is no Safe compiler implementation in this repo yet." not in tutorial_text,
+        "docs/tutorial.md must not claim the repo lacks a Safe compiler implementation",
+    )
+    require(
+        "there is no compiler yet" not in tutorial_text,
+        "docs/tutorial.md must not claim there is no compiler yet",
+    )
+
     readme_text = README_PATH.read_text(encoding="utf-8")
     for snippet in EXPECTED_README_SNIPPETS:
         require_contains(readme_text, snippet, "README.md")
@@ -460,8 +483,8 @@ def build_report(*, baseline_truth: dict[str, Any]) -> dict[str, Any]:
         "each retained post-PR10 residual must be targeted by exactly one retain-in-post-pr10 finding",
     )
     require(
-        promoted_targets == Counter({"PR10.2": 3, "PR10.3": 1, "PR10.4": 1}),
-        "promoted follow-on findings must match the audited PR10.2/PR10.3/PR10.4 split",
+        promoted_targets == Counter({"PR10.2": 3, "PR10.3": 2, "PR10.4": 1, "PR10.5": 5}),
+        "promoted follow-on findings must match the audited PR10.2/PR10.3/PR10.4/PR10.5 split",
     )
 
     retained_priority_counts = Counter(item["priority"] for item in residuals)
