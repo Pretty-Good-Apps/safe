@@ -74,7 +74,8 @@ PR10 proof representatives: `rule2_binary_search.safe`, `rule3_average.safe`,
 | I/O seams outside pure emitted packages | runtime wrapper boundaries | Wrapper integration obligations are tracked separately from pure emitted-package proof. | n/a | n/a | n/a | no | no | wrapper/runtime mechanisms and interface contracts | yes |
 
 The Rule 5 row above reflects the frozen PR10 representative only. Broader
-floating-point computed-divisor proof shaping remains tracked in
+floating-point proof shaping, overflow-to-infinity handling, and
+convergence-loop termination beyond the selected PR10 subset remain tracked in
 [`docs/post_pr10_scope.md`](post_pr10_scope.md).
 
 ## PR10 Assurance Policy

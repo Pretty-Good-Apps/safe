@@ -61,6 +61,8 @@ before PR10, and not better owned by `docs/syntax_proposals.md`.
 | Static evaluation beyond the minimal constant-reference subset used by PR08.3a and the still-deferred named-number work, including binary arithmetic and declaration-time dot-attribute references such as `.First` / `.Last` | `PR08.3a`, `spec/03-single-file-packages.md` section `3.2.7`, `compiler_impl/src/safe_frontend-check_resolve.adb` | `resolver` | `blocking-if-needed` |
 | Fixed-point Rule 5 support beyond the frozen current subset | `docs/frontend_architecture_baseline.md` | `analyzer` | `blocking-if-needed` |
 | Floating-point computed-divisor proof shaping: GNATprove's float model may not discharge division-by-zero VCs from if-then guards on computed FP values (e.g., `if mag > 0.0 then x / mag`), meaning compiler-suggested guards may not resolve the proof obligation and the emitter may need to produce stronger annotations or restructured code | PR10 review, `docs/emitted_output_verification_matrix.md`, `spec/02-restrictions.md` section `2.8.5` (TBD-04 related) | `analyzer` | `blocking-if-needed` |
+| Floating-point overflow to infinity: large-magnitude FP multiplications (e.g., `mass * velocity * velocity` where both operands are near `Float'Last`) can overflow to IEEE 754 infinity, and no if-then guard is available because the overflow occurs inside the expression evaluation itself, not at a checkable boundary; the emitter or analyzer must either reject such programs, emit range-constraining preconditions, or restructure the computation | PR10 review, `spec/02-restrictions.md` section `2.8.5` (TBD-04 related) | `analyzer` | `blocking-if-needed` |
+| Convergence loop termination: while loops with non-monotonic convergence conditions (e.g., Newton's method `while abs(guess*guess - x) > epsilon`) have no derivable `Loop_Variant` because the convergence is mathematical rather than structural; the emitter cannot produce a variant annotation and GNATprove cannot prove termination; the compiler must either reject such loops, emit a bounded-iteration fallback, or support a restricted convergence-proof mechanism | PR10 review, `spec/02-restrictions.md` section `2.8.5`, GNATprove loop-variant requirements | `analyzer` | `blocking-if-needed` |
 
 ## Concurrency, Ownership, and Runtime Model
 
@@ -119,10 +121,10 @@ before PR10, and not better owned by `docs/syntax_proposals.md`.
 
 | Priority | Count |
 |----------|------:|
-| `blocking-if-needed` | 15 |
+| `blocking-if-needed` | 17 |
 | `nice-to-have` | 3 |
 | `long-term` | 18 |
-| **Total** | **36** |
+| **Total** | **38** |
 
 See [`docs/post_pr10_scope_audit.md`](post_pr10_scope_audit.md) for the audit
 record that removed fixed items, pre-PR10 tracked work, spec-excluded rows, and
