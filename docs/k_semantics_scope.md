@@ -195,9 +195,7 @@ Phase 3 adds Safe's concurrency model: static tasks, typed bounded channels, and
 | `receive C, Var;` | Remove from head; block if empty | 4.3, p28 |
 | `try_send C, Expr, Ok;` | Non-blocking append; set Ok | 4.3, p29 |
 | `try_receive C, Var, Ok;` | Non-blocking remove; set Ok | 4.3, p30 |
-| Ownership transfer on send | Value moves from sender to channel | 4.3, p27a |
-| Ownership transfer on receive | Value moves from channel to receiver | 4.3, p28a |
-| Move-only-on-success (try_send) | Source nulled only when Success=True | 4.3, p29a |
+| Copy-only channel payloads | Access-bearing channel elements are excluded; channel payloads never transfer ownership | 4.2, p14; 4.3, p27a-31a |
 
 **Select statement formalized:**
 
@@ -691,31 +689,16 @@ rule <k> tryReceive(CId, TargetLoc, SuccessLoc) => .K ... </k>
      <store> S => S[SuccessLoc <- boolVal(false)] </store>
 ```
 
-**4.4.6 Ownership Transfer Through Channels**
+**4.4.6 Copy-Only Channel Payloads**
 
-When the channel element type is an owning access type, send performs a move and receive performs an ownership acquisition:
+Safe now excludes channel element types that are access types or composite types
+containing access-type subcomponents. The K model therefore treats channel
+payloads as copy-only values; ownership transfer through channels is outside the
+current language.
 
-```k
-// Send with ownership transfer
-rule <k> sendOwning(CId, SourceLoc) => .K ... </k>
-     <chan-id> CId </chan-id>
-     <buffer> Buf => Buf ListItem(S[SourceLoc]) </buffer>
-     <capacity> Cap </capacity>
-     <store> S => S[SourceLoc <- nullVal()] </store>
-     <ownership> O => O[SourceLoc <- Moved] </ownership>
-  requires size(Buf) <Int Cap
-  andBool  O[SourceLoc] ==K Owned
-
-// Receive with ownership transfer
-rule <k> receiveOwning(CId, TargetLoc) => .K ... </k>
-     <chan-id> CId </chan-id>
-     <buffer> ListItem(V) Rest => Rest </buffer>
-     <store> S => S[TargetLoc <- V] </store>
-     <ownership> O => O[TargetLoc <- Owned] </ownership>
-  requires S[TargetLoc] ==K nullVal()   // null-before-move legality rule
-```
-
-The source nulling on send corresponds to spec/04-tasks-and-channels.md section 4.3 paragraph 27a. The null-before-move check on receive corresponds to paragraph 28a and spec/02-restrictions.md section 2.3.2 paragraph 97a.
+The exclusion corresponds to spec/04-tasks-and-channels.md section 4.2
+paragraph 14, while the copy-only consequences correspond to section 4.3
+paragraphs 27a, 28a, 29a, 29b, 30, and 31a.
 
 ### 4.5 Deterministic Select
 
@@ -857,7 +840,7 @@ The K framework's symbolic execution engine `kprove` can verify properties of Sa
 
 3. **Atomicity.** Channel operations are atomic with respect to each other. In the K model, each rule application is atomic (a single rewrite step), ensuring no interleaving within a channel operation.
 
-4. **Ownership invariant.** At any point, each designated object is owned by exactly one entity: either a task variable or a channel buffer element. The send-with-move and receive-with-ownership-transfer rules maintain this invariant. Corresponds to spec/04-tasks-and-channels.md section 4.3 paragraph 31a.
+4. **Channel non-ownership invariant.** Channel buffers never store owning access values because access-bearing channel element types are illegal. This keeps queued channel state disjoint from task-owned heap objects. Corresponds to spec/04-tasks-and-channels.md section 4.3 paragraph 31a.
 
 ### 5.4 Determinism
 

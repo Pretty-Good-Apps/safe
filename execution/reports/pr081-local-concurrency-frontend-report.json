@@ -737,6 +737,144 @@
         "command": [
           "compiler_impl/bin/safec",
           "ast",
+          "tests/concurrency/channel_access_type.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "channel_access_type.safe:16:22: error: channel element type shall not be an access type or a composite type containing an access-type subcomponent\n  |\n  | 16 |    channel Data_Ch : Payload_Ptr capacity 1;\n  |    |                      ^~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/concurrency/channel_access_type.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "channel_access_type.safe:16:22: error: channel element type shall not be an access type or a composite type containing an access-type subcomponent\n  |\n  | 16 |    channel Data_Ch : Payload_Ptr capacity 1;\n  |    |                      ^~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "check_diag_json": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/concurrency/channel_access_type.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"channel element type shall not be an access type or a composite type containing an access-type subcomponent\",\"path\":\"tests/concurrency/channel_access_type.safe\",\"span\":{\"start_line\":16,\"start_col\":22,\"end_line\":16,\"end_col\":32},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/concurrency/channel_access_type.safe",
+          "--out-dir",
+          "$TMPDIR/channel_access_type-out",
+          "--interface-dir",
+          "$TMPDIR/channel_access_type-iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "channel_access_type.safe:16:22: error: channel element type shall not be an access type or a composite type containing an access-type subcomponent\n  |\n  | 16 |    channel Data_Ch : Payload_Ptr capacity 1;\n  |    |                      ^~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "emit_artifacts": {
+        "iface_files": [],
+        "out_files": []
+      },
+      "expected_reason": "source_frontend_error",
+      "first_diagnostic": {
+        "highlight_span": null,
+        "message": "channel element type shall not be an access type or a composite type containing an access-type subcomponent",
+        "path": "tests/concurrency/channel_access_type.safe",
+        "reason": "source_frontend_error",
+        "span": {
+          "end_col": 32,
+          "end_line": 16,
+          "start_col": 22,
+          "start_line": 16
+        }
+      },
+      "sample": "tests/concurrency/channel_access_type.safe"
+    },
+    {
+      "ast": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "ast",
+          "tests/negative/neg_channel_access_component.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_channel_access_component.safe:17:22: error: channel element type shall not be an access type or a composite type containing an access-type subcomponent\n  |\n  | 17 |    channel Data_Ch : Envelope capacity 1;\n  |    |                      ^~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_channel_access_component.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_channel_access_component.safe:17:22: error: channel element type shall not be an access type or a composite type containing an access-type subcomponent\n  |\n  | 17 |    channel Data_Ch : Envelope capacity 1;\n  |    |                      ^~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "check_diag_json": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/negative/neg_channel_access_component.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"channel element type shall not be an access type or a composite type containing an access-type subcomponent\",\"path\":\"tests/negative/neg_channel_access_component.safe\",\"span\":{\"start_line\":17,\"start_col\":22,\"end_line\":17,\"end_col\":29},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/negative/neg_channel_access_component.safe",
+          "--out-dir",
+          "$TMPDIR/neg_channel_access_component-out",
+          "--interface-dir",
+          "$TMPDIR/neg_channel_access_component-iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_channel_access_component.safe:17:22: error: channel element type shall not be an access type or a composite type containing an access-type subcomponent\n  |\n  | 17 |    channel Data_Ch : Envelope capacity 1;\n  |    |                      ^~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "emit_artifacts": {
+        "iface_files": [],
+        "out_files": []
+      },
+      "expected_reason": "source_frontend_error",
+      "first_diagnostic": {
+        "highlight_span": null,
+        "message": "channel element type shall not be an access type or a composite type containing an access-type subcomponent",
+        "path": "tests/negative/neg_channel_access_component.safe",
+        "reason": "source_frontend_error",
+        "span": {
+          "end_col": 29,
+          "end_line": 17,
+          "start_col": 22,
+          "start_line": 17
+        }
+      },
+      "sample": "tests/negative/neg_channel_access_component.safe"
+    },
+    {
+      "ast": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "ast",
           "tests/negative/neg_select_no_channel_arm.safe"
         ],
         "cwd": "$REPO_ROOT",
@@ -2231,8 +2369,8 @@
       "sample": "tests/concurrency/select_with_delay.safe"
     }
   ],
-  "repeat_sha256": "a8b156933ab09fb1818634f93ee2e990f9963c039f8bf4a74f16a5eac80e2f64",
-  "report_sha256": "a8b156933ab09fb1818634f93ee2e990f9963c039f8bf4a74f16a5eac80e2f64",
+  "repeat_sha256": "c1c69a3046a758b774791a4554f99f9848429485d49d5df94218ccee1436abf1",
+  "report_sha256": "c1c69a3046a758b774791a4554f99f9848429485d49d5df94218ccee1436abf1",
   "status": "ok",
   "task": "PR08.1"
 }

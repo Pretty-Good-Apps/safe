@@ -269,16 +269,7 @@ def compile_emitted_ada(
 ) -> dict[str, Any]:
     gpr_path = write_emitted_ada_project(ada_dir)
     result = run(
-        [
-            alr_command(),
-            "exec",
-            "--",
-            "gprbuild",
-            "-c",
-            "-P",
-            str(gpr_path),
-            emitted_body_file(ada_dir).name,
-        ],
+        compile_emitted_ada_command(ada_dir=ada_dir, gpr_path=gpr_path),
         cwd=COMPILER_ROOT,
         env=env,
         temp_root=temp_root,
@@ -288,6 +279,22 @@ def compile_emitted_ada(
         "cwd": result["cwd"],
         "returncode": result["returncode"],
     }
+
+
+def compile_emitted_ada_command(*, ada_dir: Path, gpr_path: Path | None = None) -> list[str]:
+    argv = [
+        alr_command(),
+        "exec",
+        "--",
+        "gprbuild",
+        "-c",
+        "-P",
+        str(gpr_path or write_emitted_ada_project(ada_dir)),
+        emitted_body_file(ada_dir).name,
+    ]
+    if (ada_dir / "gnat.adc").exists():
+        argv.extend(["-cargs", f"-gnatec={ada_dir / 'gnat.adc'}"])
+    return argv
 
 
 def emit_with_determinism(

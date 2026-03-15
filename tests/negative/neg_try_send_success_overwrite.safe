@@ -1,7 +1,6 @@
 -- Test: neg_try_send_success_overwrite
--- Description: Overwriting Success does not resolve a pending try_send move.
---   The source remains conditionally moved until Success is actually refined.
--- Expected: REJECT move_target_not_null
+-- Description: Access-typed channel elements are rejected before try_send success-refinement checks run.
+-- Expected: REJECT source_frontend_error
 
 package Neg_Try_Send_Success_Overwrite is
 

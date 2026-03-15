@@ -3,7 +3,7 @@
 ## Overview
 
 - **Source commit**: `468cf72332724b04b7c193b4d2a3b02f1584125d`
-- **Generation date**: 2026-03-02
+- **Generation date**: 2026-03-15
 - **Source clauses**: `clauses/clauses.yaml`
 - **Total clauses**: 205
 - **Total PO entries**: 205
@@ -31,9 +31,9 @@
 |-----------|------:|------------|
 | flow_contract_check | 24 | 11.7% |
 | gnatprove_proof_vc | 24 | 11.7% |
-| ghost_model_invariant | 13 | 6.3% |
-| runtime_wrapper_check | 26 | 12.7% |
-| translation_validation | 88 | 42.9% |
+| ghost_model_invariant | 8 | 3.9% |
+| runtime_wrapper_check | 27 | 13.2% |
+| translation_validation | 92 | 44.9% |
 | manual_review | 23 | 11.2% |
 | test_assertion | 5 | 2.4% |
 | assumption_tracking | 2 | 1.0% |
@@ -122,12 +122,12 @@
 | 20 | `spec/02-restrictions.md#2.3.8.p111a:a858bdfc` | Function shall not return .Access of local aliased variable | flow_contract_check | stubbed |
 | 21 | `spec/02-restrictions.md#2.3.8.p111b:2921e9d2` | .Access of local shall not be assigned to enclosing scope variable | flow_contract_check | stubbed |
 | 22 | `spec/02-restrictions.md#2.3.8.p111c:819cc398` | .Access of local aliased variable shall not be sent through channel | flow_contract_check | stubbed |
-| 23 | `spec/04-tasks-and-channels.md#4.3.p27a:8ed3c1d4` | Ownership transfer (move) on send for owning access types | ghost_model_invariant | stubbed |
-| 24 | `spec/04-tasks-and-channels.md#4.3.p28a:4cb19779` | Ownership transfer on receive; null-before-move rule applies | ghost_model_invariant | stubbed |
-| 25 | `spec/04-tasks-and-channels.md#4.3.p29a:8d3f2225` | Move occurs only on successful try_send for owning access types | ghost_model_invariant | stubbed |
-| 26 | `spec/04-tasks-and-channels.md#4.3.p29b:7121ccd7` | Implementation shall not null source until enqueue confirmed | runtime_wrapper_check | stubbed |
-| 27 | `spec/04-tasks-and-channels.md#4.3.p30:62619161` | try_receive with ownership transfer and null-before-move rule | ghost_model_invariant | stubbed |
-| 28 | `spec/04-tasks-and-channels.md#4.3.p31a:a621d08c` | Channel ownership invariant: each designated object owned by exactly one entity | ghost_model_invariant | stubbed |
+| 23 | `spec/04-tasks-and-channels.md#4.3.p27a:8ed3c1d4` | send never transfers ownership through a channel; enqueue is copy-only | translation_validation | stubbed |
+| 24 | `spec/04-tasks-and-channels.md#4.3.p28a:4cb19779` | receive never transfers ownership through a channel; dequeue is copy-only | translation_validation | stubbed |
+| 25 | `spec/04-tasks-and-channels.md#4.3.p29a:8d3f2225` | try_send is copy-only; success does not transfer ownership | translation_validation | stubbed |
+| 26 | `spec/04-tasks-and-channels.md#4.3.p29b:7121ccd7` | try_send evaluates before the fullness check and never transfers ownership | runtime_wrapper_check | stubbed |
+| 27 | `spec/04-tasks-and-channels.md#4.3.p30:62619161` | try_receive is copy-only and leaves Variable unchanged on failure | runtime_wrapper_check | stubbed |
+| 28 | `spec/04-tasks-and-channels.md#4.3.p31a:a621d08c` | Queued channel elements never own designated objects | translation_validation | stubbed |
 
 ### Race-freedom (23 entries)
 
@@ -212,84 +212,84 @@
 | 28 | `spec/02-restrictions.md#2.1.5.p34:70346a23` | Reject Pre, Post, Pre.Class, Post.Class aspects | translation_validation | stubbed |
 | 29 | `spec/02-restrictions.md#2.1.5.p35:9db565e8` | Reject user-authored Global/Global.Class aspects | translation_validation | stubbed |
 | 30 | `spec/02-restrictions.md#2.1.5.p36:ba7835b4` | Each subprogram identifier denotes exactly one subprogram | flow_contract_check | stubbed |
-| 31 | `spec/02-restrictions.md#2.1.5.p40:cc41753d` | Reject user-defined operator functions | translation_validation | stubbed |
-| 32 | `spec/02-restrictions.md#2.1.6.p44:a5524a86` | Reject standalone package body compilation unit | translation_validation | stubbed |
-| 33 | `spec/02-restrictions.md#2.1.7.p51:3bd0226a` | Reject use Package_Name clauses | translation_validation | stubbed |
-| 34 | `spec/02-restrictions.md#2.1.8.p58:9bf4999c` | Reject user-declared protected types/objects | translation_validation | stubbed |
-| 35 | `spec/02-restrictions.md#2.1.8.p59:95c073d3` | Reject entry declarations, accept statements, entry calls, requeue | translation_validation | stubbed |
-| 36 | `spec/02-restrictions.md#2.1.8.p60:75dc85e6` | Reject delay until statement | translation_validation | stubbed |
-| 37 | `spec/02-restrictions.md#2.1.8.p61:f91fb172` | Reject Ada select model (selective accept, timed/conditional entry call, async s | translation_validation | stubbed |
-| 38 | `spec/02-restrictions.md#2.1.8.p62:9053b623` | Reject abort statement | translation_validation | stubbed |
-| 39 | `spec/02-restrictions.md#2.1.9.p65:a6f8ab1c` | Library units shall be packages; library-level subprograms prohibited | translation_validation | stubbed |
-| 40 | `spec/02-restrictions.md#2.1.10.p67:50d815f0` | Reject exceptions, handlers, raise, pragma Suppress/Unsuppress | translation_validation | stubbed |
-| 41 | `spec/02-restrictions.md#2.1.11.p69:4ced1c77` | Reject generic declarations, bodies, and instantiations | translation_validation | stubbed |
-| 42 | `spec/02-restrictions.md#2.1.12.p77:8b158e82` | Reject machine code insertions | translation_validation | stubbed |
-| 43 | `spec/02-restrictions.md#2.1.12.p78:803e4add` | Reject Ada.Unchecked_Conversion | translation_validation | stubbed |
-| 44 | `spec/02-restrictions.md#2.1.12.p82:453192f0` | Reject stream attribute references and stream type declarations | translation_validation | stubbed |
-| 45 | `spec/02-restrictions.md#2.1.13.p84:84829058` | Reject pragma Import/Export/Convention and Annex B | translation_validation | stubbed |
-| 46 | `spec/02-restrictions.md#2.1.13.p91:4a433f78` | Reject Annex J obsolescent features | translation_validation | stubbed |
-| 47 | `spec/02-restrictions.md#2.2.p93:301d16b8` | Reject 12 SPARK verification-only aspects in Safe source | translation_validation | stubbed |
-| 48 | `spec/02-restrictions.md#2.7.p124:ef993f07` | Reject 12 contract-related aspects | translation_validation | stubbed |
-| 49 | `spec/02-restrictions.md#2.9.p140:7eeb1bb6` | Declarations and statements may interleave freely after begin | manual_review | stubbed |
-| 50 | `spec/02-restrictions.md#2.10.p141:9e5dc3fe` | Reject duplicate subprogram identifiers in declarative region (no overloading) | flow_contract_check | stubbed |
-| 51 | `spec/03-single-file-packages.md#3.p0:dcd1bc13` | Public interface made available for dependent compilation units | manual_review | stubbed |
-| 52 | `spec/03-single-file-packages.md#3.2.1.p8:cb47c342` | End identifier must match package identifier | translation_validation | stubbed |
-| 53 | `spec/03-single-file-packages.md#3.2.2.p9:d7d76101` | Declaration-before-use for all names | translation_validation | stubbed |
-| 54 | `spec/03-single-file-packages.md#3.2.3.p12:b76eb7bf` | Forward declaration body shall appear in same region and conform | translation_validation | stubbed |
-| 55 | `spec/03-single-file-packages.md#3.2.3.p13:8bf74e20` | Reject forward declaration with no completing body | translation_validation | stubbed |
-| 56 | `spec/03-single-file-packages.md#3.2.3.p14:c205a40a` | Public keyword on forward declaration, not on completing body | translation_validation | stubbed |
-| 57 | `spec/03-single-file-packages.md#3.2.4.p15:e090edc2` | No executable statements at package level | translation_validation | stubbed |
-| 58 | `spec/03-single-file-packages.md#3.2.5.p19:05cb629b` | Reject public annotation on invalid declaration kinds | translation_validation | stubbed |
-| 59 | `spec/03-single-file-packages.md#3.2.5.p20:d2c1d841` | Non-public declarations are private to declaring package | translation_validation | stubbed |
-| 60 | `spec/03-single-file-packages.md#3.2.6.p23:26dc2217` | Reject external field access on opaque types | translation_validation | stubbed |
-| 61 | `spec/03-single-file-packages.md#3.2.6.p24:12e57227` | Implementation exports size/alignment for opaque types | manual_review | stubbed |
-| 62 | `spec/03-single-file-packages.md#3.2.10.p32:be83c6b5` | Library units must be packages; reject library-level subprograms | translation_validation | stubbed |
-| 63 | `spec/03-single-file-packages.md#3.3.1.p33:b08ead48` | Implementation provides 9 categories of dependency interface information | manual_review | stubbed |
-| 64 | `spec/03-single-file-packages.md#3.3.1.p34:2a0b2728` | Dependency interface mechanism is implementation-defined | manual_review | stubbed |
-| 65 | `spec/03-single-file-packages.md#3.3.1.p35:0bbb4bb7` | Reject program when dependency interface info unavailable | translation_validation | stubbed |
-| 66 | `spec/03-single-file-packages.md#3.3.4.p40:cdfbcb6b` | Child packages have no additional visibility into parent non-public declarations | translation_validation | stubbed |
-| 67 | `spec/03-single-file-packages.md#3.5.1.p47:b7e93197` | Implementation provides dependency interface mechanism | manual_review | stubbed |
-| 68 | `spec/03-single-file-packages.md#3.5.1.p48:616dd05d` | Interface mechanism supports legality checking, ownership checking, incremental  | manual_review | stubbed |
-| 69 | `spec/03-single-file-packages.md#3.5.2.p49:02b25de0` | Separate compilation of packages using source and dependency interface info | manual_review | stubbed |
-| 70 | `spec/04-tasks-and-channels.md#4.1.p9:b4640bda` | Default priority is implementation-defined and documented | manual_review | stubbed |
-| 71 | `spec/04-tasks-and-channels.md#4.3.p23:197d9a49` | Send/try_send expression type matches channel element type | translation_validation | stubbed |
-| 72 | `spec/04-tasks-and-channels.md#4.3.p24:9e47ed4c` | Receive/try_receive variable type matches channel element type | translation_validation | stubbed |
-| 73 | `spec/04-tasks-and-channels.md#4.3.p25:961abe5a` | try_send/try_receive success variable must be Boolean | translation_validation | stubbed |
-| 74 | `spec/04-tasks-and-channels.md#4.3.p26:3a9449c1` | Channel operations shall not appear at package level | translation_validation | stubbed |
-| 75 | `spec/04-tasks-and-channels.md#4.4.p33:7a94ab51` | Select must contain at least one channel arm | translation_validation | stubbed |
-| 76 | `spec/04-tasks-and-channels.md#4.4.p34:f0f83b83` | At most one delay arm in select statement | translation_validation | stubbed |
-| 77 | `spec/04-tasks-and-channels.md#4.4.p35:2ad6e64f` | Select arms are receive-only (no send in select) | translation_validation | stubbed |
-| 78 | `spec/04-tasks-and-channels.md#4.4.p36:0bffbd47` | Select channel arm subtype must match channel element type | translation_validation | stubbed |
-| 79 | `spec/04-tasks-and-channels.md#4.4.p37:6ced8129` | Select channel arm introduces scoped variable | translation_validation | stubbed |
-| 80 | `spec/04-tasks-and-channels.md#4.4.p38:35ed84d9` | Delay arm expression must be Duration-compatible | translation_validation | stubbed |
-| 81 | `spec/04-tasks-and-channels.md#4.5.p50:2882310a` | Task-Variable Ownership clause | manual_review | stubbed |
-| 82 | `spec/05-assurance.md#5.1.p2:14a5a600` | Every conforming program achieves Stone, Bronze, Silver without annotations | manual_review | stubbed |
-| 83 | `spec/06-conformance.md#6.1.p1a:ba2c1d31` | Conforming implementation accepts every conforming program | test_assertion | stubbed |
-| 84 | `spec/06-conformance.md#6.1.p1b:3890c549` | Conforming implementation rejects non-conforming programs with diagnostic | test_assertion | stubbed |
-| 85 | `spec/06-conformance.md#6.1.p1c:1f8fe478` | Correct dynamic semantics of 8652:2023 as modified | translation_validation | stubbed |
-| 86 | `spec/06-conformance.md#6.1.p1g:80745a1e` | Provide separate compilation and linking mechanism | manual_review | stubbed |
-| 87 | `spec/06-conformance.md#6.1.p2:983b5f84` | Implementation may provide additional capabilities without altering semantics | manual_review | stubbed |
-| 88 | `spec/06-conformance.md#6.5.1.p16:b89b7765` | Support separate compilation using source and dependency info | manual_review | stubbed |
-| 89 | `spec/06-conformance.md#6.5.2.p17:70300f7a` | Dependency interface information mechanism between compiled units | manual_review | stubbed |
-| 90 | `spec/06-conformance.md#6.5.2.p18:ae5640ac` | Interface includes declarations, signatures, effects, sizes, channel summaries | manual_review | stubbed |
-| 91 | `spec/06-conformance.md#6.5.3.p19:5d4dfb69` | Linking mechanism to combine compiled units into executable | manual_review | stubbed |
-| 92 | `spec/06-conformance.md#6.6.p20a:d74e6ca7` | Diagnostics identify source file, line, column of violation | test_assertion | stubbed |
-| 93 | `spec/06-conformance.md#6.6.p20b:74ad00a2` | Diagnostics identify which rule is violated | test_assertion | stubbed |
-| 94 | `spec/06-conformance.md#6.7.p22:03afd0a4` | Implementation documents all implementation-defined behaviors | manual_review | stubbed |
-| 95 | `spec/06-conformance.md#6.8.p23:3419a843` | Runtime system supports tasks, channels, delay, deallocation, abort handler | runtime_wrapper_check | stubbed |
-| 96 | `spec/08-syntax-summary.md#8.15.p1:75c5cfea` | Reject reserved word used as identifier (authoritative list) | translation_validation | stubbed |
-| 97 | `spec/08-syntax-summary.md#8.16.p2:ccb1533b` | Constructs not in Safe grammar are excluded from Safe | translation_validation | stubbed |
-| 98 | `spec/02-restrictions.md#2.1.5.p38:872f4ec6` | Return statement shall not appear within task body | translation_validation | stubbed |
-| 99 | `spec/02-restrictions.md#2.1.9.p66:3d98f9e9` | Reject circular with dependencies | translation_validation | stubbed |
-| 100 | `spec/03-single-file-packages.md#3.2.9.p31:c2a3dc04` | Reject circular with dependency cycles | translation_validation | stubbed |
-| 101 | `spec/04-tasks-and-channels.md#4.1.p4:016e5737` | Task end identifier must match task name | translation_validation | stubbed |
-| 102 | `spec/04-tasks-and-channels.md#4.1.p6:be85291b` | Task declarations shall not bear public keyword | translation_validation | stubbed |
-| 103 | `spec/04-tasks-and-channels.md#4.1.p7:393c53c2` | Task declarations shall not be nested | translation_validation | stubbed |
-| 104 | `spec/04-tasks-and-channels.md#4.2.p13:4f888b03` | Channel declarations only at package top level | translation_validation | stubbed |
-| 105 | `spec/04-tasks-and-channels.md#4.2.p14:a35bd0fa` | Channel element type must be definite | translation_validation | stubbed |
-| 106 | `spec/04-tasks-and-channels.md#4.2.p15:b5b29b0e` | Channel capacity must be positive integer | translation_validation | stubbed |
-| 107 | `spec/04-tasks-and-channels.md#4.6.p53b:19b7c4ae` | Reject return statement within task body | translation_validation | stubbed |
-| 108 | `spec/04-tasks-and-channels.md#4.6.p53c:77a5f52c` | Exit statement shall not target outermost loop of task | translation_validation | stubbed |
+| 31 | `spec/02-restrictions.md#2.1.5.p38:872f4ec6` | Return statement shall not appear within task body | translation_validation | stubbed |
+| 32 | `spec/02-restrictions.md#2.1.5.p40:cc41753d` | Reject user-defined operator functions | translation_validation | stubbed |
+| 33 | `spec/02-restrictions.md#2.1.6.p44:a5524a86` | Reject standalone package body compilation unit | translation_validation | stubbed |
+| 34 | `spec/02-restrictions.md#2.1.7.p51:3bd0226a` | Reject use Package_Name clauses | translation_validation | stubbed |
+| 35 | `spec/02-restrictions.md#2.1.8.p58:9bf4999c` | Reject user-declared protected types/objects | translation_validation | stubbed |
+| 36 | `spec/02-restrictions.md#2.1.8.p59:95c073d3` | Reject entry declarations, accept statements, entry calls, requeue | translation_validation | stubbed |
+| 37 | `spec/02-restrictions.md#2.1.8.p60:75dc85e6` | Reject delay until statement | translation_validation | stubbed |
+| 38 | `spec/02-restrictions.md#2.1.8.p61:f91fb172` | Reject Ada select model (selective accept, timed/conditional entry call, async s | translation_validation | stubbed |
+| 39 | `spec/02-restrictions.md#2.1.8.p62:9053b623` | Reject abort statement | translation_validation | stubbed |
+| 40 | `spec/02-restrictions.md#2.1.9.p65:a6f8ab1c` | Library units shall be packages; library-level subprograms prohibited | translation_validation | stubbed |
+| 41 | `spec/02-restrictions.md#2.1.9.p66:3d98f9e9` | Reject circular with dependencies | translation_validation | stubbed |
+| 42 | `spec/02-restrictions.md#2.1.10.p67:50d815f0` | Reject exceptions, handlers, raise, pragma Suppress/Unsuppress | translation_validation | stubbed |
+| 43 | `spec/02-restrictions.md#2.1.11.p69:4ced1c77` | Reject generic declarations, bodies, and instantiations | translation_validation | stubbed |
+| 44 | `spec/02-restrictions.md#2.1.12.p77:8b158e82` | Reject machine code insertions | translation_validation | stubbed |
+| 45 | `spec/02-restrictions.md#2.1.12.p78:803e4add` | Reject Ada.Unchecked_Conversion | translation_validation | stubbed |
+| 46 | `spec/02-restrictions.md#2.1.12.p82:453192f0` | Reject stream attribute references and stream type declarations | translation_validation | stubbed |
+| 47 | `spec/02-restrictions.md#2.1.13.p84:84829058` | Reject pragma Import/Export/Convention and Annex B | translation_validation | stubbed |
+| 48 | `spec/02-restrictions.md#2.1.13.p91:4a433f78` | Reject Annex J obsolescent features | translation_validation | stubbed |
+| 49 | `spec/02-restrictions.md#2.2.p93:301d16b8` | Reject 12 SPARK verification-only aspects in Safe source | translation_validation | stubbed |
+| 50 | `spec/02-restrictions.md#2.7.p124:ef993f07` | Reject 12 contract-related aspects | translation_validation | stubbed |
+| 51 | `spec/02-restrictions.md#2.9.p140:7eeb1bb6` | Declarations and statements may interleave freely after begin | manual_review | stubbed |
+| 52 | `spec/02-restrictions.md#2.10.p141:9e5dc3fe` | Reject duplicate subprogram identifiers in declarative region (no overloading) | flow_contract_check | stubbed |
+| 53 | `spec/03-single-file-packages.md#3.p0:dcd1bc13` | Public interface made available for dependent compilation units | manual_review | stubbed |
+| 54 | `spec/03-single-file-packages.md#3.2.1.p8:cb47c342` | End identifier must match package identifier | translation_validation | stubbed |
+| 55 | `spec/03-single-file-packages.md#3.2.2.p9:d7d76101` | Declaration-before-use for all names | translation_validation | stubbed |
+| 56 | `spec/03-single-file-packages.md#3.2.3.p12:b76eb7bf` | Forward declaration body shall appear in same region and conform | translation_validation | stubbed |
+| 57 | `spec/03-single-file-packages.md#3.2.3.p13:8bf74e20` | Reject forward declaration with no completing body | translation_validation | stubbed |
+| 58 | `spec/03-single-file-packages.md#3.2.3.p14:c205a40a` | Public keyword on forward declaration, not on completing body | translation_validation | stubbed |
+| 59 | `spec/03-single-file-packages.md#3.2.4.p15:e090edc2` | No executable statements at package level | translation_validation | stubbed |
+| 60 | `spec/03-single-file-packages.md#3.2.5.p19:05cb629b` | Reject public annotation on invalid declaration kinds | translation_validation | stubbed |
+| 61 | `spec/03-single-file-packages.md#3.2.5.p20:d2c1d841` | Non-public declarations are private to declaring package | translation_validation | stubbed |
+| 62 | `spec/03-single-file-packages.md#3.2.6.p23:26dc2217` | Reject external field access on opaque types | translation_validation | stubbed |
+| 63 | `spec/03-single-file-packages.md#3.2.6.p24:12e57227` | Implementation exports size/alignment for opaque types | manual_review | stubbed |
+| 64 | `spec/03-single-file-packages.md#3.2.9.p31:c2a3dc04` | Reject circular with dependency cycles | translation_validation | stubbed |
+| 65 | `spec/03-single-file-packages.md#3.2.10.p32:be83c6b5` | Library units must be packages; reject library-level subprograms | translation_validation | stubbed |
+| 66 | `spec/03-single-file-packages.md#3.3.1.p33:b08ead48` | Implementation provides 9 categories of dependency interface information | manual_review | stubbed |
+| 67 | `spec/03-single-file-packages.md#3.3.1.p34:2a0b2728` | Dependency interface mechanism is implementation-defined | manual_review | stubbed |
+| 68 | `spec/03-single-file-packages.md#3.3.1.p35:0bbb4bb7` | Reject program when dependency interface info unavailable | translation_validation | stubbed |
+| 69 | `spec/03-single-file-packages.md#3.3.4.p40:cdfbcb6b` | Child packages have no additional visibility into parent non-public declarations | translation_validation | stubbed |
+| 70 | `spec/03-single-file-packages.md#3.5.1.p47:b7e93197` | Implementation provides dependency interface mechanism | manual_review | stubbed |
+| 71 | `spec/03-single-file-packages.md#3.5.1.p48:616dd05d` | Interface mechanism supports legality checking, ownership checking, incremental  | manual_review | stubbed |
+| 72 | `spec/03-single-file-packages.md#3.5.2.p49:02b25de0` | Separate compilation of packages using source and dependency interface info | manual_review | stubbed |
+| 73 | `spec/04-tasks-and-channels.md#4.1.p4:016e5737` | Task end identifier must match task name | translation_validation | stubbed |
+| 74 | `spec/04-tasks-and-channels.md#4.1.p6:be85291b` | Task declarations shall not bear public keyword | translation_validation | stubbed |
+| 75 | `spec/04-tasks-and-channels.md#4.1.p7:393c53c2` | Task declarations shall not be nested | translation_validation | stubbed |
+| 76 | `spec/04-tasks-and-channels.md#4.1.p9:b4640bda` | Default priority is implementation-defined and documented | manual_review | stubbed |
+| 77 | `spec/04-tasks-and-channels.md#4.2.p13:4f888b03` | Channel declarations only at package top level | translation_validation | stubbed |
+| 78 | `spec/04-tasks-and-channels.md#4.2.p14:a35bd0fa` | Channel element type must be definite and shall not be access-bearing | translation_validation | stubbed |
+| 79 | `spec/04-tasks-and-channels.md#4.2.p15:b5b29b0e` | Channel capacity must be positive integer | translation_validation | stubbed |
+| 80 | `spec/04-tasks-and-channels.md#4.3.p23:197d9a49` | Send/try_send expression type matches channel element type | translation_validation | stubbed |
+| 81 | `spec/04-tasks-and-channels.md#4.3.p24:9e47ed4c` | Receive/try_receive variable type matches channel element type | translation_validation | stubbed |
+| 82 | `spec/04-tasks-and-channels.md#4.3.p25:961abe5a` | try_send/try_receive success variable must be Boolean | translation_validation | stubbed |
+| 83 | `spec/04-tasks-and-channels.md#4.3.p26:3a9449c1` | Channel operations shall not appear at package level | translation_validation | stubbed |
+| 84 | `spec/04-tasks-and-channels.md#4.4.p33:7a94ab51` | Select must contain at least one channel arm | translation_validation | stubbed |
+| 85 | `spec/04-tasks-and-channels.md#4.4.p34:f0f83b83` | At most one delay arm in select statement | translation_validation | stubbed |
+| 86 | `spec/04-tasks-and-channels.md#4.4.p35:2ad6e64f` | Select arms are receive-only (no send in select) | translation_validation | stubbed |
+| 87 | `spec/04-tasks-and-channels.md#4.4.p36:0bffbd47` | Select channel arm subtype must match channel element type | translation_validation | stubbed |
+| 88 | `spec/04-tasks-and-channels.md#4.4.p37:6ced8129` | Select channel arm introduces scoped variable | translation_validation | stubbed |
+| 89 | `spec/04-tasks-and-channels.md#4.4.p38:35ed84d9` | Delay arm expression must be Duration-compatible | translation_validation | stubbed |
+| 90 | `spec/04-tasks-and-channels.md#4.5.p50:2882310a` | Task-Variable Ownership clause | manual_review | stubbed |
+| 91 | `spec/04-tasks-and-channels.md#4.6.p53b:19b7c4ae` | Reject return statement within task body | translation_validation | stubbed |
+| 92 | `spec/04-tasks-and-channels.md#4.6.p53c:77a5f52c` | Exit statement shall not target outermost loop of task | translation_validation | stubbed |
+| 93 | `spec/05-assurance.md#5.1.p2:14a5a600` | Every conforming program achieves Stone, Bronze, Silver without annotations | manual_review | stubbed |
+| 94 | `spec/06-conformance.md#6.1.p1a:ba2c1d31` | Conforming implementation accepts every conforming program | test_assertion | stubbed |
+| 95 | `spec/06-conformance.md#6.1.p1b:3890c549` | Conforming implementation rejects non-conforming programs with diagnostic | test_assertion | stubbed |
+| 96 | `spec/06-conformance.md#6.1.p1c:1f8fe478` | Correct dynamic semantics of 8652:2023 as modified | translation_validation | stubbed |
+| 97 | `spec/06-conformance.md#6.1.p1g:80745a1e` | Provide separate compilation and linking mechanism | manual_review | stubbed |
+| 98 | `spec/06-conformance.md#6.1.p2:983b5f84` | Implementation may provide additional capabilities without altering semantics | manual_review | stubbed |
+| 99 | `spec/06-conformance.md#6.5.1.p16:b89b7765` | Support separate compilation using source and dependency info | manual_review | stubbed |
+| 100 | `spec/06-conformance.md#6.5.2.p17:70300f7a` | Dependency interface information mechanism between compiled units | manual_review | stubbed |
+| 101 | `spec/06-conformance.md#6.5.2.p18:ae5640ac` | Interface includes declarations, signatures, effects, sizes, channel summaries | manual_review | stubbed |
+| 102 | `spec/06-conformance.md#6.5.3.p19:5d4dfb69` | Linking mechanism to combine compiled units into executable | manual_review | stubbed |
+| 103 | `spec/06-conformance.md#6.6.p20a:d74e6ca7` | Diagnostics identify source file, line, column of violation | test_assertion | stubbed |
+| 104 | `spec/06-conformance.md#6.6.p20b:74ad00a2` | Diagnostics identify which rule is violated | test_assertion | stubbed |
+| 105 | `spec/06-conformance.md#6.7.p22:03afd0a4` | Implementation documents all implementation-defined behaviors | manual_review | stubbed |
+| 106 | `spec/06-conformance.md#6.8.p23:3419a843` | Runtime system supports tasks, channels, delay, deallocation, abort handler | runtime_wrapper_check | stubbed |
+| 107 | `spec/08-syntax-summary.md#8.15.p1:75c5cfea` | Reject reserved word used as identifier (authoritative list) | translation_validation | stubbed |
+| 108 | `spec/08-syntax-summary.md#8.16.p2:ccb1533b` | Constructs not in Safe grammar are excluded from Safe | translation_validation | stubbed |
 
 ---
 
@@ -499,7 +499,7 @@ This table maps specification design decisions (D-rules) to their corresponding 
 | `spec/04-tasks-and-channels.md#4.1.p10:92a67777` | Tasks begin execution after all package-level initialisation | Race-freedom |
 | `spec/04-tasks-and-channels.md#4.1.p11:2460c5cb` | Preemptive priority-based scheduling; equal priority order is impl-def | Determinism |
 | `spec/04-tasks-and-channels.md#4.2.p13:4f888b03` | Channel declarations only at package top level | Conformance |
-| `spec/04-tasks-and-channels.md#4.2.p14:a35bd0fa` | Channel element type must be definite | Conformance |
+| `spec/04-tasks-and-channels.md#4.2.p14:a35bd0fa` | Channel element type must be definite and shall not be access-bearing | Conformance |
 | `spec/04-tasks-and-channels.md#4.2.p15:b5b29b0e` | Channel capacity must be positive integer | Conformance |
 | `spec/04-tasks-and-channels.md#4.2.p20:8aa1a21e` | Channel is FIFO: elements dequeued in enqueue order | Determinism |
 | `spec/04-tasks-and-channels.md#4.2.p21:c6a92460` | Channel ceiling priority at least max of accessing task priorities | Race-freedom |
@@ -508,16 +508,16 @@ This table maps specification design decisions (D-rules) to their corresponding 
 | `spec/04-tasks-and-channels.md#4.3.p24:9e47ed4c` | Receive/try_receive variable type matches channel element type | Conformance |
 | `spec/04-tasks-and-channels.md#4.3.p25:961abe5a` | try_send/try_receive success variable must be Boolean | Conformance |
 | `spec/04-tasks-and-channels.md#4.3.p26:3a9449c1` | Channel operations shall not appear at package level | Conformance |
-| `spec/04-tasks-and-channels.md#4.3.p27:ef0ce6bd` | send blocks if channel full; value evaluated before enqueue | Race-freedom  |
-| `spec/04-tasks-and-channels.md#4.3.p27a:8ed3c1d4` | Ownership transfer (move) on send for owning access types | Memory-safety |
-| `spec/04-tasks-and-channels.md#4.3.p28:ea6bd13c` | receive blocks if channel empty; dequeues front element | Race-freedom  |
-| `spec/04-tasks-and-channels.md#4.3.p28a:4cb19779` | Ownership transfer on receive; null-before-move rule applies | Memory-safety |
+| `spec/04-tasks-and-channels.md#4.3.p27:ef0ce6bd` | send blocks if channel full; value evaluated before enqueue | Race-freedom |
+| `spec/04-tasks-and-channels.md#4.3.p27a:8ed3c1d4` | send never transfers ownership through a channel; enqueue is copy-only | Memory-safety |
+| `spec/04-tasks-and-channels.md#4.3.p28:ea6bd13c` | receive blocks if channel empty; dequeues front element | Race-freedom |
+| `spec/04-tasks-and-channels.md#4.3.p28a:4cb19779` | receive never transfers ownership through a channel; dequeue is copy-o | Memory-safety |
 | `spec/04-tasks-and-channels.md#4.3.p29:f792d704` | try_send: atomic non-blocking enqueue attempt | Race-freedom |
-| `spec/04-tasks-and-channels.md#4.3.p29a:8d3f2225` | Move occurs only on successful try_send for owning access types | Memory-safety |
-| `spec/04-tasks-and-channels.md#4.3.p29b:7121ccd7` | Implementation shall not null source until enqueue confirmed | Memory-safety |
-| `spec/04-tasks-and-channels.md#4.3.p30:62619161` | try_receive with ownership transfer and null-before-move rule | Memory-safety |
+| `spec/04-tasks-and-channels.md#4.3.p29a:8d3f2225` | try_send is copy-only; success does not transfer ownership | Memory-safety |
+| `spec/04-tasks-and-channels.md#4.3.p29b:7121ccd7` | try_send evaluates before the fullness check and never transfers owner | Memory-safety |
+| `spec/04-tasks-and-channels.md#4.3.p30:62619161` | try_receive is copy-only and leaves Variable unchanged on failure | Memory-safety |
 | `spec/04-tasks-and-channels.md#4.3.p31:a7297e97` | Channel operations atomic with respect to same-channel operations | Race-freedom |
-| `spec/04-tasks-and-channels.md#4.3.p31a:a621d08c` | Channel ownership invariant: each designated object owned by exactly o | Memory-safety |
+| `spec/04-tasks-and-channels.md#4.3.p31a:a621d08c` | Queued channel elements never own designated objects | Memory-safety |
 | `spec/04-tasks-and-channels.md#4.4.p33:7a94ab51` | Select must contain at least one channel arm | Conformance |
 | `spec/04-tasks-and-channels.md#4.4.p34:f0f83b83` | At most one delay arm in select statement | Conformance |
 | `spec/04-tasks-and-channels.md#4.4.p35:2ad6e64f` | Select arms are receive-only (no send in select) | Conformance |
@@ -553,54 +553,47 @@ The following assumptions are made across PO entries. Each must be validated or 
    - Used by: 1 PO(s)
      - `spec/00-front-matter.md#0.8.p27:5000a79a`
 
-2. **Channel implementation correctly serializes access**
-   - Used by: 1 PO(s)
-     - `spec/04-tasks-and-channels.md#4.3.p31a:a621d08c`
-
-3. **Channel implementation provides mutual exclusion**
+2. **Channel implementation provides mutual exclusion**
    - Used by: 1 PO(s)
      - `spec/04-tasks-and-channels.md#4.3.p31:a7297e97`
 
-4. **Dependency interface effect summaries are sound**
+3. **Dependency interface effect summaries are sound**
    - Used by: 1 PO(s)
      - `spec/04-tasks-and-channels.md#4.5.p47:bc08fb3b`
 
-5. **Dependency interface information accurately represents effects**
+4. **Dependency interface information accurately represents effects**
    - Used by: 1 PO(s)
      - `spec/02-restrictions.md#2.3.7.p108:083e15a2`
 
-6. **Implementation provides at least 64-bit intermediate evaluation**
+5. **Implementation provides at least 64-bit intermediate evaluation**
    - Used by: 1 PO(s)
      - `spec/02-restrictions.md#2.8.1.p126:812b54a8`
 
-7. **Resource exhaustion behavior is defined (abort) but not statically preventable**
+6. **Resource exhaustion behavior is defined (abort) but not statically preventable**
    - Used by: 1 PO(s)
      - `spec/05-assurance.md#5.3.1.p12a:047a8410`
 
-8. **Runtime abort handler is correctly implemented**
+7. **Runtime abort handler is correctly implemented**
    - Used by: 1 PO(s)
      - `spec/02-restrictions.md#2.3.5.p103a:520dc0d4`
 
-9. **Runtime system implements deferred task activation**
+8. **Runtime system implements deferred task activation**
    - Used by: 2 PO(s)
      - `spec/03-single-file-packages.md#3.4.3.p46:b5f92bd9`
      - `spec/04-tasks-and-channels.md#4.7.p56:55e4230e`
 
-10. **Static analysis implementation is verified or validated**
+9. **Static analysis implementation is verified or validated**
    - Used by: 1 PO(s)
      - `spec/06-conformance.md#6.4.p11:f35e2134`
 
-11. **Static range analysis is sound**
+10. **Static range analysis is sound**
    - Used by: 1 PO(s)
      - `spec/02-restrictions.md#2.8.1.p130:2289e5b2`
 
-12. **Target hardware supports IEEE 754 non-trapping mode**
+11. **Target hardware supports IEEE 754 non-trapping mode**
    - Used by: 2 PO(s)
      - `spec/02-restrictions.md#2.8.5.p139:d50bc714`
      - `spec/05-assurance.md#5.3.7a.p28a:5936dbea`
-
-13. **Select polling deadline check is faithful to wall-clock elapsed time**
-   - Used by: template_select_polling (`spec/04-tasks-and-channels.md#4.4`)
 
 ---
 
@@ -643,7 +636,7 @@ model invariants that have no direct precedent.
 
 These POs back the data race freedom guarantee -- a critical safety property.
 
-- **34 POs** covering task-variable ownership,
+- **23 POs** covering task-variable ownership,
   channel atomicity, non-termination, and elaboration ordering.
 - Key risk: cross-package transitivity of effect summaries.
 - Key risk: channel ceiling priority computation correctness.
@@ -662,7 +655,7 @@ These POs back the data race freedom guarantee -- a critical safety property.
 
 #### Priority 6: Conformance and Library Safety
 
-- **97 Conformance POs**: mostly syntactic restriction
+- **108 Conformance POs**: mostly syntactic restriction
   checks that are straightforward translation validations.
 - **2 Library-safety POs**: retained library modifications.
 - Low risk: primarily implementable as compiler front-end checks.

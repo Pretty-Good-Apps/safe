@@ -2,221 +2,228 @@ This document is the canonical running ledger of proposed Safe syntax changes.
 It records future-facing design directions only; inclusion here does not
 imply an implementation commitment or rollout schedule.
 
-# Brace-Delimited Blocks
+# Whitespace-Significant Blocks
 
 ## Motivation
 
 The current Safe syntax uses Ada-style `begin`/`end`, `loop`/`end loop`, and
-`record`/`end record` block delimiters. While these are explicit and
-self-documenting, they add ceremony that may deter developers familiar with
-C-family languages.
+`record`/`end record` block delimiters. These are explicit and
+self-documenting, but they add ceremony that every line of code pays for.
 
 Key observations from the design discussion:
 
-- **`begin`/`end` is a verbose version of `{ }`** — it's a generic block
-  delimiter that says nothing the surrounding context doesn't already convey.
-- **`loop` as a block delimiter adds no meaning** — in `for I in Index loop`,
-  the `for` already tells you it's a loop. The only case where `loop` is
-  genuinely meaningful is the bare infinite loop (`loop { ... }`), where it
-  *is* the construct.
-- **`end Foo` closing labels help at the bottom of long blocks**, but if Safe
-  encourages short, focused functions, braces with indentation provide
-  sufficient visual structure.
-- **Precedent**: No mainstream language uses `begin`/`end` as mandatory
-  for-loop syntax. Oberon (Wirth's minimalist design) uses `DO`/`END` for
-  loops, reserving `LOOP` only for bare infinite loops — the same
-  distinction proposed here.
+- **`begin`/`end` says nothing the indentation doesn't already say.** Every
+  developer already indents to show structure. Making indentation meaningful
+  eliminates the redundant delimiter without losing information.
+- **`loop` as a block delimiter adds no meaning** — in `for I in Index`, the
+  `for` already tells you it's a loop. The only case where `loop` is
+  genuinely meaningful is the bare infinite loop, where it *is* the construct.
+- **`end Foo` closing labels are valuable** for safety-critical review. They
+  are preserved under `pragma Strict` for teams that need them. They are not
+  needed in the default mode.
+- **Precedent**: Python is the most widely used programming language partly
+  because of its clean, indentation-based syntax. Nim and Haskell also use
+  significant whitespace successfully. The "invisible character" concern is
+  addressed by compiler-enforced indentation rules (spaces only, fixed width,
+  no mixing).
 
 ## Proposed Change
 
-Replace all `begin`/`end`, `loop`/`end loop`, and `end record` delimiters with
-`{ }` braces. Retain keywords like `for`, `while`, `loop`, `if`, `task`,
-`package`, `function`, `procedure`, and `record` — they remain the
-*constructs*; braces are purely the block delimiter.
+In the default mode, indentation defines block structure. No `begin`/`end`,
+no braces, no `end loop`, no `end record`. Keywords that introduce blocks
+(`function`, `procedure`, `if`, `else if`, `else`, `for`, `while`, `loop`,
+`task`, `package`, `record`) increase the indentation level on the following
+line. A decrease in indentation level closes the block.
+
+The compiler enforces:
+- spaces only (no tabs)
+- fixed indentation width (3 spaces)
+- consistent indentation throughout the compilation unit
+- a wrong indentation level is a compile error, not a silent structural change
+
+Under `pragma Strict`, the full Ada-style keyword-delimited syntax with
+closing labels is used instead. See the `pragma Strict` proposal.
+
+## Block-Opening Rules
+
+A new indentation level is opened after any line ending with one of:
+
+| Line ending | Opens block for |
+|-------------|-----------------|
+| Function/procedure signature | Subprogram body |
+| `package <name>` | Package body |
+| `if <condition>` | If branch |
+| `else if <condition>` | Else-if branch |
+| `else` | Else branch |
+| `for <var> in <range>` | For loop body |
+| `while <condition>` | While loop body |
+| `loop` | Bare infinite loop body |
+| `task <name> ...` | Task body |
+| `record` | Record field list |
+
+A decrease in indentation closes the innermost open block.
 
 ## Examples
 
 ### Accumulator — for loop
 
 ```
-package Accumulator {
+package accumulator
 
-   type Small_Int is range 0 .. 100;
-   type Index is range 1 .. 20;
-   type Values is array (Index) of Small_Int;
-   type Total_Range is range 0 .. 2000;
+   type small_int is range 0 .. 100
+   type index is range 1 .. 20
+   type values is array (index) of small_int
+   type total_range is range 0 .. 2000
 
-   function Accumulate (Data : Values) return Total_Range {
-      Sum : Total_Range = 0;
+   function accumulate (data : values) returns total_range
+      sum : total_range = 0
 
-      for I in Index {
-         Sum = Sum + Total_Range (Data (I));
-      }
-      return Sum;
-   }
-
-}
+      for i in index
+         sum = sum + total_range (data (i))
+      return sum
 ```
 
-### Binary Search — while loop, if/elsif/else
+### Binary Search — while loop, if/else if/else
 
 ```
-package Binary_Search {
+package binary_search
 
-   type Index is range 1 .. 256;
-   type Element is range 0 .. 10_000;
-   type Sorted_Array is array (Index) of Element;
+   type index is range 1 .. 256
+   type element is range 0 .. 10_000
+   type sorted_array is array (index) of element
+   type search_result is record
+      found    : boolean
+      found_at : index
 
-   function Search (Arr : Sorted_Array;
-                    Key : Element;
-                    Found_At : out Index) return Boolean {
-      Lo  : Index = Index.First;
-      Hi  : Index = Index.Last;
-      Mid : Index;
+   function search (arr : sorted_array;
+                    key : element) returns search_result
+      lo  : index = index.first
+      hi  : index = index.last
+      mid : index
 
-      Found_At = Index.First;
-      while Lo <= Hi {
-         Mid = Lo + (Hi - Lo) / 2;
-         if Arr (Mid) == Key {
-            Found_At = Mid;
-            return True;
-         } elsif Arr (Mid) < Key {
-            if Mid == Index.Last {
-               return False;
-            }
-            Lo = Mid + 1;
-         } else {
-            if Mid == Index.First {
-               return False;
-            }
-            Hi = Mid - 1;
-         }
-      }
-      return False;
-   }
-
-}
+      while lo <= hi
+         mid = lo + (hi - lo) / 2
+         if arr (mid) == key
+            return ((found = true, found_at = mid) as search_result)
+         else if arr (mid) < key
+            if mid == index.last
+               return ((found = false, found_at = index.first) as search_result)
+            lo = mid + 1
+         else
+            if mid == index.first
+               return ((found = false, found_at = index.first) as search_result)
+            hi = mid - 1
+      return ((found = false, found_at = index.first) as search_result)
 ```
 
-### Linked List — record types, while with null guard
+### Linked List — record types, null guard
 
 ```
-package Safe_Linked_List {
+package safe_linked_list
 
-   type Node;
-   type Node_Ptr is access Node;
+   type node
+   type node_ref is access node
 
-   type Node is record {
-      Value : Integer;
-      Next  : Node_Ptr;
-   }
+   type node is record
+      value : integer
+      Next  : access node
 
-   function Length (Head : Node_Ptr) return Natural {
-      Count   : Natural = 0;
-      Current : Node_Ptr = Head;
+   function sum_values (Head : node_ref) returns integer
+      total : integer = 0
 
-      while Current != null {
-         Count = Count + 1;
-         Current = Current.all.Next;
-      }
-      return Count;
-   }
-
-   function Sum (Head : Node_Ptr) return Integer {
-      Total   : Integer = 0;
-      Current : Node_Ptr = Head;
-
-      while Current != null {
-         Total = Total + Current.all.Value;
-         Current = Current.all.Next;
-      }
-      return Total;
-   }
-
-}
+      if Head != null
+         total = total + Head.value
+         if Head.Next != null
+            total = total + Head.Next.value
+      return total
 ```
 
 ### Channel Pipeline — tasks, bare loops, channels
 
 ```
-package Pipeline {
+package pipeline
 
-   type Sample is range 0 .. 10_000;
+   type sample is range 0 .. 10_000
 
-   channel Raw_Ch      : Sample capacity 4;
-   channel Filtered_Ch : Sample capacity 4;
+   channel raw_ch      : sample capacity 4
+   channel filtered_ch : sample capacity 4
 
-   task Producer {
-      Counter : Sample = 0;
+   task producer with priority = 10
+      counter : sample = 0
 
-      loop {
-         send Raw_Ch, Counter;
-         if Counter < 10_000 {
-            Counter = Counter + 1;
-         } else {
-            Counter = 0;
-         }
-      }
-   }
+      loop
+         send raw_ch, counter
+         if counter < 10_000
+            counter = counter + 1
+         else
+            counter = 0
 
-   task Filter {
-      Input  : Sample;
-      Output : Sample;
+   task filter with priority = 10
+      input  : sample
+      output : sample
 
-      loop {
-         receive Raw_Ch, Input;
-         Output = Input / 2;
-         send Filtered_Ch, Output;
-      }
-   }
+      loop
+         receive raw_ch, input
+         output = input / 2
+         send filtered_ch, output
 
-   task Consumer {
-      Data : Sample;
-      Sum  : Natural = 0;
+   task consumer with priority = 10
+      data : sample
+      sum  : integer = 0
 
-      loop {
-         receive Filtered_Ch, Data;
-         Sum = Sum + Natural (Data);
-         if Sum > 1_000_000 {
-            Sum = 0;
-         }
-      }
-   }
-
-}
+      loop
+         receive filtered_ch, data
+         sum = sum + integer (data)
+         if sum > 1_000_000
+            sum = 0
 ```
 
 ### Ownership Move — record, access types, procedure
 
 ```
-package Ownership_Move {
+package ownership_demo
 
-   type Payload is record {
-      Value : Integer;
-   }
+   type payload is record
+      value : integer
 
-   type Payload_Ptr is access Payload;
+   type payload_ref is access payload
 
-   procedure Transfer {
-      Source : Payload_Ptr = new ((Value = 42) as Payload);
-      Target : Payload_Ptr = null;
+   procedure transfer
+      Source : payload_ref = new ((value = 42) as payload)
+      Target : payload_ref = null
 
-      Target = Source;
-      Target.all.Value = 100;
-   }
-
-}
+      Target = move Source
+      Target.value = 100
 ```
 
 ## Tradeoffs
 
 | Gain | Loss |
 |------|------|
-| Familiar to C/Go/Rust/Swift developers | No self-documenting `end Foo` closing labels |
-| ~20-25% reduction in line count | Closing `}` requires indentation/editor support to identify |
-| `begin` eliminated — no declaration vs. statement split | Loses visual distinction between "this is a loop body" vs. "this is a function body" |
-| `loop { }` remains meaningful as a bare construct | |
-| `record { }` reads naturally | |
+| Minimal ceremony — the code IS the structure | Invisible characters carry semantic weight |
+| ~30-40% reduction in line count vs Ada-style | Copy-paste across contexts can lose indentation |
+| No delimiter vocabulary to learn | Mixed-editor teams must agree on spaces/width |
+| Python-familiar to the largest developer community | No machine-verifiable closing labels (use `pragma Strict` for that) |
+| Indentation is always correct (compiler enforces it) | Cannot place multiple blocks on one line |
+
+## Alternatives Considered
+
+1. **Brace-delimited blocks (`{ }`)** — the original proposal in this
+   document. Braces are a middle ground: less ceremony than `begin`/`end`,
+   more ceremony than whitespace. **Rejected** because braces satisfy
+   neither the "maximum clarity" camp (no closing labels like `end loop`)
+   nor the "minimum ceremony" camp (still need `{`, `}` on their own lines).
+   Whitespace-significant default plus `pragma Strict` for begin/end covers
+   both extremes. Braces are a compromise that serves no audience fully.
+
+2. **Three modes (whitespace + braces + begin/end)** — too many options. Two
+   modes (whitespace default + strict) are sufficient. Every additional mode
+   fragments the ecosystem and complicates tooling.
+
+3. **Whitespace only (no strict mode)** — removes the safety-critical team's
+   option for explicit closing labels. `pragma Strict` is essential for
+   DO-178C review contexts where `end loop;` and `end function_name;` are
+   required by coding standards.
 
 ---
 
@@ -449,15 +456,15 @@ while staying consistent with the rest of the language.
 
 ## Motivation
 
-The brace-delimited syntax proposed earlier optimizes for familiarity and
-conciseness. But the Ada-style `begin`/`end`, `end loop`, and `end Package_Name`
-delimiters have a real advantage: **self-documenting block closers** that are
-valuable in safety-critical code, long-lived codebases, and formal review
-contexts.
+The whitespace-significant syntax proposed earlier optimizes for conciseness
+and readability. But the Ada-style `begin`/`end`, `end loop`, and
+`end Package_Name` delimiters have a real advantage: **self-documenting block
+closers** that are valuable in safety-critical code, long-lived codebases,
+and formal review contexts (e.g., DO-178C).
 
-Rather than forcing a single style, Safe can support both through a compiler-
+Rather than forcing a single style, Safe supports both through a compiler-
 enforced pragma. Teams that value explicit block labels opt in; everyone else
-gets braces by default.
+gets whitespace-significant blocks by default.
 
 ## Proposed Change
 
@@ -466,18 +473,20 @@ delimited block syntax throughout the compilation unit or project.
 
 ### What `pragma Strict` restores
 
-| Construct | Default (braces) | Under `pragma Strict` |
-|-----------|------------------|-----------------------|
-| Function/procedure body | `{ ... }` | `begin ... end Function_Name;` |
-| Package body | `{ ... }` | `is ... end Package_Name;` |
-| For/while loop body | `{ ... }` | `loop ... end loop;` |
-| Bare infinite loop | `loop { ... }` | `loop ... end loop;` |
-| Record definition | `record { ... }` | `record ... end record;` |
-| If/elsif/else blocks | `{ ... }` | `then ... end if;` |
+| Construct | Default (whitespace) | Under `pragma Strict` |
+|-----------|---------------------|-----------------------|
+| Function/procedure body | Indented block after signature | `begin ... end Function_Name;` |
+| Package body | Indented block after `package name` | `is ... end Package_Name;` |
+| For/while loop body | Indented block after `for`/`while` | `loop ... end loop;` |
+| Bare infinite loop | Indented block after `loop` | `loop ... end loop;` |
+| Record definition | Indented block after `record` | `record ... end record;` |
+| If/else if/else blocks | Indented block after condition | `then ... end if;` |
 | Return type keyword | `returns` | `return` |
+| Semicolons | Optional (auto-inserted) | Required |
 
-Under `pragma Strict`, braces are rejected by the compiler. The two styles
-are mutually exclusive within a compilation unit — no mixing.
+Under `pragma Strict`, whitespace-significant blocks are rejected by the
+compiler. The two styles are mutually exclusive within a compilation unit —
+no mixing.
 
 ### Granularity
 
@@ -612,10 +621,12 @@ end Pipeline;
 ## Design Rationale
 
 - **No style wars in a single file** — the pragma is all-or-nothing per
-  compilation unit. You never see braces and `end loop` in the same file.
+  compilation unit. You never see whitespace blocks and `end loop` in the
+  same file.
 - **Compiler-enforced** — not a linter suggestion. If `pragma Strict` is
-  active, brace syntax is a compile error. If it's absent, `begin`/`end` is
-  a compile error. Both styles parse to identical ASTs.
+  active, whitespace-significant blocks are a compile error. If it's absent,
+  `begin`/`end` delimiters are a compile error. Both styles parse to
+  identical ASTs.
 - **Safety-critical teams get what they need** — closing labels like
   `end Accumulate` and `end loop` are required by some coding standards
   (e.g., DO-178C reviews). `pragma Strict` gives them first-class support.
@@ -634,15 +645,22 @@ end Pipeline;
 1. **`pragma Verbose`** — accurate but pejorative. Implies the style is
    unnecessarily wordy rather than deliberately explicit.
 
-2. **`pragma Classic`** — nods to Ada heritage but suggests the brace style
-   is the "modern" replacement, which may not age well.
+2. **`pragma Classic`** — nods to Ada heritage but suggests the whitespace
+   style is the "modern" replacement, which may not age well.
 
 3. **`pragma Explicit_Blocks`** — too narrow. If the pragma grows to enforce
    other rules, the name won't fit.
 
 4. **Compiler flag only (no pragma)** — forces the entire project into one
    style. Per-unit control is valuable when a project mixes application code
-   (braces) with safety-critical modules (strict).
+   (whitespace) with safety-critical modules (strict).
+
+5. **Brace-delimited default instead of whitespace** — braces are a middle
+   ground between whitespace and begin/end. Rejected because braces satisfy
+   neither extreme: they lack closing labels for safety-critical review, and
+   they still add delimiter noise that whitespace eliminates. Two clean modes
+   (whitespace + strict) serve both audiences better than a compromise that
+   serves neither fully.
 
 ---
 
@@ -2260,66 +2278,241 @@ package sensor_protocol {
 
 ---
 
-# Case Insensitivity
+# Capitalisation as Reference Signal
 
-## Status
+## Motivation
 
-This is a confirmation of inherited behaviour from Ada, with a note on
-possible future direction.
-
-## Current Rule
-
-Safe inherits Ada's case insensitivity (8652:2023 §2.3). Identifiers that
-differ only in case are the same identifier:
+In Safe's current syntax, access-typed variables look identical to value-typed
+variables at every use site:
 
 ```
-Counter, counter, COUNTER, cOuNtEr  -- all the same identifier
+ptr.all.value = 42;    -- dereference happening
+other.value = 42;      -- direct field access
 ```
 
-This applies everywhere: type names, variable names, function names, package
-names, keywords. The compiler normalises all identifiers internally.
+The reader cannot tell whether an identifier is a pointer or a value without
+checking its type declaration. In a safety-critical language where pointer
+operations (move, deallocation, null risk) are the primary source of bugs,
+this is a significant readability gap.
 
-## Why This Is the Right Default
+Go demonstrated that compiler-enforced capitalisation rules work at scale:
+exported identifiers must start with an uppercase letter, unexported with
+lowercase. Every Go developer internalises this in the first week.
 
-- **Ada compatibility** — Safe is subtractively defined from Ada. Case
-  insensitivity is part of the base language.
-- **No case-convention wars** — teams do not need to agree on `camelCase` vs
-  `snake_case` vs `PascalCase` at the language level. The compiler treats
-  them identically.
-- **Readable at any style** — `Get_Length`, `get_length`, and `getLength`
-  all work. Code from different style backgrounds compiles without renaming.
-- **Grep-friendly with `-i`** — searching for identifiers does not require
-  exact-case matching.
+Safe can use the same mechanism for a different purpose: **uppercase initial
+letter means the identifier binds to a reference (access-typed storage),
+lowercase means it binds to a value.** The compiler enforces this as a
+legality rule, not a style convention.
 
-## Possible Future Direction: Meaningful Capitalisation
+## Proposed Rule
 
-Go uses capitalisation as a visibility mechanism: `Exported` (uppercase
-initial) vs `unexported` (lowercase initial). This is a powerful, zero-syntax
-way to express visibility.
+Safe becomes case-sensitive. Identifiers that bind to access-typed storage
+must start with an uppercase letter. All other identifiers must start with a
+lowercase letter. The compiler rejects violations.
 
-Safe already has the `public` keyword for visibility, so Go-style
-capitalisation is not needed for that purpose today. However, a future
-language revision could assign semantic meaning to case in other ways:
+| Identifier kind | Case rule | Examples |
+|-----------------|-----------|----------|
+| Variable binding to access type | Uppercase initial | `Source`, `Target`, `Head` |
+| Variable binding to value type | Lowercase initial | `count`, `total`, `index` |
+| Parameter binding to access type | Uppercase initial | `Data`, `Node` |
+| Parameter binding to value type | Lowercase initial | `data`, `value` |
+| Record field of access type | Uppercase initial | `Next`, `Parent` |
+| Record field of value type | Lowercase initial | `value`, `length` |
+| Type name | Lowercase initial | `payload`, `node_ref`, `integer` |
+| Package name | Lowercase initial | `provider`, `safe_runtime` |
+| Function/procedure name | Lowercase initial | `find`, `process`, `consume` |
+| Constant binding to access type | Uppercase initial | `Default_Node` |
+| Constant binding to value type | Lowercase initial | `max_size` |
 
-- **Constant naming** — `ALL_CAPS` identifiers could be recognised as
-  constants by convention or by rule.
-- **Type vs value distinction** — `PascalCase` for types, `snake_case` for
-  values, enforced by the compiler.
-- **Module-level exports** — if `public` were ever removed in favour of
-  case-based visibility.
+## The `move` Keyword
 
-Any such change would be a significant departure from Ada's case-insensitive
-model and would require a separate proposal with migration analysis. Until
-then, Safe remains fully case-insensitive.
+Capitalisation answers "is this a pointer?" The `move` keyword answers "is
+this assignment destructive?"
+
+Reference-to-reference assignment requires the `move` keyword. A bare `=` on
+a reference variable is a compile error:
+
+```
+Target = move Source;     -- ok: Source becomes null, Target takes ownership
+Target = Source;          -- ERROR: reference assignment requires 'move'
+Target = null;            -- ok: null assignment, no move needed
+```
+
+For value-typed variables, `move` is not used. Plain `=` copies the value:
+
+```
+total = count + 1;        -- value copy, both lowercase
+```
+
+No `copy` keyword is needed. The absence of `move` on a lowercase variable
+is the copy signal.
+
+## Implicit Dereference
+
+With capitalisation marking every reference, the `.all` explicit dereference
+is redundant and dropped:
+
+```
+-- Current
+Total = Total + total_value (Current.all.value);
+Current = Current.all.Next;
+
+-- Proposed
+total = total + total_value (Current.value);
+Current = move Current.Next;
+```
+
+The compiler knows `Current` is a reference (uppercase). Field access through
+a reference is an implicit dereference. The reader knows too, because the
+variable is capitalised.
+
+## Examples
+
+### Ownership move
+
+```
+package ownership_demo {
+
+   type payload is record {
+      value : integer
+   }
+
+   type payload_ref is access payload
+
+   procedure transfer {
+      Source : payload_ref = new ((value = 42) as payload)
+      Target : payload_ref = null
+
+      Target = move Source
+      Target.value = 100
+   }
+
+}
+```
+
+Every occurrence of `Source` and `Target` is visually distinct from `value`.
+The `move` on the assignment makes the destructive transfer explicit.
+
+### Linked list traversal
+
+```
+type node is record {
+   value : integer
+   Next  : access node
+}
+
+function sum_values (Head : node_ref) returns integer {
+   total : integer = 0
+
+   if Head != null {
+      total = total + Head.value
+      if Head.Next != null {
+         total = total + Head.Next.value
+      }
+   }
+   return total
+}
+```
+
+`Head` and `Next` are uppercase — the reader knows dereferences are happening.
+`total` and `value` are lowercase — plain value operations.
+
+### Function parameters
+
+```
+function consume (Data : payload_ref) ...        -- takes ownership (uppercase)
+function modify  (Data : in out payload_ref) ...  -- borrows mutably (uppercase)
+function inspect (Data : in payload_ref) ...      -- observes read-only (uppercase)
+function process (data : payload) ...             -- copies value (lowercase)
+```
+
+The call site:
+
+```
+consume (move My_Ptr)     -- uppercase argument, explicit move
+inspect (My_Ptr)          -- uppercase argument, observe (not moved)
+process (my_value)        -- lowercase argument, value copy
+```
+
+### Record field enforcement
+
+The compiler enforces field capitalisation at the type declaration:
+
+```
+type node is record {
+   value : integer         -- lowercase: value field (ok)
+   Next  : access node     -- uppercase: reference field (required)
+   next  : access node     -- ERROR: access-typed field must be uppercase
+   Value : integer         -- ERROR: value-typed field must be lowercase
+}
+```
+
+## What This Replaces
+
+This proposal supersedes the earlier Case Insensitivity confirmation. Safe
+becomes case-sensitive. This is a one-way departure from Ada's
+case-insensitive model (8652:2023 §2.3).
+
+It also eliminates the need for a `ref` keyword. Capitalisation carries the
+reference signal without a type-level keyword.
+
+## Edge Cases
+
+**Array elements.** `items(3).value` — the array `items` is lowercase (it's a
+value), but `items(3)` produces a reference if the element type is an access
+type. The capitalisation signal doesn't carry through indexing. This is the
+same gap Go and Rust accept for indexed access.
+
+**Parameter names shadowing type names.** `(Payload : payload)` is rejected
+by the compiler. An identifier that differs from a visible type name only by
+initial capitalisation is a legality error. The developer must choose a
+distinct name: `(Data : payload)`, not `(Payload : payload)`.
+
+**Refactoring type changes.** Changing a variable from value type to access
+type requires renaming it from lowercase to uppercase (and vice versa). This
+is a feature: the change is visible at every use site rather than hidden in a
+type definition.
+
+## Design Rationale
+
+- **Always-on signal** — every occurrence of every variable in the entire
+  codebase tells you whether it is a pointer. No keyword, no sigil, no type
+  lookup needed.
+- **Compiler-enforced** — not a convention. The compiler rejects a lowercase
+  name for an access-typed binding and an uppercase name for a value-typed
+  binding.
+- **Low cognitive load** — one rule: uppercase means pointer. No symbol
+  vocabulary to learn.
+- **Grep-friendly** — `[A-Z]` in an expression means a reference is involved.
+  Code review becomes faster.
+- **Proven model** — Go has used case-as-semantics since 2009 with no
+  reported usability issues. The rule is simple enough for developers to
+  internalise in the first day.
+- **Complements `move`** — capitalisation answers "is this a pointer?" and
+  `move` answers "is this destructive?" Together they make both the nature
+  and the operation visible at every site.
+
+## Alternatives Considered
+
+1. **`ref` keyword on types and declarations** — `ptr : ref payload`. Marks
+   the declaration site but not every use site. Field access `ptr.value`
+   still looks identical to a value access without checking the declaration.
+
+2. **`*` / `&` sigils** — Rust/Go-style. Visually distinct but inconsistent
+   with Safe's "words over symbols" philosophy.
+
+3. **Keep case-insensitive + add `move` only** — `move` marks destructive
+   assignment but doesn't tell you which variables are pointers at a glance.
+
+4. **Keep case-insensitive entirely** — status quo. Reader must check type
+   declarations to know whether a variable is a pointer. The gap that
+   motivated this proposal remains.
 
 ## Interaction with `pragma Strict`
 
-Case insensitivity applies identically under both default and strict modes.
+Capitalisation rules apply identically under both default and strict modes.
 `pragma Strict` controls block delimiters and closing labels, not identifier
-casing.
-
-A separate `pragma Style` or formatting tool could enforce a consistent
-casing convention per project without changing the language semantics.
+casing. Both modes enforce the same uppercase-means-reference rule.
 
 ---
 

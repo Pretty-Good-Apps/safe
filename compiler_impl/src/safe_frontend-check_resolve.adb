@@ -336,6 +336,46 @@ package body Safe_Frontend.Check_Resolve is
       return True;
    end Is_Definite_Type;
 
+   function Contains_Channel_Access_Subcomponent
+     (Info     : GM.Type_Descriptor;
+      Type_Env : Type_Maps.Map) return Boolean
+   is
+      Base : constant GM.Type_Descriptor := Base_Type (Info, Type_Env);
+      Kind : constant String := FT.Lowercase (UString_Value (Base.Kind));
+
+      function Named_Type_Contains_Access (Name : String) return Boolean is
+      begin
+         if Name = "" or else not Has_Type (Type_Env, Name) then
+            return False;
+         end if;
+         return Contains_Channel_Access_Subcomponent (Get_Type (Type_Env, Name), Type_Env);
+      end Named_Type_Contains_Access;
+   begin
+      if Kind = "access" then
+         return True;
+      end if;
+
+      if Base.Has_Component_Type
+        and then Named_Type_Contains_Access (UString_Value (Base.Component_Type))
+      then
+         return True;
+      end if;
+
+      for Field of Base.Fields loop
+         if Named_Type_Contains_Access (UString_Value (Field.Type_Name)) then
+            return True;
+         end if;
+      end loop;
+
+      for Field of Base.Variant_Fields loop
+         if Named_Type_Contains_Access (UString_Value (Field.Type_Name)) then
+            return True;
+         end if;
+      end loop;
+
+      return False;
+   end Contains_Channel_Access_Subcomponent;
+
    function Contains_Dot (Name : String) return Boolean is
    begin
       for Ch of Name loop
@@ -1843,6 +1883,15 @@ package body Safe_Frontend.Check_Resolve is
               (Path    => Path,
                Span    => Decl.Element_Type.Span,
                Message => "channel element type must be definite"));
+      end if;
+
+      if Contains_Channel_Access_Subcomponent (Type_Info, Type_Env) then
+         Raise_Diag
+           (CM.Source_Frontend_Error
+              (Path    => Path,
+               Span    => Decl.Element_Type.Span,
+               Message =>
+                 "channel element type shall not be an access type or a composite type containing an access-type subcomponent"));
       end if;
 
       Result.Is_Public := Decl.Is_Public;

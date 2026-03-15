@@ -52,7 +52,7 @@ The only live frontend path is now the Ada-native `Check_*` plus `Mir_*` pipelin
 
 PR08 extends the live `Check_*` + `Mir_*` pipeline, and the current frontend baseline is now PR08.
 PR09 layers deterministic Ada/SPARK emission on top of that frontend baseline through the optional `--ada-out-dir` path.
-PR10 layers selected emitted-output GNATprove verification on top of that emitted surface; [`../docs/emitted_output_verification_matrix.md`](../docs/emitted_output_verification_matrix.md) is the canonical statement of what is compile-only versus `flow` / `prove` verified, and [`../docs/post_pr10_scope.md`](../docs/post_pr10_scope.md) records everything still open after the selected proof corpus.
+PR10 layers selected emitted-output GNATprove verification on top of that emitted surface; [`../docs/emitted_output_verification_matrix.md`](../docs/emitted_output_verification_matrix.md) is the canonical statement of what is compile-only versus `flow` / `prove` verified, and [`../docs/post_pr10_scope.md`](../docs/post_pr10_scope.md) records everything still open after the selected proof corpus. Supplemental emitted hardening regressions can extend coverage outside that frozen PR10 corpus without changing the milestone claim.
 
 Unsupported-feature classification rule:
 - `unsupported_source_construct` means the Ada-native frontend recognized a construct that is outside the exact current Rule 5 fixture corpus, sequential ownership, and the current boolean result-record discriminant pattern.
@@ -401,6 +401,15 @@ python3 scripts/run_pr10_emitted_baseline.py
 ```
 
 That gate reruns the PR10 contract, flow, and prove gates, verifies tracker/dashboard/docs describe PR10 as complete with no next tracked milestone, and records results in `execution/reports/pr10-emitted-baseline-report.json`.
+
+The supplemental emitted hardening gate is:
+
+```bash
+cd compiler_impl && $HOME/bin/alr build
+python3 scripts/run_emitted_hardening_regressions.py
+```
+
+That gate keeps the frozen PR10 selected corpus intact while hardening emitted regressions beyond it, including ownership early-return ordering plus supplemental concurrency proof samples, and records results in `execution/reports/emitted-hardening-regressions-report.json`.
 
 To enforce the local pre-push gate chain in this clone, enable the tracked hook once:
 

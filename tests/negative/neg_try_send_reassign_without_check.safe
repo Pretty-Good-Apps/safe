@@ -1,8 +1,6 @@
 -- Test: neg_try_send_reassign_without_check
--- Description: Pending try_send state is not null-before-move safe.
---   The source cannot be overwritten with a new owner before Success is
---   checked because the transfer may already have occurred.
--- Expected: REJECT move_target_not_null
+-- Description: Access-typed channel elements are rejected before try_send reassignment checks run.
+-- Expected: REJECT source_frontend_error
 
 package Neg_Try_Send_Reassign_Without_Check is
 

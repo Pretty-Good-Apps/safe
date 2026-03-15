@@ -2111,7 +2111,9 @@
           "-c",
           "-P",
           "$TMPDIR/ada/build.gpr",
-          "ping_pong.adb"
+          "ping_pong.adb",
+          "-cargs",
+          "-gnatec=$TMPDIR/ada/gnat.adc"
         ],
         "cwd": "$REPO_ROOT/compiler_impl",
         "returncode": 0
@@ -2247,7 +2249,7 @@
             },
             "Initialization": {
               "flow": {
-                "count": 12,
+                "count": 10,
                 "detail": ""
               },
               "justified": {
@@ -2259,7 +2261,7 @@
                 "detail": ""
               },
               "total": {
-                "count": 12,
+                "count": 10,
                 "detail": ""
               },
               "unproved": {
@@ -2357,7 +2359,7 @@
             },
             "Total": {
               "flow": {
-                "count": 13,
+                "count": 11,
                 "detail": "100%"
               },
               "justified": {
@@ -2369,7 +2371,7 @@
                 "detail": ""
               },
               "total": {
-                "count": 13,
+                "count": 11,
                 "detail": ""
               },
               "unproved": {
@@ -2380,7 +2382,7 @@
           },
           "total": {
             "flow": {
-              "count": 13,
+              "count": 11,
               "detail": "100%"
             },
             "justified": {
@@ -2392,7 +2394,7 @@
               "detail": ""
             },
             "total": {
-              "count": 13,
+              "count": 11,
               "detail": ""
             },
             "unproved": {
@@ -2413,7 +2415,9 @@
           "-c",
           "-P",
           "$TMPDIR/ada/build.gpr",
-          "channel_pipeline_compute.adb"
+          "channel_pipeline_compute.adb",
+          "-cargs",
+          "-gnatec=$TMPDIR/ada/gnat.adc"
         ],
         "cwd": "$REPO_ROOT/compiler_impl",
         "returncode": 0
@@ -2549,7 +2553,7 @@
             },
             "Initialization": {
               "flow": {
-                "count": 15,
+                "count": 13,
                 "detail": ""
               },
               "justified": {
@@ -2561,7 +2565,7 @@
                 "detail": ""
               },
               "total": {
-                "count": 15,
+                "count": 13,
                 "detail": ""
               },
               "unproved": {
@@ -2659,7 +2663,7 @@
             },
             "Total": {
               "flow": {
-                "count": 16,
+                "count": 14,
                 "detail": "100%"
               },
               "justified": {
@@ -2671,7 +2675,7 @@
                 "detail": ""
               },
               "total": {
-                "count": 16,
+                "count": 14,
                 "detail": ""
               },
               "unproved": {
@@ -2682,7 +2686,7 @@
           },
           "total": {
             "flow": {
-              "count": 16,
+              "count": 14,
               "detail": "100%"
             },
             "justified": {
@@ -2694,7 +2698,7 @@
               "detail": ""
             },
             "total": {
-              "count": 16,
+              "count": 14,
               "detail": ""
             },
             "unproved": {
@@ -2715,7 +2719,9 @@
           "-c",
           "-P",
           "$TMPDIR/ada/build.gpr",
-          "select_with_delay.adb"
+          "select_with_delay.adb",
+          "-cargs",
+          "-gnatec=$TMPDIR/ada/gnat.adc"
         ],
         "cwd": "$REPO_ROOT/compiler_impl",
         "returncode": 0
@@ -2851,7 +2857,7 @@
             },
             "Initialization": {
               "flow": {
-                "count": 8,
+                "count": 6,
                 "detail": ""
               },
               "justified": {
@@ -2863,7 +2869,7 @@
                 "detail": ""
               },
               "total": {
-                "count": 8,
+                "count": 6,
                 "detail": ""
               },
               "unproved": {
@@ -2961,7 +2967,7 @@
             },
             "Total": {
               "flow": {
-                "count": 9,
+                "count": 7,
                 "detail": "100%"
               },
               "justified": {
@@ -2973,7 +2979,7 @@
                 "detail": ""
               },
               "total": {
-                "count": 9,
+                "count": 7,
                 "detail": ""
               },
               "unproved": {
@@ -2984,7 +2990,7 @@
           },
           "total": {
             "flow": {
-              "count": 9,
+              "count": 7,
               "detail": "100%"
             },
             "justified": {
@@ -2996,7 +3002,7 @@
               "detail": ""
             },
             "total": {
-              "count": 9,
+              "count": 7,
               "detail": ""
             },
             "unproved": {
@@ -3012,6 +3018,6 @@
     "PR10 selected emitted outputs compile and pass GNATprove flow with warnings treated as errors.",
     "Concurrency fixtures run GNATprove with gnat.adc applied explicitly via -cargs -gnatec."
   ],
-  "repeat_sha256": "88f40de8198613cfef10a55b15aeb9294534fcb7009e235402f173d4f1a21ac4",
-  "report_sha256": "88f40de8198613cfef10a55b15aeb9294534fcb7009e235402f173d4f1a21ac4"
+  "repeat_sha256": "9b3b27349c1b3e8f130c475e1e0b32c824dbb6767ef5e635e43116470dd73397",
+  "report_sha256": "9b3b27349c1b3e8f130c475e1e0b32c824dbb6767ef5e635e43116470dd73397"
 }

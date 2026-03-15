@@ -62,17 +62,23 @@ def generate_report(*, safec: Path, env: dict[str, str]) -> dict[str, object]:
             spec_path = body_path.with_suffix(".ads")
             body_text = body_path.read_text(encoding="utf-8")
             if fixture.name == "ownership_early_return.safe":
-                required = ["Free_Payload_Ptr (Inner);", "Free_Payload_Ptr (Outer);"]
+                required = [
+                    "Return_Value : constant Integer := Outer.all.Value;",
+                    "Free_Payload_Ptr (Inner);",
+                    "Free_Payload_Ptr (Outer);",
+                    "return Return_Value;",
+                ]
+                capture_index = body_text.find("Return_Value : constant Integer := Outer.all.Value;")
                 inner_index = body_text.find("Free_Payload_Ptr (Inner);")
                 outer_index = body_text.find("Free_Payload_Ptr (Outer);")
-                return_index = body_text.find("return Outer.all.Value;")
+                return_index = body_text.find("return Return_Value;")
                 require(
-                    inner_index >= 0 and outer_index >= 0 and return_index >= 0,
-                    f"{fixture}: missing early-return cleanup fragments in emitted body",
+                    capture_index >= 0 and inner_index >= 0 and outer_index >= 0 and return_index >= 0,
+                    f"{fixture}: missing early-return capture/cleanup fragments in emitted body",
                 )
                 require(
-                    inner_index < outer_index < return_index,
-                    f"{fixture}: early-return cleanup must free inner then outer owner before return",
+                    capture_index < inner_index < outer_index < return_index,
+                    f"{fixture}: early-return path must capture the return value before freeing inner then outer owner",
                 )
                 spec_required = ["Global => null"]
             elif fixture.name == "ownership_move.safe":

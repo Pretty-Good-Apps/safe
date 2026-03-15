@@ -1,6 +1,6 @@
 -- Test: neg_receive_target_not_null
--- Description: receive into a non-null owning target.
--- Expected: REJECT move_target_not_null
+-- Description: Access-typed channel elements are rejected before receive-target ownership checks run.
+-- Expected: REJECT source_frontend_error
 
 package Neg_Receive_Target_Not_Null is
 

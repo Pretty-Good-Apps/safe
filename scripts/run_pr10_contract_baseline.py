@@ -43,9 +43,11 @@ EXPECTED_COVERAGE_LINES = [
 ]
 MATRIX_REQUIRED_SNIPPETS = [
     "Coverage Notes",
+    "Supplemental hardening fixtures outside the frozen PR10 selected corpus",
     "Other currently emitted sequential fixtures outside the PR10 corpus",
     "Other currently emitted concurrency fixtures outside the PR10 corpus",
-    "Channel access-type compile-only subset",
+    "Access-typed channel elements and composites containing access-type subcomponents",
+    "Spec-excluded by channel element legality",
     "I/O seams outside pure emitted packages",
     "zero warnings",
     "zero justified checks",
@@ -133,11 +135,10 @@ def generate_report() -> dict[str, object]:
     for snippet in MATRIX_REQUIRED_SNIPPETS:
         require_contains(matrix_text, snippet, "docs/emitted_output_verification_matrix.md")
     for item in selected_corpus:
-        fixture_name = Path(item["fixture"]).name
         require(
-            row_contains(matrix_text, item["feature"], fixture_name, item["matrix_note"]),
+            row_contains(matrix_text, item["feature"], item["fixture"], item["matrix_note"]),
             "docs/emitted_output_verification_matrix.md: expected row "
-            f"for {fixture_name} with feature {item['feature']!r} and note {item['matrix_note']!r}",
+            f"for {item['fixture']} with feature {item['feature']!r} and note {item['matrix_note']!r}",
         )
         normalized_source = normalize_source_text((REPO_ROOT / item["fixture"]).read_text(encoding="utf-8"))
         for fragment in normalized_source_fragments(item):

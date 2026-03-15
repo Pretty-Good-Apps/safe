@@ -372,35 +372,11 @@ This section enumerates every feature of ISO/IEC 8652:2023 (Ada 2022) that Safe 
 
    (c) Passing an access-to-variable value as an `out` or `in out` mode parameter (the caller's value may be moved out).
 
-   (d) Sending an owning access value through a channel via `send` or `try_send` (Section 4, §4.3, paragraphs 27a, 29a). For `try_send`, the move occurs only on successful enqueue.
-
-   (e) Receiving an owning access value from a channel via `receive` or `try_receive` (Section 4, §4.3, paragraph 28a). The receiving task becomes the owner.
-
-97a. **Null-before-move legality rule.** The target of any move into a pool-specific owning access variable — whether by assignment, `receive`, or `try_receive` — shall be provably null at the point of the move. A conforming implementation shall verify this by flow analysis: after declaration with default initialisation (null), after a move-out (the source becomes null per paragraph 96(a)), or after explicit assignment of `null`, the variable is in the null state. After an allocator, a `receive`, or any move-in, the variable is in the non-null state. A conforming implementation shall reject any move into a variable that is not provably null at that program point, with a diagnostic identifying the variable and the unresolvable ownership conflict.
+97a. **Null-before-move legality rule.** The target of any move into a pool-specific owning access variable — whether by assignment or by `out` / `in out` parameter copy-back — shall be provably null at the point of the move. A conforming implementation shall verify this by flow analysis: after declaration with default initialisation (null), after a move-out (the source becomes null per paragraph 96(a)), or after explicit assignment of `null`, the variable is in the null state. After an allocator or any move-in, the variable is in the non-null state. A conforming implementation shall reject any move into a variable that is not provably null at that program point, with a diagnostic identifying the variable and the unresolvable ownership conflict.
 
 97b. **Rationale.** Without this rule, overwriting a non-null owning access variable leaks the old designated object — there is no mechanism to deallocate it mid-scope (`Ada.Unchecked_Deallocation` is excluded, paragraph 107(c), and automatic deallocation occurs only at scope exit, paragraph 104). The rule prevents leaks by construction and uses the same flow-analysis machinery already required for paragraph 96(c) (tracking the null/non-null state of moved-from variables).
 
-97c. **Conforming pattern for repeated receive.** When receiving owning access values in a loop, declare the target variable inside the loop body so that each iteration starts with a fresh null variable and scope-exit deallocation fires at the end of each iteration:
-
-```ada
-loop
-    Msg : Node_Ptr;          -- null by default initialisation
-    receive Ch, Msg;          -- legal: Msg is provably null
-    Process(Msg);
-end loop;                     -- Msg goes out of scope, designated object deallocated
-```
-
-The following is nonconforming:
-
-```ada
--- NONCONFORMING: second receive overwrites non-null Msg
-Msg : Node_Ptr;
-loop
-    receive Ch, Msg;          -- rejected on second iteration:
-                               -- Msg is non-null from previous receive
-    Process(Msg);
-end loop;
-```
+97c. **Channel exclusion.** Section 4, §4.2, paragraph 14 excludes access-typed channel element subtypes and composite channel element types containing access-type subcomponents. Channel operations therefore do not participate in ownership transfer or move semantics.
 
 ### 2.3.3 Borrowing
 
@@ -1236,9 +1212,9 @@ On restart, all task-local state is reset: local declarations within the task bo
 
 151e. **Channel state on task failure.** The existing channel and ownership semantics constrain the options:
 
-   (a) **Pending sends.** A task blocked in `send` has already evaluated the payload and transferred ownership (Section 4, §4.3, paragraph 27a: the move occurs at the point of the send statement, not at actual enqueue). The pending send shall commit: the runtime enqueues the payload when capacity becomes available, even though the sending task has been terminated. This preserves the ownership invariant — the payload is neither in the sender nor lost.
+   (a) **Pending sends.** A task blocked in `send` has already evaluated the payload, but channel payloads are copy-only because channel element types exclude access-bearing values (Section 4, §4.2, paragraph 14). The pending send shall commit: the runtime enqueues the already-evaluated payload when capacity becomes available, even though the sending task has been terminated. No ownership transfer question arises.
 
-   (b) **Completed receives.** A message removed from a channel by `receive` is owned by the receiving task. If the receiver then crashes, the message is not re-delivered. Owned objects in the crashed task's scope are reclaimed by automatic deallocation (paragraph 104–105), preserving memory safety.
+   (b) **Completed receives.** A message removed from a channel by `receive` is not re-delivered if the receiver then crashes. Any task-local owned objects in the crashed task's scope are reclaimed by automatic deallocation (paragraph 104–105), preserving memory safety.
 
    (c) **Blocked receives.** A task blocked in `receive` that is terminated by a supervisor (or by restart) simply stops waiting. No message is consumed. Other tasks may subsequently receive from the same channel.
 

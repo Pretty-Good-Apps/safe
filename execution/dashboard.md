@@ -9,11 +9,11 @@
 ## Repo Facts
 
 - `tests/positive`: 48
-- `tests/negative`: 76
+- `tests/negative`: 77
 - `tests/golden`: 3
-- `tests/concurrency`: 13
+- `tests/concurrency`: 14
 - `tests/diagnostics_golden`: 17
-- **Total test corpus entries:** 157
+- **Total test corpus entries:** 159
 
 ## Task Ledger
 
@@ -421,9 +421,9 @@
 - **Blockers:** none
 - **Acceptance:**
   - Local-only Bronze summaries exist for task/channel programs, covering deterministic Global, Depends, and Initializes equivalents, task-variable ownership, and local channel-access and ceiling summaries.
-  - Local channel transfer forms enforce Silver ownership semantics for send, receive, try_send, try_receive, and select-arm bindings.
+  - Channel declarations reject access-typed element types and composite element types containing access-type subcomponents.
   - Representative local concurrency cases stay in parity between safec check --diag-json and emitted safec analyze-mir --diag-json.
-  - The accepted local concurrency corpus includes exclusive_variable.safe, try_send_ownership.safe, and select_priority.safe.
+  - The accepted local concurrency corpus includes exclusive_variable.safe, channel_pingpong.safe, and select_priority.safe.
 - **Evidence:**
   - `execution/reports/pr082-local-concurrency-analysis-report.json`
 

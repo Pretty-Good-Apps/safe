@@ -1,0 +1,59 @@
+-- Test: select_with_delay_multiarm
+-- Description: Select statement with two channel arms and one delay arm.
+--   The worker polls two message channels plus a delay fallback. A producer
+--   task actually sends on both channels so the emitted polling lowering
+--   must handle real success-path receives as well as the timeout arm.
+-- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.4.p33:7a94ab51
+-- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.4.p35:2ad6e64f
+-- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.4.p38:35ed84d9
+-- Expected: ACCEPT
+
+package Select_With_Delay_Multiarm is
+
+   type Message is range 1 .. 10;
+   type Counter is range 0 .. 100;
+
+   channel High_Ch : Message capacity 2;
+   channel Low_Ch  : Message capacity 2;
+
+   task Producer with Priority = 10 is
+   begin
+      loop
+         send High_Ch, 1;
+         send Low_Ch, 2;
+         delay 0.01;
+      end loop;
+   end Producer;
+
+   task Poller with Priority = 10 is
+      Seen : Counter = 0;
+   begin
+      loop
+         select
+            when High_Item : Message from High_Ch then
+               if Seen <= 90 then
+                  Seen = Seen + Counter (High_Item);
+               else
+                  Seen = 0;
+               end if;
+         or
+            when Low_Item : Message from Low_Ch then
+               if Seen <= 90 then
+                  Seen = Seen + Counter (Low_Item);
+               else
+                  Seen = 0;
+               end if;
+         or
+            delay 0.05 then
+               Seen = 0;
+         end select;
+
+         if Seen > 95 then
+            Seen = 0;
+         else
+            delay 0.001;
+         end if;
+      end loop;
+   end Poller;
+
+end Select_With_Delay_Multiarm;

@@ -43,6 +43,21 @@ class Pr09EmitTests(unittest.TestCase):
             self.assertIn("package Compiler is", text)
             self.assertIn("package Linker is", text)
 
+    def test_compile_command_adds_gnat_adc_explicitly(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ada_dir = Path(temp_dir)
+            (ada_dir / "sample.adb").write_text("procedure Sample is begin null; end Sample;\n", encoding="utf-8")
+            gpr_path = ada_dir / "build.gpr"
+            gpr_path.write_text("project Build is end Build;\n", encoding="utf-8")
+
+            command = pr09_emit.compile_emitted_ada_command(ada_dir=ada_dir, gpr_path=gpr_path)
+            self.assertNotIn("-cargs", command)
+
+            (ada_dir / "gnat.adc").write_text("pragma Profile(Jorvik);\n", encoding="utf-8")
+            command = pr09_emit.compile_emitted_ada_command(ada_dir=ada_dir, gpr_path=gpr_path)
+            self.assertIn("-cargs", command)
+            self.assertIn(f"-gnatec={ada_dir / 'gnat.adc'}", command)
+
 
 if __name__ == "__main__":
     unittest.main()

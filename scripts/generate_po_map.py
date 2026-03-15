@@ -566,35 +566,37 @@ def classify_clause(clause):
                 soundness_note = 'Guarantees channel exemption; does NOT guarantee exemption is safe for all patterns'
             return target, mechanism, summary, soundness_note, status, assumptions, artifact_location
 
-        # Channel ownership for memory safety
-        if 'ownership' in tags and section == '4.3':
+        # Channel copy-only / non-ownership guarantees
+        if section == '4.3' and any(
+            marker in cid for marker in ('p27a', 'p28a', 'p29a', 'p29b', 'p30', 'p31a')
+        ):
             target = 'Memory-safety'
-            artifact_location = 'companion/spark/safe_ownership_po.ads'
+            artifact_location = 'N/A'
             if 'p27a' in cid:
-                summary = 'Ownership transfer (move) on send for owning access types'
-                mechanism = 'ghost_model_invariant'
-                soundness_note = 'Guarantees move semantics on channel send; does NOT guarantee atomicity of move and enqueue'
+                summary = 'send never transfers ownership through a channel; enqueue is copy-only'
+                mechanism = 'translation_validation'
+                soundness_note = 'Guarantees access-bearing channel element types are rejected; does NOT guarantee runtime wrapper copy semantics by itself'
             elif 'p28a' in cid:
-                summary = 'Ownership transfer on receive; null-before-move rule applies'
-                mechanism = 'ghost_model_invariant'
-                soundness_note = 'Guarantees receiver ownership; does NOT guarantee null-state tracking across control flow'
+                summary = 'receive never transfers ownership through a channel; dequeue is copy-only'
+                mechanism = 'translation_validation'
+                soundness_note = 'Guarantees access-bearing channel element types are rejected; does NOT guarantee runtime wrapper copy semantics by itself'
             elif 'p29a' in cid:
-                summary = 'Move occurs only on successful try_send for owning access types'
-                mechanism = 'ghost_model_invariant'
-                soundness_note = 'Guarantees conditional move correctness; does NOT guarantee atomic try-send implementation'
+                summary = 'try_send is copy-only; success does not transfer ownership'
+                mechanism = 'translation_validation'
+                soundness_note = 'Guarantees access-bearing channel element types are rejected; does NOT guarantee atomic try-send implementation'
             elif 'p29b' in cid:
-                summary = 'Implementation shall not null source until enqueue confirmed'
+                summary = 'try_send evaluates before the fullness check and never transfers ownership'
                 mechanism = 'runtime_wrapper_check'
-                soundness_note = 'Guarantees deferred nulling; does NOT guarantee implementation atomicity'
+                soundness_note = 'Guarantees copy-only try_send evaluation order; does NOT guarantee implementation atomicity'
             elif 'p30' in cid:
-                summary = 'try_receive with ownership transfer and null-before-move rule'
-                mechanism = 'ghost_model_invariant'
-                soundness_note = 'Guarantees conditional receive ownership; does NOT guarantee all try_receive paths tracked'
+                summary = 'try_receive is copy-only and leaves Variable unchanged on failure'
+                mechanism = 'runtime_wrapper_check'
+                soundness_note = 'Guarantees copy-only try_receive behavior; does NOT guarantee all control-flow refinements are tracked'
             elif 'p31a' in cid:
-                summary = 'Channel ownership invariant: each designated object owned by exactly one entity'
-                mechanism = 'ghost_model_invariant'
-                soundness_note = 'Guarantees single-owner invariant; does NOT guarantee invariant holds during concurrent access windows'
-                assumptions = ['Channel implementation correctly serializes access']
+                summary = 'Queued channel elements never own designated objects'
+                mechanism = 'translation_validation'
+                soundness_note = 'Guarantees access-bearing channel element types are rejected; does NOT guarantee runtime wrapper copy semantics by itself'
+                assumptions = []
             return target, mechanism, summary, soundness_note, status, assumptions, artifact_location
 
         # Task declarations

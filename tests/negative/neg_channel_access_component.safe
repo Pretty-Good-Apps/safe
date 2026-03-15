@@ -1,0 +1,19 @@
+-- Test: neg_channel_access_component
+-- Description: Channel element types shall not be composites containing access-type components.
+-- Expected: REJECT source_frontend_error
+
+package Neg_Channel_Access_Component is
+
+   type Payload is record
+      Value : Integer;
+   end record;
+
+   type Payload_Ptr is access Payload;
+
+   type Envelope is record
+      Item : Payload_Ptr;
+   end record;
+
+   channel Data_Ch : Envelope capacity 1;
+
+end Neg_Channel_Access_Component;

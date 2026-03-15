@@ -1,12 +1,8 @@
 -- Test: try_send_ownership
--- Description: try_send with ownership transfer semantics.
---   When try_send succeeds, ownership of the access value is transferred
---   to the channel. When it fails, the sender retains ownership.
---   The source is only nulled on success.
--- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29:f792d704
--- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29a:8d3f2225
--- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29b:7121ccd7
--- Expected: ACCEPT
+-- Description: Ownership-through-channels is excluded from the language.
+--   Access-typed channel declarations are rejected before try_send semantics
+--   are analyzed.
+-- Expected: REJECT source_frontend_error
 
 package Try_Send_Ownership is
 
@@ -19,8 +15,6 @@ package Try_Send_Ownership is
 
    channel Data_Ch : Payload_Ptr capacity 2;
 
-   --  Sender: attempts non-blocking send. On success, ownership transfers.
-   --  On failure, the pointer is still valid and can be retried.
    task Sender is
       P       : Payload_Ptr;
       Success : Boolean;
@@ -30,12 +24,9 @@ package Try_Send_Ownership is
          P = new ((Id = Counter, Value = Counter * 10) as Payload);
          try_send Data_Ch, P, Success;
          if Success then
-            --  P is now null (moved to channel). Do not dereference.
             null;
          else
-            --  Send failed; P still owns the payload. Safe to use.
             P.all.Value = P.all.Value + 1;
-            --  Retry: this time blocking send.
             send Data_Ch, P;
          end if;
          Counter = Counter + 1;
@@ -45,18 +36,13 @@ package Try_Send_Ownership is
       end loop;
    end Sender;
 
-   --  Receiver: receives payloads, takes ownership.
-   --  Item is declared inside the loop body so that each iteration starts
-   --  with a fresh null variable (§2.3.2 paragraph 97c conforming pattern).
-   --  Scope-exit deallocation fires at the end of each iteration.
    task Receiver is
    begin
       loop
          Item : Payload_Ptr;
          receive Data_Ch, Item;
-         --  Item is now owned by this task.
          if Item != null then
-            Item.all.Value = 0;  -- process
+            Item.all.Value = 0;
          end if;
       end loop;
    end Receiver;

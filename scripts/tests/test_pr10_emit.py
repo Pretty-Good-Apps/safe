@@ -20,7 +20,8 @@ class Pr10EmitTests(unittest.TestCase):
 
     def test_parse_gnatprove_summary(self) -> None:
         summary = pr10_emit.parse_gnatprove_summary(
-            """=========================
+            """tool chatter
+=========================
 Summary of SPARK analysis
 =========================
 
@@ -45,6 +46,29 @@ Total                             8    2 (25%)    6 (75%)           .          .
             "CVC5",
         )
 
+    def test_parse_gnatprove_summary_rejects_missing_total(self) -> None:
+        with self.assertRaises(RuntimeError):
+            pr10_emit.parse_gnatprove_summary(
+                """---------------------------------------------------------------------------------
+SPARK Analysis results        Total       Flow     Provers   Justified   Unproved
+---------------------------------------------------------------------------------
+Run-time Checks                   5          .    5 (CVC5)           .          .
+---------------------------------------------------------------------------------
+"""
+            )
+
+    def test_parse_gnatprove_summary_rejects_malformed_rows(self) -> None:
+        with self.assertRaises(RuntimeError):
+            pr10_emit.parse_gnatprove_summary(
+                """---------------------------------------------------------------------------------
+SPARK Analysis results        Total       Flow     Provers   Justified   Unproved
+---------------------------------------------------------------------------------
+Run-time Checks 5 . 5 (CVC5) . .
+---------------------------------------------------------------------------------
+Total                             5          .    5 (CVC5)           .          .
+"""
+            )
+
     def test_gnatprove_command_adds_gnat_adc_explicitly(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             ada_dir = Path(temp_dir)
@@ -62,6 +86,17 @@ Total                             8    2 (25%)    6 (75%)           .          .
             )
             self.assertIn("-cargs", command)
             self.assertIn(f"-gnatec={ada_dir / 'gnat.adc'}", command)
+
+    def test_golden_pipeline_uses_in_out_try_receive_without_failure_default(self) -> None:
+        spec = (
+            pr10_emit.REPO_ROOT / "tests" / "golden" / "golden_pipeline" / "pipeline.ads"
+        ).read_text(encoding="utf-8")
+        body = (
+            pr10_emit.REPO_ROOT / "tests" / "golden" / "golden_pipeline" / "pipeline.adb"
+        ).read_text(encoding="utf-8")
+        self.assertIn("procedure Try_Receive (Value : in out Sample; Success : out Boolean);", spec)
+        self.assertIn("procedure Try_Receive (Value : in out Sample; Success : out Boolean) is", body)
+        self.assertNotIn("Value := Sample'First;", body)
 
 
 if __name__ == "__main__":

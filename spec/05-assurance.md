@@ -180,7 +180,7 @@ This section specifies the language-level assurance guarantees provided by Safe.
 
 33. The implementation shall verify this through task-variable ownership analysis (Section 4, §4.5): each package-level variable is accessed by at most one task.
 
-33a. **Designated objects transferred through channels.** When an owning access value is sent through a channel, the channel move semantics (Section 4, §4.3, paragraphs 27a, 28a, 29a) ensure that the designated object is owned by exactly one entity at any time — either the sending task (before the send), the channel (while queued), or the receiving task (after the receive). This extends the data-race-freedom guarantee to heap-allocated objects communicated between tasks.
+33a. **No designated-object transfer through channels.** Channel element types exclude access types and composite types containing access-type subcomponents (Section 4, §4.2, paragraph 14). Data-race-freedom for concurrency therefore relies on copy-only channel communication plus task-variable ownership; channels are not a mechanism for transferring heap ownership between tasks.
 
 ### 5.4.2 Priority Inversion Avoidance
 

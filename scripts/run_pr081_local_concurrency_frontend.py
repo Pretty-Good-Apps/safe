@@ -52,6 +52,8 @@ NEGATIVE_CASES = [
     REPO_ROOT / "tests" / "negative" / "neg_task_priority_range.safe",
     REPO_ROOT / "tests" / "negative" / "neg_chan_zero_cap.safe",
     REPO_ROOT / "tests" / "negative" / "neg_channel_indefinite.safe",
+    REPO_ROOT / "tests" / "concurrency" / "channel_access_type.safe",
+    REPO_ROOT / "tests" / "negative" / "neg_channel_access_component.safe",
     REPO_ROOT / "tests" / "negative" / "neg_select_no_channel_arm.safe",
     REPO_ROOT / "tests" / "negative" / "neg_select_multiple_delay.safe",
     REPO_ROOT / "tests" / "negative" / "neg_try_send_success_not_boolean.safe",

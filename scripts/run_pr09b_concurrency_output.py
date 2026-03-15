@@ -33,7 +33,6 @@ FIXTURES = [
     REPO_ROOT / "tests" / "positive" / "channel_pingpong.safe",
     REPO_ROOT / "tests" / "positive" / "channel_pipeline.safe",
     REPO_ROOT / "tests" / "concurrency" / "select_with_delay.safe",
-    REPO_ROOT / "tests" / "concurrency" / "channel_access_type.safe",
 ]
 EXPECTED_GNAT_ADC = (
     "pragma Partition_Elaboration_Policy(Sequential);\n"
@@ -71,11 +70,10 @@ def generate_report(*, safec: Path, env: dict[str, str]) -> dict[str, object]:
             )
             body_path = emitted_body_file(ada_dir)
             spec_path = body_path.with_suffix(".ads")
-            fragments = ["protected type", "task "]
+            spec_fragments = ["protected type", "task "]
             if fixture.name == "select_with_delay.safe":
-                body_fragments = ["Select_Polls", "Try_Receive (", "delay 0.001;"]
-            elif fixture.name == "channel_access_type.safe":
-                body_fragments = [".Send (", ".Receive (", "null"]
+                spec_fragments.append("Try_Receive (Value : in out Message; Success : out Boolean);")
+                body_fragments = ["Select_Polls", "Try_Receive (", "delay 0.001;", "Success := False;"]
             else:
                 body_fragments = [".Send (", ".Receive ("]
             fixtures.append(
@@ -90,7 +88,7 @@ def generate_report(*, safec: Path, env: dict[str, str]) -> dict[str, object]:
                     "structural_assertions": {
                         spec_path.name: structural_assertions(
                             spec_path,
-                            fragments,
+                            spec_fragments,
                         ),
                         body_path.name: structural_assertions(
                             body_path,

@@ -1,9 +1,6 @@
 -- Test: neg_try_send_compound_else_use
--- Description: Compound Boolean false paths do not prove try_send failure.
---   The else arm of `Success and then Ready` is reachable when Success is
---   true and Ready is false, so the source remains conditionally unavailable
---   there and cannot be sent again.
--- Expected: REJECT move_source_not_nonnull
+-- Description: Access-typed channel elements are rejected before try_send path-sensitivity checks run.
+-- Expected: REJECT source_frontend_error
 
 package Neg_Try_Send_Compound_Else_Use is
 

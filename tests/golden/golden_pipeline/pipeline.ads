@@ -12,7 +12,7 @@ is
       entry Send (Value : in Sample);
       entry Receive (Value : out Sample);
       procedure Try_Send (Value : in Sample; Success : out Boolean);
-      procedure Try_Receive (Value : out Sample; Success : out Boolean);
+      procedure Try_Receive (Value : in out Sample; Success : out Boolean);
    private
       Buffer : Raw_Ch_Buffer := (others => Sample'First);
       Head   : Raw_Ch_Index := Raw_Ch_Index'First;
@@ -28,7 +28,7 @@ is
       entry Send (Value : in Sample);
       entry Receive (Value : out Sample);
       procedure Try_Send (Value : in Sample; Success : out Boolean);
-      procedure Try_Receive (Value : out Sample; Success : out Boolean);
+      procedure Try_Receive (Value : in out Sample; Success : out Boolean);
    private
       Buffer : Filtered_Ch_Buffer := (others => Sample'First);
       Head   : Filtered_Ch_Index := Filtered_Ch_Index'First;

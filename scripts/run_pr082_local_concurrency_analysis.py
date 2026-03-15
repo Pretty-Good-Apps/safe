@@ -42,15 +42,17 @@ POSITIVE_CASES = [
     REPO_ROOT / "tests" / "concurrency" / "try_ops.safe",
     REPO_ROOT / "tests" / "concurrency" / "select_with_delay.safe",
     REPO_ROOT / "tests" / "concurrency" / "exclusive_variable.safe",
-    REPO_ROOT / "tests" / "concurrency" / "try_send_ownership.safe",
     REPO_ROOT / "tests" / "concurrency" / "task_global_owner.safe",
     REPO_ROOT / "tests" / "concurrency" / "channel_ceiling_priority.safe",
-    REPO_ROOT / "tests" / "concurrency" / "select_ownership_binding.safe",
 ]
 
 NEGATIVE_CASES = [
     REPO_ROOT / "tests" / "negative" / "neg_task_shared_variable.safe",
     REPO_ROOT / "tests" / "negative" / "neg_task_shared_subprogram_global.safe",
+    REPO_ROOT / "tests" / "concurrency" / "channel_access_type.safe",
+    REPO_ROOT / "tests" / "negative" / "neg_channel_access_component.safe",
+    REPO_ROOT / "tests" / "concurrency" / "try_send_ownership.safe",
+    REPO_ROOT / "tests" / "concurrency" / "select_ownership_binding.safe",
     REPO_ROOT / "tests" / "negative" / "neg_receive_target_not_null.safe",
     REPO_ROOT / "tests" / "negative" / "neg_try_receive_target_not_null.safe",
     REPO_ROOT / "tests" / "negative" / "neg_send_use_after_move.safe",
@@ -1692,60 +1694,6 @@ def build_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[str, 
                 env=env,
                 temp_root=temp_root,
                 label="task_shared_subprogram_global_parity",
-            ),
-            run_concurrency_parity_case(
-                safec=safec,
-                source=REPO_ROOT / "tests" / "negative" / "neg_receive_target_not_null.safe",
-                fixture_payload=build_receive_target_not_null_fixture(
-                    "tests/negative/neg_receive_target_not_null.safe",
-                    try_receive=False,
-                ),
-                env=env,
-                temp_root=temp_root,
-                label="receive_target_not_null_parity",
-            ),
-            run_concurrency_parity_case(
-                safec=safec,
-                source=REPO_ROOT / "tests" / "negative" / "neg_try_receive_target_not_null.safe",
-                fixture_payload=build_receive_target_not_null_fixture(
-                    "tests/negative/neg_try_receive_target_not_null.safe",
-                    try_receive=True,
-                ),
-                env=env,
-                temp_root=temp_root,
-                label="try_receive_target_not_null_parity",
-            ),
-            run_concurrency_parity_case(
-                safec=safec,
-                source=REPO_ROOT / "tests" / "negative" / "neg_send_use_after_move.safe",
-                fixture_payload=build_send_use_after_move_fixture(
-                    "tests/negative/neg_send_use_after_move.safe",
-                    try_send=False,
-                ),
-                env=env,
-                temp_root=temp_root,
-                label="send_use_after_move_parity",
-            ),
-            run_concurrency_parity_case(
-                safec=safec,
-                source=REPO_ROOT / "tests" / "negative" / "neg_try_send_use_after_move.safe",
-                fixture_payload=build_send_use_after_move_fixture(
-                    "tests/negative/neg_try_send_use_after_move.safe",
-                    try_send=True,
-                ),
-                env=env,
-                temp_root=temp_root,
-                label="try_send_use_after_move_parity",
-            ),
-            run_concurrency_parity_case(
-                safec=safec,
-                source=REPO_ROOT / "tests" / "negative" / "neg_try_send_reassign_without_check.safe",
-                fixture_payload=build_try_send_reassign_fixture(
-                    "tests/negative/neg_try_send_reassign_without_check.safe"
-                ),
-                env=env,
-                temp_root=temp_root,
-                label="try_send_reassign_without_check_parity",
             ),
         ]
 

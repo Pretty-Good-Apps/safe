@@ -1,8 +1,7 @@
 -- Test: select_ownership_binding
--- Description: Owning access binding in a select channel arm.
---   The bound variable enters the arm as a moved-in owner and can be
---   dereferenced immediately inside the arm body.
--- Expected: ACCEPT
+-- Description: Access-typed channel elements are illegal, including in select arms.
+--   The channel declaration is rejected before select-arm binding semantics apply.
+-- Expected: REJECT source_frontend_error
 
 package Select_Ownership_Binding is
 

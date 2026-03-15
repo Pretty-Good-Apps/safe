@@ -1,6 +1,6 @@
 -- Test: neg_try_send_use_after_move
--- Description: try_send freezes an owning source until Success is checked.
--- Expected: REJECT use_after_move
+-- Description: Access-typed channel elements are rejected before try_send ownership checks run.
+-- Expected: REJECT source_frontend_error
 
 package Neg_Try_Send_Use_After_Move is
 

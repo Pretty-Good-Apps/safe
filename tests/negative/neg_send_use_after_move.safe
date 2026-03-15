@@ -1,6 +1,6 @@
 -- Test: neg_send_use_after_move
--- Description: send moves an owning access source immediately.
--- Expected: REJECT use_after_move
+-- Description: Access-typed channel elements are rejected before send ownership-transfer checks run.
+-- Expected: REJECT source_frontend_error
 
 package Neg_Send_Use_After_Move is
 

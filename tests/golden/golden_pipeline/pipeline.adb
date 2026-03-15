@@ -17,6 +17,7 @@ package body Pipeline with SPARK_Mode => On is
          when Count > 0 is
       begin
          Value := Buffer (Head);
+         Buffer (Head) := Sample'First;
          if Head = Raw_Ch_Index'Last then
             Head := Raw_Ch_Index'First;
          else
@@ -41,10 +42,11 @@ package body Pipeline with SPARK_Mode => On is
          end if;
       end Try_Send;
 
-      procedure Try_Receive (Value : out Sample; Success : out Boolean) is
+      procedure Try_Receive (Value : in out Sample; Success : out Boolean) is
       begin
          if Count > 0 then
             Value := Buffer (Head);
+            Buffer (Head) := Sample'First;
             if Head = Raw_Ch_Index'Last then
                Head := Raw_Ch_Index'First;
             else
@@ -53,7 +55,6 @@ package body Pipeline with SPARK_Mode => On is
             Count := Count - 1;
             Success := True;
          else
-            Value := Sample'First;
             Success := False;
          end if;
       end Try_Receive;
@@ -76,6 +77,7 @@ package body Pipeline with SPARK_Mode => On is
          when Count > 0 is
       begin
          Value := Buffer (Head);
+         Buffer (Head) := Sample'First;
          if Head = Filtered_Ch_Index'Last then
             Head := Filtered_Ch_Index'First;
          else
@@ -100,10 +102,11 @@ package body Pipeline with SPARK_Mode => On is
          end if;
       end Try_Send;
 
-      procedure Try_Receive (Value : out Sample; Success : out Boolean) is
+      procedure Try_Receive (Value : in out Sample; Success : out Boolean) is
       begin
          if Count > 0 then
             Value := Buffer (Head);
+            Buffer (Head) := Sample'First;
             if Head = Filtered_Ch_Index'Last then
                Head := Filtered_Ch_Index'First;
             else
@@ -112,7 +115,6 @@ package body Pipeline with SPARK_Mode => On is
             Count := Count - 1;
             Success := True;
          else
-            Value := Sample'First;
             Success := False;
          end if;
       end Try_Receive;

@@ -366,136 +366,6 @@
         "stderr": "",
         "stdout": "validate-mir: OK ($TMPDIR/mir/task_shared_subprogram_global_parity.json)\n"
       }
-    },
-    {
-      "analyze_first": {
-        "message": "move target 'Target' is not provably null",
-        "path": "tests/negative/neg_receive_target_not_null.safe",
-        "reason": "move_target_not_null"
-      },
-      "check_first": {
-        "message": "move target 'Target' is not provably null",
-        "path": "tests/negative/neg_receive_target_not_null.safe",
-        "reason": "move_target_not_null"
-      },
-      "fixture": "mir/receive_target_not_null_parity.json",
-      "name": "receive_target_not_null_parity",
-      "source": "tests/negative/neg_receive_target_not_null.safe",
-      "validate_mir": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "validate-mir",
-          "$TMPDIR/mir/receive_target_not_null_parity.json"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 0,
-        "stderr": "",
-        "stdout": "validate-mir: OK ($TMPDIR/mir/receive_target_not_null_parity.json)\n"
-      }
-    },
-    {
-      "analyze_first": {
-        "message": "move target 'Target' is not provably null",
-        "path": "tests/negative/neg_try_receive_target_not_null.safe",
-        "reason": "move_target_not_null"
-      },
-      "check_first": {
-        "message": "move target 'Target' is not provably null",
-        "path": "tests/negative/neg_try_receive_target_not_null.safe",
-        "reason": "move_target_not_null"
-      },
-      "fixture": "mir/try_receive_target_not_null_parity.json",
-      "name": "try_receive_target_not_null_parity",
-      "source": "tests/negative/neg_try_receive_target_not_null.safe",
-      "validate_mir": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "validate-mir",
-          "$TMPDIR/mir/try_receive_target_not_null_parity.json"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 0,
-        "stderr": "",
-        "stdout": "validate-mir: OK ($TMPDIR/mir/try_receive_target_not_null_parity.json)\n"
-      }
-    },
-    {
-      "analyze_first": {
-        "message": "dereference of moved access value",
-        "path": "tests/negative/neg_send_use_after_move.safe",
-        "reason": "use_after_move"
-      },
-      "check_first": {
-        "message": "dereference of moved access value",
-        "path": "tests/negative/neg_send_use_after_move.safe",
-        "reason": "use_after_move"
-      },
-      "fixture": "mir/send_use_after_move_parity.json",
-      "name": "send_use_after_move_parity",
-      "source": "tests/negative/neg_send_use_after_move.safe",
-      "validate_mir": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "validate-mir",
-          "$TMPDIR/mir/send_use_after_move_parity.json"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 0,
-        "stderr": "",
-        "stdout": "validate-mir: OK ($TMPDIR/mir/send_use_after_move_parity.json)\n"
-      }
-    },
-    {
-      "analyze_first": {
-        "message": "dereference of moved access value",
-        "path": "tests/negative/neg_try_send_use_after_move.safe",
-        "reason": "use_after_move"
-      },
-      "check_first": {
-        "message": "dereference of moved access value",
-        "path": "tests/negative/neg_try_send_use_after_move.safe",
-        "reason": "use_after_move"
-      },
-      "fixture": "mir/try_send_use_after_move_parity.json",
-      "name": "try_send_use_after_move_parity",
-      "source": "tests/negative/neg_try_send_use_after_move.safe",
-      "validate_mir": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "validate-mir",
-          "$TMPDIR/mir/try_send_use_after_move_parity.json"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 0,
-        "stderr": "",
-        "stdout": "validate-mir: OK ($TMPDIR/mir/try_send_use_after_move_parity.json)\n"
-      }
-    },
-    {
-      "analyze_first": {
-        "message": "move target 'Source' is not provably null",
-        "path": "tests/negative/neg_try_send_reassign_without_check.safe",
-        "reason": "move_target_not_null"
-      },
-      "check_first": {
-        "message": "move target 'Source' is not provably null",
-        "path": "tests/negative/neg_try_send_reassign_without_check.safe",
-        "reason": "move_target_not_null"
-      },
-      "fixture": "mir/try_send_reassign_without_check_parity.json",
-      "name": "try_send_reassign_without_check_parity",
-      "source": "tests/negative/neg_try_send_reassign_without_check.safe",
-      "validate_mir": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "validate-mir",
-          "$TMPDIR/mir/try_send_reassign_without_check_parity.json"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 0,
-        "stderr": "",
-        "stdout": "validate-mir: OK ($TMPDIR/mir/try_send_reassign_without_check_parity.json)\n"
-      }
     }
   ],
   "deterministic": true,
@@ -548,18 +418,102 @@
           "compiler_impl/bin/safec",
           "check",
           "--diag-json",
+          "tests/concurrency/channel_access_type.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"channel element type shall not be an access type or a composite type containing an access-type subcomponent\",\"path\":\"tests/concurrency/channel_access_type.safe\",\"span\":{\"start_line\":16,\"start_col\":22,\"end_line\":16,\"end_col\":32},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "expected_reason": "source_frontend_error",
+      "first_diagnostic": {
+        "message": "channel element type shall not be an access type or a composite type containing an access-type subcomponent",
+        "path": "tests/concurrency/channel_access_type.safe",
+        "reason": "source_frontend_error"
+      },
+      "source": "tests/concurrency/channel_access_type.safe"
+    },
+    {
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/negative/neg_channel_access_component.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"channel element type shall not be an access type or a composite type containing an access-type subcomponent\",\"path\":\"tests/negative/neg_channel_access_component.safe\",\"span\":{\"start_line\":17,\"start_col\":22,\"end_line\":17,\"end_col\":29},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "expected_reason": "source_frontend_error",
+      "first_diagnostic": {
+        "message": "channel element type shall not be an access type or a composite type containing an access-type subcomponent",
+        "path": "tests/negative/neg_channel_access_component.safe",
+        "reason": "source_frontend_error"
+      },
+      "source": "tests/negative/neg_channel_access_component.safe"
+    },
+    {
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/concurrency/try_send_ownership.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"channel element type shall not be an access type or a composite type containing an access-type subcomponent\",\"path\":\"tests/concurrency/try_send_ownership.safe\",\"span\":{\"start_line\":16,\"start_col\":22,\"end_line\":16,\"end_col\":32},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "expected_reason": "source_frontend_error",
+      "first_diagnostic": {
+        "message": "channel element type shall not be an access type or a composite type containing an access-type subcomponent",
+        "path": "tests/concurrency/try_send_ownership.safe",
+        "reason": "source_frontend_error"
+      },
+      "source": "tests/concurrency/try_send_ownership.safe"
+    },
+    {
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/concurrency/select_ownership_binding.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "",
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"channel element type shall not be an access type or a composite type containing an access-type subcomponent\",\"path\":\"tests/concurrency/select_ownership_binding.safe\",\"span\":{\"start_line\":14,\"start_col\":22,\"end_line\":14,\"end_col\":32},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
+      },
+      "expected_reason": "source_frontend_error",
+      "first_diagnostic": {
+        "message": "channel element type shall not be an access type or a composite type containing an access-type subcomponent",
+        "path": "tests/concurrency/select_ownership_binding.safe",
+        "reason": "source_frontend_error"
+      },
+      "source": "tests/concurrency/select_ownership_binding.safe"
+    },
+    {
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
           "tests/negative/neg_receive_target_not_null.safe"
         ],
         "cwd": "$REPO_ROOT",
         "returncode": 1,
         "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"move_target_not_null\",\"message\":\"move target 'Target' is not provably null\",\"path\":\"tests/negative/neg_receive_target_not_null.safe\",\"span\":{\"start_line\":18,\"start_col\":7,\"end_line\":18,\"end_col\":30},\"highlight_span\":{\"start_line\":18,\"start_col\":7,\"end_line\":18,\"end_col\":30},\"notes\":[\"static analysis determined state 'NonNull' for the move target.\",\"rule: Safe \u00a72.3.2 (target of move must be provably null)\"],\"suggestions\":[]}]}\n"
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"channel element type shall not be an access type or a composite type containing an access-type subcomponent\",\"path\":\"tests/negative/neg_receive_target_not_null.safe\",\"span\":{\"start_line\":13,\"start_col\":22,\"end_line\":13,\"end_col\":32},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
       },
-      "expected_reason": "move_target_not_null",
+      "expected_reason": "source_frontend_error",
       "first_diagnostic": {
-        "message": "move target 'Target' is not provably null",
+        "message": "channel element type shall not be an access type or a composite type containing an access-type subcomponent",
         "path": "tests/negative/neg_receive_target_not_null.safe",
-        "reason": "move_target_not_null"
+        "reason": "source_frontend_error"
       },
       "source": "tests/negative/neg_receive_target_not_null.safe"
     },
@@ -574,13 +528,13 @@
         "cwd": "$REPO_ROOT",
         "returncode": 1,
         "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"move_target_not_null\",\"message\":\"move target 'Target' is not provably null\",\"path\":\"tests/negative/neg_try_receive_target_not_null.safe\",\"span\":{\"start_line\":19,\"start_col\":7,\"end_line\":19,\"end_col\":43},\"highlight_span\":{\"start_line\":19,\"start_col\":7,\"end_line\":19,\"end_col\":43},\"notes\":[\"static analysis determined state 'NonNull' for the move target.\",\"rule: Safe \u00a72.3.2 (target of move must be provably null)\"],\"suggestions\":[]}]}\n"
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"channel element type shall not be an access type or a composite type containing an access-type subcomponent\",\"path\":\"tests/negative/neg_try_receive_target_not_null.safe\",\"span\":{\"start_line\":13,\"start_col\":22,\"end_line\":13,\"end_col\":32},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
       },
-      "expected_reason": "move_target_not_null",
+      "expected_reason": "source_frontend_error",
       "first_diagnostic": {
-        "message": "move target 'Target' is not provably null",
+        "message": "channel element type shall not be an access type or a composite type containing an access-type subcomponent",
         "path": "tests/negative/neg_try_receive_target_not_null.safe",
-        "reason": "move_target_not_null"
+        "reason": "source_frontend_error"
       },
       "source": "tests/negative/neg_try_receive_target_not_null.safe"
     },
@@ -595,13 +549,13 @@
         "cwd": "$REPO_ROOT",
         "returncode": 1,
         "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"use_after_move\",\"message\":\"dereference of moved access value\",\"path\":\"tests/negative/neg_send_use_after_move.safe\",\"span\":{\"start_line\":19,\"start_col\":7,\"end_line\":19,\"end_col\":12},\"highlight_span\":{\"start_line\":19,\"start_col\":7,\"end_line\":19,\"end_col\":12},\"notes\":[\"the access value was moved before this dereference.\",\"rule: D27 Rule 4 (Not-Null Dereference)\"],\"suggestions\":[]}]}\n"
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"channel element type shall not be an access type or a composite type containing an access-type subcomponent\",\"path\":\"tests/negative/neg_send_use_after_move.safe\",\"span\":{\"start_line\":13,\"start_col\":22,\"end_line\":13,\"end_col\":32},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
       },
-      "expected_reason": "use_after_move",
+      "expected_reason": "source_frontend_error",
       "first_diagnostic": {
-        "message": "dereference of moved access value",
+        "message": "channel element type shall not be an access type or a composite type containing an access-type subcomponent",
         "path": "tests/negative/neg_send_use_after_move.safe",
-        "reason": "use_after_move"
+        "reason": "source_frontend_error"
       },
       "source": "tests/negative/neg_send_use_after_move.safe"
     },
@@ -616,13 +570,13 @@
         "cwd": "$REPO_ROOT",
         "returncode": 1,
         "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"use_after_move\",\"message\":\"dereference of moved access value\",\"path\":\"tests/negative/neg_try_send_use_after_move.safe\",\"span\":{\"start_line\":20,\"start_col\":7,\"end_line\":20,\"end_col\":12},\"highlight_span\":{\"start_line\":20,\"start_col\":7,\"end_line\":20,\"end_col\":12},\"notes\":[\"the access value was moved before this dereference.\",\"rule: D27 Rule 4 (Not-Null Dereference)\"],\"suggestions\":[]}]}\n"
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"channel element type shall not be an access type or a composite type containing an access-type subcomponent\",\"path\":\"tests/negative/neg_try_send_use_after_move.safe\",\"span\":{\"start_line\":13,\"start_col\":22,\"end_line\":13,\"end_col\":32},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
       },
-      "expected_reason": "use_after_move",
+      "expected_reason": "source_frontend_error",
       "first_diagnostic": {
-        "message": "dereference of moved access value",
+        "message": "channel element type shall not be an access type or a composite type containing an access-type subcomponent",
         "path": "tests/negative/neg_try_send_use_after_move.safe",
-        "reason": "use_after_move"
+        "reason": "source_frontend_error"
       },
       "source": "tests/negative/neg_try_send_use_after_move.safe"
     },
@@ -637,13 +591,13 @@
         "cwd": "$REPO_ROOT",
         "returncode": 1,
         "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"move_target_not_null\",\"message\":\"move target 'Source' is not provably null\",\"path\":\"tests/negative/neg_try_send_reassign_without_check.safe\",\"span\":{\"start_line\":22,\"start_col\":7,\"end_line\":22,\"end_col\":44},\"highlight_span\":{\"start_line\":22,\"start_col\":7,\"end_line\":22,\"end_col\":44},\"notes\":[\"static analysis determined state 'Moved' for the move target.\",\"rule: Safe \u00a72.3.2 (target of move must be provably null)\"],\"suggestions\":[]}]}\n"
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"channel element type shall not be an access type or a composite type containing an access-type subcomponent\",\"path\":\"tests/negative/neg_try_send_reassign_without_check.safe\",\"span\":{\"start_line\":13,\"start_col\":22,\"end_line\":13,\"end_col\":32},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
       },
-      "expected_reason": "move_target_not_null",
+      "expected_reason": "source_frontend_error",
       "first_diagnostic": {
-        "message": "move target 'Source' is not provably null",
+        "message": "channel element type shall not be an access type or a composite type containing an access-type subcomponent",
         "path": "tests/negative/neg_try_send_reassign_without_check.safe",
-        "reason": "move_target_not_null"
+        "reason": "source_frontend_error"
       },
       "source": "tests/negative/neg_try_send_reassign_without_check.safe"
     },
@@ -658,13 +612,13 @@
         "cwd": "$REPO_ROOT",
         "returncode": 1,
         "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"move_target_not_null\",\"message\":\"move target 'Source' is not provably null\",\"path\":\"tests/negative/neg_try_send_success_overwrite.safe\",\"span\":{\"start_line\":22,\"start_col\":7,\"end_line\":22,\"end_col\":44},\"highlight_span\":{\"start_line\":22,\"start_col\":7,\"end_line\":22,\"end_col\":44},\"notes\":[\"static analysis determined state 'Moved' for the move target.\",\"rule: Safe \u00a72.3.2 (target of move must be provably null)\"],\"suggestions\":[]}]}\n"
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"channel element type shall not be an access type or a composite type containing an access-type subcomponent\",\"path\":\"tests/negative/neg_try_send_success_overwrite.safe\",\"span\":{\"start_line\":13,\"start_col\":22,\"end_line\":13,\"end_col\":32},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
       },
-      "expected_reason": "move_target_not_null",
+      "expected_reason": "source_frontend_error",
       "first_diagnostic": {
-        "message": "move target 'Source' is not provably null",
+        "message": "channel element type shall not be an access type or a composite type containing an access-type subcomponent",
         "path": "tests/negative/neg_try_send_success_overwrite.safe",
-        "reason": "move_target_not_null"
+        "reason": "source_frontend_error"
       },
       "source": "tests/negative/neg_try_send_success_overwrite.safe"
     },
@@ -679,13 +633,13 @@
         "cwd": "$REPO_ROOT",
         "returncode": 1,
         "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"move_source_not_nonnull\",\"message\":\"move source 'Source' is not provably non-null\",\"path\":\"tests/negative/neg_try_send_compound_else_use.safe\",\"span\":{\"start_line\":27,\"start_col\":10,\"end_line\":27,\"end_col\":30},\"highlight_span\":{\"start_line\":27,\"start_col\":10,\"end_line\":27,\"end_col\":30},\"notes\":[\"static analysis determined state 'MaybeNull' at this move site.\",\"rule: Safe \u00a72.3.2 (source of move must be provably non-null)\"],\"suggestions\":[]}]}\n"
+        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"source_frontend_error\",\"message\":\"channel element type shall not be an access type or a composite type containing an access-type subcomponent\",\"path\":\"tests/negative/neg_try_send_compound_else_use.safe\",\"span\":{\"start_line\":13,\"start_col\":22,\"end_line\":13,\"end_col\":32},\"highlight_span\":null,\"notes\":[],\"suggestions\":[]}]}\n"
       },
-      "expected_reason": "move_source_not_nonnull",
+      "expected_reason": "source_frontend_error",
       "first_diagnostic": {
-        "message": "move source 'Source' is not provably non-null",
+        "message": "channel element type shall not be an access type or a composite type containing an access-type subcomponent",
         "path": "tests/negative/neg_try_send_compound_else_use.safe",
-        "reason": "move_source_not_nonnull"
+        "reason": "source_frontend_error"
       },
       "source": "tests/negative/neg_try_send_compound_else_use.safe"
     }
@@ -1453,90 +1407,6 @@
           "compiler_impl/bin/safec",
           "analyze-mir",
           "--diag-json",
-          "$TMPDIR/try_send_ownership/out/try_send_ownership.mir.json"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 0,
-        "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
-      },
-      "check": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "check",
-          "--diag-json",
-          "tests/concurrency/try_send_ownership.safe"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 0,
-        "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
-      },
-      "emit": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "emit",
-          "tests/concurrency/try_send_ownership.safe",
-          "--out-dir",
-          "$TMPDIR/try_send_ownership/out",
-          "--interface-dir",
-          "$TMPDIR/try_send_ownership/iface"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 0,
-        "stderr": "",
-        "stdout": ""
-      },
-      "source": "tests/concurrency/try_send_ownership.safe",
-      "validate_ast": {
-        "command": [
-          "python3",
-          "scripts/validate_ast_output.py",
-          "$TMPDIR/try_send_ownership/out/try_send_ownership.ast.json"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 0,
-        "stderr": "",
-        "stdout": "$TMPDIR/try_send_ownership/out/try_send_ownership.ast.json: OK\n"
-      },
-      "validate_contracts": {
-        "command": [
-          "python3",
-          "scripts/validate_output_contracts.py",
-          "--ast",
-          "$TMPDIR/try_send_ownership/out/try_send_ownership.ast.json",
-          "--typed",
-          "$TMPDIR/try_send_ownership/out/try_send_ownership.typed.json",
-          "--mir",
-          "$TMPDIR/try_send_ownership/out/try_send_ownership.mir.json",
-          "--safei",
-          "$TMPDIR/try_send_ownership/iface/try_send_ownership.safei.json",
-          "--source-path",
-          "tests/concurrency/try_send_ownership.safe"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 0,
-        "stderr": "",
-        "stdout": "output contracts: OK (try_send_ownership.ast.json, try_send_ownership.typed.json, try_send_ownership.mir.json, try_send_ownership.safei.json)\n"
-      },
-      "validate_mir": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "validate-mir",
-          "$TMPDIR/try_send_ownership/out/try_send_ownership.mir.json"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 0,
-        "stderr": "",
-        "stdout": "validate-mir: OK ($TMPDIR/try_send_ownership/out/try_send_ownership.mir.json)\n"
-      }
-    },
-    {
-      "analyze_mir": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "analyze-mir",
-          "--diag-json",
           "$TMPDIR/task_global_owner/out/task_global_owner.mir.json"
         ],
         "cwd": "$REPO_ROOT",
@@ -1698,94 +1568,10 @@
         "stderr": "",
         "stdout": "validate-mir: OK ($TMPDIR/channel_ceiling_priority/out/channel_ceiling_priority.mir.json)\n"
       }
-    },
-    {
-      "analyze_mir": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "analyze-mir",
-          "--diag-json",
-          "$TMPDIR/select_ownership_binding/out/select_ownership_binding.mir.json"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 0,
-        "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
-      },
-      "check": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "check",
-          "--diag-json",
-          "tests/concurrency/select_ownership_binding.safe"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 0,
-        "stderr": "",
-        "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
-      },
-      "emit": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "emit",
-          "tests/concurrency/select_ownership_binding.safe",
-          "--out-dir",
-          "$TMPDIR/select_ownership_binding/out",
-          "--interface-dir",
-          "$TMPDIR/select_ownership_binding/iface"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 0,
-        "stderr": "",
-        "stdout": ""
-      },
-      "source": "tests/concurrency/select_ownership_binding.safe",
-      "validate_ast": {
-        "command": [
-          "python3",
-          "scripts/validate_ast_output.py",
-          "$TMPDIR/select_ownership_binding/out/select_ownership_binding.ast.json"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 0,
-        "stderr": "",
-        "stdout": "$TMPDIR/select_ownership_binding/out/select_ownership_binding.ast.json: OK\n"
-      },
-      "validate_contracts": {
-        "command": [
-          "python3",
-          "scripts/validate_output_contracts.py",
-          "--ast",
-          "$TMPDIR/select_ownership_binding/out/select_ownership_binding.ast.json",
-          "--typed",
-          "$TMPDIR/select_ownership_binding/out/select_ownership_binding.typed.json",
-          "--mir",
-          "$TMPDIR/select_ownership_binding/out/select_ownership_binding.mir.json",
-          "--safei",
-          "$TMPDIR/select_ownership_binding/iface/select_ownership_binding.safei.json",
-          "--source-path",
-          "tests/concurrency/select_ownership_binding.safe"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 0,
-        "stderr": "",
-        "stdout": "output contracts: OK (select_ownership_binding.ast.json, select_ownership_binding.typed.json, select_ownership_binding.mir.json, select_ownership_binding.safei.json)\n"
-      },
-      "validate_mir": {
-        "command": [
-          "compiler_impl/bin/safec",
-          "validate-mir",
-          "$TMPDIR/select_ownership_binding/out/select_ownership_binding.mir.json"
-        ],
-        "cwd": "$REPO_ROOT",
-        "returncode": 0,
-        "stderr": "",
-        "stdout": "validate-mir: OK ($TMPDIR/select_ownership_binding/out/select_ownership_binding.mir.json)\n"
-      }
     }
   ],
-  "repeat_sha256": "346323eff402741eba4a1dea2f569d7a4b43bdc91d43032daf206d6edb4b94b6",
-  "report_sha256": "346323eff402741eba4a1dea2f569d7a4b43bdc91d43032daf206d6edb4b94b6",
+  "repeat_sha256": "bc71546e0c23a64c8bca7fef89bb35bb6e31ab8610f6ca9574b291a277298059",
+  "report_sha256": "bc71546e0c23a64c8bca7fef89bb35bb6e31ab8610f6ca9574b291a277298059",
   "sequential_positive_regression_cases": [
     {
       "check": {

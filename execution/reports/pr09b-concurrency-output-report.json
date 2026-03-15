@@ -11,7 +11,9 @@
           "-c",
           "-P",
           "$TMPDIR/channel_pingpong-a/ada/build.gpr",
-          "ping_pong.adb"
+          "ping_pong.adb",
+          "-cargs",
+          "-gnatec=$TMPDIR/channel_pingpong-a/ada/gnat.adc"
         ],
         "cwd": "$REPO_ROOT/compiler_impl",
         "returncode": 0
@@ -22,10 +24,10 @@
             "sha256": "02f745f7b4743057317a8e6b81f29ef7431b7672dc8d5cdc4ea5550036d82daf"
           },
           "ping_pong.adb": {
-            "sha256": "59c683586cbe114bf45ffe26442ce0102490f41660feb3b3764bf177f8edb25e"
+            "sha256": "c7b64db5ff8643edb989e82927fd3ba0b6ecb3292ebb91427a08be2a12988efe"
           },
           "ping_pong.ads": {
-            "sha256": "6d12f45977e6ee5722bb6c017a6a9e2902409232a5945b2bf8c2973e6d602b4d"
+            "sha256": "2f1e0505518f425138eec5c2f6377fa0fa3930f670427410bac652b4499b35c8"
           }
         },
         "json_and_interface": {
@@ -69,7 +71,9 @@
           "-c",
           "-P",
           "$TMPDIR/channel_pipeline-a/ada/build.gpr",
-          "pipeline.adb"
+          "pipeline.adb",
+          "-cargs",
+          "-gnatec=$TMPDIR/channel_pipeline-a/ada/gnat.adc"
         ],
         "cwd": "$REPO_ROOT/compiler_impl",
         "returncode": 0
@@ -80,10 +84,10 @@
             "sha256": "02f745f7b4743057317a8e6b81f29ef7431b7672dc8d5cdc4ea5550036d82daf"
           },
           "pipeline.adb": {
-            "sha256": "cf1c2ca3e3b0d122cff991896c1c20e26c2a7aeffa80892888a1fd297e3edc2e"
+            "sha256": "41af125026a39475bdda637068bd4ee97f55b276874c76d6f63e904562dc1802"
           },
           "pipeline.ads": {
-            "sha256": "b1997e978d56a6fc96817a42e7debbd64b5017a42d39a69b3dc8e8bd05efb944"
+            "sha256": "c283bd2d26c96be3637c540dbc40ea41e7483e5764e285d8c3466663c54d470e"
           }
         },
         "json_and_interface": {
@@ -127,7 +131,9 @@
           "-c",
           "-P",
           "$TMPDIR/select_with_delay-a/ada/build.gpr",
-          "select_with_delay.adb"
+          "select_with_delay.adb",
+          "-cargs",
+          "-gnatec=$TMPDIR/select_with_delay-a/ada/gnat.adc"
         ],
         "cwd": "$REPO_ROOT/compiler_impl",
         "returncode": 0
@@ -138,10 +144,10 @@
             "sha256": "02f745f7b4743057317a8e6b81f29ef7431b7672dc8d5cdc4ea5550036d82daf"
           },
           "select_with_delay.adb": {
-            "sha256": "9346c1f1ec2a7dab276fffc994d20fc761be3f8e6f448143afd5f82b17f0c9fb"
+            "sha256": "a34053595b7cf7aa03be54cc1798c840b00927f0ea43183e7e2e8361d96db29e"
           },
           "select_with_delay.ads": {
-            "sha256": "7f05908e850a9113f4f7122363384cc1a70fb0236b9a31d4e058bae2cbbb513a"
+            "sha256": "1c6a0e9966963a1be61aa8b82288b1c339a11a1043ad2cee0fedc565d06b36bd"
           }
         },
         "json_and_interface": {
@@ -168,74 +174,17 @@
         "select_with_delay.adb": [
           "Select_Polls",
           "Try_Receive (",
-          "delay 0.001;"
+          "delay 0.001;",
+          "Success := False;"
         ],
         "select_with_delay.ads": [
           "protected type",
-          "task "
-        ]
-      }
-    },
-    {
-      "compile": {
-        "command": [
-          "alr",
-          "exec",
-          "--",
-          "gprbuild",
-          "-c",
-          "-P",
-          "$TMPDIR/channel_access_type-a/ada/build.gpr",
-          "channel_access_type.adb"
-        ],
-        "cwd": "$REPO_ROOT/compiler_impl",
-        "returncode": 0
-      },
-      "determinism": {
-        "ada": {
-          "channel_access_type.adb": {
-            "sha256": "b97d0481e8cc79ce835883768386658b8f2851164d6b245937df716bd92c5d39"
-          },
-          "channel_access_type.ads": {
-            "sha256": "014e01ded5967824c395017f733dca15c23192205a58650cbdbd35c7e7ea5ed3"
-          },
-          "gnat.adc": {
-            "sha256": "02f745f7b4743057317a8e6b81f29ef7431b7672dc8d5cdc4ea5550036d82daf"
-          }
-        },
-        "json_and_interface": {
-          "channel_access_type.ast.json": {
-            "sha256": "3f8636eb2ab1560b38c1047e66ee35338ad567a44e75ed7b05ea29e5c4030ae2"
-          },
-          "channel_access_type.mir.json": {
-            "sha256": "4a4db92c2640247cffe3cb96fe7c133530c169f77a343f405cc04203e619aac9"
-          },
-          "channel_access_type.safei.json": {
-            "sha256": "b1ae627fe2d8b3776fbf5281d67156c421677dc663473a2d9da6a2a55bb2af19"
-          },
-          "channel_access_type.typed.json": {
-            "sha256": "e91908492e0010f970247c8287957e4ca690d18639b00b8d9b3aeba036715c2c"
-          }
-        }
-      },
-      "fixture": "tests/concurrency/channel_access_type.safe",
-      "gnat_adc": {
-        "content": "pragma Partition_Elaboration_Policy(Sequential);\npragma Profile(Jorvik);\n",
-        "path": "gnat.adc"
-      },
-      "structural_assertions": {
-        "channel_access_type.adb": [
-          ".Send (",
-          ".Receive (",
-          "null"
-        ],
-        "channel_access_type.ads": [
-          "protected type",
-          "task "
+          "task ",
+          "Try_Receive (Value : in out Message; Success : out Boolean);"
         ]
       }
     }
   ],
-  "repeat_sha256": "3ec342d6215e0c161425204bb1c4f4875de3db5ef1013d52d1859f75e769bdf1",
-  "report_sha256": "3ec342d6215e0c161425204bb1c4f4875de3db5ef1013d52d1859f75e769bdf1"
+  "repeat_sha256": "e97b69dc6eacdd4e5788941e40bd47acc7019fd9e923cc050e2faa3b763dcbe7",
+  "report_sha256": "e97b69dc6eacdd4e5788941e40bd47acc7019fd9e923cc050e2faa3b763dcbe7"
 }

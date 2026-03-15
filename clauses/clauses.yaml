@@ -1612,7 +1612,7 @@ clauses:
   notes: ''
 - id: "SAFE@468cf72:spec/04-tasks-and-channels.md#4.2.p14:a35bd0fa"
   text: |-
-    The element type shall be a definite type. A conforming implementation shall reject a channel whose element type is indefinite.
+    The element type shall be a definite type. A channel element type shall not be an access type, and shall not be a composite type that contains an access-type subcomponent. A conforming implementation shall reject a channel whose element type is indefinite or access-bearing.
   section: '4.2'
   section_title: Channel Declarations
   source_file: spec/04-tasks-and-channels.md
@@ -1737,7 +1737,7 @@ clauses:
   notes: send semantics
 - id: "SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p27a:8ed3c1d4"
   text: |-
-    If the element type is an owning access type, send performs a move: the source object becomes null after the send completes. A conforming implementation shall reject any subsequent dereference of the source object unless it has been reassigned or verified as non-null.
+    Because channel element types exclude access types and composite types containing access-type subcomponents, send never transfers ownership of a designated object through the channel. The value enqueued is a copy of the evaluated payload.
   section: '4.3'
   section_title: Channel Operations
   source_file: spec/04-tasks-and-channels.md
@@ -1746,9 +1746,8 @@ clauses:
   normative: true
   tags:
   - D28
-  - ownership
   tbd: false
-  notes: Ownership transfer on send
+  notes: Copy-only send semantics
 - id: "SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p28:ea6bd13c"
   text: |-
     receive Ch, Variable: Dequeue the front element of channel Ch into Variable. If Ch is empty, the current task blocks until an element becomes available.
@@ -1764,7 +1763,7 @@ clauses:
   notes: receive semantics
 - id: "SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p28a:4cb19779"
   text: |-
-    If the element type is an owning access type, receive performs a move from the channel into Variable. The null-before-move legality rule applies: Variable shall be provably null at the point of the receive.
+    Because channel element types exclude access types and composite types containing access-type subcomponents, receive never transfers ownership of a designated object through the channel. The dequeued element is copied into Variable.
   section: '4.3'
   section_title: Channel Operations
   source_file: spec/04-tasks-and-channels.md
@@ -1773,9 +1772,8 @@ clauses:
   normative: true
   tags:
   - D28
-  - ownership
   tbd: false
-  notes: Ownership transfer on receive
+  notes: Copy-only receive semantics
 - id: "SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29:f792d704"
   text: |-
     try_send Ch, Value, Success: Attempt to enqueue Value into channel Ch without blocking. The operation is performed atomically.
@@ -1791,7 +1789,7 @@ clauses:
   notes: try_send semantics
 - id: "SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29a:8d3f2225"
   text: |-
-    If the element type is an owning access type, the move of Value occurs only when the enqueue succeeds. The implementation shall ensure that the evaluation of Value and the fullness check are performed atomically.
+    Because channel element types exclude access-bearing elements, try_send never conditionally transfers ownership. When Success is True, a copy of Value is enqueued. When Success is False, no element is enqueued and the source expression's ownership state is unchanged.
   section: '4.3'
   section_title: Channel Operations
   source_file: spec/04-tasks-and-channels.md
@@ -1800,12 +1798,11 @@ clauses:
   normative: true
   tags:
   - D28
-  - ownership
   tbd: false
-  notes: Move-only-on-success for try_send
+  notes: Copy-only success semantics for try_send
 - id: "SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29b:7121ccd7"
   text: |-
-    For owning access types, the implementation shall not null the source variable until the enqueue is confirmed to succeed.
+    The expression Value is evaluated before the atomic fullness check. If the channel is not full, the already-evaluated value is enqueued. If the channel is full, the evaluated value is discarded. No ownership transfer occurs because access-bearing channel element types are illegal.
   section: '4.3'
   section_title: Channel Operations
   source_file: spec/04-tasks-and-channels.md
@@ -1814,12 +1811,11 @@ clauses:
   normative: true
   tags:
   - D28
-  - ownership
   tbd: false
-  notes: Deferred nulling for try_send
+  notes: Evaluation order for copy-only try_send
 - id: "SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p30:62619161"
   text: |-
-    try_receive Ch, Variable, Success: Attempt to dequeue the front element of channel Ch without blocking. Variable shall be provably null at the point of the try_receive.
+    try_receive Ch, Variable, Success: Attempt to dequeue the front element of channel Ch without blocking. If Ch is not empty, the element is dequeued into Variable and Success is set to True. If Ch is empty, Variable is unchanged and Success is set to False. Because channel element types exclude access-bearing values, try_receive never transfers ownership through the channel.
   section: '4.3'
   section_title: Channel Operations
   source_file: spec/04-tasks-and-channels.md
@@ -1828,9 +1824,8 @@ clauses:
   normative: true
   tags:
   - D28
-  - ownership
   tbd: false
-  notes: try_receive semantics
+  notes: Copy-only try_receive semantics
 - id: "SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p31:a7297e97"
   text: |-
     Channel operations are atomic with respect to other channel operations on the same channel. The implementation shall ensure that concurrent send and receive operations on the same channel do not corrupt the channel state.
@@ -1846,7 +1841,7 @@ clauses:
   notes: Channel atomicity
 - id: "SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p31a:a621d08c"
   text: |-
-    At any point during program execution, each designated object reachable through an owning access value in a channel element is owned by exactly one entity.
+    Because channel element types exclude access types and composite types containing access-type subcomponents, queued channel elements never own designated objects. Channel state therefore cannot alias task-owned heap objects through channel storage.
   section: '4.3'
   section_title: Channel Operations
   source_file: spec/04-tasks-and-channels.md
@@ -1855,9 +1850,8 @@ clauses:
   normative: true
   tags:
   - D28
-  - ownership
   tbd: false
-  notes: Channel ownership invariant
+  notes: Channel storage excludes ownership-bearing elements
 - id: "SAFE@468cf72:spec/04-tasks-and-channels.md#4.4.p33:7a94ab51"
   text: A select statement shall contain at least one channel_arm.
   section: '4.4'

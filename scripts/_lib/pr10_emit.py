@@ -154,7 +154,7 @@ SELECTED_EMITTED_CORPUS: list[dict[str, Any]] = [
         "coverage": "concurrency",
         "kind": "concurrency",
         "feature": "Select-with-delay emitted polling subset",
-        "matrix_note": "One receive arm plus one delay arm proved through the emitted polling-based lowering, not source-level blocking fairness or timing semantics.",
+        "matrix_note": "Frozen PR10 coverage proves one receive arm plus one delay arm, and supplemental hardening additionally proves a two-channel-arm success-path variant. Both are proved through the emitted polling-based lowering, not source-level blocking fairness or timing semantics.",
         "source_fragments": [
             "select",
             "when Item : Message from Msg_Ch then",
@@ -199,15 +199,7 @@ def corpus_paths() -> list[Path]:
     return [REPO_ROOT / item["fixture"] for item in SELECTED_EMITTED_CORPUS]
 
 
-def normalize_source_text(text: str) -> str:
-    return " ".join(text.split())
-
-
-def normalized_source_fragments(item: dict[str, Any]) -> Sequence[str]:
-    return tuple(normalize_source_text(fragment) for fragment in item["source_fragments"])
-
-
-def emit_selected_fixture(
+def emit_fixture(
     *,
     source: Path,
     root: Path,
@@ -235,6 +227,23 @@ def emit_selected_fixture(
         "iface_dir": iface_dir,
         "ada_dir": ada_dir,
     }
+
+
+def normalize_source_text(text: str) -> str:
+    return " ".join(text.split())
+
+
+def normalized_source_fragments(item: dict[str, Any]) -> Sequence[str]:
+    return tuple(normalize_source_text(fragment) for fragment in item["source_fragments"])
+
+
+def emit_selected_fixture(
+    *,
+    source: Path,
+    root: Path,
+    env: dict[str, str],
+) -> dict[str, Path]:
+    return emit_fixture(source=source, root=root, env=env)
 
 
 def gnatprove_command(
@@ -274,23 +283,35 @@ def parse_summary_cell(cell: str) -> dict[str, Any]:
 def parse_gnatprove_summary(text: str) -> dict[str, Any]:
     lines = text.splitlines()
     header_index = None
+    expected_header = [
+        "SPARK Analysis results",
+        "Total",
+        "Flow",
+        "Provers",
+        "Justified",
+        "Unproved",
+    ]
     for index, line in enumerate(lines):
-        if line.strip().startswith("SPARK Analysis results"):
+        parts = re.split(r"\s{2,}", line.strip())
+        if parts == expected_header:
             header_index = index
             break
-    require(header_index is not None, "missing GNATprove summary table")
+    require(header_index is not None, "missing GNATprove summary table header")
 
     rows: dict[str, dict[str, dict[str, Any]]] = {}
-    for line in lines[header_index + 2 :]:
+    saw_row = False
+    for line in lines[header_index + 1 :]:
         stripped = line.strip()
         if not stripped:
+            if saw_row:
+                break
             continue
         if set(stripped) == {"-"}:
             continue
         parts = re.split(r"\s{2,}", stripped)
-        if len(parts) != 6:
-            continue
+        require(len(parts) == 6, f"malformed GNATprove summary row: {stripped!r}")
         label, total, flow, provers, justified, unproved = parts
+        require(label not in rows, f"duplicate GNATprove summary row: {label}")
         rows[label] = {
             "total": parse_summary_cell(total),
             "flow": parse_summary_cell(flow),
@@ -298,6 +319,7 @@ def parse_gnatprove_summary(text: str) -> dict[str, Any]:
             "justified": parse_summary_cell(justified),
             "unproved": parse_summary_cell(unproved),
         }
+        saw_row = True
 
     require("Total" in rows, "GNATprove summary missing Total row")
     return {
@@ -332,14 +354,14 @@ def gnatprove_emitted_ada(
     }
 
 
-def compile_and_prove_fixture(
+def compile_and_prove_source(
     *,
     source: Path,
     root: Path,
     env: dict[str, str],
     mode: str,
 ) -> dict[str, Any]:
-    outputs = emit_selected_fixture(source=source, root=root, env=env)
+    outputs = emit_fixture(source=source, root=root, env=env)
     compile_result = compile_emitted_ada(
         ada_dir=outputs["ada_dir"],
         env=env,
@@ -365,3 +387,18 @@ def compile_and_prove_fixture(
         "compile": compile_result,
         mode: proof_result,
     }
+
+
+def compile_and_prove_fixture(
+    *,
+    source: Path,
+    root: Path,
+    env: dict[str, str],
+    mode: str,
+) -> dict[str, Any]:
+    return compile_and_prove_source(
+        source=source,
+        root=root,
+        env=env,
+        mode=mode,
+    )

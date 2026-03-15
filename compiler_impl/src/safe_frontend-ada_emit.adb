@@ -129,6 +129,7 @@ package body Safe_Frontend.Ada_Emit is
      (Buffer : in out SU.Unbounded_String;
       State  : Emit_State;
       Depth  : Natural);
+   function Has_Active_Cleanup_Items (State : Emit_State) return Boolean;
    function Starts_With (Text : String; Prefix : String) return Boolean;
    function Normalize_Aspect_Name
      (Subprogram_Name : String;
@@ -235,6 +236,10 @@ package body Safe_Frontend.Ada_Emit is
    function Statement_Falls_Through
      (Item : CM.Statement_Access) return Boolean;
    function Statements_Fall_Through
+     (Statements : CM.Statement_Access_Vectors.Vector) return Boolean;
+   function Statement_Contains_Exit
+     (Item : CM.Statement_Access) return Boolean;
+   function Statements_Contain_Exit
      (Statements : CM.Statement_Access_Vectors.Vector) return Boolean;
    function Loop_Variant_Image
      (Unit      : CM.Resolved_Unit;
@@ -508,6 +513,20 @@ package body Safe_Frontend.Ada_Emit is
          end;
       end loop;
    end Render_Active_Cleanup;
+
+   function Has_Active_Cleanup_Items (State : Emit_State) return Boolean is
+   begin
+      if State.Cleanup_Stack.Is_Empty then
+         return False;
+      end if;
+
+      for Frame of State.Cleanup_Stack loop
+         if not Frame.Items.Is_Empty then
+            return True;
+         end if;
+      end loop;
+      return False;
+   end Has_Active_Cleanup_Items;
 
    function Starts_With (Text : String; Prefix : String) return Boolean is
    begin
@@ -2113,6 +2132,46 @@ package body Safe_Frontend.Ada_Emit is
       return "";
    end Render_Discrete_Range;
 
+   function Statement_Contains_Exit
+     (Item : CM.Statement_Access) return Boolean
+   is
+   begin
+      if Item = null then
+         return False;
+      end if;
+
+      case Item.Kind is
+         when CM.Stmt_Exit =>
+            return True;
+         when CM.Stmt_If =>
+            if Statements_Contain_Exit (Item.Then_Stmts) then
+               return True;
+            end if;
+            for Part of Item.Elsifs loop
+               if Statements_Contain_Exit (Part.Statements) then
+                  return True;
+               end if;
+            end loop;
+            return Item.Has_Else and then Statements_Contain_Exit (Item.Else_Stmts);
+         when CM.Stmt_Block | CM.Stmt_Loop | CM.Stmt_While | CM.Stmt_For =>
+            return Statements_Contain_Exit (Item.Body_Stmts);
+         when others =>
+            return False;
+      end case;
+   end Statement_Contains_Exit;
+
+   function Statements_Contain_Exit
+     (Statements : CM.Statement_Access_Vectors.Vector) return Boolean
+   is
+   begin
+      for Item of Statements loop
+         if Statement_Contains_Exit (Item) then
+            return True;
+         end if;
+      end loop;
+      return False;
+   end Statements_Contain_Exit;
+
    function Statement_Falls_Through
      (Item : CM.Statement_Access) return Boolean
    is
@@ -2139,6 +2198,8 @@ package body Safe_Frontend.Ada_Emit is
             return Statements_Fall_Through (Item.Else_Stmts);
          when CM.Stmt_Block =>
             return Statements_Fall_Through (Item.Body_Stmts);
+         when CM.Stmt_Loop =>
+            return Statements_Contain_Exit (Item.Body_Stmts);
          when others =>
             return True;
       end case;
@@ -2347,10 +2408,85 @@ package body Safe_Frontend.Ada_Emit is
       else
          Append_Line
            (Buffer,
-            "return " & Render_Expr (Unit, Document, Value, State) & ";",
-            Depth);
+           "return " & Render_Expr (Unit, Document, Value, State) & ";",
+           Depth);
       end if;
    end Append_Return;
+
+   procedure Append_Return_With_Cleanup
+     (Buffer      : in out SU.Unbounded_String;
+      Unit        : CM.Resolved_Unit;
+      Document    : GM.Mir_Document;
+      State       : in out Emit_State;
+      Value       : CM.Expr_Access;
+      Return_Type : String;
+      Depth       : Natural)
+   is
+      Value_Type : constant String := FT.To_String (Value.Type_Name);
+      Value_Info : constant GM.Type_Descriptor :=
+        (if Has_Type (Unit, Document, Value_Type)
+         then Lookup_Type (Unit, Document, Value_Type)
+         else (others => <>));
+      Needs_Move_Null : constant Boolean :=
+        Has_Type (Unit, Document, Value_Type)
+        and then Is_Owner_Access (Value_Info)
+        and then Value.Kind in CM.Expr_Ident | CM.Expr_Select | CM.Expr_Resolved_Index;
+   begin
+      if Return_Type'Length = 0 then
+         Raise_Internal ("cleanup-preserving return requires a function return type");
+      end if;
+
+      Append_Line (Buffer, "declare", Depth);
+      if Is_Integer_Type (Unit, Document, Return_Type)
+        and then Uses_Wide_Value (Unit, Document, State, Value)
+      then
+         declare
+            Wide_Image : constant String := Render_Wide_Expr (Unit, Document, Value, State);
+         begin
+            Append_Line
+              (Buffer,
+               "Wide_Return_Value : constant Safe_Runtime.Wide_Integer := "
+               & Wide_Image
+               & ";",
+               Depth + 1);
+            Append_Line (Buffer, "Return_Value : " & Return_Type & ";", Depth + 1);
+         end;
+      else
+         Append_Line
+           (Buffer,
+            "Return_Value : constant "
+            & Return_Type
+            & " := "
+            & Render_Expr (Unit, Document, Value, State)
+            & ";",
+            Depth + 1);
+      end if;
+      Append_Line (Buffer, "begin", Depth);
+      if Is_Integer_Type (Unit, Document, Return_Type)
+        and then Uses_Wide_Value (Unit, Document, State, Value)
+      then
+         Append_Line
+           (Buffer,
+            "pragma Assert ("
+            & "Wide_Return_Value >= Safe_Runtime.Wide_Integer ("
+            & Return_Type
+            & "'First) and then "
+            & "Wide_Return_Value <= Safe_Runtime.Wide_Integer ("
+            & Return_Type
+            & "'Last));",
+            Depth + 1);
+         Append_Line
+           (Buffer,
+            "Return_Value := " & Return_Type & " (Wide_Return_Value);",
+            Depth + 1);
+      end if;
+      if Needs_Move_Null then
+         Append_Move_Null (Buffer, Unit, Document, State, Value, Depth + 1);
+      end if;
+      Render_Active_Cleanup (Buffer, State, Depth + 1);
+      Append_Line (Buffer, "return Return_Value;", Depth + 1);
+      Append_Line (Buffer, "end;", Depth);
+   end Append_Return_With_Cleanup;
 
    procedure Render_Block_Declarations
      (Buffer       : in out SU.Unbounded_String;
@@ -2479,15 +2615,26 @@ package body Safe_Frontend.Ada_Emit is
                   Render_Expr (Unit, Document, Item.Call, State) & ";",
                   Depth);
             when CM.Stmt_Return =>
-               Render_Active_Cleanup (Buffer, State, Depth);
-               Append_Return
-                 (Buffer,
-                  Unit,
-                  Document,
-                  State,
-                  Item.Value,
-                  Return_Type,
-                  Depth);
+               if Item.Value /= null and then Has_Active_Cleanup_Items (State) then
+                  Append_Return_With_Cleanup
+                    (Buffer,
+                     Unit,
+                     Document,
+                     State,
+                     Item.Value,
+                     Return_Type,
+                     Depth);
+               else
+                  Render_Active_Cleanup (Buffer, State, Depth);
+                  Append_Return
+                    (Buffer,
+                     Unit,
+                     Document,
+                     State,
+                     Item.Value,
+                     Return_Type,
+                     Depth);
+               end if;
             when CM.Stmt_If =>
                Append_Line
                  (Buffer,
@@ -2684,6 +2831,8 @@ package body Safe_Frontend.Ada_Emit is
                               FT.To_String (Arm.Channel_Data.Variable_Name)
                               & " : "
                               & Render_Type_Name (Arm.Channel_Data.Type_Info)
+                              & " := "
+                              & Default_Value_Expr (Arm.Channel_Data.Type_Info)
                               & ";",
                               Depth + 4);
                            Append_Line (Buffer, "Arm_Success : Boolean;", Depth + 4);
@@ -2748,6 +2897,8 @@ package body Safe_Frontend.Ada_Emit is
                               FT.To_String (Arm.Channel_Data.Variable_Name)
                               & " : "
                               & Render_Type_Name (Arm.Channel_Data.Type_Info)
+                              & " := "
+                              & Default_Value_Expr (Arm.Channel_Data.Type_Info)
                               & ";",
                               Depth + 4);
                            Append_Line (Buffer, "Arm_Success : Boolean;", Depth + 4);
@@ -2815,6 +2966,8 @@ package body Safe_Frontend.Ada_Emit is
       Index_Subtype : constant String := Name & "_Index";
       Count_Subtype : constant String := Name & "_Count";
       Buffer_Type   : constant String := Name & "_Buffer";
+      Send_Mode     : constant String :=
+        (if Is_Owner_Access (Channel.Element_Type) then "in out " else "in ");
       Ceiling       : Long_Long_Integer :=
         (if Channel.Has_Required_Ceiling then Channel.Required_Ceiling else 0);
    begin
@@ -2843,15 +2996,19 @@ package body Safe_Frontend.Ada_Emit is
          & " with Priority => " & Trim_Image (Ceiling)
          & " is",
          1);
-      Append_Line (Buffer, "entry Send (Value : in " & Element_Type & ");", 2);
+      Append_Line (Buffer, "entry Send (Value : " & Send_Mode & Element_Type & ");", 2);
       Append_Line (Buffer, "entry Receive (Value : out " & Element_Type & ");", 2);
       Append_Line
         (Buffer,
-         "procedure Try_Send (Value : in " & Element_Type & "; Success : out Boolean);",
+         "procedure Try_Send (Value : " & Send_Mode & Element_Type & "; Success : out Boolean);",
          2);
       Append_Line
         (Buffer,
-         "procedure Try_Receive (Value : out " & Element_Type & "; Success : out Boolean);",
+         "procedure Try_Receive (Value : in out "
+         & Element_Type
+         & "; Success : out Boolean)"
+         & (if Is_Owner_Access (Channel.Element_Type) then " with Pre => Value = null" else "")
+         & ";",
          2);
       Append_Line (Buffer, "private", 1);
       Append_Line
@@ -2879,12 +3036,46 @@ package body Safe_Frontend.Ada_Emit is
       Capacity      : constant String := Trim_Image (Channel.Capacity);
       Type_Name     : constant String := Name & "_Channel";
       Index_Subtype : constant String := Name & "_Index";
+      Move_Helper   : constant String := Name & "_Move_From_Buffer";
+      Is_Owner      : constant Boolean := Is_Owner_Access (Channel.Element_Type);
    begin
+      if Is_Owner then
+         Append_Line
+           (Buffer,
+            "procedure "
+            & Move_Helper
+            & " (Source : in out "
+            & Element_Type
+            & "; Target : out "
+            & Element_Type
+            & ") with Global => null is",
+            1);
+         Append_Line (Buffer, "begin", 1);
+         Append_Line (Buffer, "Target := Source;", 2);
+         Append_Line (Buffer, "Source := null;", 2);
+         Append_Line (Buffer, "end " & Move_Helper & ";", 1);
+         Append_Line (Buffer);
+      end if;
       Append_Line (Buffer, "protected body " & Type_Name & " is", 1);
-      Append_Line (Buffer, "entry Send (Value : in " & Render_Type_Name (Channel.Element_Type) & ")", 2);
-      Append_Line (Buffer, "when Count < " & Capacity & " is", 3);
+      Append_Line
+        (Buffer,
+         "entry Send (Value : "
+         & (if Is_Owner then "in out " else "in ")
+         & Render_Type_Name (Channel.Element_Type)
+         & ")",
+         2);
+      Append_Line
+        (Buffer,
+         "when Count < "
+         & Capacity
+         & " is",
+         3);
       Append_Line (Buffer, "begin", 2);
-      Append_Line (Buffer, "Buffer (Tail) := Value;", 3);
+      if Is_Owner then
+         Append_Line (Buffer, Move_Helper & " (Value, Buffer (Tail));", 3);
+      else
+         Append_Line (Buffer, "Buffer (Tail) := Value;", 3);
+      end if;
       Append_Line (Buffer, "if Tail = " & Index_Subtype & "'Last then", 3);
       Append_Line (Buffer, "Tail := " & Index_Subtype & "'First;", 4);
       Append_Line (Buffer, "else", 3);
@@ -2894,9 +3085,21 @@ package body Safe_Frontend.Ada_Emit is
       Append_Line (Buffer, "end Send;", 2);
       Append_Line (Buffer);
       Append_Line (Buffer, "entry Receive (Value : out " & Render_Type_Name (Channel.Element_Type) & ")", 2);
-      Append_Line (Buffer, "when Count > 0 is", 3);
+      Append_Line
+        (Buffer,
+         "when Count > 0"
+         & " is",
+         3);
       Append_Line (Buffer, "begin", 2);
-      Append_Line (Buffer, "Value := Buffer (Head);", 3);
+      if Is_Owner then
+         Append_Line (Buffer, Move_Helper & " (Buffer (Head), Value);", 3);
+      else
+         Append_Line (Buffer, "Value := Buffer (Head);", 3);
+         Append_Line
+           (Buffer,
+            "Buffer (Head) := " & Default_Value_Expr (Channel.Element_Type) & ";",
+            3);
+      end if;
       Append_Line (Buffer, "if Head = " & Index_Subtype & "'Last then", 3);
       Append_Line (Buffer, "Head := " & Index_Subtype & "'First;", 4);
       Append_Line (Buffer, "else", 3);
@@ -2907,11 +3110,23 @@ package body Safe_Frontend.Ada_Emit is
       Append_Line (Buffer);
       Append_Line
         (Buffer,
-         "procedure Try_Send (Value : in " & Element_Type & "; Success : out Boolean) is",
+         "procedure Try_Send (Value : "
+         & (if Is_Owner then "in out " else "in ")
+         & Element_Type
+         & "; Success : out Boolean) is",
          2);
       Append_Line (Buffer, "begin", 2);
-      Append_Line (Buffer, "if Count < " & Capacity & " then", 3);
-      Append_Line (Buffer, "Buffer (Tail) := Value;", 4);
+      Append_Line
+        (Buffer,
+         "if Count < "
+         & Capacity
+         & " then",
+         3);
+      if Is_Owner then
+         Append_Line (Buffer, Move_Helper & " (Value, Buffer (Tail));", 4);
+      else
+         Append_Line (Buffer, "Buffer (Tail) := Value;", 4);
+      end if;
       Append_Line (Buffer, "if Tail = " & Index_Subtype & "'Last then", 4);
       Append_Line (Buffer, "Tail := " & Index_Subtype & "'First;", 5);
       Append_Line (Buffer, "else", 4);
@@ -2926,11 +3141,28 @@ package body Safe_Frontend.Ada_Emit is
       Append_Line (Buffer);
       Append_Line
         (Buffer,
-         "procedure Try_Receive (Value : out " & Element_Type & "; Success : out Boolean) is",
+         "procedure Try_Receive (Value : in out " & Element_Type & "; Success : out Boolean) is",
          2);
       Append_Line (Buffer, "begin", 2);
-      Append_Line (Buffer, "if Count > 0 then", 3);
-      Append_Line (Buffer, "Value := Buffer (Head);", 4);
+      Append_Line
+        (Buffer,
+         "if Count > 0"
+         & (if Is_Owner
+              then
+                " and then Value = "
+                & Default_Value_Expr (Channel.Element_Type)
+              else "")
+         & " then",
+         3);
+      if Is_Owner then
+         Append_Line (Buffer, Move_Helper & " (Buffer (Head), Value);", 4);
+      else
+         Append_Line (Buffer, "Value := Buffer (Head);", 4);
+         Append_Line
+           (Buffer,
+            "Buffer (Head) := " & Default_Value_Expr (Channel.Element_Type) & ";",
+            4);
+      end if;
       Append_Line (Buffer, "if Head = " & Index_Subtype & "'Last then", 4);
       Append_Line (Buffer, "Head := " & Index_Subtype & "'First;", 5);
       Append_Line (Buffer, "else", 4);
@@ -2939,10 +3171,6 @@ package body Safe_Frontend.Ada_Emit is
       Append_Line (Buffer, "Count := Count - 1;", 4);
       Append_Line (Buffer, "Success := True;", 4);
       Append_Line (Buffer, "else", 3);
-         Append_Line
-           (Buffer,
-            "Value := " & Default_Value_Expr (Channel.Element_Type) & ";",
-            4);
       Append_Line (Buffer, "Success := False;", 4);
       Append_Line (Buffer, "end if;", 3);
       Append_Line (Buffer, "end Try_Receive;", 2);
@@ -3085,7 +3313,9 @@ package body Safe_Frontend.Ada_Emit is
       Append_Line (Buffer, "begin", 1);
       Render_Statements
         (Buffer, Unit, Document, Task_Item.Statements, State, 2, "");
-      Render_Cleanup (Buffer, Task_Item.Declarations, 2);
+      if Statements_Fall_Through (Task_Item.Statements) then
+         Render_Cleanup (Buffer, Task_Item.Declarations, 2);
+      end if;
       Append_Line (Buffer, "end " & FT.To_String (Task_Item.Name) & ";", 1);
       Append_Line (Buffer);
       Restore_Wide_Names (State, Previous_Wide_Count);

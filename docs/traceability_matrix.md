@@ -183,15 +183,15 @@ generated artifact, test file(s), and implementation status.
 | 18 | `4.3.p25:961abe5a` | 4.3 | 25 | Conformance | N/A | -- | stubbed |
 | 19 | `4.3.p26:3a9449c1` | 4.3 | 26 | Conformance | N/A | -- | stubbed |
 | 20 | `4.3.p27:ef0ce6bd` | 4.3 | 27 | Race-freedom | Safe_PO.Check_Channel_Not_Full, Safe_Model.Channel_State | channel_pingpong.safe, channel_pipeline.safe, neg_chan_full_send.safe, golden_pipeline/, fifo_ordering.safe, multi_task_channel.safe | stubbed |
-| 21 | `4.3.p27a:8ed3c1d4` | 4.3 | 27a | Memory-safety | N/A | -- | stubbed |
+| 21 | `4.3.p27a:8ed3c1d4` | 4.3 | 27a | Memory-safety | N/A | channel_access_type.safe, neg_channel_access_component.safe | stubbed |
 | 22 | `4.3.p28:ea6bd13c` | 4.3 | 28 | Race-freedom | Safe_PO.Check_Channel_Not_Empty, Safe_Model.Channel_State | channel_pingpong.safe, channel_pipeline.safe, neg_chan_empty_recv.safe, golden_pipeline/, fifo_ordering.safe, multi_task_channel.safe | stubbed |
-| 23 | `4.3.p28a:4cb19779` | 4.3 | 28a | Memory-safety | N/A | -- | stubbed |
-| 24 | `4.3.p29:f792d704` | 4.3 | 29 | Race-freedom | Safe_PO.Check_Channel_Not_Full | try_send_ownership.safe | stubbed |
-| 25 | `4.3.p29a:8d3f2225` | 4.3 | 29a | Memory-safety | N/A | try_send_ownership.safe | stubbed |
-| 26 | `4.3.p29b:7121ccd7` | 4.3 | 29b | Memory-safety | N/A | try_send_ownership.safe | stubbed |
-| 27 | `4.3.p30:62619161` | 4.3 | 30 | Memory-safety | N/A | -- | stubbed |
+| 23 | `4.3.p28a:4cb19779` | 4.3 | 28a | Memory-safety | N/A | channel_access_type.safe, select_ownership_binding.safe | stubbed |
+| 24 | `4.3.p29:f792d704` | 4.3 | 29 | Race-freedom | Safe_PO.Check_Channel_Not_Full | try_ops.safe | stubbed |
+| 25 | `4.3.p29a:8d3f2225` | 4.3 | 29a | Memory-safety | N/A | try_ops.safe, try_send_ownership.safe | stubbed |
+| 26 | `4.3.p29b:7121ccd7` | 4.3 | 29b | Memory-safety | N/A | try_ops.safe, try_send_ownership.safe | stubbed |
+| 27 | `4.3.p30:62619161` | 4.3 | 30 | Memory-safety | N/A | try_ops.safe | stubbed |
 | 28 | `4.3.p31:a7297e97` | 4.3 | 31 | Race-freedom | Safe_Model.Channel_State | channel_pipeline.safe, golden_pipeline/, multi_task_channel.safe | stubbed |
-| 29 | `4.3.p31a:a621d08c` | 4.3 | 31a | Memory-safety | N/A | -- | stubbed |
+| 29 | `4.3.p31a:a621d08c` | 4.3 | 31a | Memory-safety | N/A | channel_access_type.safe, neg_channel_access_component.safe | stubbed |
 | 30 | `4.4.p33:7a94ab51` | 4.4 | 33 | Conformance | N/A | select_priority.safe, select_with_delay.safe, select_delay_local_scope.safe | stubbed |
 | 31 | `4.4.p34:f0f83b83` | 4.4 | 34 | Conformance | N/A | -- | stubbed |
 | 32 | `4.4.p35:2ad6e64f` | 4.4 | 35 | Conformance | N/A | select_priority.safe | stubbed |
@@ -520,13 +520,14 @@ affected POs/models, severity, and related spec references.
 
 | Metric | Value |
 |--------|-------|
-| Number of test files | 33 |
-| Clause IDs covered | 25 |
+| Number of test files | 34 |
+| Clause IDs covered | 26 |
 | D27 rules exercised | Rule 1, Rule 2, Rule 3, Rule 4, Rule 5 |
 
 | Test File | Clause References |
 |-----------|-------------------|
 | neg_chan_empty_recv.safe | `4.3.p28:ea6bd13c`, `4.2.p15:b5b29b0e` |
+| neg_channel_access_component.safe | `4.2.p14:a35bd0fa`, `4.3.p27a:8ed3c1d4`, `4.3.p31a:a621d08c` |
 | neg_chan_full_send.safe | `4.3.p27:ef0ce6bd`, `4.2.p15:b5b29b0e` |
 | neg_chan_zero_cap.safe | `4.2.p15:b5b29b0e` |
 | neg_own_borrow_conflict.safe | `2.3.3.p99b:47108b45` |
@@ -578,24 +579,26 @@ affected POs/models, severity, and related spec references.
 
 | Metric | Value |
 |--------|-------|
-| Number of test files | 12 |
+| Number of test files | 14 |
 | Clause IDs covered | 15 |
 | D27 rules exercised | None |
 
 | Test File | Clause References |
 |-----------|-------------------|
 | channel_ceiling_priority.safe | `4.3.p27:ef0ce6bd`, `4.3.p31:a7297e97` |
+| channel_access_type.safe | `4.2.p14:a35bd0fa`, `4.3.p27a:8ed3c1d4`, `4.3.p28a:4cb19779`, `4.3.p31a:a621d08c` |
 | exclusive_variable.safe | `4.5.p45:8bdd0c99`, `5.4.1.p32:90d4f527`, `5.4.1.p33:0fc25399` |
 | fifo_ordering.safe | `4.2.p20:8aa1a21e`, `4.3.p27:ef0ce6bd`, `4.3.p28:ea6bd13c` |
 | multi_task_channel.safe | `4.3.p31:a7297e97`, `4.3.p27:ef0ce6bd`, `4.3.p28:ea6bd13c` |
 | select_delay_local_scope.safe | `4.4.p33:7a94ab51`, `4.4.p38:35ed84d9` |
-| select_ownership_binding.safe | `4.4.p33:7a94ab51`, `4.4.p38:35ed84d9`, `4.3.p28a:4cb19779` |
+| select_ownership_binding.safe | `4.2.p14:a35bd0fa`, `4.4.p33:7a94ab51`, `4.4.p38:35ed84d9`, `4.3.p28a:4cb19779` |
 | select_priority.safe | `4.4.p39:1012f4db`, `4.4.p33:7a94ab51`, `4.4.p35:2ad6e64f` |
 | select_with_delay.safe | `4.4.p33:7a94ab51`, `4.4.p38:35ed84d9` |
+| select_with_delay_multiarm.safe | `4.4.p33:7a94ab51`, `4.4.p35:2ad6e64f`, `4.4.p38:35ed84d9` |
 | task_global_owner.safe | `4.5.p45:8bdd0c99`, `5.4.1.p32:90d4f527`, `5.4.1.p33:0fc25399` |
 | task_priority_delay.safe | `--` |
 | try_ops.safe | `4.3.p29:f792d704`, `4.3.p29a:8d3f2225`, `4.3.p29b:7121ccd7` |
-| try_send_ownership.safe | `4.3.p29:f792d704`, `4.3.p29a:8d3f2225`, `4.3.p29b:7121ccd7` |
+| try_send_ownership.safe | `4.2.p14:a35bd0fa`, `4.3.p29:f792d704`, `4.3.p29a:8d3f2225`, `4.3.p29b:7121ccd7` |
 
 ### `diagnostics_golden/`
 

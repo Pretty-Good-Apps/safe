@@ -46,7 +46,10 @@ PRIMARY_GATE_SCRIPTS = {
         "scripts/run_pr08_frontend_baseline.py",
     ),
     "codex/pr09": ("scripts/run_pr09_ada_emission_baseline.py",),
-    "codex/pr10": ("scripts/run_pr10_emitted_baseline.py",),
+    "codex/pr10": (
+        "scripts/run_pr10_emitted_baseline.py",
+        "scripts/run_emitted_hardening_regressions.py",
+    ),
 }
 
 
