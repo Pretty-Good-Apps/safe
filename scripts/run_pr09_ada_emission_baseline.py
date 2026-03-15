@@ -63,7 +63,7 @@ def require_contains(text: str, snippet: str, label: str) -> None:
 def parse_task_id(value: object) -> tuple[int, int | None] | None:
     if not isinstance(value, str):
         return None
-    match = re.fullmatch(r"PR(\d+)(?:\.(\d+))?", value)
+    match = re.fullmatch(r"PR(\d+)(?:\.(\d+)[A-Za-z0-9]*)?", value)
     if match is None:
         return None
     major = int(match.group(1))
@@ -115,7 +115,10 @@ def generate_report(*, env: dict[str, str]) -> dict[str, object]:
             dashboard_text == rendered_dashboard["stdout"],
             "execution/dashboard.md must match scripts/render_execution_status.py output",
         )
-        next_task_match = re.search(r"- \*\*Next task:\*\* `(PR\d+(?:\.[0-9]+)?|none)`", dashboard_text)
+        next_task_match = re.search(
+            r"- \*\*Next task:\*\* `(PR\d+(?:\.[0-9]+[A-Za-z0-9]*)?|none)`",
+            dashboard_text,
+        )
         require(
             next_task_match is not None
             and next_task_is_at_or_beyond_pr10(

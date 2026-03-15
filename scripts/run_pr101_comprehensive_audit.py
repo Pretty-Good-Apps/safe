@@ -161,6 +161,14 @@ def normalized_assumptions_hash(path: Path) -> str:
     return sha256_text(normalized)
 
 
+def normalized_gnatprove_summary_hash(path: Path) -> str:
+    text = path.read_text(encoding="utf-8")
+    match = re.search(r"^Summary of SPARK.*?^Total.*$", text, flags=re.MULTILINE | re.DOTALL)
+    require(match is not None, f"{display_path(path, repo_root=REPO_ROOT)}: missing GNATprove summary block")
+    normalized = re.sub(r"\([^)]*\)", "(normalized)", match.group(0))
+    return sha256_text(normalized)
+
+
 def snapshot_text(path: Path) -> str | None:
     if not path.exists():
         return None
@@ -286,7 +294,9 @@ def run_companion_verify(*, env: dict[str, str]) -> dict[str, Any]:
     finally:
         restore_text(assumptions_path, original_assumptions)
     prove_golden_hash = sha256_file(REPO_ROOT / "companion" / "gen" / "prove_golden.txt")
-    gnatprove_out_hash = sha256_file(REPO_ROOT / "companion" / "gen" / "obj" / "gnatprove" / "gnatprove.out")
+    gnatprove_summary_hash = normalized_gnatprove_summary_hash(
+        REPO_ROOT / "companion" / "gen" / "obj" / "gnatprove" / "gnatprove.out"
+    )
     return {
         "build": compact_result(build),
         "flow": compact_result(flow),
@@ -295,7 +305,7 @@ def run_companion_verify(*, env: dict[str, str]) -> dict[str, Any]:
         "diff_assumptions": compact_result(diff),
         "assumptions_extracted_sha256": extracted_hash,
         "prove_golden_sha256": prove_golden_hash,
-        "gnatprove_out_sha256": gnatprove_out_hash,
+        "gnatprove_summary_sha256": gnatprove_summary_hash,
     }
 
 
@@ -344,7 +354,9 @@ def run_templates_verify(*, env: dict[str, str]) -> dict[str, Any]:
     finally:
         restore_text(assumptions_path, original_assumptions)
     prove_golden_hash = sha256_file(REPO_ROOT / "companion" / "templates" / "prove_golden.txt")
-    gnatprove_out_hash = sha256_file(REPO_ROOT / "companion" / "templates" / "obj" / "gnatprove" / "gnatprove.out")
+    gnatprove_summary_hash = normalized_gnatprove_summary_hash(
+        REPO_ROOT / "companion" / "templates" / "obj" / "gnatprove" / "gnatprove.out"
+    )
     return {
         "build": compact_result(build),
         "flow": compact_result(flow),
@@ -353,7 +365,7 @@ def run_templates_verify(*, env: dict[str, str]) -> dict[str, Any]:
         "diff_assumptions": compact_result(diff),
         "assumptions_extracted_sha256": extracted_hash,
         "prove_golden_sha256": prove_golden_hash,
-        "gnatprove_out_sha256": gnatprove_out_hash,
+        "gnatprove_summary_sha256": gnatprove_summary_hash,
     }
 
 

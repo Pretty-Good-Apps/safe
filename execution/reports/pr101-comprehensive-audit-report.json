@@ -61,7 +61,7 @@
         "cwd": "$REPO_ROOT/companion/gen",
         "returncode": 0
       },
-      "gnatprove_out_sha256": "ea975670c2c08783a830817f41341ce517bf85658758b71d411cde356901c275",
+      "gnatprove_summary_sha256": "460bf10afff01235cd1df5591ac3f6d1a5c79641a5adddc7c2a0b997a5a8a263",
       "prove": {
         "command": [
           "alr",
@@ -195,7 +195,7 @@
         "cwd": "$REPO_ROOT/companion/templates",
         "returncode": 0
       },
-      "gnatprove_out_sha256": "93b0d64d3042c8eea5d85ad7bc4d4d8d507d1f4018365822e97bcc7ebc0f36b9",
+      "gnatprove_summary_sha256": "5377a78e3d65a395344fe559dbb066a6839f64f95a8cc3c89c094e4bb83988de",
       "prove": {
         "command": [
           "alr",
@@ -314,8 +314,8 @@
       "title": "Ada emitter maintenance hardening"
     }
   ],
-  "repeat_sha256": "92bd298e57e80e8512a48fb0ac44256c95444073de4e05e5a6bc892e6314558d",
-  "report_sha256": "92bd298e57e80e8512a48fb0ac44256c95444073de4e05e5a6bc892e6314558d",
+  "repeat_sha256": "a989c4e9e30d771870c9051e85fd7e54c2dfa9598b01cb453ea703298b3f6213",
+  "report_sha256": "a989c4e9e30d771870c9051e85fd7e54c2dfa9598b01cb453ea703298b3f6213",
   "retained_post_pr10_residuals": [
     {
       "area": "resolver",
