@@ -24,9 +24,110 @@
     "execution/dashboard.md",
     "execution/reports/pr06913-documentation-architecture-clarity-report.json"
   ],
-  "repeat_sha256": "ebddeb44df7687ac3447346fa4950d08ef5aa17478d6dc1791e4949f85ffb189",
-  "report_sha256": "ebddeb44df7687ac3447346fa4950d08ef5aa17478d6dc1791e4949f85ffb189",
-  "reruns": {},
-  "status": "bootstrap",
+  "repeat_sha256": "f03815c1559b4a6737e3568bc623dbd982baa13562512e5a0fe05b713558852a",
+  "report_sha256": "f03815c1559b4a6737e3568bc623dbd982baa13562512e5a0fe05b713558852a",
+  "reruns": {
+    "gate_quality": {
+      "committed_report_path": "execution/reports/pr0697-gate-quality-report.json",
+      "matches_committed_report": true,
+      "rerun": {
+        "command": [
+          "python3",
+          "scripts/run_pr0697_gate_quality.py",
+          "--report",
+          "$TMPDIR/pr0697-gate-quality-report.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "script": "scripts/run_pr0697_gate_quality.py"
+    },
+    "glue_script_safety": {
+      "committed_report_path": "execution/reports/pr06911-glue-script-safety-report.json",
+      "matches_committed_report": true,
+      "rerun": {
+        "command": [
+          "python3",
+          "scripts/run_pr06911_glue_script_safety.py",
+          "--report",
+          "$TMPDIR/pr06911-glue-script-safety-report.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "script": "scripts/run_pr06911_glue_script_safety.py"
+    },
+    "legacy_package_cleanup": {
+      "committed_report_path": "execution/reports/pr0698-legacy-package-cleanup-report.json",
+      "matches_committed_report": true,
+      "rerun": {
+        "command": [
+          "python3",
+          "scripts/run_pr0698_legacy_package_cleanup.py",
+          "--report",
+          "$TMPDIR/pr0698-legacy-package-cleanup-report.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "script": "scripts/run_pr0698_legacy_package_cleanup.py"
+    },
+    "performance_scale_sanity": {
+      "committed_report_path": "execution/reports/pr06912-performance-scale-sanity-report.json",
+      "matches_committed_report": true,
+      "rerun": {
+        "command": [
+          "python3",
+          "scripts/run_pr06912_performance_scale_sanity.py",
+          "--report",
+          "$TMPDIR/pr06912-performance-scale-sanity-report.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "script": "scripts/run_pr06912_performance_scale_sanity.py"
+    },
+    "portability_environment": {
+      "committed_report_path": "execution/reports/pr06910-portability-environment-report.json",
+      "matches_committed_report": true,
+      "rerun": {
+        "command": [
+          "python3",
+          "scripts/run_pr06910_portability_environment.py",
+          "--report",
+          "$TMPDIR/pr06910-portability-environment-report.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "script": "scripts/run_pr06910_portability_environment.py"
+    },
+    "runtime_boundary": {
+      "committed_report_path": "execution/reports/pr0693-runtime-boundary-report.json",
+      "matches_committed_report": true,
+      "rerun": {
+        "command": [
+          "python3",
+          "scripts/run_pr0693_runtime_boundary.py",
+          "--report",
+          "$TMPDIR/pr0693-runtime-boundary-report.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "script": "scripts/run_pr0693_runtime_boundary.py"
+    },
+    "validate_execution_state": {
+      "command": [
+        "python3",
+        "scripts/validate_execution_state.py"
+      ],
+      "cwd": "$REPO_ROOT",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "execution state: OK\n"
+    }
+  },
+  "status": "ok",
   "task": "PR06.9.13"
 }
