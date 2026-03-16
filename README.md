@@ -13,7 +13,8 @@ The canonical tracked ledger lives in [`execution/tracker.json`](execution/track
 [`execution/dashboard.md`](execution/dashboard.md). Detailed `PR11.x` proposal text lives in
 [`docs/PR11.x-series-proposed.md`](docs/PR11.x-series-proposed.md).
 
-Completed rows use strikethrough. Italic rows are proposed only.
+Completed rows use strikethrough. Italic rows are tracked planned milestones
+that still live at the proposal/detail stage rather than in gate-backed CI.
 
 | Series | Status | Focus |
 |--------|--------|-------|
@@ -28,17 +29,17 @@ Completed rows use strikethrough. Italic rows are proposed only.
 | PR10.4 | `planned` | Evidence, parser, and report hardening |
 | PR10.5 | `planned` | Emitter maintenance hardening |
 | PR10.6 | `planned` | Remaining sequential proof corpus |
-| *PR11.1* | `proposed` | Build wrapper, editor grammar, Rosetta |
-| *PR11.2* | `proposed` | Strings/chars and case statements |
-| *PR11.3* | `proposed` | Discriminants and constraints |
-| *PR11.4* | `proposed` | `returns` and `else if` |
-| *PR11.5* | `proposed` | Optional semicolons and `var` |
-| *PR11.6* | `proposed` | `pragma Strict` and whitespace blocks |
-| *PR11.7* | `proposed` | Reference-surface experiments |
-| *PR11.8* | `proposed` | Numeric model |
-| *PR11.9* | `proposed` | Artifact contract stabilization |
-| *PR11.10* | `proposed` | Monomorphic library layer |
-| *PR11.11* | `proposed` | Restricted generics |
+| *PR11.1* | `planned` | Build wrapper, editor grammar, Rosetta |
+| *PR11.2* | `planned` | Strings/chars and case statements |
+| *PR11.3* | `planned` | Discriminants and constraints |
+| *PR11.4* | `planned` | `returns` and `else if` |
+| *PR11.5* | `planned` | Optional semicolons and `var` |
+| *PR11.6* | `planned` | `pragma Strict` and whitespace blocks |
+| *PR11.7* | `planned` | Reference-surface experiments |
+| *PR11.8* | `planned` | Numeric model |
+| *PR11.9* | `planned` | Artifact contract stabilization |
+| *PR11.10* | `planned` | Monomorphic library layer |
+| *PR11.11* | `planned` | Restricted generics |
 
 ---
 
