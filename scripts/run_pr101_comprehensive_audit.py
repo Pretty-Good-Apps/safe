@@ -65,6 +65,15 @@ EXPECTED_PR102_ACCEPTANCE = [
     "The source-level Rule 5 negative contract remains tests/negative/neg_rule5_div_zero.safe -> fp_division_by_zero, tests/negative/neg_rule5_infinity.safe -> infinity_at_narrowing, tests/negative/neg_rule5_nan.safe -> nan_at_narrowing, tests/negative/neg_rule5_overflow.safe -> fp_overflow_at_narrowing, and tests/negative/neg_rule5_uninitialized.safe -> fp_uninitialized_at_narrowing; unsupported float-evaluator shapes use the new fp_unsupported_expression_at_narrowing reason under MIR analysis parity coverage instead of being mislabeled as overflow.",
     "While loops outside the current derivable Loop_Variant proof surface are rejected during safec check with loop_variant_not_derivable, and a dedicated PR10.2 gate, report, CI job, tracker/docs update, and deterministic diagnostics-golden set capture the resulting Rule 5 plus convergence-loop boundary without weakening the frozen PR10 claim.",
 ]
+EXPECTED_PR103_ACCEPTANCE = [
+    "The first PR10.3 ownership expansion corpus consists of tests/positive/ownership_borrow.safe, tests/positive/ownership_observe.safe, tests/positive/ownership_observe_access.safe, tests/positive/ownership_return.safe, tests/positive/ownership_inout.safe, and tests/positive/ownership_early_return.safe, and that named set may not be silently shrunk.",
+    "Those six ownership fixtures pass compile, GNATprove flow, and GNATprove prove under the all-proved-only policy.",
+    "docs/emitted_output_verification_matrix.md and related audit/docs surfaces distinguish the frozen PR10 claim from the now-proved PR10.3 ownership expansion set and retarget remaining sequential proof expansion to PR10.6.",
+    "A dedicated PR10.3 gate, report, and CI wiring keep the expanded sequential proof corpus deterministic and evidence-backed.",
+]
+EXPECTED_PR103_EVIDENCE = [
+    "execution/reports/pr103-sequential-proof-expansion-report.json",
+]
 ALLOWED_DISPOSITIONS = {
     "fix-in-pr101",
     "promote-to-pr10x",
@@ -74,7 +83,12 @@ ALLOWED_DISPOSITIONS = {
     "close-as-spec-excluded",
     "close-as-pretracked",
 }
-PROMOTED_TASKS = ("PR10.2", "PR10.3", "PR10.4", "PR10.5")
+PROMOTED_TASKS = ("PR10.4", "PR10.5", "PR10.6")
+PROMOTED_DEPENDENCIES = {
+    "PR10.4": ["PR10.1"],
+    "PR10.5": ["PR10.1"],
+    "PR10.6": ["PR10.3"],
+}
 RETAINED_PRIORITY_COUNTS = {
     "blocking-if-needed": 14,
     "nice-to-have": 3,
@@ -88,10 +102,11 @@ EXPECTED_AUDIT_SNIPPETS = [
     "`scripts/run_pr10_emitted_baseline.py`",
     "`scripts/run_emitted_hardening_regressions.py`",
     "`PR10.2` — Rule 5 proof-boundary closure and loop-termination diagnostics",
-    "`PR10.3` — Sequential emitted proof-corpus expansion beyond the frozen PR10 subset",
+    "`PR10.3` — Ownership emitted proof-corpus expansion beyond the frozen PR10 `ownership_move` representative",
     "`PR10.4` — GNATprove evidence and parser hardening, including audit-parser regression tests, explicit `gnat.adc` sentinels, proof-repeatability policy, and deterministic report de-cascading",
     "`PR10.5` — Ada emitter maintenance hardening",
-    "`next_task_id` advances to `PR10.3`",
+    "`PR10.6` — Remaining sequential emitted proof-corpus expansion beyond the completed ownership set",
+    "`next_task_id` advances to `PR10.4`",
 ]
 EXPECTED_MATRIX_SNIPPETS = [
     "frontend Silver ownership analysis is the mechanism that prevents use-after-free",
@@ -99,6 +114,7 @@ EXPECTED_MATRIX_SNIPPETS = [
     "ownership_borrow.safe",
     "ownership_early_return.safe",
     "PR10.3",
+    "PR10.6",
     "PR10.2 keeps the frozen PR10 Rule 5 row above intact while closing the broader",
     "fp_unsupported_expression_at_narrowing",
     "loop_variant_not_derivable",
@@ -126,9 +142,13 @@ EXPECTED_WORKFLOW_SNIPPETS = [
     "pr101-comprehensive-audit:",
     "python3 scripts/run_pr101_comprehensive_audit.py",
     "git diff --exit-code execution/reports/pr101-comprehensive-audit-report.json",
+    "pr103-sequential-proof-expansion:",
+    "python3 scripts/run_pr103_sequential_proof_expansion.py",
+    "git diff --exit-code execution/reports/pr103-sequential-proof-expansion-report.json",
 ]
 EXPECTED_PRE_PUSH_SNIPPETS = [
     "\"scripts/run_pr101_comprehensive_audit.py\"",
+    "\"scripts/run_pr103_sequential_proof_expansion.py\"",
 ]
 EXPECTED_TUTORIAL_SNIPPETS = [
     "Ada-native `safec` frontend plus emitted-output proof",
@@ -437,6 +457,17 @@ def build_report(*, baseline_truth: dict[str, Any]) -> dict[str, Any]:
         task_map["PR10.2"]["acceptance"] == EXPECTED_PR102_ACCEPTANCE,
         "PR10.2 acceptance text must match the committed Rule 5 boundary-closure contract",
     )
+    require("PR10.3" in task_map, "tracker must define PR10.3")
+    require(task_map["PR10.3"]["status"] == "done", "PR10.3 must be marked done")
+    require(task_map["PR10.3"]["depends_on"] == ["PR10.1"], "PR10.3 must depend on PR10.1")
+    require(
+        task_map["PR10.3"]["acceptance"] == EXPECTED_PR103_ACCEPTANCE,
+        "PR10.3 acceptance text must match the committed ownership proof-expansion contract",
+    )
+    require(
+        task_map["PR10.3"]["evidence"] == EXPECTED_PR103_EVIDENCE,
+        "PR10.3 evidence must list the committed ownership proof-expansion report",
+    )
     require(
         task_is_at_or_beyond_pr102(tracker.get("next_task_id")),
         "next_task_id must remain at or beyond PR10.2 after PR10.1",
@@ -447,7 +478,10 @@ def build_report(*, baseline_truth: dict[str, Any]) -> dict[str, Any]:
             task_map[task_id]["status"] in {"planned", "ready", "in_progress", "done"},
             f"{task_id} must remain a live tracked follow-on milestone",
         )
-        require(task_map[task_id]["depends_on"] == ["PR10.1"], f"{task_id} must depend on PR10.1")
+        require(
+            task_map[task_id]["depends_on"] == PROMOTED_DEPENDENCIES[task_id],
+            f"{task_id} must depend on {PROMOTED_DEPENDENCIES[task_id]}",
+        )
     require(
         task_map["PR10.4"]["acceptance"] == EXPECTED_PR104_ACCEPTANCE,
         "PR10.4 acceptance text must match the tightened parser/evidence hardening scope",
@@ -457,6 +491,7 @@ def build_report(*, baseline_truth: dict[str, Any]) -> dict[str, Any]:
     dashboard_text = DASHBOARD_PATH.read_text(encoding="utf-8")
     require(dashboard_text == rendered_dashboard["stdout"], "execution/dashboard.md must match render_execution_status.py")
     require_contains(dashboard_text, "| PR10.1 | done | PR10 | 1 |", "execution/dashboard.md")
+    require_contains(dashboard_text, "| PR10.3 | done | PR10.1 | 1 |", "execution/dashboard.md")
     next_task_match = re.search(r"- \*\*Next task:\*\* `([^`]+)`", dashboard_text)
     require(next_task_match is not None, "execution/dashboard.md must render the next-task line")
     require(
@@ -464,9 +499,9 @@ def build_report(*, baseline_truth: dict[str, Any]) -> dict[str, Any]:
         "execution/dashboard.md must show a next task at or beyond PR10.2 (or none)",
     )
     require(
-        re.search(r"\| PR10\.2 \| (planned|ready|in_progress|done) \| PR10\.1 \| \d+ \|", dashboard_text)
+        re.search(r"\| PR10\.4 \| (planned|ready|in_progress|done) \| PR10\.1 \| \d+ \|", dashboard_text)
         is not None,
-        "execution/dashboard.md must contain the tracked PR10.2 row",
+        "execution/dashboard.md must contain the tracked PR10.4 row",
     )
 
     audit_text = AUDIT_DOC_PATH.read_text(encoding="utf-8")
@@ -561,8 +596,8 @@ def build_report(*, baseline_truth: dict[str, Any]) -> dict[str, Any]:
         "each retained post-PR10 residual must be targeted by exactly one retain-in-post-pr10 finding",
     )
     require(
-        promoted_targets == Counter({"PR10.3": 2, "PR10.4": 1, "PR10.5": 5}),
-        "promoted follow-on findings must match the live post-PR10.2 PR10.3/PR10.4/PR10.5 split",
+        promoted_targets == Counter({"PR10.4": 1, "PR10.5": 5, "PR10.6": 1}),
+        "promoted follow-on findings must match the live post-PR10.3 PR10.4/PR10.5/PR10.6 split",
     )
 
     retained_priority_counts = Counter(item["priority"] for item in residuals)

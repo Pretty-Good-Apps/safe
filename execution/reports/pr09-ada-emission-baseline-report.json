@@ -6,8 +6,8 @@
     "frontend_baseline": "docs/frontend_architecture_baseline.md",
     "readme": "README.md"
   },
-  "repeat_sha256": "ac2f0d41522da797e7c5c6a44a27b04628aa23145c734e53932d84e112ba4f2f",
-  "report_sha256": "ac2f0d41522da797e7c5c6a44a27b04628aa23145c734e53932d84e112ba4f2f",
+  "repeat_sha256": "363bc40e3488121d8eccebf13737b0f333430d2af1f02dcc5c6c40df83816316",
+  "report_sha256": "363bc40e3488121d8eccebf13737b0f333430d2af1f02dcc5c6c40df83816316",
   "retired_snapshots_absent": [
     "tests/golden/golden_sensors.ada",
     "tests/golden/golden_ownership.ada",
@@ -28,7 +28,7 @@
     },
     {
       "deterministic": true,
-      "report_sha256": "d9b34518014e0c020d1bbdf82ec7184eff1c5a47f4357037654f497e4f0a380b",
+      "report_sha256": "f900a8ed63cba62fb3369e7162dd885cae844e8eafa6a52ddea8a962ea8ea632",
       "script": "scripts/run_pr09b_sequential_semantics.py",
       "stdout": "pr09b sequential semantics: OK ($TMPDIR/run_pr09b_sequential_semantics.json)\n"
     },
@@ -40,13 +40,13 @@
     },
     {
       "deterministic": true,
-      "report_sha256": "1774a1839a53937cd54d55697df5a07a6e567014fbb3b2dc7521dfa3dcc01fac",
+      "report_sha256": "e39c5bf3eb6ec3cbf69ddeca5c361a6853448bebdb7cc6843b8a39ac527b9dfb",
       "script": "scripts/run_pr09b_snapshot_refresh.py",
       "stdout": "pr09b snapshot refresh: OK ($TMPDIR/run_pr09b_snapshot_refresh.json)\n"
     }
   ],
   "tracker": {
-    "next_task_id": "PR10.3",
+    "next_task_id": "PR10.4",
     "pr09_evidence": [
       "execution/reports/pr09a-emitter-surface-report.json",
       "execution/reports/pr09a-emitter-mvp-report.json",

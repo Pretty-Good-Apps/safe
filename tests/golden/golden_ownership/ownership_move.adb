@@ -10,12 +10,8 @@ package body Ownership_Move with SPARK_Mode => On is
       Target := Source;
       Source := null;
       Target.all.Value := 100;
-      if Target /= null then
-         Free_Payload_Ptr (Target);
-      end if;
-      if Source /= null then
-         Free_Payload_Ptr (Source);
-      end if;
+      Free_Payload_Ptr (Target);
+      Free_Payload_Ptr (Source);
    end Transfer;
 
 end Ownership_Move;

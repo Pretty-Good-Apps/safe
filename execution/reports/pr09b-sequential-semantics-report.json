@@ -19,7 +19,7 @@
       "determinism": {
         "ada": {
           "ownership_early_return.adb": {
-            "sha256": "b44eb236fb84d3f9878425eabf20e288055f47edffd58c854c1f913e30b571fb"
+            "sha256": "2126f6951569ee3d2de83e30749b10d6e5e449b5cd6c53cfcd1b4523c80b4b1b"
           },
           "ownership_early_return.ads": {
             "sha256": "faff7ffedb117504d83b025e5262085f56e03381b18b41c7a1169affaf3689f4"
@@ -71,7 +71,7 @@
       "determinism": {
         "ada": {
           "ownership_move.adb": {
-            "sha256": "d23bd21dc655a59b1965fe45fc7c231e462c8d86978e95bb86a2bd65ec575cb1"
+            "sha256": "8de6b1eed6a2bfedd95459f9f08b8445245cc45a47c0694bbc067cba4b438304"
           },
           "ownership_move.ads": {
             "sha256": "76046e138c42551c25e2982f1db7ff51e44b74419162f694d9af4961e0943bc2"
@@ -153,6 +153,6 @@
       }
     }
   ],
-  "repeat_sha256": "d9b34518014e0c020d1bbdf82ec7184eff1c5a47f4357037654f497e4f0a380b",
-  "report_sha256": "d9b34518014e0c020d1bbdf82ec7184eff1c5a47f4357037654f497e4f0a380b"
+  "repeat_sha256": "f900a8ed63cba62fb3369e7162dd885cae844e8eafa6a52ddea8a962ea8ea632",
+  "report_sha256": "f900a8ed63cba62fb3369e7162dd885cae844e8eafa6a52ddea8a962ea8ea632"
 }

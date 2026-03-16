@@ -80,6 +80,16 @@ class RunLocalPrePushTests(unittest.TestCase):
         labels = [step.label for step in steps]
         self.assertIn("Run run_pr09_ada_emission_baseline.py", labels)
 
+    def test_gate_scripts_for_branch_maps_known_pr103_branch(self) -> None:
+        self.assertEqual(
+            gate_scripts_for_branch("codex/pr103-ownership-proof-expansion"),
+            (
+                "scripts/run_pr103_sequential_proof_expansion.py",
+                "scripts/run_pr10_emitted_baseline.py",
+                "scripts/run_pr101_comprehensive_audit.py",
+            ),
+        )
+
     def test_build_steps_skips_unmapped_non_pr08_branch(self) -> None:
         self.assertEqual(
             build_steps(

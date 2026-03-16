@@ -153,6 +153,15 @@ PR102_LOOP_NEGATIVE_CASES = [
     "tests/negative/neg_while_variant_not_derivable.safe",
 ]
 
+PR103_OWNERSHIP_PROOF_CASES = [
+    "tests/positive/ownership_borrow.safe",
+    "tests/positive/ownership_observe.safe",
+    "tests/positive/ownership_observe_access.safe",
+    "tests/positive/ownership_return.safe",
+    "tests/positive/ownership_inout.safe",
+    "tests/positive/ownership_early_return.safe",
+]
+
 PR07_RESULT_CASES = [
     "tests/positive/result_guarded_access.safe",
     "tests/negative/neg_result_unguarded.safe",

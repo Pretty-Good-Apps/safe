@@ -1,6 +1,7 @@
 with Ada.Characters.Handling;
 with Ada.Containers;
 with Ada.Containers.Indefinite_Vectors;
+with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;
 
 package body Safe_Frontend.Ada_Emit is
@@ -51,7 +52,10 @@ package body Safe_Frontend.Ada_Emit is
      "pragma Partition_Elaboration_Policy(Sequential);" & ASCII.LF
      & "pragma Profile(Jorvik);" & ASCII.LF;
 
+   type Cleanup_Action is (Cleanup_Deallocate, Cleanup_Reset_Null);
+
    type Cleanup_Item is record
+      Action    : Cleanup_Action := Cleanup_Deallocate;
       Name      : FT.UString := FT.To_UString ("");
       Type_Name : FT.UString := FT.To_UString ("");
    end record;
@@ -70,6 +74,7 @@ package body Safe_Frontend.Ada_Emit is
 
    type Emit_State is record
       Needs_Safe_Runtime : Boolean := False;
+      Needs_Unevaluated_Use_Of_Old : Boolean := False;
       Needs_Gnat_Adc     : Boolean := False;
       Needs_Unchecked_Deallocation : Boolean := False;
       Wide_Local_Names   : FT.UString_Vectors.Vector;
@@ -114,7 +119,8 @@ package body Safe_Frontend.Ada_Emit is
    procedure Add_Cleanup_Item
      (State     : in out Emit_State;
       Name      : String;
-      Type_Name : String);
+      Type_Name : String;
+      Action    : Cleanup_Action := Cleanup_Deallocate);
    procedure Register_Cleanup_Items
      (State        : in out Emit_State;
       Declarations : CM.Resolved_Object_Decl_Vectors.Vector);
@@ -166,9 +172,15 @@ package body Safe_Frontend.Ada_Emit is
    function Is_Float_Type (Info : GM.Type_Descriptor) return Boolean;
    function Is_Access_Type (Info : GM.Type_Descriptor) return Boolean;
    function Is_Owner_Access (Info : GM.Type_Descriptor) return Boolean;
+   function Is_Alias_Access (Info : GM.Type_Descriptor) return Boolean;
+   function Replace_All
+     (Source      : String;
+      Pattern     : String;
+      Replacement : String) return String;
    function Default_Value_Expr (Type_Name : String) return String;
    function Default_Value_Expr (Info : GM.Type_Descriptor) return String;
    function Render_Type_Name (Info : GM.Type_Descriptor) return String;
+   function Render_Param_Type_Name (Info : GM.Type_Descriptor) return String;
    function Render_Type_Name
      (Unit     : CM.Resolved_Unit;
       Document : GM.Mir_Document;
@@ -244,6 +256,16 @@ package body Safe_Frontend.Ada_Emit is
       Depth      : Natural;
       Return_Type : String := "";
       In_Loop    : Boolean := False);
+   function Alias_Declarations
+     (Declarations : CM.Resolved_Object_Decl_Vectors.Vector)
+      return CM.Resolved_Object_Decl_Vectors.Vector;
+   function Non_Alias_Declarations
+     (Declarations : CM.Resolved_Object_Decl_Vectors.Vector)
+      return CM.Resolved_Object_Decl_Vectors.Vector;
+   procedure Render_In_Out_Param_Stabilizers
+     (Buffer     : in out SU.Unbounded_String;
+      Subprogram : CM.Resolved_Subprogram;
+      Depth      : Natural);
    function Statement_Falls_Through
      (Item : CM.Statement_Access) return Boolean;
    function Statements_Fall_Through
@@ -266,9 +288,22 @@ package body Safe_Frontend.Ada_Emit is
    function Render_Initializes_Aspect
      (Unit   : CM.Resolved_Unit;
       Bronze : MB.Bronze_Result) return String;
+   function Render_Access_Param_Precondition
+     (Unit       : CM.Resolved_Unit;
+      Document   : GM.Mir_Document;
+      Subprogram : CM.Resolved_Subprogram;
+      State      : in out Emit_State) return String;
+   function Render_Access_Param_Postcondition
+     (Unit       : CM.Resolved_Unit;
+      Document   : GM.Mir_Document;
+      Subprogram : CM.Resolved_Subprogram;
+      State      : in out Emit_State) return String;
    function Render_Subprogram_Aspects
-     (Subprogram : CM.Resolved_Subprogram;
-      Bronze     : MB.Bronze_Result) return String;
+     (Unit       : CM.Resolved_Unit;
+      Document   : GM.Mir_Document;
+      Subprogram : CM.Resolved_Subprogram;
+      Bronze     : MB.Bronze_Result;
+      State      : in out Emit_State) return String;
    procedure Render_Channel_Spec
      (Buffer  : in out SU.Unbounded_String;
       Channel : CM.Resolved_Channel_Decl;
@@ -442,7 +477,8 @@ package body Safe_Frontend.Ada_Emit is
    procedure Add_Cleanup_Item
      (State     : in out Emit_State;
       Name      : String;
-      Type_Name : String) is
+      Type_Name : String;
+      Action    : Cleanup_Action := Cleanup_Deallocate) is
    begin
       if State.Cleanup_Stack.Is_Empty then
          Raise_Internal ("cleanup item added outside an active cleanup scope during Ada emission");
@@ -452,7 +488,8 @@ package body Safe_Frontend.Ada_Emit is
          Frame : Cleanup_Frame := State.Cleanup_Stack.Last_Element;
       begin
          Frame.Items.Append
-           ((Name      => FT.To_UString (Name),
+           ((Action    => Action,
+             Name      => FT.To_UString (Name),
              Type_Name => FT.To_UString (Type_Name)));
          State.Cleanup_Stack.Replace_Element (State.Cleanup_Stack.Last_Index, Frame);
       end;
@@ -495,15 +532,18 @@ package body Safe_Frontend.Ada_Emit is
       Item   : Cleanup_Item;
       Depth  : Natural) is
    begin
-      Append_Line
-        (Buffer,
-         "if " & FT.To_String (Item.Name) & " /= null then",
-         Depth);
-      Append_Line
-        (Buffer,
-         "Free_" & FT.To_String (Item.Type_Name) & " (" & FT.To_String (Item.Name) & ");",
-         Depth + 1);
-      Append_Line (Buffer, "end if;", Depth);
+      case Item.Action is
+         when Cleanup_Deallocate =>
+            Append_Line
+              (Buffer,
+               "Free_" & FT.To_String (Item.Type_Name) & " (" & FT.To_String (Item.Name) & ");",
+               Depth);
+         when Cleanup_Reset_Null =>
+            Append_Line
+              (Buffer,
+               FT.To_String (Item.Name) & " := null;",
+               Depth);
+      end case;
    end Render_Cleanup_Item;
 
    procedure Render_Active_Cleanup
@@ -888,6 +928,58 @@ package body Safe_Frontend.Ada_Emit is
         and then FT.To_String (Info.Access_Role) = "Owner";
    end Is_Owner_Access;
 
+   function Is_Alias_Access (Info : GM.Type_Descriptor) return Boolean is
+      Role : constant String := FT.To_String (Info.Access_Role);
+   begin
+      return Is_Access_Type (Info)
+        and then not Is_Owner_Access (Info)
+        and then Role in "Borrow" | "Observe";
+   end Is_Alias_Access;
+
+   function Replace_All
+     (Source      : String;
+      Pattern     : String;
+      Replacement : String) return String
+   is
+      Result : SU.Unbounded_String;
+      Cursor : Positive := Source'First;
+   begin
+      if Pattern'Length = 0 or else Source'Length = 0 then
+         return Source;
+      end if;
+
+      while Cursor <= Source'Last loop
+         declare
+            Match : constant Natural :=
+              Ada.Strings.Fixed.Index (Source (Cursor .. Source'Last), Pattern);
+         begin
+            if Match = 0 then
+               Result :=
+                 Result & SU.To_Unbounded_String (Source (Cursor .. Source'Last));
+               exit;
+            end if;
+
+            declare
+               Match_Start : constant Positive := Positive (Match);
+               Match_End   : constant Natural := Match_Start + Pattern'Length - 1;
+            begin
+               if Match_Start > Cursor then
+                  Result :=
+                    Result
+                    & SU.To_Unbounded_String (Source (Cursor .. Match_Start - 1));
+               end if;
+               Result := Result & SU.To_Unbounded_String (Replacement);
+               if Match_End >= Source'Last then
+                  exit;
+               end if;
+               Cursor := Match_End + 1;
+            end;
+         end;
+      end loop;
+
+      return SU.To_String (Result);
+   end Replace_All;
+
    function Render_Type_Name (Info : GM.Type_Descriptor) return String is
    begin
       if Info.Anonymous and then Is_Access_Type (Info) then
@@ -899,6 +991,15 @@ package body Safe_Frontend.Ada_Emit is
       end if;
       return FT.To_String (Info.Name);
    end Render_Type_Name;
+
+   function Render_Param_Type_Name (Info : GM.Type_Descriptor) return String is
+      Param_Info : GM.Type_Descriptor := Info;
+   begin
+      if Param_Info.Anonymous and then Is_Alias_Access (Param_Info) then
+         Param_Info.Not_Null := True;
+      end if;
+      return Render_Type_Name (Param_Info);
+   end Render_Param_Type_Name;
 
    function Render_Type_Name
      (Unit     : CM.Resolved_Unit;
@@ -1179,6 +1280,9 @@ package body Safe_Frontend.Ada_Emit is
                     & FT.To_String (Expr.Callee.Selector)
                   else Render_Expr (Unit, Document, Expr.Callee, State));
             begin
+               if Expr.Args.Is_Empty then
+                  return Callee_Image;
+               end if;
                Result := SU.To_Unbounded_String (Callee_Image & " (");
             end;
             for Index in Expr.Args.First_Index .. Expr.Args.Last_Index loop
@@ -1217,7 +1321,9 @@ package body Safe_Frontend.Ada_Emit is
             return
               Render_Expr (Unit, Document, Expr.Target, State)
               & "'"
-              & Render_Expr (Unit, Document, Expr.Inner, State);
+              & (if Expr.Inner /= null and then Expr.Inner.Kind = CM.Expr_Aggregate
+                 then Render_Expr (Unit, Document, Expr.Inner, State)
+                 else "(" & Render_Expr (Unit, Document, Expr.Inner, State) & ")");
          when CM.Expr_Unary =>
             return
               "("
@@ -1856,7 +1962,7 @@ package body Safe_Frontend.Ada_Emit is
                   (FT.To_String (Param.Name)
                    & " : "
                    & (if Mode = "in" or else Mode = "" then "" else Mode & " ")
-                   & Render_Type_Name (Param.Type_Info));
+                   & Render_Param_Type_Name (Param.Type_Info));
          end;
       end loop;
 
@@ -1872,6 +1978,66 @@ package body Safe_Frontend.Ada_Emit is
       end if;
       return "";
    end Render_Subprogram_Return;
+
+   function Alias_Declarations
+     (Declarations : CM.Resolved_Object_Decl_Vectors.Vector)
+      return CM.Resolved_Object_Decl_Vectors.Vector
+   is
+      Result : CM.Resolved_Object_Decl_Vectors.Vector;
+   begin
+      for Decl of Declarations loop
+         if Is_Alias_Access (Decl.Type_Info) then
+            Result.Append (Decl);
+         end if;
+      end loop;
+      return Result;
+   end Alias_Declarations;
+
+   function Non_Alias_Declarations
+     (Declarations : CM.Resolved_Object_Decl_Vectors.Vector)
+      return CM.Resolved_Object_Decl_Vectors.Vector
+   is
+      Result : CM.Resolved_Object_Decl_Vectors.Vector;
+   begin
+      for Decl of Declarations loop
+         if not Is_Alias_Access (Decl.Type_Info) then
+            Result.Append (Decl);
+         end if;
+      end loop;
+      return Result;
+   end Non_Alias_Declarations;
+
+   procedure Render_In_Out_Param_Stabilizers
+     (Buffer     : in out SU.Unbounded_String;
+      Subprogram : CM.Resolved_Subprogram;
+      Depth      : Natural)
+   is
+   begin
+      for Param of Subprogram.Params loop
+         if FT.To_String (Param.Mode) = "in out"
+           and then Is_Owner_Access (Param.Type_Info)
+         then
+            declare
+               Param_Name    : constant String := FT.To_String (Param.Name);
+               Snapshot_Name : constant String := Param_Name & "_Snapshot";
+            begin
+               Append_Line (Buffer, "declare", Depth);
+               Append_Line
+                 (Buffer,
+                  Snapshot_Name
+                  & " : constant "
+                  & Render_Type_Name (Param.Type_Info)
+                  & " := "
+                  & Param_Name
+                  & ";",
+                  Depth + 1);
+               Append_Line (Buffer, "begin", Depth);
+               Append_Line (Buffer, Param_Name & " := " & Snapshot_Name & ";", Depth + 1);
+               Append_Line (Buffer, "end;", Depth);
+            end;
+         end if;
+      end loop;
+   end Render_In_Out_Param_Stabilizers;
 
    function Find_Graph_Summary
      (Bronze : MB.Bronze_Result;
@@ -2233,32 +2399,264 @@ package body Safe_Frontend.Ada_Emit is
       return SU.To_String (Result);
    end Render_Depends_Aspect;
 
+   function Render_Access_Param_Precondition
+     (Unit       : CM.Resolved_Unit;
+      Document   : GM.Mir_Document;
+      Subprogram : CM.Resolved_Subprogram;
+      State      : in out Emit_State) return String
+   is
+      Conditions : FT.UString_Vectors.Vector;
+
+      function Is_Alias_Param_Name (Name : String) return Boolean is
+      begin
+         for Param of Subprogram.Params loop
+            if FT.To_String (Param.Name) = Name
+              and then Param.Type_Info.Anonymous
+              and then Is_Alias_Access (Param.Type_Info)
+            then
+               return True;
+            end if;
+         end loop;
+         return False;
+      end Is_Alias_Param_Name;
+
+      procedure Add_Unique (Condition : String) is
+      begin
+         if Condition'Length > 0 and then not Contains_Name (Conditions, Condition) then
+            Conditions.Append (FT.To_UString (Condition));
+         end if;
+      end Add_Unique;
+
+      procedure Collect
+        (Statements : CM.Statement_Access_Vectors.Vector);
+
+      procedure Collect
+        (Statements : CM.Statement_Access_Vectors.Vector) is
+      begin
+         for Item of Statements loop
+            if Item = null then
+               null;
+            else
+               case Item.Kind is
+                  when CM.Stmt_Assign =>
+                     declare
+                        Target_Name : constant String := Root_Name (Item.Target);
+                        Target_Type : constant String := FT.To_String (Item.Target.Type_Name);
+                     begin
+                        if Target_Name'Length > 0
+                          and then Is_Alias_Param_Name (Target_Name)
+                          and then Is_Integer_Type (Unit, Document, Target_Type)
+                          and then Uses_Wide_Value (Unit, Document, State, Item.Value)
+                        then
+                           declare
+                              Wide_Image : constant String :=
+                                Render_Wide_Expr (Unit, Document, Item.Value, State);
+                           begin
+                              Add_Unique
+                                ("("
+                                 & Wide_Image
+                                 & " >= Safe_Runtime.Wide_Integer ("
+                                 & Target_Type
+                                 & "'First) and then "
+                                 & Wide_Image
+                                 & " <= Safe_Runtime.Wide_Integer ("
+                                 & Target_Type
+                                 & "'Last))");
+                           end;
+                        end if;
+                     end;
+                  when CM.Stmt_If =>
+                     Collect (Item.Then_Stmts);
+                     for Part of Item.Elsifs loop
+                        Collect (Part.Statements);
+                     end loop;
+                     if Item.Has_Else then
+                        Collect (Item.Else_Stmts);
+                     end if;
+                  when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
+                     Collect (Item.Body_Stmts);
+                  when CM.Stmt_Block =>
+                     Collect (Item.Body_Stmts);
+                  when CM.Stmt_Select =>
+                     for Arm of Item.Arms loop
+                        case Arm.Kind is
+                           when CM.Select_Arm_Channel =>
+                              Collect (Arm.Channel_Data.Statements);
+                           when CM.Select_Arm_Delay =>
+                              Collect (Arm.Delay_Data.Statements);
+                           when others =>
+                              null;
+                        end case;
+                     end loop;
+                  when others =>
+                     null;
+               end case;
+            end if;
+         end loop;
+      end Collect;
+
+      Result : SU.Unbounded_String;
+   begin
+      Collect (Subprogram.Statements);
+      for Index in Conditions.First_Index .. Conditions.Last_Index loop
+         if Index /= Conditions.First_Index then
+            Result := Result & SU.To_Unbounded_String (" and then ");
+         end if;
+         Result := Result & SU.To_Unbounded_String (FT.To_String (Conditions (Index)));
+      end loop;
+      return SU.To_String (Result);
+   end Render_Access_Param_Precondition;
+
+   function Render_Access_Param_Postcondition
+     (Unit       : CM.Resolved_Unit;
+      Document   : GM.Mir_Document;
+      Subprogram : CM.Resolved_Subprogram;
+      State      : in out Emit_State) return String
+   is
+      Conditions   : FT.UString_Vectors.Vector;
+      Seen_Targets : FT.UString_Vectors.Vector;
+      Unsupported  : Boolean := False;
+
+      function Is_Alias_Param_Name (Name : String) return Boolean is
+      begin
+         for Param of Subprogram.Params loop
+            if FT.To_String (Param.Name) = Name
+              and then Param.Type_Info.Anonymous
+              and then Is_Alias_Access (Param.Type_Info)
+              and then not Param.Type_Info.Is_Constant
+            then
+               return True;
+            end if;
+         end loop;
+         return False;
+      end Is_Alias_Param_Name;
+
+      procedure Add_Unique_Equality
+        (Target_Image : String;
+         Value_Image  : String)
+      is
+      begin
+         if Target_Image'Length = 0 or else Value_Image'Length = 0 then
+            Unsupported := True;
+            return;
+         end if;
+
+         if Contains_Name (Seen_Targets, Target_Image) then
+            Unsupported := True;
+            return;
+         end if;
+
+         Seen_Targets.Append (FT.To_UString (Target_Image));
+         Conditions.Append
+           (FT.To_UString
+              (Target_Image
+               & " = "
+               & Replace_All
+                   (Value_Image,
+                    Target_Image,
+                    Target_Image & "'Old")));
+      end Add_Unique_Equality;
+
+      Result : SU.Unbounded_String;
+   begin
+      for Item of Subprogram.Statements loop
+         exit when Unsupported;
+
+         if Item = null then
+            null;
+         else
+            case Item.Kind is
+               when CM.Stmt_Assign =>
+                  declare
+                     Target_Name : constant String := Root_Name (Item.Target);
+                  begin
+                     if Target_Name'Length > 0
+                       and then Is_Alias_Param_Name (Target_Name)
+                     then
+                        Add_Unique_Equality
+                          (Render_Expr (Unit, Document, Item.Target, State),
+                           Render_Expr (Unit, Document, Item.Value, State));
+                     end if;
+                  end;
+               when CM.Stmt_If
+                  | CM.Stmt_While
+                  | CM.Stmt_For
+                  | CM.Stmt_Loop
+                  | CM.Stmt_Block
+                  | CM.Stmt_Select =>
+                  Unsupported := True;
+               when others =>
+                  null;
+            end case;
+         end if;
+      end loop;
+
+      if Unsupported or else Conditions.Is_Empty then
+         return "";
+      end if;
+
+      State.Needs_Unevaluated_Use_Of_Old := True;
+      for Index in Conditions.First_Index .. Conditions.Last_Index loop
+         if Index /= Conditions.First_Index then
+            Result := Result & SU.To_Unbounded_String (" and then ");
+         end if;
+         Result := Result & SU.To_Unbounded_String (FT.To_String (Conditions (Index)));
+      end loop;
+      return SU.To_String (Result);
+   end Render_Access_Param_Postcondition;
+
    function Render_Subprogram_Aspects
-     (Subprogram : CM.Resolved_Subprogram;
-      Bronze     : MB.Bronze_Result) return String
+     (Unit       : CM.Resolved_Unit;
+      Document   : GM.Mir_Document;
+      Subprogram : CM.Resolved_Subprogram;
+      Bronze     : MB.Bronze_Result;
+      State      : in out Emit_State) return String
    is
       Summary : constant MB.Graph_Summary :=
         Find_Graph_Summary (Bronze, FT.To_String (Subprogram.Name));
       Global_Image  : constant String := Render_Global_Aspect (Summary);
       Depends_Image : constant String :=
         Render_Depends_Aspect (Subprogram, Summary);
+      Pre_Image : constant String :=
+        Render_Access_Param_Precondition (Unit, Document, Subprogram, State);
+      Post_Image : constant String :=
+        Render_Access_Param_Postcondition (Unit, Document, Subprogram, State);
+      Result : SU.Unbounded_String :=
+        SU.To_Unbounded_String (" with Global => " & Global_Image);
    begin
       if not Has_Text (Summary.Name) then
          return "";
       end if;
 
-      if Depends_Image'Length = 0 then
-         return " with Global => " & Global_Image;
+      if Depends_Image'Length > 0 then
+         Result :=
+           Result
+           & SU.To_Unbounded_String
+               ("," & ASCII.LF
+                & Indentation (4)
+                & "Depends => ("
+                & Depends_Image
+                & ")");
       end if;
-      return
-        " with Global => "
-        & Global_Image
-        & "," & ASCII.LF
-        & Indentation (4)
-        & "Depends => "
-        & "("
-        & Depends_Image
-        & ")";
+      if Pre_Image'Length > 0 then
+         Result :=
+           Result
+           & SU.To_Unbounded_String
+               ("," & ASCII.LF
+                & Indentation (4)
+                & "Pre => "
+                & Pre_Image);
+      end if;
+      if Post_Image'Length > 0 then
+         Result :=
+           Result
+           & SU.To_Unbounded_String
+               ("," & ASCII.LF
+                & Indentation (4)
+                & "Post => "
+                & Post_Image);
+      end if;
+      return SU.To_String (Result);
    end Render_Subprogram_Aspects;
 
    function Render_Discrete_Range
@@ -2498,8 +2896,64 @@ package body Safe_Frontend.Ada_Emit is
          else (others => <>));
       Target_Image : constant String := Render_Expr (Unit, Document, Stmt.Target, State);
       Value_Image  : constant String := Render_Expr (Unit, Document, Stmt.Value, State);
+      Needs_Target_Snapshot : constant Boolean :=
+        Stmt.Target /= null
+        and then Stmt.Target.Kind = CM.Expr_Select
+        and then Target_Image'Length > 0
+        and then Value_Image'Length > 0
+        and then Ada.Strings.Fixed.Index (Value_Image, Target_Image) /= 0;
    begin
-      if Stmt.Target.Kind = CM.Expr_Ident
+      if Needs_Target_Snapshot then
+         declare
+            Snapshot_Name : constant String :=
+              Root_Name (Stmt.Target) & "_" & FT.To_String (Stmt.Target.Selector) & "_Snapshot";
+            Snapshot_Type : constant String :=
+              Render_Type_Name (Unit, Document, FT.To_String (Stmt.Target.Type_Name));
+            Snapshot_Value_Image : constant String :=
+              Replace_All (Value_Image, Target_Image, Snapshot_Name);
+         begin
+            Append_Line (Buffer, "declare", Depth);
+            Append_Line
+              (Buffer,
+               Snapshot_Name & " : constant " & Snapshot_Type & " := " & Target_Image & ";",
+               Depth + 1);
+            Append_Line (Buffer, "begin", Depth);
+            if Is_Integer_Type (Unit, Document, Target_Type)
+              and then Uses_Wide_Value (Unit, Document, State, Stmt.Value)
+            then
+               declare
+                  Snapshot_Wide_Image : constant String :=
+                    Replace_All
+                      (Render_Wide_Expr (Unit, Document, Stmt.Value, State),
+                       Target_Image,
+                       Snapshot_Name);
+               begin
+                  Append_Line
+                    (Buffer,
+                     "pragma Assert ("
+                     & Snapshot_Wide_Image
+                     & " >= Safe_Runtime.Wide_Integer ("
+                     & Target_Type
+                     & "'First) and then "
+                     & Snapshot_Wide_Image
+                     & " <= Safe_Runtime.Wide_Integer ("
+                     & Target_Type
+                     & "'Last));",
+                     Depth + 1);
+                  Append_Line
+                    (Buffer,
+                     Target_Image & " := " & Target_Type & " (" & Snapshot_Wide_Image & ");",
+                     Depth + 1);
+               end;
+            else
+               Append_Line
+                 (Buffer,
+                  Target_Image & " := " & Snapshot_Value_Image & ";",
+                  Depth + 1);
+            end if;
+            Append_Line (Buffer, "end;", Depth);
+         end;
+      elsif Stmt.Target.Kind = CM.Expr_Ident
         and then Is_Wide_Name (State, FT.To_String (Stmt.Target.Name))
       then
          Append_Line
@@ -2741,7 +3195,8 @@ package body Safe_Frontend.Ada_Emit is
                for Name of Decl.Names loop
                   Render_Cleanup_Item
                     (Buffer,
-                     (Name      => Name,
+                     (Action    => Cleanup_Deallocate,
+                      Name      => Name,
                       Type_Name => Decl.Type_Info.Name),
                      Depth);
                end loop;
@@ -2766,7 +3221,8 @@ package body Safe_Frontend.Ada_Emit is
                for Name of Decl.Names loop
                   Render_Cleanup_Item
                     (Buffer,
-                     (Name      => Name,
+                     (Action    => Cleanup_Deallocate,
+                      Name      => Name,
                       Type_Name => Decl.Type_Info.Name),
                      Depth);
                end loop;
@@ -3462,13 +3918,17 @@ package body Safe_Frontend.Ada_Emit is
       Subprogram : CM.Resolved_Subprogram;
       State      : in out Emit_State)
    is
+      Outer_Declarations : constant CM.Resolved_Object_Decl_Vectors.Vector :=
+        Non_Alias_Declarations (Subprogram.Declarations);
+      Inner_Alias_Declarations : constant CM.Resolved_Object_Decl_Vectors.Vector :=
+        Alias_Declarations (Subprogram.Declarations);
       Previous_Wide_Count : constant Ada.Containers.Count_Type :=
         State.Wide_Local_Names.Length;
    begin
       Collect_Wide_Locals
         (Unit, Document, State, Subprogram.Declarations, Subprogram.Statements);
       Push_Cleanup_Frame (State);
-      Register_Cleanup_Items (State, Subprogram.Declarations);
+      Register_Cleanup_Items (State, Outer_Declarations);
       Append_Line
         (Buffer,
          FT.To_String (Subprogram.Kind)
@@ -3479,19 +3939,36 @@ package body Safe_Frontend.Ada_Emit is
          & " is",
          1);
       Render_Block_Declarations
-        (Buffer, Unit, Document, Subprogram.Declarations, State, 2);
-      Render_Free_Declarations (Buffer, Subprogram.Declarations, 2);
+        (Buffer, Unit, Document, Outer_Declarations, State, 2);
+      Render_Free_Declarations (Buffer, Outer_Declarations, 2);
       Append_Line (Buffer, "begin", 1);
-      Render_Statements
-        (Buffer,
-         Unit,
-         Document,
-         Subprogram.Statements,
-         State,
-         2,
-         (if Subprogram.Has_Return_Type then Render_Type_Name (Subprogram.Return_Type) else ""));
+      Render_In_Out_Param_Stabilizers (Buffer, Subprogram, 2);
+      if not Inner_Alias_Declarations.Is_Empty then
+         Append_Line (Buffer, "declare", 2);
+         Render_Block_Declarations
+           (Buffer, Unit, Document, Inner_Alias_Declarations, State, 3);
+         Append_Line (Buffer, "begin", 2);
+         Render_Statements
+           (Buffer,
+            Unit,
+            Document,
+            Subprogram.Statements,
+            State,
+            3,
+            (if Subprogram.Has_Return_Type then Render_Type_Name (Subprogram.Return_Type) else ""));
+         Append_Line (Buffer, "end;", 2);
+      else
+         Render_Statements
+           (Buffer,
+            Unit,
+            Document,
+            Subprogram.Statements,
+            State,
+            2,
+            (if Subprogram.Has_Return_Type then Render_Type_Name (Subprogram.Return_Type) else ""));
+      end if;
       if Statements_Fall_Through (Subprogram.Statements) then
-         Render_Cleanup (Buffer, Subprogram.Declarations, 2);
+         Render_Cleanup (Buffer, Outer_Declarations, 2);
       end if;
       Append_Line (Buffer, "end " & FT.To_String (Subprogram.Name) & ";", 1);
       Append_Line (Buffer);
@@ -3613,7 +4090,7 @@ package body Safe_Frontend.Ada_Emit is
                & FT.To_String (Subprogram.Name)
                & Render_Subprogram_Params (Unit, Document, Subprogram.Params)
                & Render_Subprogram_Return (Subprogram)
-               & Render_Subprogram_Aspects (Subprogram, Bronze)
+               & Render_Subprogram_Aspects (Unit, Document, Subprogram, Bronze, State)
                & ";",
                1);
          end loop;
@@ -3673,7 +4150,38 @@ package body Safe_Frontend.Ada_Emit is
          Append_Line (Body_Text);
       end if;
       Body_Text := Body_Text & Body_Inner;
-      Spec_Text := Spec_Inner;
+      declare
+         Original_Spec : constant String := SU.To_String (Spec_Inner);
+         Pragma_Block  : constant String :=
+           "pragma SPARK_Mode (On);" & ASCII.LF & ASCII.LF;
+         Spec_Needs_Safe_Runtime : constant Boolean :=
+           Ada.Strings.Fixed.Index (Original_Spec, "Safe_Runtime.") > 0;
+      begin
+         if (Spec_Needs_Safe_Runtime or else State.Needs_Unevaluated_Use_Of_Old)
+           and then Original_Spec'Length >= Pragma_Block'Length
+           and then
+             Original_Spec
+               (Original_Spec'First .. Original_Spec'First + Pragma_Block'Length - 1) =
+               Pragma_Block
+         then
+            Append_Line (Spec_Text, "pragma SPARK_Mode (On);");
+            if State.Needs_Unevaluated_Use_Of_Old then
+               Append_Line (Spec_Text, "pragma Unevaluated_Use_Of_Old (Allow);");
+            end if;
+            if Spec_Needs_Safe_Runtime then
+               Append_Line (Spec_Text, "with Safe_Runtime;");
+               Append_Line (Spec_Text, "use type Safe_Runtime.Wide_Integer;");
+            end if;
+            Append_Line (Spec_Text);
+            Spec_Text :=
+              Spec_Text
+              & SU.To_Unbounded_String
+                  (Original_Spec
+                     (Original_Spec'First + Pragma_Block'Length .. Original_Spec'Last));
+         else
+            Spec_Text := Spec_Text & Spec_Inner;
+         end if;
+      end;
 
       return
         (Success            => True,

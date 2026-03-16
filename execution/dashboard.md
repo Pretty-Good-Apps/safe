@@ -3,8 +3,8 @@
 - **Schema version:** `1`
 - **Frozen spec SHA:** `468cf72332724b04b7c193b4d2a3b02f1584125d`
 - **Active task:** `none`
-- **Next task:** `PR10.3`
-- **Updated at:** `2026-03-15T00:00:00Z`
+- **Next task:** `PR10.4`
+- **Updated at:** `2026-03-16T00:00:00Z`
 
 ## Repo Facts
 
@@ -54,9 +54,10 @@
 | PR10 | done | PR09 | 4 |
 | PR10.1 | done | PR10 | 1 |
 | PR10.2 | done | PR10.1 | 1 |
-| PR10.3 | planned | PR10.1 | 0 |
+| PR10.3 | done | PR10.1 | 1 |
 | PR10.4 | planned | PR10.1 | 0 |
 | PR10.5 | planned | PR10.1 | 0 |
+| PR10.6 | planned | PR10.3 | 0 |
 
 ## Acceptance Snapshot
 
@@ -542,14 +543,16 @@
 
 ### PR10.3 — Sequential emitted proof-corpus expansion beyond PR10
 
-- **Status:** `planned`
+- **Status:** `done`
 - **Depends on:** PR10.1
 - **Blockers:** none
 - **Acceptance:**
   - The first PR10.3 ownership expansion corpus consists of tests/positive/ownership_borrow.safe, tests/positive/ownership_observe.safe, tests/positive/ownership_observe_access.safe, tests/positive/ownership_return.safe, tests/positive/ownership_inout.safe, and tests/positive/ownership_early_return.safe, and that named set may not be silently shrunk.
   - Those six ownership fixtures pass compile, GNATprove flow, and GNATprove prove under the all-proved-only policy.
-  - docs/emitted_output_verification_matrix.md and related audit/docs surfaces distinguish the frozen PR10 claim from post-PR10 supplemental proved sequential fixtures.
+  - docs/emitted_output_verification_matrix.md and related audit/docs surfaces distinguish the frozen PR10 claim from the now-proved PR10.3 ownership expansion set and retarget remaining sequential proof expansion to PR10.6.
   - A dedicated PR10.3 gate, report, and CI wiring keep the expanded sequential proof corpus deterministic and evidence-backed.
+- **Evidence:**
+  - `execution/reports/pr103-sequential-proof-expansion-report.json`
 
 ### PR10.4 — GNATprove evidence and parser hardening
 
@@ -573,3 +576,13 @@
   - The three broad Constraint_Error catch-alls in compiler_impl/src/safe_frontend-ada_emit.adb are removed or narrowed so malformed-state failures are not collapsed into generic emitter internal errors.
   - Unreachable post-Raise_Unsupported fallback returns are removed, integer-type classification is made subtype-aware, name-based type lookup/render helpers are unified, and the duplicated Render_Object_Decl_Text bodies are consolidated into one shared implementation path.
   - A dedicated PR10.5 gate, report, and CI job keep the emitter-maintenance refactor deterministic and evidence-backed.
+
+### PR10.6 — Remaining sequential emitted proof-corpus expansion beyond ownership
+
+- **Status:** `planned`
+- **Depends on:** PR10.3
+- **Blockers:** none
+- **Acceptance:**
+  - The remaining accepted sequential emitted subset beyond the frozen PR10 representatives and the completed PR10.3 ownership set is explicitly enumerated and may not be silently shrunk.
+  - That remaining sequential subset passes compile, GNATprove flow, and GNATprove prove under the all-proved-only policy with dedicated deterministic evidence.
+  - docs/emitted_output_verification_matrix.md, docs/pr10_refinement_audit.md, and related tracker/docs surfaces distinguish the completed PR10.3 ownership expansion from the still-open PR10.6 sequential remainder.

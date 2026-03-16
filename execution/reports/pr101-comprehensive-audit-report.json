@@ -1,13 +1,13 @@
 {
   "artifact_hashes": {
-    "audit_doc": "e6a55eb282ed742a675745210626c6d4f5e999a0f2aaf6d2b7e6ba281f61011c",
+    "audit_doc": "0bf35607d24671b89d5388d0d5e3d9326e9d56fc3c24026de9640fe2124c2e1f",
     "compiler_readme": "05188ccfcaf9e0c14a02927b175159b64bc8d3c26016eaef18a51d5f61581ecc",
-    "dashboard": "00e5ae482e28eaf42bcc39bb3126524a9e68a67448dd85796569bdc96e8ad4ee",
-    "matrix": "581eebd1d7e385c9475236290b4bd1041b775691299482b63b49b916daf51868",
+    "dashboard": "398e3c868d03d22bc2bc3da429ca71a745c39b22e818bdce21e43c05b4df3e24",
+    "matrix": "fdea8c4b68ac3986a09c3d19b072ccb591e30b5edec870c66fde5a2aabcf71b1",
     "post_pr10_scope": "52d74391fcb697b6cc620bbeb8ed8aaff90f6d5689f99c9f093da972d9f55237",
     "readme": "18b4c914ca6f68eb7a01bc1d5e63687926fae68b35fdd4450811a453587c6c9d",
-    "tracker": "ba7c0b2397fd5d963a417a5c4c03e70c0eab291f75adacdf058b1ae0217e8c4c",
-    "workflow": "73fec50c9aa0edb2b36e990795e5db730a70c11c2349d5feae419405e97dc848"
+    "tracker": "27881e47833ebf57eecff18ec6d99bd9f9aad22638722a2bb9dbdac806edc9cc",
+    "workflow": "7f5fa708cdff28a40ddf4d9669186d212574945789b67750424b848907fc0644"
   },
   "audited_surfaces": [
     "spec/TBD consistency",
@@ -95,7 +95,7 @@
     "python_gates": [
       {
         "deterministic": true,
-        "report_sha256": "e137367f5bbc9aea4dbdd736d9fe40f6c257fabdba1d9134403dbdcd13fca3e9",
+        "report_sha256": "cf8cb087fec2f67e7e9fb8030837b429fb974ddfb0159f9a0c9c8aea87d89cea",
         "result": {
           "command": [
             "python3",
@@ -110,7 +110,7 @@
       },
       {
         "deterministic": true,
-        "report_sha256": "ac2f0d41522da797e7c5c6a44a27b04628aa23145c734e53932d84e112ba4f2f",
+        "report_sha256": "363bc40e3488121d8eccebf13737b0f333430d2af1f02dcc5c6c40df83816316",
         "result": {
           "command": [
             "python3",
@@ -125,7 +125,7 @@
       },
       {
         "deterministic": true,
-        "report_sha256": "8c9f2363159df30b41438b9d48e1067ce758f9a8b49955a7aeb293d04bd030ac",
+        "report_sha256": "f40d58a3f57fb35db0d5be159100e5985a883b1bbebd9c8a652e3d53cea086c3",
         "result": {
           "command": [
             "python3",
@@ -269,6 +269,11 @@
       "disposition": "close-as-pretracked",
       "id": "PR101-022",
       "target": "docs/syntax_proposals.md"
+    },
+    {
+      "disposition": "close-as-fixed",
+      "id": "PR101-051",
+      "target": "PR10.3"
     }
   ],
   "deterministic": true,
@@ -284,28 +289,15 @@
       "tooling": 13
     },
     "by_disposition": {
-      "close-as-fixed": 5,
+      "close-as-fixed": 6,
       "close-as-pretracked": 1,
       "fix-in-pr101": 4,
-      "promote-to-pr10x": 8,
+      "promote-to-pr10x": 7,
       "retain-in-post-pr10": 33
     },
     "total": 51
   },
   "promoted_follow_on_candidates": [
-    {
-      "finding_ids": [],
-      "task": "PR10.2",
-      "title": "Rule 5 proof-boundary closure and loop-termination diagnostics"
-    },
-    {
-      "finding_ids": [
-        "PR101-027",
-        "PR101-051"
-      ],
-      "task": "PR10.3",
-      "title": "Sequential emitted proof-corpus expansion beyond PR10"
-    },
     {
       "finding_ids": [
         "PR101-030"
@@ -323,10 +315,17 @@
       ],
       "task": "PR10.5",
       "title": "Ada emitter maintenance hardening"
+    },
+    {
+      "finding_ids": [
+        "PR101-027"
+      ],
+      "task": "PR10.6",
+      "title": "Remaining sequential emitted proof-corpus expansion beyond ownership"
     }
   ],
-  "repeat_sha256": "5bbfdb277cc2ab3452efa6446d143f0dd6933c8540f68efc702a479c87b78d9d",
-  "report_sha256": "5bbfdb277cc2ab3452efa6446d143f0dd6933c8540f68efc702a479c87b78d9d",
+  "repeat_sha256": "2db6776536191341d8b8f74314157fc93109b770b15f99076062fb69ef73068f",
+  "report_sha256": "2db6776536191341d8b8f74314157fc93109b770b15f99076062fb69ef73068f",
   "retained_post_pr10_residuals": [
     {
       "area": "resolver",
@@ -496,24 +495,12 @@
   ],
   "task": "PR10.1",
   "tracker": {
-    "next_task_id": "PR10.3",
+    "next_task_id": "PR10.4",
     "pr101_evidence": [
       "execution/reports/pr101-comprehensive-audit-report.json"
     ],
     "pr101_status": "done",
     "promoted_tasks": {
-      "PR10.2": {
-        "depends_on": [
-          "PR10.1"
-        ],
-        "status": "done"
-      },
-      "PR10.3": {
-        "depends_on": [
-          "PR10.1"
-        ],
-        "status": "planned"
-      },
       "PR10.4": {
         "depends_on": [
           "PR10.1"
@@ -523,6 +510,12 @@
       "PR10.5": {
         "depends_on": [
           "PR10.1"
+        ],
+        "status": "planned"
+      },
+      "PR10.6": {
+        "depends_on": [
+          "PR10.3"
         ],
         "status": "planned"
       }

@@ -85,7 +85,7 @@ The committed report is
 |----|------|--------------|------------------|----------|-------------|--------|-------|
 | `PR101-025` | `tooling` | `PR08.3` review fallout | Interface search-dir scanning still fails closed on unrelated malformed `.safei.json` files. | Existing review fallout; current interface loading behaviour | `retain-in-post-pr10` | `PS-016` | Nice-to-have ergonomics hardening. |
 | `PR101-026` | `tooling` | `PR08.2` review fallout | Ada-side Bronze regression derivation still depends on Python-driven evidence refresh. | Current gate stack and report generation | `retain-in-post-pr10` | `PS-017` | Nice-to-have tooling hardening. |
-| `PR101-027` | `tooling` | `docs/emitted_output_verification_matrix.md`; `execution/tracker.json` | Sequential emitted proof coverage beyond the frozen PR10 representatives is now the cleanest bounded follow-on proof-expansion task. | Matrix “Other currently emitted sequential fixtures” row; frozen PR10 claim | `promote-to-pr10x` | `PR10.3` | Promote into a tracked sequential proof-expansion milestone instead of leaving it as an undifferentiated long-term note. |
+| `PR101-027` | `tooling` | `docs/emitted_output_verification_matrix.md`; `execution/tracker.json` | Sequential emitted proof coverage beyond the frozen PR10 representatives is still an open bounded follow-on task after the ownership-specific PR10.3 closure. | Matrix “Other currently emitted sequential fixtures” row; frozen PR10 claim; completed ownership-specific proof set | `promote-to-pr10x` | `PR10.6` | Retarget the remaining non-ownership sequential proof expansion into its own milestone now that PR10.3 closes the six-fixture ownership set. |
 | `PR101-028` | `tooling` | `docs/emitted_output_verification_matrix.md`; `execution/tracker.json` | Concurrency emitted proof coverage beyond the frozen PR10 subset remains open, but the runtime-model boundary makes it less decision-complete than the sequential expansion. | Matrix concurrency residual row; retained runtime obligations | `retain-in-post-pr10` | `PS-018` | Keep retained until a narrower concurrency proof task is decision-complete. |
 | `PR101-029` | `tooling` | `docs/emitted_output_verification_matrix.md` | I/O seam wrapper obligations remain outside direct emitted-package proof and need separate wrapper/runtime mechanisms. | Matrix I/O seam row | `retain-in-post-pr10` | `PS-019` | Long-term assurance boundary. |
 | `PR101-030` | `tooling` | PR10 review; `scripts/_lib/pr10_emit.py`; downstream PR06.9.x report churn | The GNATprove parser is now stricter and tested, but the repo still relies on textual summary parsing instead of a dedicated hardened evidence path, and several deterministic parent reports still churn when child report hashes change for unrelated reasons. | Current parser tests; text-summary dependency remains; PR06.9.10/11/13 rollup behavior | `promote-to-pr10x` | `PR10.4` | Promote the remaining tooling hardening into its own bounded milestone: audit-parser regression tests, explicit `gnat.adc` sentinels, proof-repeatability policy, and report-topology de-cascading so parent evidence stays stable when only child report hashes move. |
@@ -93,7 +93,7 @@ The committed report is
 | `PR101-032` | `tooling` | `spec/00-front-matter.md` section `0.8`; interface and MIR code | The repo has stable `safei-v1` and `mir-v2` artifacts, but not a fully stabilised normative interchange-format policy. | Existing artifacts plus retained normative-policy gap | `retain-in-post-pr10` | `PS-021` | Long-term documentation/policy work. |
 | `PR101-033` | `tooling` | `spec/00-front-matter.md` section `0.8` | Performance targets are still intentionally undefined. | Spec TBD register | `retain-in-post-pr10` | `PS-022` | Long-term. |
 | `PR101-034` | `tooling` | `docs/spark_container_compatibility.md` | SPARK container compatibility gaps remain open. | Existing compatibility memo | `retain-in-post-pr10` | `PS-023` | Long-term. |
-| `PR101-051` | `tooling` | `docs/emitted_output_verification_matrix.md`; `execution/tracker.json`; ownership fixtures under `tests/positive/` | The ownership follow-on proof surface is still only implicit in the generic sequential-expansion wording, even though the repo already has a concrete six-fixture ownership set beyond `ownership_move`. | `ownership_borrow.safe`; `ownership_observe.safe`; `ownership_observe_access.safe`; `ownership_return.safe`; `ownership_inout.safe`; `ownership_early_return.safe`; current PR10.3 tracker text | `promote-to-pr10x` | `PR10.3` | Make the ownership set the first explicit, non-shrinkable PR10.3 target instead of leaving it buried inside a catch-all sequential expansion claim. |
+| `PR101-051` | `tooling` | `docs/emitted_output_verification_matrix.md`; `execution/tracker.json`; ownership fixtures under `tests/positive/` | The ownership follow-on proof surface is now explicit, non-shrinkable, and proved as its own six-fixture post-PR10 expansion set. | `execution/reports/pr103-sequential-proof-expansion-report.json`; ownership expansion row in the matrix; updated tracker text | `close-as-fixed` | `PR10.3` | PR10.3 closes the ownership-specific proof-expansion gap without collapsing the remaining non-ownership sequential backlog. |
 
 ### Spec and Language TBDs
 
@@ -115,11 +115,12 @@ The committed report is
 The PR10.1 audit carved the following evidence-ready follow-on tasks:
 
 - `PR10.2` — Rule 5 proof-boundary closure and loop-termination diagnostics (completed)
-- `PR10.3` — Sequential emitted proof-corpus expansion beyond the frozen PR10 subset, beginning with the six ownership fixtures
+- `PR10.3` — Ownership emitted proof-corpus expansion beyond the frozen PR10 `ownership_move` representative (completed)
 - `PR10.4` — GNATprove evidence and parser hardening, including audit-parser regression tests, explicit `gnat.adc` sentinels, proof-repeatability policy, and deterministic report de-cascading
 - `PR10.5` — Ada emitter maintenance hardening
+- `PR10.6` — Remaining sequential emitted proof-corpus expansion beyond the completed ownership set
 
-The live tracker now records `PR10.2` as done, and `next_task_id` advances to `PR10.3`.
+The live tracker now records `PR10.3` as done, and `next_task_id` advances to `PR10.4`.
 
 ## Supersession Note
 

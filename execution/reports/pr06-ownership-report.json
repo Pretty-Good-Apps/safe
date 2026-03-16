@@ -693,28 +693,28 @@
   },
   "determinism": {
     "tests/positive/ownership_borrow.safe": {
-      "iface/ownership_borrow.safei.json": "a81989a81818b0fa39d0ca7ca62699da793e9beebaefb94a72431c142dbe2554",
-      "out/ownership_borrow.ast.json": "b6d5af9477354f3de4ed610109782a0005f79998517b5748125f92b760e30aac",
-      "out/ownership_borrow.mir.json": "eaff591edc8e854337fb7e44627a7484f46f089fdd0cc443339b7ef82ab9cd83",
-      "out/ownership_borrow.typed.json": "28f5d04c7a67556c5376e5abae99ebbfda51c8412b7a5d4bb6d5d1a5712c0c54"
+      "iface/ownership_borrow.safei.json": "31f17208eae070dcea0e80dab1c65832381add825729546293ae76eabd26ee62",
+      "out/ownership_borrow.ast.json": "123fd88809ae004dace646bae66456f00e335d4ed12324d1462280ba5f491511",
+      "out/ownership_borrow.mir.json": "6ba6f6eb0ae21b04f578e60290693326f9dbfcc6fb5ff27556306691901ee81e",
+      "out/ownership_borrow.typed.json": "4ef43d777b6f7534454068d2341ebe6346cbf387935e6a3c4e466b02b11cfbd4"
     },
     "tests/positive/ownership_inout.safe": {
-      "iface/ownership_inout.safei.json": "90c06376af9c266b89d1f0c0620ff9a9ff32537580b5281d10632f8d7a5cfd75",
-      "out/ownership_inout.ast.json": "b759a0330a959c97de92b65bb40038966c27a4ee712e600be1fe878d73557dd3",
-      "out/ownership_inout.mir.json": "389c2d2fb81d1c486f11cc8c5c3fc2440b611adbcf0ac521432defc3a1d4d4ef",
-      "out/ownership_inout.typed.json": "65c60a1a188038d3f2eb97af6c76cf5e5b66f612f97256f2bb0a2951bef14fae"
+      "iface/ownership_inout.safei.json": "3edb9f2247dac04ba8989627777bd75abe46a3b62a11fdec35c5f1c1fffcf554",
+      "out/ownership_inout.ast.json": "fbd50a4f92a34855ea9b6bfa922e8b89c1dfa404255f14928b08cef2560d1949",
+      "out/ownership_inout.mir.json": "359a95e824ff1000103e664f27057e111ec46a42dc8f7fdd4cdfdbf3681a9278",
+      "out/ownership_inout.typed.json": "c852c016bc2f34af4e2b07165b9450d57c3dc09bda734af36f273cfb4c626019"
     },
     "tests/positive/ownership_observe_access.safe": {
-      "iface/ownership_observe_access.safei.json": "ee372ffcca155886a40a897623eb152bbc7def44e109e07f0422a78e50025bd4",
-      "out/ownership_observe_access.ast.json": "92d48229155bff59817db58775d60dc98cdd6aaddc1c15a3ea3da65a7bc37f7f",
-      "out/ownership_observe_access.mir.json": "00a1ab9c5a6cd100fd02cf9720cbbc1d5ea71a7edcb4ced14012b5630146fabf",
-      "out/ownership_observe_access.typed.json": "abb15258fdff0d2b5bfdb77efb4d83c2542eac4dbf981895b0008197616f5723"
+      "iface/ownership_observe_access.safei.json": "555f2d8930aa5be97781836ed3567365cbfb50bfc5c11bc2094728263e547c06",
+      "out/ownership_observe_access.ast.json": "cba3f0b2dcd63363329a0f7ec6cd0b104089b3f1443901baf7a4fef2c0efa810",
+      "out/ownership_observe_access.mir.json": "6783e5b368908b159004cdd0306529990f833780d4b2345f9294fe4f006b558b",
+      "out/ownership_observe_access.typed.json": "5bddeedc1af6ec0947b70101fa4894753a023f49c5ca047e3cf2f1538334052c"
     },
     "tests/positive/ownership_return.safe": {
-      "iface/ownership_return.safei.json": "7244e9f3b2ab54ee91f08f60f2e52a89705b732ab6133b9c117ad382fe950a1f",
-      "out/ownership_return.ast.json": "3a3b65f3b9832c6cd7bd1788b98944fa63d3678c992516c164a05cf5c1e85ef5",
-      "out/ownership_return.mir.json": "3298b0298a12c74273eaf0788c8e0f1df63b454db09a97922dcc5309f090074e",
-      "out/ownership_return.typed.json": "ad8b294b6fa2730898b92ac98fdc8a79d146e44be6e6e2dfb054467f58035590"
+      "iface/ownership_return.safei.json": "1deff87307dc16b326aec66804796e6073f2b0fe11981321740824b8c0889d84",
+      "out/ownership_return.ast.json": "ef76a500630ed0c2aa950c8aa68a8ab842f0827b1c91e6b5c38519113449031f",
+      "out/ownership_return.mir.json": "f9e854fe57bdfdd001c1ff6dbe37a3833083e41c05aa706decf8cd84e8d3f839",
+      "out/ownership_return.typed.json": "e5fdedd1076569fc287c14d46926ab2dc0b8db5a68f9c99c6577b7ea4ed5798b"
     }
   },
   "deterministic": true,
@@ -993,6 +993,6 @@
     }
   ],
   "mode": "all",
-  "repeat_sha256": "a271b176e36285db0753189fc84b2dfacfd5344b5d5792e95dc83b5106a06142",
-  "report_sha256": "a271b176e36285db0753189fc84b2dfacfd5344b5d5792e95dc83b5106a06142"
+  "repeat_sha256": "84e82b6d415b99f09ea156d75c161306050057c77362d90fdb1180b84a9d718c",
+  "report_sha256": "84e82b6d415b99f09ea156d75c161306050057c77362d90fdb1180b84a9d718c"
 }
