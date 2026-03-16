@@ -690,6 +690,160 @@
       "evidence": [],
       "blockers": [],
       "unblock_condition": ""
+    },
+    {
+      "id": "PR11.1",
+      "title": "Language Evaluation Harness",
+      "status": "planned",
+      "depends_on": ["PR10.4", "PR10.5", "PR10.6"],
+      "acceptance": [
+        "A one-command `safe build <file.safe>` wrapper, static VSCode grammar, and disposable diagnostics shim exist as explicitly non-frozen tooling surfaces for language evaluation.",
+        "PR11.1 creates and validates a starter Rosetta/sample corpus consisting of fibonacci.safe, gcd.safe, factorial.safe, collatz_bounded.safe, bubble_sort.safe, binary_search.safe, bounded_stack.safe, and producer_consumer.safe; linked_list_reverse.safe and prime_sieve_pipeline.safe remain candidate expansions, while trapezoidal_rule.safe and newton_sqrt_bounded.safe remain deferred to later numeric work.",
+        "None of the PR11.1 starter-corpus candidates depend on PR11.2 string/case support, and PR11.1 remains a `safec check` -> `safec emit --ada-out-dir` -> `gprbuild` compile milestone rather than emitted-proof expansion."
+      ],
+      "evidence": [],
+      "blockers": [],
+      "unblock_condition": ""
+    },
+    {
+      "id": "PR11.2",
+      "title": "Parser Completeness Phase 1",
+      "status": "planned",
+      "depends_on": ["PR11.1"],
+      "acceptance": [
+        "The parser is extended for string/character literals and case statements without absorbing richer constant-evaluation work (`PS-001`) or named-number support (`PS-010`).",
+        "Resolver/emitter support and positive/negative tests are added for the accepted string/character and case-statement surface.",
+        "The Rosetta/sample corpus grows with programs unlocked by strings/chars and case statements after the PR11.1 starter set lands."
+      ],
+      "evidence": [],
+      "blockers": [],
+      "unblock_condition": ""
+    },
+    {
+      "id": "PR11.3",
+      "title": "Discriminated Types and Constraints",
+      "status": "planned",
+      "depends_on": ["PR11.2"],
+      "acceptance": [
+        "The accepted subset covers record discriminants only, including multiple scalar discriminants, defaults, explicit constraints on objects/parameters/results, and bounded variant-part support.",
+        "Access discriminants, private/limited-view issues, discriminant-constrained dispatch, generic interactions, and ownership-specific discriminant extensions remain explicitly deferred rather than being absorbed into the milestone.",
+        "A deterministic non-shrinkable `check` -> `emit` -> Ada-compile corpus plus emitted-structure assertions lock the accepted discriminant surface without silently flattening away semantics."
+      ],
+      "evidence": [],
+      "blockers": [],
+      "unblock_condition": ""
+    },
+    {
+      "id": "PR11.4",
+      "title": "Signature and Control-Flow Syntax",
+      "status": "planned",
+      "depends_on": ["PR11.3"],
+      "acceptance": [
+        "The `returns` and `else if` spellings are supported with an explicit coexistence or migration rule for legacy forms.",
+        "The existing test corpus and Rosetta/sample corpus have a mechanical migration strategy for the new forms.",
+        "A deterministic acceptance corpus shows the feature is surface-only and does not perturb typing, MIR, or emission for already-supported programs."
+      ],
+      "evidence": [],
+      "blockers": [],
+      "unblock_condition": ""
+    },
+    {
+      "id": "PR11.5",
+      "title": "Statement Ergonomics",
+      "status": "planned",
+      "depends_on": ["PR11.4"],
+      "acceptance": [
+        "Optional semicolons and statement-local `var` declarations are the only syntax admissions in scope for this milestone.",
+        "Semicolon insertion and statement-local declaration legality are bounded so they do not accidentally broaden task, block, or unrelated statement semantics.",
+        "Corpus migration guidance plus Rosetta-side readability and ambiguity evidence back the admitted statement-ergonomics surface."
+      ],
+      "evidence": [],
+      "blockers": [],
+      "unblock_condition": ""
+    },
+    {
+      "id": "PR11.6",
+      "title": "Alternate Block Syntax Modes",
+      "status": "planned",
+      "depends_on": ["PR11.5"],
+      "acceptance": [
+        "`pragma Strict` and whitespace-significant blocks are evaluated as alternate block-structuring modes with explicit mode-selection rules and no accidental mixed-syntax acceptance.",
+        "A deterministic corpus demonstrates that the accepted block-mode surface remains readable, parseable, and mechanically migratable.",
+        "Rosetta-side evaluation yields an explicit admit/defer decision for each candidate block-syntax mode."
+      ],
+      "evidence": [],
+      "blockers": [],
+      "unblock_condition": ""
+    },
+    {
+      "id": "PR11.7",
+      "title": "Reference-Surface Experiments",
+      "status": "planned",
+      "depends_on": ["PR11.6"],
+      "acceptance": [
+        "Capitalisation as Reference Signal and Implicit Dereference are evaluated as separate high-risk reference-surface experiments rather than being silently bundled into lower-risk syntax work.",
+        "Admission criteria explicitly cover parser impact, readability, ownership-model consequences, and tooling fallout.",
+        "Rosetta comparisons against the current ownership/reference surface support an explicit admit, defer, or abandon decision for each proposal independently."
+      ],
+      "evidence": [],
+      "blockers": [],
+      "unblock_condition": ""
+    },
+    {
+      "id": "PR11.8",
+      "title": "Numeric Model",
+      "status": "planned",
+      "depends_on": ["PR11.7"],
+      "acceptance": [
+        "The three-tier integer model with wide-intermediate overflow checking and the simplified predefined type names (`integer`, `short`, `byte`) ship as one coupled change.",
+        "The milestone resolves or explicitly defers `PS-028` and `PS-030` within its own scope without absorbing fixed-point Rule 5 work (`PS-002`) or broader floating-point semantics (`PS-026`).",
+        "The Rosetta/sample corpus and existing tests are updated for the admitted numeric-model surface."
+      ],
+      "evidence": [],
+      "blockers": [],
+      "unblock_condition": ""
+    },
+    {
+      "id": "PR11.9",
+      "title": "Artifact Contract Stabilization",
+      "status": "planned",
+      "depends_on": ["PR11.8"],
+      "acceptance": [
+        "Compatibility policy and version-bump rules are documented for diagnostics-v0, safei-v1, and mir-v2.",
+        "The milestone resolves `PS-021` by defining what is additive-only versus breaking for the machine-facing artifacts.",
+        "Tooling introduced earlier in the roadmap can move from explicitly disposable to stable-interface consumer status only after this contract lands."
+      ],
+      "evidence": [],
+      "blockers": [],
+      "unblock_condition": ""
+    },
+    {
+      "id": "PR11.10",
+      "title": "Monomorphic Library Layer",
+      "status": "planned",
+      "depends_on": ["PR11.9"],
+      "acceptance": [
+        "A monomorphic bounded string buffer and concrete bounded vector/map/set types for built-in element types are available without generics.",
+        "The accepted container surface is copy-semantics-only in this milestone; move-semantic container elements stay deferred.",
+        "The concrete library layer serves as the pre-generic baseline that later lifts into PR11.11 generic instantiations."
+      ],
+      "evidence": [],
+      "blockers": [],
+      "unblock_condition": ""
+    },
+    {
+      "id": "PR11.11",
+      "title": "Restricted Generics",
+      "status": "planned",
+      "depends_on": ["PR11.10"],
+      "acceptance": [
+        "Generic package declarations and monomorphic instantiation are supported as the first generic capability milestone.",
+        "Standard generic bounded containers land, and String_Buffer becomes a generic instantiation rather than a monomorphic special case.",
+        "Emitter-based instantiation and the related generic-scope TBDs are resolved or explicitly version-targeted while copy-semantics-only element support remains the v1 baseline."
+      ],
+      "evidence": [],
+      "blockers": [],
+      "unblock_condition": ""
     }
   ]
 }

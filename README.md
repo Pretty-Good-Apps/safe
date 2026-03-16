@@ -7,6 +7,42 @@ A systems programming language defined subtractively from Ada 2022, designed so 
 
 ---
 
+## Roadmap Snapshot
+
+The canonical tracked ledger lives in [`execution/tracker.json`](execution/tracker.json) and
+[`execution/dashboard.md`](execution/dashboard.md). Detailed `PR11.x` proposal text lives in
+[`docs/PR11.x-series-proposed.md`](docs/PR11.x-series-proposed.md).
+
+Completed rows use strikethrough. Italic rows are tracked planned milestones
+that still live at the proposal/detail stage rather than in gate-backed CI.
+
+| Series | Status | Focus |
+|--------|--------|-------|
+| ~~PR00–PR06.9.13~~ | `done` | Ledger, compiler bring-up, hardening |
+| ~~PR07~~ | `done` | Rule 5 analyzer baseline |
+| ~~PR08~~ | `done` | Ada-native frontend baseline |
+| ~~PR09~~ | `done` | Ada/SPARK emission baseline |
+| ~~PR10~~ | `done` | Emitted GNATprove baseline |
+| ~~PR10.1~~ | `done` | Audit and residual normalization |
+| ~~PR10.2~~ | `done` | Rule 5 proof closure |
+| ~~PR10.3~~ | `done` | Ownership proof expansion |
+| PR10.4 | `planned` | Evidence, parser, and report hardening |
+| PR10.5 | `planned` | Emitter maintenance hardening |
+| PR10.6 | `planned` | Remaining sequential proof corpus |
+| *PR11.1* | `planned` | Build wrapper, editor grammar, Rosetta |
+| *PR11.2* | `planned` | Strings/chars and case statements |
+| *PR11.3* | `planned` | Discriminants and constraints |
+| *PR11.4* | `planned` | `returns` and `else if` |
+| *PR11.5* | `planned` | Optional semicolons and `var` |
+| *PR11.6* | `planned` | `pragma Strict` and whitespace blocks |
+| *PR11.7* | `planned` | Reference-surface experiments |
+| *PR11.8* | `planned` | Numeric model |
+| *PR11.9* | `planned` | Artifact contract stabilization |
+| *PR11.10* | `planned` | Monomorphic library layer |
+| *PR11.11* | `planned` | Restricted generics |
+
+---
+
 ## What Is Safe?
 
 Safe is built on ISO/IEC 8652:2023 (Ada 2022). It is a curated subset -- removing exceptions, tagged types, and generics -- augmented with new constructs including static tasks and typed channels. Conforming Safe programs compile via any conforming Ada 2022 compiler after translation.
