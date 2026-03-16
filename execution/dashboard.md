@@ -58,6 +58,17 @@
 | PR10.4 | planned | PR10.1 | 0 |
 | PR10.5 | planned | PR10.1 | 0 |
 | PR10.6 | planned | PR10.3 | 0 |
+| PR11.1 | planned | PR10.4, PR10.5, PR10.6 | 0 |
+| PR11.2 | planned | PR11.1 | 0 |
+| PR11.3 | planned | PR11.2 | 0 |
+| PR11.4 | planned | PR11.3 | 0 |
+| PR11.5 | planned | PR11.4 | 0 |
+| PR11.6 | planned | PR11.5 | 0 |
+| PR11.7 | planned | PR11.6 | 0 |
+| PR11.8 | planned | PR11.7 | 0 |
+| PR11.9 | planned | PR11.8 | 0 |
+| PR11.10 | planned | PR11.9 | 0 |
+| PR11.11 | planned | PR11.10 | 0 |
 
 ## Acceptance Snapshot
 
@@ -586,3 +597,113 @@
   - The remaining accepted sequential emitted subset beyond the frozen PR10 representatives and the completed PR10.3 ownership set is explicitly enumerated and may not be silently shrunk.
   - That remaining sequential subset passes compile, GNATprove flow, and GNATprove prove under the all-proved-only policy with dedicated deterministic evidence.
   - docs/emitted_output_verification_matrix.md, docs/pr10_refinement_audit.md, and related tracker/docs surfaces distinguish the completed PR10.3 ownership expansion from the still-open PR10.6 sequential remainder.
+
+### PR11.1 — Language Evaluation Harness
+
+- **Status:** `planned`
+- **Depends on:** PR10.4, PR10.5, PR10.6
+- **Blockers:** none
+- **Acceptance:**
+  - A one-command `safe build <file.safe>` wrapper, static VSCode grammar, and disposable diagnostics shim exist as explicitly non-frozen tooling surfaces for language evaluation.
+  - PR11.1 creates and validates a starter Rosetta/sample corpus consisting of fibonacci.safe, gcd.safe, factorial.safe, collatz_bounded.safe, bubble_sort.safe, binary_search.safe, bounded_stack.safe, and producer_consumer.safe; linked_list_reverse.safe and prime_sieve_pipeline.safe remain candidate expansions, while trapezoidal_rule.safe and newton_sqrt_bounded.safe remain deferred to later numeric work.
+  - None of the PR11.1 starter-corpus candidates depend on PR11.2 string/case support, and PR11.1 remains a `safec check` -> `safec emit --ada-out-dir` -> `gprbuild` compile milestone rather than emitted-proof expansion.
+
+### PR11.2 — Parser Completeness Phase 1
+
+- **Status:** `planned`
+- **Depends on:** PR11.1
+- **Blockers:** none
+- **Acceptance:**
+  - The parser is extended for string/character literals and case statements without absorbing richer constant-evaluation work (`PS-001`) or named-number support (`PS-010`).
+  - Resolver/emitter support and positive/negative tests are added for the accepted string/character and case-statement surface.
+  - The Rosetta/sample corpus grows with programs unlocked by strings/chars and case statements after the PR11.1 starter set lands.
+
+### PR11.3 — Discriminated Types and Constraints
+
+- **Status:** `planned`
+- **Depends on:** PR11.2
+- **Blockers:** none
+- **Acceptance:**
+  - The accepted subset covers record discriminants only, including multiple scalar discriminants, defaults, explicit constraints on objects/parameters/results, and bounded variant-part support.
+  - Access discriminants, private/limited-view issues, discriminant-constrained dispatch, generic interactions, and ownership-specific discriminant extensions remain explicitly deferred rather than being absorbed into the milestone.
+  - A deterministic non-shrinkable `check` -> `emit` -> Ada-compile corpus plus emitted-structure assertions lock the accepted discriminant surface without silently flattening away semantics.
+
+### PR11.4 — Signature and Control-Flow Syntax
+
+- **Status:** `planned`
+- **Depends on:** PR11.3
+- **Blockers:** none
+- **Acceptance:**
+  - The `returns` and `else if` spellings are supported with an explicit coexistence or migration rule for legacy forms.
+  - The existing test corpus and Rosetta/sample corpus have a mechanical migration strategy for the new forms.
+  - A deterministic acceptance corpus shows the feature is surface-only and does not perturb typing, MIR, or emission for already-supported programs.
+
+### PR11.5 — Statement Ergonomics
+
+- **Status:** `planned`
+- **Depends on:** PR11.4
+- **Blockers:** none
+- **Acceptance:**
+  - Optional semicolons and statement-local `var` declarations are the only syntax admissions in scope for this milestone.
+  - Semicolon insertion and statement-local declaration legality are bounded so they do not accidentally broaden task, block, or unrelated statement semantics.
+  - Corpus migration guidance plus Rosetta-side readability and ambiguity evidence back the admitted statement-ergonomics surface.
+
+### PR11.6 — Alternate Block Syntax Modes
+
+- **Status:** `planned`
+- **Depends on:** PR11.5
+- **Blockers:** none
+- **Acceptance:**
+  - `pragma Strict` and whitespace-significant blocks are evaluated as alternate block-structuring modes with explicit mode-selection rules and no accidental mixed-syntax acceptance.
+  - A deterministic corpus demonstrates that the accepted block-mode surface remains readable, parseable, and mechanically migratable.
+  - Rosetta-side evaluation yields an explicit admit/defer decision for each candidate block-syntax mode.
+
+### PR11.7 — Reference-Surface Experiments
+
+- **Status:** `planned`
+- **Depends on:** PR11.6
+- **Blockers:** none
+- **Acceptance:**
+  - Capitalisation as Reference Signal and Implicit Dereference are evaluated as separate high-risk reference-surface experiments rather than being silently bundled into lower-risk syntax work.
+  - Admission criteria explicitly cover parser impact, readability, ownership-model consequences, and tooling fallout.
+  - Rosetta comparisons against the current ownership/reference surface support an explicit admit, defer, or abandon decision for each proposal independently.
+
+### PR11.8 — Numeric Model
+
+- **Status:** `planned`
+- **Depends on:** PR11.7
+- **Blockers:** none
+- **Acceptance:**
+  - The three-tier integer model with wide-intermediate overflow checking and the simplified predefined type names (`integer`, `short`, `byte`) ship as one coupled change.
+  - The milestone resolves or explicitly defers `PS-028` and `PS-030` within its own scope without absorbing fixed-point Rule 5 work (`PS-002`) or broader floating-point semantics (`PS-026`).
+  - The Rosetta/sample corpus and existing tests are updated for the admitted numeric-model surface.
+
+### PR11.9 — Artifact Contract Stabilization
+
+- **Status:** `planned`
+- **Depends on:** PR11.8
+- **Blockers:** none
+- **Acceptance:**
+  - Compatibility policy and version-bump rules are documented for diagnostics-v0, safei-v1, and mir-v2.
+  - The milestone resolves `PS-021` by defining what is additive-only versus breaking for the machine-facing artifacts.
+  - Tooling introduced earlier in the roadmap can move from explicitly disposable to stable-interface consumer status only after this contract lands.
+
+### PR11.10 — Monomorphic Library Layer
+
+- **Status:** `planned`
+- **Depends on:** PR11.9
+- **Blockers:** none
+- **Acceptance:**
+  - A monomorphic bounded string buffer and concrete bounded vector/map/set types for built-in element types are available without generics.
+  - The accepted container surface is copy-semantics-only in this milestone; move-semantic container elements stay deferred.
+  - The concrete library layer serves as the pre-generic baseline that later lifts into PR11.11 generic instantiations.
+
+### PR11.11 — Restricted Generics
+
+- **Status:** `planned`
+- **Depends on:** PR11.10
+- **Blockers:** none
+- **Acceptance:**
+  - Generic package declarations and monomorphic instantiation are supported as the first generic capability milestone.
+  - Standard generic bounded containers land, and String_Buffer becomes a generic instantiation rather than a monomorphic special case.
+  - Emitter-based instantiation and the related generic-scope TBDs are resolved or explicitly version-targeted while copy-semantics-only element support remains the v1 baseline.
