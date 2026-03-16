@@ -2401,7 +2401,13 @@ package body Safe_Frontend.Ada_Emit is
             end if;
 
             if Cursor /= null then
-               return "Structural => " & CM.Flatten_Name (Cursor);
+               declare
+                  Flattened : constant String := CM.Flatten_Name (Cursor);
+               begin
+                  if Flattened'Length > 0 then
+                     return "Structural => " & Flattened;
+                  end if;
+               end;
             end if;
          end;
       elsif Operator in "<" | "<=" then

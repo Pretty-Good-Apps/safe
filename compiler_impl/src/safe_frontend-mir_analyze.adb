@@ -2984,12 +2984,14 @@ package body Safe_Frontend.Mir_Analyze is
            (Condition.Left /= null
             and then Condition.Left.Kind /= GM.Expr_Null
             and then Condition.Right /= null
-            and then Condition.Right.Kind = GM.Expr_Null)
+            and then Condition.Right.Kind = GM.Expr_Null
+            and then Flatten_Name (Condition.Left)'Length > 0)
            or else
            (Condition.Right /= null
             and then Condition.Right.Kind /= GM.Expr_Null
             and then Condition.Left /= null
-            and then Condition.Left.Kind = GM.Expr_Null);
+            and then Condition.Left.Kind = GM.Expr_Null
+            and then Flatten_Name (Condition.Right)'Length > 0);
       elsif UString_Value (Condition.Operator) in "<" | "<=" then
          if Condition.Left /= null
            and then Condition.Right /= null

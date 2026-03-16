@@ -57,6 +57,7 @@ EXPECTED_PR104_ACCEPTANCE = [
     "The emitted proof and audit harnesses verify explicit gnat.adc application and fail deterministically if concurrency compile/flow/prove commands lose the concrete -gnatec=<ada_dir>/gnat.adc argument.",
     "The GNATprove evidence path documents and enforces the repo's proof-repeatability policy for emitted gates, including the current --steps=0 plus bounded-timeout profile and an explicit statement about whether committed session artifacts are part of the reproducibility contract.",
     "parse_task_id() is extended to handle three-level milestone IDs (e.g., PR06.9.8) that already exist in the tracker's own task list, so forward-stability checks match the project's actual ID convention rather than silently rejecting valid historical IDs.",
+    "Dependent deterministic report rollups are de-cascaded so parent reports do not churn solely because child report hashes changed: freshness checks rerun child gates into comparison artifacts or validate stable path-level invariants, and portability/glue/doc hardening reports avoid repo-wide unittest-count summaries that change for unrelated test additions.",
     "A dedicated PR10.4 gate, report, and CI job keep the hardened evidence path and parser-regression surface under committed deterministic coverage.",
 ]
 EXPECTED_PR102_ACCEPTANCE = [
@@ -88,7 +89,7 @@ EXPECTED_AUDIT_SNIPPETS = [
     "`scripts/run_emitted_hardening_regressions.py`",
     "`PR10.2` — Rule 5 proof-boundary closure and loop-termination diagnostics",
     "`PR10.3` — Sequential emitted proof-corpus expansion beyond the frozen PR10 subset",
-    "`PR10.4` — GNATprove evidence and parser hardening, including audit-parser regression tests, explicit `gnat.adc` sentinels, and proof-repeatability policy",
+    "`PR10.4` — GNATprove evidence and parser hardening, including audit-parser regression tests, explicit `gnat.adc` sentinels, proof-repeatability policy, and deterministic report de-cascading",
     "`PR10.5` — Ada emitter maintenance hardening",
     "`next_task_id` advances to `PR10.3`",
 ]
@@ -148,7 +149,7 @@ def require_contains(text: str, snippet: str, label: str) -> None:
 def parse_task_id(value: object) -> tuple[int, int | None] | None:
     if not isinstance(value, str):
         return None
-    match = re.fullmatch(r"PR(\d+)(?:\.(\d+)[A-Za-z0-9]*)?", value)
+    match = re.fullmatch(r"PR(\d+)(?:\.(\d+)(?:\.(\d+))?[A-Za-z0-9]*)?", value)
     if match is None:
         return None
     major = int(match.group(1))
