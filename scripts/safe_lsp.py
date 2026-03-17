@@ -5,21 +5,30 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
+import re
 import sys
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
 
-from _lib.harness_common import ensure_sdkroot
+from _lib.harness_common import ensure_sdkroot, run_capture
 from _lib.pr111_language_eval import REPO_ROOT, safec_path
+
+
+WINDOWS_DRIVE_URI_RE = re.compile(r"^/[A-Za-z]:")
 
 
 def file_uri_to_path(uri: str) -> Path | None:
     parsed = urlparse(uri)
     if parsed.scheme != "file":
         return None
-    return Path(unquote(parsed.path))
+    netloc = unquote(parsed.netloc)
+    decoded_path = unquote(parsed.path)
+    if netloc and netloc.lower() != "localhost":
+        return Path(f"//{netloc}{decoded_path}")
+    if WINDOWS_DRIVE_URI_RE.match(decoded_path):
+        return Path(decoded_path[1:])
+    return Path(decoded_path)
 
 
 def synthetic_diagnostic(path: Path, reason: str, message: str) -> dict[str, Any]:
@@ -63,13 +72,10 @@ def diagnostic_to_lsp(diagnostic: dict[str, Any]) -> dict[str, Any]:
 
 def read_diag_payload(path: Path) -> list[dict[str, Any]]:
     env = ensure_sdkroot(os.environ.copy())
-    completed = subprocess.run(
+    completed = run_capture(
         [str(safec_path()), "check", "--diag-json", str(path)],
         cwd=REPO_ROOT,
         env=env,
-        text=True,
-        capture_output=True,
-        check=False,
     )
     if completed.stdout:
         try:

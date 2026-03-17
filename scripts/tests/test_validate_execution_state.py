@@ -34,6 +34,9 @@ from validate_execution_state import (
 
 class ValidateExecutionStateTests(unittest.TestCase):
     def test_pr111_glue_scripts_are_registered_for_safety_audit(self) -> None:
+        self.assertIn("safe", GLUE_SAFETY_AUDITED_SCRIPTS)
+        self.assertIn("scripts/safe_cli.py", GLUE_SAFETY_AUDITED_SCRIPTS)
+        self.assertIn("scripts/safe_lsp.py", GLUE_SAFETY_AUDITED_SCRIPTS)
         self.assertIn("scripts/run_rosetta_corpus.py", GLUE_SAFETY_AUDITED_SCRIPTS)
         self.assertIn("scripts/run_pr111_language_evaluation_harness.py", GLUE_SAFETY_AUDITED_SCRIPTS)
         self.assertIn("scripts/run_rosetta_corpus.py", GLUE_SAFETY_REPORT_SCRIPTS)

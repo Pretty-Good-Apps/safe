@@ -86,6 +86,26 @@ class HarnessCommonTests(unittest.TestCase):
                     temp_root=temp_root,
                 )
 
+    def test_run_capture_returns_stdout_stderr_and_returncode_without_raising(self) -> None:
+        completed = hc.run_capture(
+            [
+                sys.executable,
+                "-c",
+                "import sys; print('hello'); print('warn', file=sys.stderr); sys.exit(3)",
+            ],
+            cwd=hc.REPO_ROOT,
+        )
+        self.assertEqual(completed.returncode, 3)
+        self.assertEqual(completed.stdout, "hello\n")
+        self.assertEqual(completed.stderr, "warn\n")
+
+    def test_run_passthrough_returns_process_exit_code(self) -> None:
+        exit_code = hc.run_passthrough(
+            [sys.executable, "-c", "import sys; sys.exit(5)"],
+            cwd=hc.REPO_ROOT,
+        )
+        self.assertEqual(exit_code, 5)
+
     def test_read_diag_json_checks_format(self) -> None:
         payload = hc.read_diag_json(
             json.dumps({"format": "diagnostics-v0", "diagnostics": []}),

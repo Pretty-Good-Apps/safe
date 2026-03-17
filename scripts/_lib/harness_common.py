@@ -114,6 +114,37 @@ def run(
     return result
 
 
+def run_capture(
+    argv: list[str],
+    *,
+    cwd: Path,
+    env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        argv,
+        cwd=cwd,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
+def run_passthrough(
+    argv: list[str],
+    *,
+    cwd: Path,
+    env: dict[str, str] | None = None,
+) -> int:
+    completed = subprocess.run(
+        argv,
+        cwd=cwd,
+        env=env,
+        check=False,
+    )
+    return completed.returncode
+
+
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise RuntimeError(message)

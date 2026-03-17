@@ -80,6 +80,14 @@ class Pr111LanguageEvalTests(unittest.TestCase):
             safe_lsp.file_uri_to_path("file:///tmp/demo.safe"),
             Path("/tmp/demo.safe"),
         )
+        self.assertEqual(
+            safe_lsp.file_uri_to_path("file:///C:/work/demo.safe"),
+            Path("C:/work/demo.safe"),
+        )
+        self.assertEqual(
+            safe_lsp.file_uri_to_path("file://server/share/demo.safe"),
+            Path("//server/share/demo.safe"),
+        )
         self.assertIsNone(safe_lsp.file_uri_to_path("untitled:demo.safe"))
 
     def test_span_to_range_converts_to_zero_based_lsp_positions(self) -> None:

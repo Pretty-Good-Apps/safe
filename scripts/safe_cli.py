@@ -4,11 +4,10 @@
 from __future__ import annotations
 
 import os
-import subprocess
 import sys
 from pathlib import Path
 
-from _lib.harness_common import ensure_sdkroot
+from _lib.harness_common import ensure_sdkroot, run_passthrough
 from _lib.pr111_language_eval import (
     COMPILER_ROOT,
     REPO_ROOT,
@@ -36,8 +35,7 @@ def print_usage(stream: object = sys.stderr) -> int:
 
 
 def run_subprocess(argv: list[str], *, cwd: Path, env: dict[str, str]) -> int:
-    completed = subprocess.run(argv, cwd=cwd, env=env, check=False)
-    return completed.returncode
+    return run_passthrough(argv, cwd=cwd, env=env)
 
 
 def pass_through(command: str, args: list[str]) -> int:
