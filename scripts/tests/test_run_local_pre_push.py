@@ -99,6 +99,15 @@ class RunLocalPrePushTests(unittest.TestCase):
             ),
         )
 
+    def test_gate_scripts_for_branch_maps_known_pr105_branch(self) -> None:
+        self.assertEqual(
+            gate_scripts_for_branch("codex/pr105-ada-emitter-maintenance"),
+            (
+                "scripts/run_pr105_ada_emitter_maintenance_hardening.py",
+                "scripts/run_pr101_comprehensive_audit.py",
+            ),
+        )
+
     def test_gate_scripts_for_branch_maps_pr11_family_branch(self) -> None:
         self.assertEqual(
             gate_scripts_for_branch("codex/pr111-language-eval-harness"),

@@ -3,7 +3,7 @@
 - **Schema version:** `1`
 - **Frozen spec SHA:** `468cf72332724b04b7c193b4d2a3b02f1584125d`
 - **Active task:** `none`
-- **Next task:** `PR10.5`
+- **Next task:** `PR10.6`
 - **Updated at:** `2026-03-16T00:00:00Z`
 
 ## Repo Facts
@@ -56,7 +56,7 @@
 | PR10.2 | done | PR10.1 | 1 |
 | PR10.3 | done | PR10.1 | 1 |
 | PR10.4 | done | PR10.1 | 1 |
-| PR10.5 | planned | PR10.1 | 0 |
+| PR10.5 | done | PR10.1 | 1 |
 | PR10.6 | planned | PR10.3 | 0 |
 | PR11.1 | planned | PR10.4, PR10.5, PR10.6 | 0 |
 | PR11.2 | planned | PR11.1 | 0 |
@@ -585,13 +585,16 @@
 
 ### PR10.5 — Ada emitter maintenance hardening
 
-- **Status:** `planned`
+- **Status:** `done`
 - **Depends on:** PR10.1
 - **Blockers:** none
 - **Acceptance:**
   - The three broad Constraint_Error catch-alls in compiler_impl/src/safe_frontend-ada_emit.adb are removed or narrowed so malformed-state failures are not collapsed into generic emitter internal errors.
   - Unreachable post-Raise_Unsupported fallback returns are removed, integer-type classification is made subtype-aware, name-based type lookup/render helpers are unified, and the duplicated Render_Object_Decl_Text bodies are consolidated into one shared implementation path.
+  - String-based alias-postcondition 'Old insertion is replaced with AST-aware rendering, with focused regression coverage for similar-name, nested-selector, and repeated-target cases.
   - A dedicated PR10.5 gate, report, and CI job keep the emitter-maintenance refactor deterministic and evidence-backed.
+- **Evidence:**
+  - `execution/reports/pr105-ada-emitter-maintenance-hardening-report.json`
 
 ### PR10.6 — Remaining sequential emitted proof-corpus expansion beyond ownership
 

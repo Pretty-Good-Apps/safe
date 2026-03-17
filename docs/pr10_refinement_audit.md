@@ -78,6 +78,7 @@ The committed report is
 | `PR101-048` | `emitter` | PR54 review; `compiler_impl/src/safe_frontend-ada_emit.adb` | The emitter still contains unreachable fallback returns after `Raise_Unsupported`, which adds dead code noise to unsupported paths and obscures intent during review. | `safe_frontend-ada_emit.adb` `Render_Type_Decl`; `Render_Expr`; similar unsupported-path returns | `promote-to-pr10x` | `PR10.5` | Treat as deterministic cleanup work within the emitter-maintenance milestone. |
 | `PR101-049` | `emitter` | PR54 review; `compiler_impl/src/safe_frontend-ada_emit.adb`; `docs/emitted_output_verification_matrix.md` | `Is_Integer_Type` still treats every subtype descriptor as integer, which is too coarse for a name that is used to drive emitted numeric lowering decisions. | `safe_frontend-ada_emit.adb` `Is_Integer_Type (Info)` implementation | `promote-to-pr10x` | `PR10.5` | This is maintenance debt unless and until it produces a user-visible mis-lowering; track it explicitly now. |
 | `PR101-050` | `emitter` | PR54 review; `compiler_impl/src/safe_frontend-ada_emit.adb` | Name-based type rendering still duplicates lookup paths, and the resolved/non-resolved `Render_Object_Decl_Text` overloads still carry near-identical bodies. | `safe_frontend-ada_emit.adb` `Is_Integer_Type (Name)`; `Render_Type_Name (Name)`; duplicated `Render_Object_Decl_Text` bodies | `promote-to-pr10x` | `PR10.5` | Track the lookup unification and object-declaration rendering consolidation together as one refactor surface. |
+| `PR101-052` | `emitter` | PR58 review; `compiler_impl/src/safe_frontend-ada_emit.adb` | Alias-postcondition `'Old` insertion still relies on string-based rewriting, which is too fragile for a safety-critical emitter and risks false matches as the emitted expression surface grows. | `safe_frontend-ada_emit.adb` `Render_Access_Param_Postcondition`; string-based target substitution | `promote-to-pr10x` | `PR10.5` | Close this in the same emitter-maintenance milestone as the surrounding Ada emission refactors rather than splitting a second micro-milestone. |
 
 ### Tooling, Interface UX, and Assurance
 
@@ -117,10 +118,10 @@ The PR10.1 audit carved the following evidence-ready follow-on tasks:
 - `PR10.2` — Rule 5 proof-boundary closure and loop-termination diagnostics (completed)
 - `PR10.3` — Ownership emitted proof-corpus expansion beyond the frozen PR10 `ownership_move` representative (completed)
 - `PR10.4` — GNATprove evidence and parser hardening, including audit-parser regression tests, explicit `gnat.adc` sentinels, proof-repeatability policy, and deterministic report de-cascading (completed)
-- `PR10.5` — Ada emitter maintenance hardening
+- `PR10.5` — Ada emitter maintenance hardening (completed)
 - `PR10.6` — Remaining sequential emitted proof-corpus expansion beyond the completed ownership set
 
-The live tracker now records `PR10.4` as done, and `next_task_id` advances to `PR10.5`.
+The live tracker now records `PR10.5` as done, and `next_task_id` advances to `PR10.6`.
 
 ## Supersession Note
 

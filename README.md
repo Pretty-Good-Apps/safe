@@ -27,7 +27,7 @@ that still live at the proposal/detail stage rather than in gate-backed CI.
 | ~~PR10.2~~ | `done` | Rule 5 proof closure |
 | ~~PR10.3~~ | `done` | Ownership proof expansion |
 | ~~PR10.4~~ | `done` | Evidence, parser, report hardening |
-| PR10.5 | `planned` | Emitter maintenance hardening |
+| ~~PR10.5~~ | `done` | Emitter maintenance hardening |
 | PR10.6 | `planned` | Remaining sequential proof corpus |
 | *PR11.1* | `planned` | Build wrapper, editor grammar, Rosetta |
 | *PR11.2* | `planned` | Strings/chars and case statements |

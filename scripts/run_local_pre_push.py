@@ -66,6 +66,10 @@ PRIMARY_GATE_SCRIPTS = {
         "scripts/run_pr104_gnatprove_evidence_parser_hardening.py",
         "scripts/run_pr101_comprehensive_audit.py",
     ),
+    "codex/pr105": (
+        "scripts/run_pr105_ada_emitter_maintenance_hardening.py",
+        "scripts/run_pr101_comprehensive_audit.py",
+    ),
 }
 
 PR11_FAMILY_GATE_SCRIPTS = (

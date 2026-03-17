@@ -63,6 +63,15 @@ EXPECTED_PR104_ACCEPTANCE = [
 EXPECTED_PR104_EVIDENCE = [
     "execution/reports/pr104-gnatprove-evidence-parser-hardening-report.json",
 ]
+EXPECTED_PR105_ACCEPTANCE = [
+    "The three broad Constraint_Error catch-alls in compiler_impl/src/safe_frontend-ada_emit.adb are removed or narrowed so malformed-state failures are not collapsed into generic emitter internal errors.",
+    "Unreachable post-Raise_Unsupported fallback returns are removed, integer-type classification is made subtype-aware, name-based type lookup/render helpers are unified, and the duplicated Render_Object_Decl_Text bodies are consolidated into one shared implementation path.",
+    "String-based alias-postcondition 'Old insertion is replaced with AST-aware rendering, with focused regression coverage for similar-name, nested-selector, and repeated-target cases.",
+    "A dedicated PR10.5 gate, report, and CI job keep the emitter-maintenance refactor deterministic and evidence-backed.",
+]
+EXPECTED_PR105_EVIDENCE = [
+    "execution/reports/pr105-ada-emitter-maintenance-hardening-report.json",
+]
 EXPECTED_PR102_ACCEPTANCE = [
     "The exact six-fixture PR10.2 Rule 5 positive corpus is tests/positive/rule5_filter.safe, tests/positive/rule5_interpolate.safe, tests/positive/rule5_normalize.safe, tests/positive/rule5_statistics.safe, tests/positive/rule5_temperature.safe, and tests/positive/rule5_vector_normalize.safe; that merged PR07-plus-PR10 set is non-shrinkable and each fixture is frontend-accepted, Ada-emitted, compile-valid, and passes emitted GNATprove flow and prove under the all-proved-only policy.",
     "The source-level Rule 5 negative contract remains tests/negative/neg_rule5_div_zero.safe -> fp_division_by_zero, tests/negative/neg_rule5_infinity.safe -> infinity_at_narrowing, tests/negative/neg_rule5_nan.safe -> nan_at_narrowing, tests/negative/neg_rule5_overflow.safe -> fp_overflow_at_narrowing, and tests/negative/neg_rule5_uninitialized.safe -> fp_uninitialized_at_narrowing; unsupported float-evaluator shapes use the new fp_unsupported_expression_at_narrowing reason under MIR analysis parity coverage instead of being mislabeled as overflow.",
@@ -107,9 +116,9 @@ EXPECTED_AUDIT_SNIPPETS = [
     "`PR10.2` — Rule 5 proof-boundary closure and loop-termination diagnostics",
     "`PR10.3` — Ownership emitted proof-corpus expansion beyond the frozen PR10 `ownership_move` representative",
     "`PR10.4` — GNATprove evidence and parser hardening, including audit-parser regression tests, explicit `gnat.adc` sentinels, proof-repeatability policy, and deterministic report de-cascading (completed)",
-    "`PR10.5` — Ada emitter maintenance hardening",
+    "`PR10.5` — Ada emitter maintenance hardening (completed)",
     "`PR10.6` — Remaining sequential emitted proof-corpus expansion beyond the completed ownership set",
-    "`next_task_id` advances to `PR10.5`",
+    "`next_task_id` advances to `PR10.6`",
 ]
 EXPECTED_MATRIX_SNIPPETS = [
     "frontend Silver ownership analysis is the mechanism that prevents use-after-free",
@@ -498,6 +507,15 @@ def build_report(*, baseline_truth: dict[str, Any]) -> dict[str, Any]:
         task_map["PR10.4"]["evidence"] == EXPECTED_PR104_EVIDENCE,
         "PR10.4 evidence must list the committed parser/evidence hardening report",
     )
+    require(
+        task_map["PR10.5"]["acceptance"] == EXPECTED_PR105_ACCEPTANCE,
+        "PR10.5 acceptance text must match the committed Ada emitter maintenance-hardening scope",
+    )
+    require(task_map["PR10.5"]["status"] == "done", "PR10.5 must be marked done")
+    require(
+        task_map["PR10.5"]["evidence"] == EXPECTED_PR105_EVIDENCE,
+        "PR10.5 evidence must list the committed Ada emitter maintenance-hardening report",
+    )
 
     rendered_dashboard = run([find_command("python3"), "scripts/render_execution_status.py"], cwd=REPO_ROOT, env=ensure_sdkroot(os.environ.copy()))
     dashboard_text = DASHBOARD_PATH.read_text(encoding="utf-8")
@@ -608,7 +626,7 @@ def build_report(*, baseline_truth: dict[str, Any]) -> dict[str, Any]:
         "each retained post-PR10 residual must be targeted by exactly one retain-in-post-pr10 finding",
     )
     require(
-        promoted_targets == Counter({"PR10.4": 1, "PR10.5": 5, "PR10.6": 1}),
+        promoted_targets == Counter({"PR10.4": 1, "PR10.5": 6, "PR10.6": 1}),
         "promoted follow-on findings must match the live post-PR10.3 PR10.4/PR10.5/PR10.6 split",
     )
 

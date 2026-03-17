@@ -3,7 +3,7 @@
   "updated_at": "2026-03-16T00:00:00Z",
   "frozen_spec_sha": "468cf72332724b04b7c193b4d2a3b02f1584125d",
   "active_task_id": null,
-  "next_task_id": "PR10.5",
+  "next_task_id": "PR10.6",
   "repo_facts": {
     "tests": {
       "positive": 48,
@@ -666,14 +666,17 @@
     {
       "id": "PR10.5",
       "title": "Ada emitter maintenance hardening",
-      "status": "planned",
+      "status": "done",
       "depends_on": ["PR10.1"],
       "acceptance": [
         "The three broad Constraint_Error catch-alls in compiler_impl/src/safe_frontend-ada_emit.adb are removed or narrowed so malformed-state failures are not collapsed into generic emitter internal errors.",
         "Unreachable post-Raise_Unsupported fallback returns are removed, integer-type classification is made subtype-aware, name-based type lookup/render helpers are unified, and the duplicated Render_Object_Decl_Text bodies are consolidated into one shared implementation path.",
+        "String-based alias-postcondition 'Old insertion is replaced with AST-aware rendering, with focused regression coverage for similar-name, nested-selector, and repeated-target cases.",
         "A dedicated PR10.5 gate, report, and CI job keep the emitter-maintenance refactor deterministic and evidence-backed."
       ],
-      "evidence": [],
+      "evidence": [
+        "execution/reports/pr105-ada-emitter-maintenance-hardening-report.json"
+      ],
       "blockers": [],
       "unblock_condition": ""
     },
