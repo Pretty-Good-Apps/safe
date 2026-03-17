@@ -37,6 +37,8 @@
       "scripts/run_pr104_gnatprove_evidence_parser_hardening.py",
       "scripts/run_pr105_ada_emitter_maintenance_hardening.py",
       "scripts/run_pr106_sequential_proof_corpus_expansion.py",
+      "scripts/run_rosetta_corpus.py",
+      "scripts/run_pr111_language_evaluation_harness.py",
       "scripts/run_local_pre_push.py",
       "scripts/validate_execution_state.py",
       "scripts/validate_ast_output.py",
@@ -85,7 +87,9 @@
       "scripts/run_pr103_sequential_proof_expansion.py",
       "scripts/run_pr104_gnatprove_evidence_parser_hardening.py",
       "scripts/run_pr105_ada_emitter_maintenance_hardening.py",
-      "scripts/run_pr106_sequential_proof_corpus_expansion.py"
+      "scripts/run_pr106_sequential_proof_corpus_expansion.py",
+      "scripts/run_rosetta_corpus.py",
+      "scripts/run_pr111_language_evaluation_harness.py"
     ],
     "safe_source_readers": [
       {
@@ -175,8 +179,8 @@
       "script": "scripts/run_frontend_smoke.py"
     }
   },
-  "repeat_sha256": "cfc6864858f409c76012bcc81bee685504546ee34933f671b3f790dbbde50064",
-  "report_sha256": "cfc6864858f409c76012bcc81bee685504546ee34933f671b3f790dbbde50064",
+  "repeat_sha256": "775d5702ef6941cedb0ac67887ea0d73b7a3f91c4d9238b1b428c4583268746e",
+  "report_sha256": "775d5702ef6941cedb0ac67887ea0d73b7a3f91c4d9238b1b428c4583268746e",
   "reruns": {
     "gate_quality": {
       "committed_report_path": "execution/reports/pr0697-gate-quality-report.json",
