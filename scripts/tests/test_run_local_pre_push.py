@@ -145,11 +145,32 @@ class RunLocalPrePushTests(unittest.TestCase):
         )
         labels = [step.label for step in steps]
         self.assertIn("Run run_pr111_language_evaluation_harness.py", labels)
+        self.assertIn("Run run_pr08_frontend_baseline.py", labels)
         self.assertIn("Run run_pr09_ada_emission_baseline.py", labels)
+        self.assertIn("Run run_pr10_emitted_baseline.py", labels)
+        self.assertLess(
+            labels.index("Run run_pr08_frontend_baseline.py"),
+            labels.index("Rebuild compiler after reproducibility gate"),
+        )
         self.assertLess(
             labels.index("Run run_pr09_ada_emission_baseline.py"),
             labels.index("Rebuild compiler after reproducibility gate"),
         )
+        self.assertLess(
+            labels.index("Run run_pr10_emitted_baseline.py"),
+            labels.index("Rebuild compiler after reproducibility gate"),
+        )
+
+    def test_build_steps_deduplicate_pr101_audit_for_pr111(self) -> None:
+        steps = build_steps(
+            branch="codex/pr111-language-eval-harness",
+            python="python3",
+            alr="alr",
+            git="git",
+            include_diff=False,
+        )
+        labels = [step.label for step in steps]
+        self.assertEqual(labels.count("Run run_pr101_comprehensive_audit.py"), 1)
 
     def test_build_steps_skips_unmapped_non_pr08_branch(self) -> None:
         self.assertEqual(

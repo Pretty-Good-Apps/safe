@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
@@ -24,7 +25,6 @@ class Step:
 
 
 FOLLOWUP_SCRIPTS = (
-    "scripts/run_pr09_ada_emission_baseline.py",
     "scripts/run_pr0694_output_contract_stability.py",
     "scripts/run_pr0697_gate_quality.py",
     "scripts/run_pr0699_build_reproducibility.py",
@@ -32,6 +32,13 @@ FOLLOWUP_SCRIPTS = (
     "scripts/run_pr06911_glue_script_safety.py",
     "scripts/run_pr06913_documentation_architecture_clarity.py",
     "scripts/validate_execution_state.py",
+)
+
+STATEFUL_BASELINE_SCRIPTS = (
+    "scripts/run_pr08_frontend_baseline.py",
+    "scripts/run_pr09_ada_emission_baseline.py",
+    "scripts/run_pr10_emitted_baseline.py",
+    "scripts/run_pr101_comprehensive_audit.py",
 )
 
 PRIMARY_GATE_SCRIPTS = {
@@ -112,6 +119,11 @@ def gate_scripts_for_branch(branch: str) -> tuple[str, ...]:
     return ()
 
 
+def is_pr10_or_later_branch(branch: str) -> bool:
+    match = re.match(r"^codex/pr(\d{2})", branch)
+    return match is not None and int(match.group(1)) >= 10
+
+
 def build_steps(
     *,
     branch: str,
@@ -125,16 +137,28 @@ def build_steps(
         return []
 
     steps: list[Step] = [Step("Build compiler", (alr, "build"), COMPILER_ROOT)]
-    for script in gate_scripts:
+    seen_scripts: set[str] = set()
+
+    def append_script(script: str) -> None:
+        if script in seen_scripts:
+            return
+        seen_scripts.add(script)
         steps.append(Step(f"Run {Path(script).name}", (python, script), REPO_ROOT))
 
+    for script in gate_scripts:
+        append_script(script)
+
+    if is_pr10_or_later_branch(branch):
+        for script in STATEFUL_BASELINE_SCRIPTS:
+            append_script(script)
+
     for script in FOLLOWUP_SCRIPTS[:3]:
-        steps.append(Step(f"Run {Path(script).name}", (python, script), REPO_ROOT))
+        append_script(script)
 
     steps.append(Step("Rebuild compiler after reproducibility gate", (alr, "build"), COMPILER_ROOT))
 
     for script in FOLLOWUP_SCRIPTS[3:]:
-        steps.append(Step(f"Run {Path(script).name}", (python, script), REPO_ROOT))
+        append_script(script)
 
     if include_diff:
         steps.append(
