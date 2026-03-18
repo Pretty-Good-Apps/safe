@@ -1,0 +1,6 @@
+package Neg_PR113_String_Discriminant is
+   type Packet (Label : String) is
+      record
+         Value : Integer;
+      end record;
+end Neg_PR113_String_Discriminant;

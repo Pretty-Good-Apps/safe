@@ -13,7 +13,7 @@
         "cwd": "$REPO_ROOT",
         "returncode": 0,
         "stderr": "",
-        "stdout": "<3530 chars>"
+        "stdout": "<3529 chars>"
       },
       "check": {
         "command": [
@@ -46,10 +46,10 @@
         "stdout": ""
       },
       "hashes": {
-        "ast": "ea5150d37ac71e29175f51a643a4a6441f8a02516490c6bd1f3f2d11ca63f1b7",
+        "ast": "0ab94b03eed2c873666136439366e7af6fd42cbbde374f1693ad5d0ccc331bd2",
         "mir": "987e08f7a6454421b379992a3bb8347710cbee577b655a976513fca36e4edd30",
         "safei": "c0478811f358aad5c60e5dbad4b7c853882e73dd15fcbecf0ccc2730f667d0ab",
-        "typed": "a719b82cc52886a1e72ec79b248bcaf9896566e8a48fee97aec11fdfe10189ed"
+        "typed": "032d2ae39f5ff09a3e331648fce45483feeaf1590715fc5866d40c6489670ba3"
       },
       "safei_summary": {
         "object_names": [],
@@ -345,10 +345,10 @@
         "stdout": ""
       },
       "hashes": {
-        "ast": "eb85be109eeaf0961b288fda7724ecb3c1f9ef9c275e03c58dc570d2c03b78d4",
+        "ast": "e2a51ad75d180c503bae818cc4a571186c4bb09015d4cd6610928ffc6f9254f1",
         "mir": "c692c069f66e3a3a44ee1200b68ba0c3478e4b1ac45c6d87fe52b8944ac1a2a3",
         "safei": "ef17178580c2d093dbc9771253a50e8c848ff376f52d80d8fe90ee5a2559c77c",
-        "typed": "470739cfabb21102f71c4fa884472f57d0180808288c8d3193c22a058cea589d"
+        "typed": "600fab15b9cca7ba4a2aadde7b2e3bd3ce3a1957aaf99c81727ce1655ffd7246"
       },
       "mir_constant_locals": 0,
       "source": "tests/positive/constant_discriminant_default.safe",
@@ -1191,8 +1191,8 @@
       ]
     }
   },
-  "repeat_sha256": "71ef782ca30b9c4c22269c81d84c1dbb7097fbbfd7dcd4ed51ed364799c52700",
-  "report_sha256": "71ef782ca30b9c4c22269c81d84c1dbb7097fbbfd7dcd4ed51ed364799c52700",
+  "repeat_sha256": "14439975299a84da18ac4f42fbfdacaa70fbc53bd796b2e9d9246b8005912a62",
+  "report_sha256": "14439975299a84da18ac4f42fbfdacaa70fbc53bd796b2e9d9246b8005912a62",
   "source_failures": {
     "imported_missing_static_value": {
       "ast": {

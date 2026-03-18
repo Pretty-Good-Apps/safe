@@ -19,6 +19,7 @@ package body Safe_Frontend.Check_Resolve is
    use type CM.Static_Value_Kind;
    use type CM.Type_Decl_Kind;
    use type CM.Type_Spec_Kind;
+   use type GM.Scalar_Value_Kind;
    use type FT.UString;
 
    type Function_Info is record
@@ -36,7 +37,8 @@ package body Safe_Frontend.Check_Resolve is
    begin
       return Left.Kind = Right.Kind
         and then Left.Int_Value = Right.Int_Value
-        and then Left.Bool_Value = Right.Bool_Value;
+        and then Left.Bool_Value = Right.Bool_Value
+        and then FT.To_String (Left.Text) = FT.To_String (Right.Text);
    end Equal_Static_Value;
 
    package Type_Maps is new Ada.Containers.Indefinite_Hashed_Maps
@@ -177,10 +179,34 @@ package body Safe_Frontend.Check_Resolve is
       Put_Type (Type_Env, "Boolean", BT.Boolean_Type);
       Put_Type (Type_Env, "Character", BT.Character_Type);
       Put_Type (Type_Env, "String", BT.String_Type);
+      Put_Type (Type_Env, "result", BT.Result_Type);
       Put_Type (Type_Env, "Float", BT.Float_Type);
       Put_Type (Type_Env, "Long_Float", BT.Long_Float_Type);
       Put_Type (Type_Env, "Duration", BT.Duration_Type);
    end Add_Builtins;
+
+   procedure Add_Builtin_Functions (Functions : in out Function_Maps.Map) is
+      Info   : Function_Info;
+      Symbol : CM.Symbol;
+   begin
+      Info.Name := FT.To_UString ("ok");
+      Info.Kind := FT.To_UString ("function");
+      Info.Has_Return_Type := True;
+      Info.Return_Type := BT.Result_Type;
+      Put_Function (Functions, "ok", Info);
+
+      Info := (others => <>);
+      Info.Name := FT.To_UString ("fail");
+      Info.Kind := FT.To_UString ("function");
+      Info.Has_Return_Type := True;
+      Info.Return_Type := BT.Result_Type;
+      Symbol.Name := FT.To_UString ("message");
+      Symbol.Kind := FT.To_UString ("param");
+      Symbol.Mode := FT.To_UString ("in");
+      Symbol.Type_Info := BT.String_Type;
+      Info.Params.Append (Symbol);
+      Put_Function (Functions, "fail", Info);
+   end Add_Builtin_Functions;
 
    procedure Raise_Diag (Item : CM.MD.Diagnostic) is
    begin
@@ -252,6 +278,10 @@ package body Safe_Frontend.Check_Resolve is
      (Info     : GM.Type_Descriptor;
      Type_Env : Type_Maps.Map) return Boolean;
 
+   function Is_Tuple_Type
+     (Info     : GM.Type_Descriptor;
+      Type_Env : Type_Maps.Map) return Boolean;
+
    function Is_Character_Type
      (Info     : GM.Type_Descriptor;
       Type_Env : Type_Maps.Map) return Boolean;
@@ -269,6 +299,12 @@ package body Safe_Frontend.Check_Resolve is
       Choice    : GM.Type_Descriptor;
       Type_Env  : Type_Maps.Map) return Boolean;
 
+   function Resolve_Type
+     (Name     : String;
+      Type_Env : Type_Maps.Map;
+      Path     : String;
+      Span     : FT.Source_Span) return GM.Type_Descriptor;
+
    function Equivalent_Type
      (Left     : GM.Type_Descriptor;
       Right    : GM.Type_Descriptor;
@@ -277,6 +313,27 @@ package body Safe_Frontend.Check_Resolve is
       Left_Base  : constant GM.Type_Descriptor := Base_Type (Left, Type_Env);
       Right_Base : constant GM.Type_Descriptor := Base_Type (Right, Type_Env);
    begin
+      if FT.Lowercase (UString_Value (Left_Base.Kind)) = "tuple"
+        or else FT.Lowercase (UString_Value (Right_Base.Kind)) = "tuple"
+      then
+         if FT.Lowercase (UString_Value (Left_Base.Kind)) /= "tuple"
+           or else FT.Lowercase (UString_Value (Right_Base.Kind)) /= "tuple"
+           or else Natural (Left_Base.Tuple_Element_Types.Length) /=
+                    Natural (Right_Base.Tuple_Element_Types.Length)
+         then
+            return False;
+         end if;
+         for Index in Left_Base.Tuple_Element_Types.First_Index .. Left_Base.Tuple_Element_Types.Last_Index loop
+            if not Equivalent_Type
+              (Resolve_Type (UString_Value (Left_Base.Tuple_Element_Types (Index)), Type_Env, "", FT.Null_Span),
+               Resolve_Type (UString_Value (Right_Base.Tuple_Element_Types (Index)), Type_Env, "", FT.Null_Span),
+               Type_Env)
+            then
+               return False;
+            end if;
+         end loop;
+         return True;
+      end if;
       return UString_Value (Left.Name) = UString_Value (Right.Name)
         or else UString_Value (Left_Base.Name) = UString_Value (Right_Base.Name);
    end Equivalent_Type;
@@ -292,6 +349,9 @@ package body Safe_Frontend.Check_Resolve is
       Right_Kind : constant String := FT.Lowercase (UString_Value (Right_Base.Kind));
    begin
       return Equivalent_Type (Left, Right, Type_Env)
+        or else (Is_Tuple_Type (Left, Type_Env)
+                 and then Is_Tuple_Type (Right, Type_Env)
+                 and then Equivalent_Type (Left, Right, Type_Env))
         or else (Is_Integerish (Left, Type_Env) and then Is_Integerish (Right, Type_Env))
         or else (Left_Kind = "float" and then Right_Kind = "float");
    end Compatible_Type;
@@ -302,6 +362,13 @@ package body Safe_Frontend.Check_Resolve is
    begin
       return UString_Value (Base_Type (Info, Type_Env).Name) = "Boolean";
    end Is_Boolean_Type;
+
+   function Is_Tuple_Type
+     (Info     : GM.Type_Descriptor;
+      Type_Env : Type_Maps.Map) return Boolean is
+   begin
+      return FT.Lowercase (UString_Value (Base_Type (Info, Type_Env).Kind)) = "tuple";
+   end Is_Tuple_Type;
 
    function Is_Character_Type
      (Info     : GM.Type_Descriptor;
@@ -316,6 +383,18 @@ package body Safe_Frontend.Check_Resolve is
    begin
       return UString_Value (Base_Type (Info, Type_Env).Name) = "String";
    end Is_String_Type;
+
+   function Is_Tuple_Element_Type_Allowed
+     (Info     : GM.Type_Descriptor;
+      Type_Env : Type_Maps.Map) return Boolean
+   is
+      Base : constant GM.Type_Descriptor := Base_Type (Info, Type_Env);
+      Kind : constant String := FT.Lowercase (UString_Value (Base.Kind));
+   begin
+      return Kind /= "access"
+        and then Kind /= "tuple"
+        and then Kind /= "incomplete";
+   end Is_Tuple_Element_Type_Allowed;
 
    function Is_Duration_Compatible
      (Info     : GM.Type_Descriptor;
@@ -371,11 +450,31 @@ package body Safe_Frontend.Check_Resolve is
    is
       Base : constant GM.Type_Descriptor := Base_Type (Info, Type_Env);
       Kind : constant String := FT.Lowercase (UString_Value (Base.Kind));
+      Info_Kind : constant String := FT.Lowercase (UString_Value (Info.Kind));
    begin
       if Kind = "incomplete" then
          return False;
+      elsif Info_Kind = "subtype" and then not Info.Discriminant_Constraints.Is_Empty then
+         return True;
       elsif Kind = "array" then
          return not Base.Unconstrained;
+      elsif Kind = "tuple" then
+         for Item of Base.Tuple_Element_Types loop
+            if not Is_Definite_Type
+              (Resolve_Type (UString_Value (Item), Type_Env, "", FT.Null_Span),
+               Type_Env)
+            then
+               return False;
+            end if;
+         end loop;
+         return True;
+      elsif Kind = "record" and then not Base.Discriminants.Is_Empty then
+         for Disc of Base.Discriminants loop
+            if not Disc.Has_Default then
+               return False;
+            end if;
+         end loop;
+         return True;
       elsif Kind = "record" and then Base.Has_Discriminant then
          return Base.Has_Discriminant_Default;
       end if;
@@ -432,6 +531,12 @@ package body Safe_Frontend.Check_Resolve is
          return True;
       end if;
 
+      for Item of Base.Tuple_Element_Types loop
+         if Named_Type_Contains_Access (UString_Value (Item)) then
+            return True;
+         end if;
+      end loop;
+
       for Field of Base.Fields loop
          if Named_Type_Contains_Access (UString_Value (Field.Type_Name)) then
             return True;
@@ -460,7 +565,7 @@ package body Safe_Frontend.Check_Resolve is
    function Is_Builtin_Name (Name : String) return Boolean is
    begin
       return Name in
-        "Integer" | "Natural" | "Boolean" | "Character" | "String" | "Float" | "Long_Float" | "Duration";
+        "Integer" | "Natural" | "Boolean" | "Character" | "String" | "Float" | "Long_Float" | "Duration" | "result";
    end Is_Builtin_Name;
 
    function Qualify_Name
@@ -624,6 +729,10 @@ package body Safe_Frontend.Check_Resolve is
             Result.Kind := CM.Static_Value_Integer;
             Result.Int_Value := Expr.Int_Value;
             return True;
+         when CM.Expr_Char =>
+            Result.Kind := CM.Static_Value_Character;
+            Result.Text := Expr.Text;
+            return True;
          when CM.Expr_Bool =>
             Result.Kind := CM.Static_Value_Boolean;
             Result.Bool_Value := Expr.Bool_Value;
@@ -657,6 +766,46 @@ package body Safe_Frontend.Check_Resolve is
             return False;
       end case;
    end Try_Static_Value;
+
+   function To_Scalar_Value (Value : CM.Static_Value) return GM.Scalar_Value is
+      Result : GM.Scalar_Value;
+   begin
+      case Value.Kind is
+         when CM.Static_Value_Integer =>
+            Result.Kind := GM.Scalar_Value_Integer;
+            Result.Int_Value := Long_Long_Integer (Value.Int_Value);
+         when CM.Static_Value_Boolean =>
+            Result.Kind := GM.Scalar_Value_Boolean;
+            Result.Bool_Value := Value.Bool_Value;
+         when CM.Static_Value_Character =>
+            Result.Kind := GM.Scalar_Value_Character;
+            Result.Text := Value.Text;
+         when others =>
+            null;
+      end case;
+      return Result;
+   end To_Scalar_Value;
+
+   function Scalar_Value_Compatible
+     (Value    : CM.Static_Value;
+      Disc_Type : GM.Type_Descriptor;
+      Type_Env : Type_Maps.Map) return Boolean
+   is
+      Base : constant GM.Type_Descriptor := Base_Type (Disc_Type, Type_Env);
+   begin
+      if Value.Kind = CM.Static_Value_Boolean then
+         return Is_Boolean_Type (Base, Type_Env);
+      elsif Value.Kind = CM.Static_Value_Character then
+         return Is_Character_Type (Base, Type_Env);
+      elsif Value.Kind = CM.Static_Value_Integer then
+         return Is_Integerish (Base, Type_Env)
+           and then (not Base.Has_Low or else Long_Long_Integer (Value.Int_Value) >= Base.Low)
+           and then (not Base.Has_High or else Long_Long_Integer (Value.Int_Value) <= Base.High)
+           and then not Is_Boolean_Type (Base, Type_Env)
+           and then not Is_Character_Type (Base, Type_Env);
+      end if;
+      return False;
+   end Scalar_Value_Compatible;
 
    function Bool_Literal_Value
      (Expr      : CM.Expr_Access;
@@ -729,6 +878,78 @@ package body Safe_Frontend.Check_Resolve is
       return 0;
    end Literal_Value;
 
+   function Sanitize_Type_Name_Component (Value : String) return String is
+      Result : FT.UString := FT.To_UString ("");
+      Last_Was_Underscore : Boolean := False;
+   begin
+      for Ch of Value loop
+         if Ch in 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' then
+            Result := Result & FT.To_UString ((1 => Ch));
+            Last_Was_Underscore := False;
+         else
+            if not Last_Was_Underscore then
+               Result := Result & FT.To_UString ("_");
+               Last_Was_Underscore := True;
+            end if;
+         end if;
+      end loop;
+      declare
+         Text : constant String := UString_Value (Result);
+         First : Positive := Text'First;
+         Last  : Natural := Text'Last;
+      begin
+         while First <= Text'Last and then Text (First) = '_' loop
+            First := First + 1;
+         end loop;
+         while Last >= First and then Text (Last) = '_' loop
+            Last := Last - 1;
+         end loop;
+         if Last < First then
+            return "value";
+         end if;
+         return Text (First .. Last);
+      end;
+   end Sanitize_Type_Name_Component;
+
+   function Tuple_Type_Name
+     (Element_Types : FT.UString_Vectors.Vector) return FT.UString
+   is
+      Result : FT.UString := FT.To_UString ("__tuple");
+   begin
+      for Item of Element_Types loop
+         Result :=
+           Result
+           & FT.To_UString ("_")
+           & FT.To_UString (Sanitize_Type_Name_Component (UString_Value (Item)));
+      end loop;
+      return Result;
+   end Tuple_Type_Name;
+
+   function Static_Value_Name_Component (Value : CM.Static_Value) return String is
+   begin
+      case Value.Kind is
+         when CM.Static_Value_Integer =>
+            return Sanitize_Type_Name_Component (CM.Wide_Integer'Image (Value.Int_Value));
+         when CM.Static_Value_Boolean =>
+            return (if Value.Bool_Value then "true" else "false");
+         when CM.Static_Value_Character =>
+            return Sanitize_Type_Name_Component (UString_Value (Value.Text));
+         when others =>
+            return "value";
+      end case;
+   end Static_Value_Name_Component;
+
+   function Make_Tuple_Type
+     (Element_Types : FT.UString_Vectors.Vector) return GM.Type_Descriptor
+   is
+      Result : GM.Type_Descriptor;
+   begin
+      Result.Name := Tuple_Type_Name (Element_Types);
+      Result.Kind := FT.To_UString ("tuple");
+      Result.Tuple_Element_Types := Element_Types;
+      return Result;
+   end Make_Tuple_Type;
+
    function Resolve_Type_Spec
      (Spec     : CM.Type_Spec;
       Type_Env : Type_Maps.Map;
@@ -736,10 +957,165 @@ package body Safe_Frontend.Check_Resolve is
    is
       Result : GM.Type_Descriptor;
       Target : GM.Type_Descriptor;
+      Base   : GM.Type_Descriptor;
+      Element_Types : FT.UString_Vectors.Vector;
    begin
       case Spec.Kind is
          when CM.Type_Spec_Name | CM.Type_Spec_Subtype_Indication =>
+            if not Spec.Constraints.Is_Empty then
+               Base := Resolve_Type (UString_Value (Spec.Name), Type_Env, Path, Spec.Span);
+               if Base.Discriminants.Is_Empty then
+                  Raise_Diag
+                    (CM.Source_Frontend_Error
+                       (Path    => Path,
+                        Span    => Spec.Span,
+                        Message => "discriminant constraints require a discriminated record type"));
+               end if;
+               declare
+                  First_Is_Named : constant Boolean := Spec.Constraints (Spec.Constraints.First_Index).Is_Named;
+                  Seen_Names     : FT.UString_Vectors.Vector;
+                  Disc_Index     : Positive := Base.Discriminants.First_Index;
+               begin
+                  for Assoc of Spec.Constraints loop
+                     declare
+                        Disc         : GM.Discriminant_Descriptor;
+                        Static_Value : CM.Static_Value;
+                        Constraint   : GM.Discriminant_Constraint;
+                        Found        : Boolean := False;
+                     begin
+                        if Assoc.Is_Named /= First_Is_Named then
+                           Raise_Diag
+                             (CM.Source_Frontend_Error
+                                (Path    => Path,
+                                 Span    => Assoc.Span,
+                                 Message => "do not mix positional and named discriminant constraints"));
+                        end if;
+
+                        if Assoc.Is_Named then
+                           for Existing of Seen_Names loop
+                              if UString_Value (Existing) = UString_Value (Assoc.Name) then
+                                 Raise_Diag
+                                   (CM.Source_Frontend_Error
+                                      (Path    => Path,
+                                       Span    => Assoc.Span,
+                                       Message => "duplicate named discriminant constraint '" & UString_Value (Assoc.Name) & "'"));
+                              end if;
+                           end loop;
+                           for Item of Base.Discriminants loop
+                              if UString_Value (Item.Name) = UString_Value (Assoc.Name) then
+                                 Disc := Item;
+                                 Found := True;
+                                 exit;
+                              end if;
+                           end loop;
+                           if not Found then
+                              Raise_Diag
+                                (CM.Source_Frontend_Error
+                                   (Path    => Path,
+                                    Span    => Assoc.Span,
+                                    Message => "unknown discriminant name '" & UString_Value (Assoc.Name) & "'"));
+                           end if;
+                           Seen_Names.Append (Assoc.Name);
+                        else
+                           if Disc_Index > Base.Discriminants.Last_Index then
+                              Raise_Diag
+                                (CM.Source_Frontend_Error
+                                   (Path    => Path,
+                                    Span    => Assoc.Span,
+                                    Message => "too many positional discriminant constraints"));
+                           end if;
+                           Disc := Base.Discriminants (Disc_Index);
+                           Disc_Index := Disc_Index + 1;
+                        end if;
+
+                        if not Try_Static_Value (Assoc.Value, Static_Value_Maps.Empty_Map, Static_Value) then
+                           Raise_Diag
+                             (CM.Source_Frontend_Error
+                                (Path    => Path,
+                                 Span    => Assoc.Span,
+                                 Message => "discriminant constraints must be static scalar values"));
+                        elsif not Scalar_Value_Compatible
+                          (Static_Value,
+                           Resolve_Type (UString_Value (Disc.Type_Name), Type_Env, Path, Assoc.Span),
+                           Type_Env)
+                        then
+                           Raise_Diag
+                             (CM.Source_Frontend_Error
+                                (Path    => Path,
+                                 Span    => Assoc.Span,
+                                 Message => "discriminant constraint value does not match discriminant type"));
+                        end if;
+
+                        Constraint.Is_Named := Assoc.Is_Named;
+                        Constraint.Name := Disc.Name;
+                        Constraint.Value := To_Scalar_Value (Static_Value);
+                        Result.Discriminant_Constraints.Append (Constraint);
+                     end;
+                  end loop;
+
+                  if Natural (Result.Discriminant_Constraints.Length) /=
+                    Natural (Base.Discriminants.Length)
+                  then
+                     Raise_Diag
+                       (CM.Source_Frontend_Error
+                          (Path    => Path,
+                           Span    => Spec.Span,
+                           Message => "discriminant constraints must cover every discriminant in PR11.3"));
+                  end if;
+               end;
+               Result.Name :=
+                 FT.To_UString
+                   ("__constraint_"
+                    & Sanitize_Type_Name_Component (UString_Value (Base.Name)));
+               for Constraint of Result.Discriminant_Constraints loop
+                  Result.Name :=
+                    Result.Name
+                    & FT.To_UString ("_")
+                    & FT.To_UString
+                        (Sanitize_Type_Name_Component (UString_Value (Constraint.Name)))
+                    & FT.To_UString ("_")
+                    & FT.To_UString
+                        (Sanitize_Type_Name_Component
+                           ((case Constraint.Value.Kind is
+                                when GM.Scalar_Value_Integer =>
+                                   Long_Long_Integer'Image (Constraint.Value.Int_Value),
+                                when GM.Scalar_Value_Boolean =>
+                                   (if Constraint.Value.Bool_Value then "true" else "false"),
+                                when GM.Scalar_Value_Character =>
+                                   UString_Value (Constraint.Value.Text),
+                                when others =>
+                                   "value")));
+               end loop;
+               Result.Kind := FT.To_UString ("subtype");
+               Result.Has_Base := True;
+               Result.Base := Base.Name;
+               return Result;
+            end if;
             return Resolve_Type (UString_Value (Spec.Name), Type_Env, Path, Spec.Span);
+         when CM.Type_Spec_Tuple =>
+            if Natural (Spec.Tuple_Elements.Length) < 2 then
+               Raise_Diag
+                 (CM.Source_Frontend_Error
+                    (Path    => Path,
+                     Span    => Spec.Span,
+                     Message => "tuple types require at least two elements"));
+            end if;
+            for Item of Spec.Tuple_Elements loop
+               declare
+                  Element_Type : constant GM.Type_Descriptor :=
+                    Resolve_Type_Spec (Item.all, Type_Env, Path);
+               begin
+                  if not Is_Tuple_Element_Type_Allowed (Element_Type, Type_Env) then
+                     Raise_Diag
+                       (CM.Unsupported_Source_Construct
+                          (Path    => Path,
+                           Span    => Item.Span,
+                           Message => "tuple elements are limited to the current value-type subset in PR11.3"));
+                  end if;
+                  Element_Types.Append (Element_Type.Name);
+               end;
+            end loop;
+            return Make_Tuple_Type (Element_Types);
          when CM.Type_Spec_Access_Def =>
             Target := Resolve_Type (Flatten_Name (Spec.Target_Name), Type_Env, Path, Spec.Span);
             Result.Name := FT.To_UString ("access " & UString_Value (Target.Name));
@@ -782,6 +1158,11 @@ package body Safe_Frontend.Check_Resolve is
    is
    begin
       if UString_Value (Info.Kind) = "record" then
+         for Disc of Info.Discriminants loop
+            if UString_Value (Disc.Name) = Field_Name then
+               return Resolve_Type (UString_Value (Disc.Type_Name), Type_Env, "", FT.Null_Span);
+            end if;
+         end loop;
          if Info.Has_Discriminant and then UString_Value (Info.Discriminant_Name) = Field_Name then
             return Resolve_Type (UString_Value (Info.Discriminant_Type), Type_Env, "", FT.Null_Span);
          end if;
@@ -790,6 +1171,24 @@ package body Safe_Frontend.Check_Resolve is
                return Resolve_Type (UString_Value (Field.Type_Name), Type_Env, "", FT.Null_Span);
             end if;
          end loop;
+      elsif UString_Value (Info.Kind) = "tuple" then
+         declare
+            Index_Value : Natural := 0;
+         begin
+            begin
+               Index_Value := Natural'Value (Field_Name);
+            exception
+               when Constraint_Error =>
+                  return Default_Integer;
+            end;
+            if Index_Value in 1 .. Natural (Info.Tuple_Element_Types.Length) then
+               return Resolve_Type
+                 (UString_Value (Info.Tuple_Element_Types (Positive (Index_Value))),
+                  Type_Env,
+                  "",
+                  FT.Null_Span);
+            end if;
+         end;
       elsif UString_Value (Info.Kind) = "access" and then Info.Has_Target then
          return Field_Type
            (Resolve_Type (UString_Value (Info.Target), Type_Env, "", FT.Null_Span),
@@ -818,6 +1217,15 @@ package body Safe_Frontend.Check_Resolve is
             return Default_String;
          when CM.Expr_Char =>
             return Default_Character;
+         when CM.Expr_Tuple =>
+            declare
+               Elements : FT.UString_Vectors.Vector;
+            begin
+               for Item of Expr.Elements loop
+                  Elements.Append (Expr_Type (Item, Var_Types, Functions, Type_Env).Name);
+               end loop;
+               return Make_Tuple_Type (Elements);
+            end;
          when CM.Expr_Real =>
             if UString_Value (Expr.Type_Name)'Length > 0
               and then Has_Type (Type_Env, UString_Value (Expr.Type_Name))
@@ -829,6 +1237,14 @@ package body Safe_Frontend.Check_Resolve is
             Name := Expr.Name;
             if Has_Type (Var_Types, UString_Value (Name)) then
                return Get_Type (Var_Types, UString_Value (Name));
+            elsif Has_Function (Functions, UString_Value (Name)) then
+               declare
+                  Info : constant Function_Info := Get_Function (Functions, UString_Value (Name));
+               begin
+                  if Info.Has_Return_Type then
+                     return Info.Return_Type;
+                  end if;
+               end;
             end if;
          when CM.Expr_Select =>
             Name := FT.To_UString (Flatten_Name (Expr));
@@ -1092,6 +1508,12 @@ package body Safe_Frontend.Check_Resolve is
                Field.Expr := Normalize_Expr (Item.Expr, Var_Types, Functions, Type_Env);
                Result.Fields.Append (Field);
             end loop;
+         when CM.Expr_Tuple =>
+            Result := new CM.Expr_Node'(Expr.all);
+            Result.Elements.Clear;
+            for Item of Expr.Elements loop
+               Result.Elements.Append (Normalize_Expr (Item, Var_Types, Functions, Type_Env));
+            end loop;
          when CM.Expr_Annotated =>
             Result := new CM.Expr_Node'(Expr.all);
             Result.Inner := Normalize_Expr (Expr.Inner, Var_Types, Functions, Type_Env);
@@ -1127,8 +1549,32 @@ package body Safe_Frontend.Check_Resolve is
                Raise_Diag
                  (CM.Unsupported_Source_Construct
                     (Path    => Path,
-                     Span    => Expr.Span,
+                    Span    => Expr.Span,
                      Message => "string attributes are outside the current PR11.2 text subset"));
+            elsif Is_Tuple_Type (Prefix_Type, Type_Env) then
+               declare
+                  Index_Value : Natural := 0;
+               begin
+                  begin
+                     Index_Value := Natural'Value (UString_Value (Expr.Selector));
+                  exception
+                     when Constraint_Error =>
+                        Raise_Diag
+                          (CM.Source_Frontend_Error
+                             (Path    => Path,
+                              Span    => Expr.Span,
+                              Message => "tuple field selectors must be positional indexes like `.1` in PR11.3"));
+                  end;
+                  if Index_Value = 0
+                    or else Index_Value > Natural (Base_Type (Prefix_Type, Type_Env).Tuple_Element_Types.Length)
+                  then
+                     Raise_Diag
+                       (CM.Source_Frontend_Error
+                          (Path    => Path,
+                           Span    => Expr.Span,
+                           Message => "tuple field selector is out of bounds for the tuple type"));
+                  end if;
+               end;
             end if;
          when CM.Expr_Resolved_Index =>
             Validate_Pr112_Expr_Boundaries (Expr.Prefix, Var_Types, Functions, Type_Env, Path);
@@ -1154,6 +1600,10 @@ package body Safe_Frontend.Check_Resolve is
          when CM.Expr_Aggregate =>
             for Item of Expr.Fields loop
                Validate_Pr112_Expr_Boundaries (Item.Expr, Var_Types, Functions, Type_Env, Path);
+            end loop;
+         when CM.Expr_Tuple =>
+            for Item of Expr.Elements loop
+               Validate_Pr112_Expr_Boundaries (Item, Var_Types, Functions, Type_Env, Path);
             end loop;
          when CM.Expr_Annotated =>
             Validate_Pr112_Expr_Boundaries (Expr.Inner, Var_Types, Functions, Type_Env, Path);
@@ -1202,6 +1652,16 @@ package body Safe_Frontend.Check_Resolve is
       if Expr = null then
          return False;
       elsif Expr.Kind = CM.Expr_Ident or else Expr.Kind = CM.Expr_Resolved_Index then
+         return True;
+      elsif Expr.Kind = CM.Expr_Tuple then
+         if Natural (Expr.Elements.Length) < 2 then
+            return False;
+         end if;
+         for Item of Expr.Elements loop
+            if not Is_Assignable_Target (Item) then
+               return False;
+            end if;
+         end loop;
          return True;
       elsif Expr.Kind = CM.Expr_Select then
          return UString_Value (Expr.Selector) not in "First" | "Last" | "Length" | "Access";
@@ -1456,7 +1916,16 @@ package body Safe_Frontend.Check_Resolve is
       Message          : String) is
       Name : constant String := Root_Name (Expr);
    begin
-      if Is_Read_Only_Imported_Target (Expr, Imported_Objects) then
+      if Expr /= null and then Expr.Kind = CM.Expr_Tuple then
+         for Item of Expr.Elements loop
+            Ensure_Writable_Target
+              (Item,
+               Imported_Objects,
+               Local_Constants,
+               Path,
+               Message);
+         end loop;
+      elsif Is_Read_Only_Imported_Target (Expr, Imported_Objects) then
          Raise_Diag
            (CM.Unsupported_Source_Construct
               (Path    => Path,
@@ -1521,6 +1990,22 @@ package body Safe_Frontend.Check_Resolve is
                      Normalized.Decl.Type_Info,
                      Normalized.Decl.Is_Constant);
                end loop;
+            elsif Normalized.Kind = CM.Stmt_Destructure_Decl then
+               declare
+                  Tuple_Type : constant GM.Type_Descriptor := Base_Type (Normalized.Destructure.Type_Info, Type_Env);
+               begin
+                  for Index in Normalized.Destructure.Names.First_Index .. Normalized.Destructure.Names.Last_Index loop
+                     Put_Type
+                       (Local_Types,
+                        UString_Value (Normalized.Destructure.Names (Index)),
+                        Resolve_Type
+                          (UString_Value (Tuple_Type.Tuple_Element_Types (Index)),
+                           Type_Env,
+                           "",
+                           FT.Null_Span));
+                     Remove_Type (Current_Constants, UString_Value (Normalized.Destructure.Names (Index)));
+                  end loop;
+               end;
             end if;
          end;
       end loop;
@@ -1549,6 +2034,52 @@ package body Safe_Frontend.Check_Resolve is
       case Stmt.Kind is
          when CM.Stmt_Object_Decl =>
             Result.Decl := Normalize_Object_Decl (Stmt.Decl, Var_Types, Functions, Type_Env, Path);
+
+         when CM.Stmt_Destructure_Decl =>
+            Result.Destructure := Stmt.Destructure;
+            Result.Destructure.Type_Info :=
+              Resolve_Type_Spec (Stmt.Destructure.Decl_Type, Type_Env, Path);
+            if not Is_Tuple_Type (Result.Destructure.Type_Info, Type_Env) then
+               Raise_Diag
+                 (CM.Unsupported_Source_Construct
+                    (Path    => Path,
+                     Span    => Stmt.Destructure.Decl_Type.Span,
+                     Message => "destructuring declarations currently require a tuple type"));
+            end if;
+            if not Stmt.Destructure.Has_Initializer or else Stmt.Destructure.Initializer = null then
+               Raise_Diag
+                 (CM.Source_Frontend_Error
+                    (Path    => Path,
+                     Span    => Stmt.Destructure.Span,
+                     Message => "destructuring declarations require an initializer"));
+            end if;
+            Result.Destructure.Initializer :=
+              Normalize_Expr_Checked
+                (Stmt.Destructure.Initializer, Var_Types, Functions, Type_Env, Path);
+            if not Compatible_Type
+              (Expr_Type (Result.Destructure.Initializer, Var_Types, Functions, Type_Env),
+               Result.Destructure.Type_Info,
+               Type_Env)
+            then
+               Raise_Diag
+                 (CM.Source_Frontend_Error
+                    (Path    => Path,
+                     Span    => Result.Destructure.Initializer.Span,
+                     Message => "destructuring initializer type does not match declared tuple type"));
+            end if;
+            declare
+               Tuple_Type : constant GM.Type_Descriptor := Base_Type (Result.Destructure.Type_Info, Type_Env);
+            begin
+               if Natural (Result.Destructure.Names.Length) /=
+                 Natural (Tuple_Type.Tuple_Element_Types.Length)
+               then
+                  Raise_Diag
+                    (CM.Source_Frontend_Error
+                       (Path    => Path,
+                        Span    => Result.Destructure.Span,
+                        Message => "destructuring declaration arity does not match tuple type"));
+               end if;
+            end;
 
          when CM.Stmt_Assign =>
             Result.Target := Normalize_Expr_Checked (Stmt.Target, Var_Types, Functions, Type_Env, Path);
@@ -2061,17 +2592,62 @@ package body Safe_Frontend.Check_Resolve is
             Result.Unconstrained := Decl.Kind = CM.Type_Decl_Unconstrained_Array;
          when CM.Type_Decl_Record =>
             Result.Kind := FT.To_UString ("record");
-            if Decl.Has_Discriminant then
-               Result.Has_Discriminant := True;
-               Result.Discriminant_Name := Decl.Discriminant.Name;
-               Result.Discriminant_Type :=
-                 Resolve_Type_Spec (Decl.Discriminant.Disc_Type, Type_Env, Path).Name;
-               if Decl.Discriminant.Has_Default then
-                  Result.Has_Discriminant_Default := True;
-                  Result.Discriminant_Default_Bool :=
-                    Bool_Literal_Value (Decl.Discriminant.Default_Expr, Const_Env, Path);
+            declare
+               Decl_Discriminants : CM.Discriminant_Spec_Vectors.Vector := Decl.Discriminants;
+            begin
+               if Decl_Discriminants.Is_Empty and then Decl.Has_Discriminant then
+                  Decl_Discriminants.Append (Decl.Discriminant);
                end if;
-            end if;
+               for Disc_Spec of Decl_Discriminants loop
+                  declare
+                     Disc_Type    : constant GM.Type_Descriptor :=
+                       Resolve_Type_Spec (Disc_Spec.Disc_Type, Type_Env, Path);
+                     Disc_Desc    : GM.Discriminant_Descriptor;
+                     Static_Value : CM.Static_Value;
+                  begin
+                     if not Is_Discrete_Case_Type (Disc_Type, Type_Env) then
+                        Raise_Diag
+                          (CM.Unsupported_Source_Construct
+                             (Path    => Path,
+                              Span    => Disc_Spec.Span,
+                              Message => "PR11.3 discriminants currently support only boolean, character, and integer-family types"));
+                     end if;
+                     Disc_Desc.Name := Disc_Spec.Name;
+                     Disc_Desc.Type_Name := Disc_Type.Name;
+                     if Disc_Spec.Has_Default then
+                        if not Try_Static_Value (Disc_Spec.Default_Expr, Const_Env, Static_Value) then
+                           Raise_Diag
+                             (CM.Source_Frontend_Error
+                                (Path    => Path,
+                                 Span    => Disc_Spec.Span,
+                                 Message => "discriminant defaults must be static scalar values"));
+                        elsif not Scalar_Value_Compatible (Static_Value, Disc_Type, Type_Env) then
+                           Raise_Diag
+                             (CM.Source_Frontend_Error
+                                (Path    => Path,
+                                 Span    => Disc_Spec.Span,
+                                 Message => "discriminant default value does not match discriminant type"));
+                        end if;
+                        Disc_Desc.Has_Default := True;
+                        Disc_Desc.Default_Value := To_Scalar_Value (Static_Value);
+                     end if;
+                     Result.Discriminants.Append (Disc_Desc);
+                  end;
+               end loop;
+               if not Result.Discriminants.Is_Empty then
+                  Result.Has_Discriminant := True;
+                  Result.Discriminant_Name := Result.Discriminants (Result.Discriminants.First_Index).Name;
+                  Result.Discriminant_Type := Result.Discriminants (Result.Discriminants.First_Index).Type_Name;
+                  if Result.Discriminants (Result.Discriminants.First_Index).Has_Default
+                    and then Result.Discriminants (Result.Discriminants.First_Index).Default_Value.Kind =
+                      GM.Scalar_Value_Boolean
+                  then
+                     Result.Has_Discriminant_Default := True;
+                     Result.Discriminant_Default_Bool :=
+                       Result.Discriminants (Result.Discriminants.First_Index).Default_Value.Bool_Value;
+                  end if;
+               end if;
+            end;
             for Field_Decl of Decl.Components loop
                for Name of Field_Decl.Names loop
                   Item.Name := Name;
@@ -2091,34 +2667,91 @@ package body Safe_Frontend.Check_Resolve is
                end loop;
             end loop;
             if not Decl.Variants.Is_Empty then
-               for Alternative of Decl.Variants loop
-                  for Field_Decl of Alternative.Components loop
-                     for Name of Field_Decl.Names loop
-                        Item.Name := Name;
-                        declare
-                           Field_Type : constant GM.Type_Descriptor :=
-                             Resolve_Type_Spec (Field_Decl.Field_Type, Type_Env, Path);
-                        begin
-                           Reject_Unsupported_String_Use
-                             (Field_Type,
-                              Type_Env,
-                              Path,
-                              Field_Decl.Field_Type.Span,
-                              "record fields of type String are outside the current PR11.2 text subset");
-                           Item.Type_Name := Field_Type.Name;
-                        end;
-                        Result.Fields.Append (Item);
-                        declare
-                           Variant_Field : GM.Variant_Field;
-                        begin
-                           Variant_Field.Name := Name;
-                           Variant_Field.Type_Name := Item.Type_Name;
-                           Variant_Field.When_True := Alternative.When_Value;
-                           Result.Variant_Fields.Append (Variant_Field);
-                        end;
-                     end loop;
+               declare
+                  Control_Type : GM.Type_Descriptor;
+                  Found_Control : Boolean := False;
+               begin
+                  if Result.Discriminants.Is_Empty then
+                     Raise_Diag
+                       (CM.Source_Frontend_Error
+                          (Path    => Path,
+                           Span    => Decl.Span,
+                           Message => "variant parts require declared discriminants"));
+                  end if;
+                  Result.Variant_Discriminant_Name := Decl.Variant_Discriminant_Name;
+                  for Disc of Result.Discriminants loop
+                     if UString_Value (Disc.Name) = UString_Value (Decl.Variant_Discriminant_Name) then
+                        Control_Type :=
+                          Resolve_Type (UString_Value (Disc.Type_Name), Type_Env, Path, Decl.Span);
+                        Found_Control := True;
+                        exit;
+                     end if;
                   end loop;
-               end loop;
+                  if not Found_Control then
+                     Raise_Diag
+                       (CM.Source_Frontend_Error
+                          (Path    => Path,
+                           Span    => Decl.Span,
+                           Message =>
+                             "variant part discriminant '" & UString_Value (Decl.Variant_Discriminant_Name)
+                             & "' is not declared on the record"));
+                  end if;
+
+                  for Alternative of Decl.Variants loop
+                     declare
+                        Choice_Value : CM.Static_Value := (others => <>);
+                        Variant_Choice : GM.Scalar_Value;
+                     begin
+                        if not Alternative.Is_Others then
+                           if not Try_Static_Value (Alternative.Choice_Expr, Const_Env, Choice_Value) then
+                              Raise_Diag
+                                (CM.Source_Frontend_Error
+                                   (Path    => Path,
+                                    Span    => Alternative.Span,
+                                    Message => "variant choices must be static scalar values"));
+                           elsif not Scalar_Value_Compatible (Choice_Value, Control_Type, Type_Env) then
+                              Raise_Diag
+                                (CM.Source_Frontend_Error
+                                   (Path    => Path,
+                                    Span    => Alternative.Span,
+                                    Message => "variant choice does not match discriminant type"));
+                           end if;
+                           Variant_Choice := To_Scalar_Value (Choice_Value);
+                        end if;
+
+                        for Field_Decl of Alternative.Components loop
+                           for Name of Field_Decl.Names loop
+                              Item.Name := Name;
+                              declare
+                                 Field_Type : constant GM.Type_Descriptor :=
+                                   Resolve_Type_Spec (Field_Decl.Field_Type, Type_Env, Path);
+                              begin
+                                 Reject_Unsupported_String_Use
+                                   (Field_Type,
+                                    Type_Env,
+                                    Path,
+                                    Field_Decl.Field_Type.Span,
+                                    "record fields of type String are outside the current PR11.2 text subset");
+                                 Item.Type_Name := Field_Type.Name;
+                              end;
+                              Result.Fields.Append (Item);
+                              declare
+                                 Variant_Field : GM.Variant_Field;
+                              begin
+                                 Variant_Field.Name := Name;
+                                 Variant_Field.Type_Name := Item.Type_Name;
+                                 Variant_Field.Is_Others := Alternative.Is_Others;
+                                 Variant_Field.Choice := Variant_Choice;
+                                 if Variant_Choice.Kind = GM.Scalar_Value_Boolean then
+                                    Variant_Field.When_True := Variant_Choice.Bool_Value;
+                                 end if;
+                                 Result.Variant_Fields.Append (Variant_Field);
+                              end;
+                           end loop;
+                        end loop;
+                     end;
+                  end loop;
+               end;
             end if;
          when CM.Type_Decl_Access =>
             Result.Kind := FT.To_UString ("access");
@@ -2425,6 +3058,7 @@ package body Safe_Frontend.Check_Resolve is
       end Add_Imported_Interface;
    begin
       Add_Builtins (Type_Env);
+      Add_Builtin_Functions (Functions);
       Result.Path := Unit.Path;
       Result.Package_Name := Unit.Package_Name;
 

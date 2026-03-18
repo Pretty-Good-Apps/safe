@@ -490,6 +490,9 @@ package body Safe_Frontend.Mir_Json is
                end;
             end loop;
          end;
+      elsif FT.To_String (Tag) = "tuple" then
+         Result.Kind := GM.Expr_Tuple;
+         Parse_Expr_List (Json_Array_Or_Empty (Value, "elements"), Result.Elements);
       elsif FT.To_String (Tag) = "annotated" then
          Result.Kind := GM.Expr_Annotated;
          if Has_Field (Value, "subtype") then

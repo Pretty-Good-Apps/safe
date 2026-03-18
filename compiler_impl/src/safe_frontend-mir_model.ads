@@ -31,6 +31,7 @@ package Safe_Frontend.Mir_Model is
       Expr_Call,
       Expr_Allocator,
       Expr_Aggregate,
+      Expr_Tuple,
       Expr_Annotated,
       Expr_Unary,
       Expr_Binary);
@@ -73,6 +74,7 @@ package Safe_Frontend.Mir_Model is
       Indices       : Expr_Access_Vectors.Vector;
       Args          : Expr_Access_Vectors.Vector;
       Fields        : Aggregate_Field_Vectors.Vector;
+      Elements      : Expr_Access_Vectors.Vector;
       Has_Call_Span : Boolean := False;
       Call_Span     : FT.Source_Span := FT.Null_Span;
    end record;
@@ -86,10 +88,46 @@ package Safe_Frontend.Mir_Model is
      (Index_Type   => Positive,
       Element_Type => Type_Field);
 
+   type Scalar_Value_Kind is
+     (Scalar_Value_None,
+      Scalar_Value_Integer,
+      Scalar_Value_Boolean,
+      Scalar_Value_Character);
+
+   type Scalar_Value is record
+      Kind       : Scalar_Value_Kind := Scalar_Value_None;
+      Int_Value  : Long_Long_Integer := 0;
+      Bool_Value : Boolean := False;
+      Text       : FT.UString := FT.To_UString ("");
+   end record;
+
+   type Discriminant_Descriptor is record
+      Name        : FT.UString := FT.To_UString ("");
+      Type_Name   : FT.UString := FT.To_UString ("");
+      Has_Default : Boolean := False;
+      Default_Value : Scalar_Value;
+   end record;
+
+   package Discriminant_Descriptor_Vectors is new Ada.Containers.Indefinite_Vectors
+     (Index_Type   => Positive,
+      Element_Type => Discriminant_Descriptor);
+
+   type Discriminant_Constraint is record
+      Is_Named : Boolean := False;
+      Name     : FT.UString := FT.To_UString ("");
+      Value    : Scalar_Value;
+   end record;
+
+   package Discriminant_Constraint_Vectors is new Ada.Containers.Indefinite_Vectors
+     (Index_Type   => Positive,
+      Element_Type => Discriminant_Constraint);
+
    type Variant_Field is record
       Name       : FT.UString := FT.To_UString ("");
       Type_Name  : FT.UString := FT.To_UString ("");
       When_True  : Boolean := False;
+      Is_Others  : Boolean := False;
+      Choice     : Scalar_Value;
    end record;
 
    package Variant_Field_Vectors is new Ada.Containers.Indefinite_Vectors
@@ -123,13 +161,18 @@ package Safe_Frontend.Mir_Model is
       Discriminant_Type  : FT.UString := FT.To_UString ("");
       Has_Discriminant_Default : Boolean := False;
       Discriminant_Default_Bool : Boolean := False;
+      Discriminants      : Discriminant_Descriptor_Vectors.Vector;
+      Discriminant_Constraints : Discriminant_Constraint_Vectors.Vector;
+      Variant_Discriminant_Name : FT.UString := FT.To_UString ("");
       Variant_Fields     : Variant_Field_Vectors.Vector;
+      Tuple_Element_Types : FT.UString_Vectors.Vector;
       Not_Null           : Boolean := False;
       Anonymous          : Boolean := False;
       Is_Constant        : Boolean := False;
       Is_All             : Boolean := False;
       Has_Access_Role    : Boolean := False;
       Access_Role        : FT.UString := FT.To_UString ("");
+      Is_Result_Builtin  : Boolean := False;
    end record;
 
    package Type_Descriptor_Vectors is new Ada.Containers.Indefinite_Vectors

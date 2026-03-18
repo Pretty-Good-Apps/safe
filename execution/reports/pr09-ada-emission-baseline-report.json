@@ -6,8 +6,8 @@
     "frontend_baseline": "docs/frontend_architecture_baseline.md",
     "readme": "README.md"
   },
-  "repeat_sha256": "9316e248a64e931bb101ca880d5804c2395294fce5c82e9a1db0831f040f6220",
-  "report_sha256": "9316e248a64e931bb101ca880d5804c2395294fce5c82e9a1db0831f040f6220",
+  "repeat_sha256": "a51c4db9cc8955d671c41f0c7abe7f32f8294efc6582e0fccbe740800ddb55df",
+  "report_sha256": "a51c4db9cc8955d671c41f0c7abe7f32f8294efc6582e0fccbe740800ddb55df",
   "retired_snapshots_absent": [
     "tests/golden/golden_sensors.ada",
     "tests/golden/golden_ownership.ada",
@@ -16,7 +16,7 @@
   "slice_reports": [
     {
       "deterministic": true,
-      "report_sha256": "a1d55413737550edc4d9f5b2e6842fd0cde072d015cadae2e941543142dcce9b",
+      "report_sha256": "a7984a55ebb99eb8303ca199eacd1242005953467a5b67518add7d2a687a47c0",
       "script": "scripts/run_pr09a_emitter_surface.py",
       "stdout": "pr09a emitter surface: OK ($TMPDIR/run_pr09a_emitter_surface.json)\n"
     },
@@ -46,7 +46,7 @@
     }
   ],
   "tracker": {
-    "next_task_id": "PR11.3",
+    "next_task_id": "PR11.3a",
     "pr09_evidence": [
       "execution/reports/pr09a-emitter-surface-report.json",
       "execution/reports/pr09a-emitter-mvp-report.json",

@@ -56,6 +56,8 @@ package body Safe_Frontend.Mir_Model is
             return "allocator";
          when Expr_Aggregate =>
             return "aggregate";
+         when Expr_Tuple =>
+            return "tuple";
          when Expr_Annotated =>
             return "annotated";
          when Expr_Unary =>

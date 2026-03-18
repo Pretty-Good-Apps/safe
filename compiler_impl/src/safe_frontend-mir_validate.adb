@@ -276,6 +276,13 @@ package body Safe_Frontend.Mir_Validate is
                   end;
                end loop;
             end if;
+         when GM.Expr_Tuple =>
+            Require (Natural (Value.Elements.Length) >= 2, Where & ": tuple expressions must have at least two elements");
+            for Index in Value.Elements.First_Index .. Value.Elements.Last_Index loop
+               Validate_Expr
+                 (Value.Elements (Index),
+                  Where & ".elements[" & Image (Index - 1) & "]");
+            end loop;
          when GM.Expr_Annotated =>
             Validate_Expr (Value.Inner, Where & ".value");
          when GM.Expr_Unary =>

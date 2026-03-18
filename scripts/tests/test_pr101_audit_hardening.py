@@ -62,6 +62,14 @@ class Pr101AuditHardeningTests(unittest.TestCase):
         self.assertTrue(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr113("PR12.1"))
         self.assertFalse(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr113("PR11.2"))
 
+    def test_pr101_audit_next_task_guard_accepts_pr113a_and_beyond(self) -> None:
+        self.assertTrue(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr113a("PR11.3a"))
+        self.assertTrue(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr113a("PR11.3b"))
+        self.assertTrue(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr113a("PR11.4"))
+        self.assertTrue(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr113a("PR12.1"))
+        self.assertFalse(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr113a("PR11.3"))
+        self.assertFalse(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr113a("PR11.2"))
+
     def test_pr101_audit_tracks_pr111_acceptance_and_evidence(self) -> None:
         self.assertEqual(
             run_pr101_comprehensive_audit.EXPECTED_PR111_EVIDENCE,
@@ -82,6 +90,22 @@ class Pr101AuditHardeningTests(unittest.TestCase):
         self.assertIn(
             "string/character literals and case statements",
             run_pr101_comprehensive_audit.EXPECTED_PR112_ACCEPTANCE[0],
+        )
+
+    def test_pr101_audit_tracks_pr113_acceptance_and_evidence(self) -> None:
+        self.assertEqual(
+            run_pr101_comprehensive_audit.EXPECTED_PR113_EVIDENCE,
+            ["execution/reports/pr113-discriminated-types-tuples-structured-returns-report.json"],
+        )
+        self.assertEqual(len(run_pr101_comprehensive_audit.EXPECTED_PR113_ACCEPTANCE), 3)
+        self.assertIn(
+            "tuple returns/destructuring/field access/channel elements",
+            run_pr101_comprehensive_audit.EXPECTED_PR113_ACCEPTANCE[1],
+        )
+        self.assertEqual(len(run_pr101_comprehensive_audit.EXPECTED_PR113A_ACCEPTANCE), 3)
+        self.assertIn(
+            "tuples and structured-return/result support",
+            run_pr101_comprehensive_audit.EXPECTED_PR113A_ACCEPTANCE[0],
         )
 
     def test_split_table_row_rejects_non_data_rows(self) -> None:

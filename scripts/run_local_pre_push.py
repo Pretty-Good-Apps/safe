@@ -91,6 +91,12 @@ PRIMARY_GATE_SCRIPTS = {
         "scripts/run_pr112_parser_completeness_phase1.py",
         "scripts/run_pr101_comprehensive_audit.py",
     ),
+    "codex/pr113": (
+        "scripts/run_pr111_language_evaluation_harness.py",
+        "scripts/run_pr112_parser_completeness_phase1.py",
+        "scripts/run_pr113_discriminated_types_tuples_structured_returns.py",
+        "scripts/run_pr101_comprehensive_audit.py",
+    ),
 }
 
 PR11_FAMILY_GATE_SCRIPTS = (

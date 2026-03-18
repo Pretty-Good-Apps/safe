@@ -263,6 +263,15 @@ package body Safe_Frontend.Mir_Write is
                end loop;
                Items.Append ("""fields"":" & Json_List (Values));
             end;
+         when GM.Expr_Tuple =>
+            declare
+               Values : String_Vectors.Vector;
+            begin
+               for Item of Expr.Elements loop
+                  Values.Append (Expr_Json (Item));
+               end loop;
+               Items.Append ("""elements"":" & Json_List (Values));
+            end;
          when GM.Expr_Annotated =>
             Items.Append ("""subtype"":" & Name_From_String (FT.To_String (Expr.Subtype_Name), Expr.Span));
             Items.Append ("""expr"":" & Expr_Json (Expr.Inner));

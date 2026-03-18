@@ -21,6 +21,12 @@
       "include": "#types"
     },
     {
+      "include": "#builtins"
+    },
+    {
+      "include": "#tuple_selectors"
+    },
+    {
       "include": "#numbers"
     },
     {
@@ -83,7 +89,23 @@
       "patterns": [
         {
           "name": "support.type.builtin.safe",
-          "match": "\\b(Boolean|Integer|Natural|Character|String)\\b"
+          "match": "\\b(Boolean|Integer|Natural|Character|String|result)\\b"
+        }
+      ]
+    },
+    "builtins": {
+      "patterns": [
+        {
+          "name": "support.function.builtin.safe",
+          "match": "\\b(ok|fail)\\b"
+        }
+      ]
+    },
+    "tuple_selectors": {
+      "patterns": [
+        {
+          "name": "variable.other.member.tuple-index.safe",
+          "match": "(?<=\\.)\\d+\\b"
         }
       ]
     },

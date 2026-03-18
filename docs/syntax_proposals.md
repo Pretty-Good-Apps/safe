@@ -3464,19 +3464,33 @@ var (found, data) : (boolean, string) = Lookup (DB, "host")
 
 Positional: `result.1`, `result.2` (1-indexed).
 
+### Current implementation status (PR11.3)
+
+PR11.3 lands the narrow value-type tuple subset:
+
+- Anonymous tuple types and tuple expressions with arity >= 2
+- Function returns of tuple type
+- Local destructuring bind
+- Positional selectors like `.1`, `.2`
+- Tuple-typed channel elements
+
+PR11.3 does **not** admit nested tuples, access-typed tuple elements, or other
+ownership-bearing tuple shapes. Those remain deferred.
+
 ## Emitter Mapping
 
 The emitter lowers tuples to Ada records with positional field names:
 
 ```ada
-type Lookup_Result is record
+type Safe_tuple_Boolean_Integer is record
    F1 : Boolean;
-   F2 : String_Buffer_256;
+   F2 : Integer;
 end record;
 ```
 
-The Ada type is anonymous (generated name) and invisible to the Safe
-programmer.
+The Ada type is generated and invisible to the Safe programmer. Tuple elements
+of type `string` are emitted with compiler-generated length discriminants in
+the helper Ada record; PR11.3 does not route tuples through `string_buffer`.
 
 ## Interaction with Discriminated Records
 
@@ -3493,14 +3507,10 @@ whether they need named fields and variant-part enforcement.
 
 ## Interaction with Ownership
 
-Tuples containing reference-typed elements follow the same ownership rules
-as records containing reference-typed fields. If a tuple element is an
-access type, the element name is uppercase under the capitalisation
-convention (e.g., the tuple type would need named fields for this case,
-which may push the design toward using a record instead).
-
-For the common case — tuples of value types like `(boolean, string)` or
-`(integer, integer)` — there are no ownership complications.
+The landed PR11.3 subset avoids ownership-heavy tuple shapes. Access-typed
+elements, nested tuples, and other ownership-bearing elements are rejected.
+For the admitted value-type cases like `(boolean, string)` or
+`(integer, integer)`, tuples behave like ordinary copyable records.
 
 ## Interaction with Channels
 
@@ -3798,12 +3808,12 @@ task worker with priority = 10, receives jobs, sends results
 
 task collector with priority = 5, receives results
    loop
-      var (ok, data) : (boolean, string)
-      receive results, (ok, data)
-      if not ok
+      var payload : (boolean, string)
+      receive results, payload
+      if not payload.1
          log_error ("job failed")
       else
-         store_result (data)
+         store_result (payload.2)
 ```
 
 ### Limitation
@@ -3818,17 +3828,33 @@ For cases where an error message is needed, introduce a predefined `result`
 type:
 
 ```
-type result is record
-   ok      : boolean
-   message : string
+result
+ok
+fail ("key not found")
 ```
 
-With predefined constructors:
+### Current implementation status (PR11.3)
+
+`result` is a compiler-known builtin type, not a user-declared alias or
+ordinary source-level record declaration. Semantically it exposes:
+
+```
+ok      : boolean
+message : string
+```
+
+with builtin constructors:
 
 ```
 ok                          -- result where ok = true, message = ""
 fail ("key not found")      -- result where ok = false, message = "key not found"
 ```
+
+PR11.3 keeps the general PR11.2 restriction on user-declared `String` record
+fields. `result` is the only carveout, and the emitter lowers it to a
+compiler-generated Ada discriminated record with hidden message-length storage
+rather than to an ordinary user-visible record with an unconstrained `String`
+component.
 
 This is the upgrade path from `(boolean, T)` when bare true/false is not
 enough context. Functions return `(result, T)`:

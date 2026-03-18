@@ -1,0 +1,3 @@
+package Neg_PR113_Nested_Tuple is
+   Value : ((Boolean, Integer), Integer) = ((True, 1), 2);
+end Neg_PR113_Nested_Tuple;

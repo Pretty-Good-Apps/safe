@@ -64,7 +64,7 @@ package body Safe_Frontend.Mir_Analyze is
 
    type Discriminant_Fact is record
       Known       : Boolean := False;
-      Value       : Boolean := False;
+      Value       : GM.Scalar_Value;
       Invalidated : Boolean := False;
    end record;
 
@@ -255,6 +255,8 @@ package body Safe_Frontend.Mir_Analyze is
    function Is_Integer_Type
      (Info : GM.Type_Descriptor) return Boolean;
    function Is_Float_Type
+     (Info : GM.Type_Descriptor) return Boolean;
+   function Is_Tuple_Type
      (Info : GM.Type_Descriptor) return Boolean;
    function Type_Access_Role
      (Info : GM.Type_Descriptor) return Access_Role_Kind;
@@ -526,6 +528,16 @@ package body Safe_Frontend.Mir_Analyze is
       Truthy    : Boolean;
       Var_Types : Type_Maps.Map;
       Type_Env  : Type_Maps.Map);
+   function Scalar_Value_Equal
+     (Left, Right : GM.Scalar_Value) return Boolean;
+   function Expr_Scalar_Value
+     (Expr  : GM.Expr_Access;
+      Value : out GM.Scalar_Value) return Boolean;
+   function Variant_Discriminant_Name (Info : GM.Type_Descriptor) return String;
+   function Variant_Field_Allows
+     (Field      : GM.Variant_Field;
+      Value      : GM.Scalar_Value;
+      All_Fields : GM.Variant_Field_Vectors.Vector) return Boolean;
    procedure Apply_Discriminant_Refinement
      (Current   : in out State;
       Expr      : GM.Expr_Access;
@@ -797,6 +809,7 @@ package body Safe_Frontend.Mir_Analyze is
       Type_Env.Include ("Boolean", BT.Boolean_Type);
       Type_Env.Include ("Character", BT.Character_Type);
       Type_Env.Include ("String", BT.String_Type);
+      Type_Env.Include ("result", BT.Result_Type);
       Type_Env.Include ("Float", BT.Float_Type (With_Analysis_Metadata => True));
       Type_Env.Include ("Long_Float", BT.Long_Float_Type (With_Analysis_Metadata => True));
       Type_Env.Include ("Duration", BT.Duration_Type (With_Analysis_Metadata => True));
@@ -871,6 +884,36 @@ package body Safe_Frontend.Mir_Analyze is
       return Resolve_Type (Name, Type_Env);
    end Resolve_Type;
 
+   function Sanitize_Type_Name_Component (Value : String) return String is
+      Result : FT.UString := FT.To_UString ("");
+   begin
+      for Ch of Value loop
+         if Ch in 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' then
+            Result := Result & FT.To_UString ((1 => Ch));
+         else
+            Result := Result & FT.To_UString ("_");
+         end if;
+      end loop;
+      return UString_Value (Result);
+   end Sanitize_Type_Name_Component;
+
+   function Make_Tuple_Type
+     (Element_Types : FT.UString_Vectors.Vector) return GM.Type_Descriptor
+   is
+      Result : GM.Type_Descriptor;
+   begin
+      Result.Name := FT.To_UString ("__tuple");
+      for Item of Element_Types loop
+         Result.Name :=
+           Result.Name
+           & FT.To_UString ("_")
+           & FT.To_UString (Sanitize_Type_Name_Component (UString_Value (Item)));
+      end loop;
+      Result.Kind := FT.To_UString ("tuple");
+      Result.Tuple_Element_Types := Element_Types;
+      return Result;
+   end Make_Tuple_Type;
+
    function Range_Interval
      (Info : GM.Type_Descriptor) return Interval
    is
@@ -907,6 +950,12 @@ package body Safe_Frontend.Mir_Analyze is
    begin
       return Lower (UString_Value (Info.Kind)) = "float";
    end Is_Float_Type;
+
+   function Is_Tuple_Type
+     (Info : GM.Type_Descriptor) return Boolean is
+   begin
+      return Lower (UString_Value (Info.Kind)) = "tuple";
+   end Is_Tuple_Type;
 
    function Type_Access_Role
      (Info : GM.Type_Descriptor) return Access_Role_Kind
@@ -964,6 +1013,11 @@ package body Safe_Frontend.Mir_Analyze is
          Base := Access_Target_Type (Base, Type_Env);
       end if;
       if Lower (UString_Value (Base.Kind)) = "record" then
+         for Disc of Base.Discriminants loop
+            if UString_Value (Disc.Name) = Field_Name then
+               return Resolve_Type (UString_Value (Disc.Type_Name), Type_Env);
+            end if;
+         end loop;
          if Base.Has_Discriminant and then UString_Value (Base.Discriminant_Name) = Field_Name then
             return Resolve_Type (UString_Value (Base.Discriminant_Type), Type_Env);
          end if;
@@ -972,6 +1026,22 @@ package body Safe_Frontend.Mir_Analyze is
                return Resolve_Type (UString_Value (Field.Type_Name), Type_Env);
             end if;
          end loop;
+      elsif Lower (UString_Value (Base.Kind)) = "tuple" then
+         declare
+            Index_Value : Natural := 0;
+         begin
+            begin
+               Index_Value := Natural'Value (Field_Name);
+            exception
+               when Constraint_Error =>
+                  return Resolve_Type ("Integer", Type_Env);
+            end;
+            if Index_Value in 1 .. Natural (Base.Tuple_Element_Types.Length) then
+               return Resolve_Type
+                 (UString_Value (Base.Tuple_Element_Types (Positive (Index_Value))),
+                  Type_Env);
+            end if;
+         end;
       end if;
       return Resolve_Type ("Integer", Type_Env);
    end Field_Type;
@@ -1389,6 +1459,15 @@ package body Safe_Frontend.Mir_Analyze is
       end if;
 
       case Expr.Kind is
+         when GM.Expr_Tuple =>
+            declare
+               Elements : FT.UString_Vectors.Vector;
+            begin
+               for Item of Expr.Elements loop
+                  Elements.Append (Expr_Type (Item, Var_Types, Type_Env, Functions).Name);
+               end loop;
+               return Make_Tuple_Type (Elements);
+            end;
          when GM.Expr_Ident =>
             if Var_Types.Contains (UString_Value (Expr.Name)) then
                return Var_Types.Element (UString_Value (Expr.Name));
@@ -1608,10 +1687,10 @@ package body Safe_Frontend.Mir_Analyze is
    is
       Prefix_Type : GM.Type_Descriptor;
       Base_Name_Text : constant String := Root_Name (Expr.Prefix);
-      Expected    : Boolean := False;
       Found       : Boolean := False;
       Fact        : Discriminant_Fact;
       Diag        : MD.Diagnostic := Null_Diagnostic;
+      Disc_Name_Text : FT.UString := FT.To_UString ("");
    begin
       if Expr = null or else Expr.Kind /= GM.Expr_Select or else Base_Name_Text = "" then
          return;
@@ -1620,43 +1699,45 @@ package body Safe_Frontend.Mir_Analyze is
       if Lower (UString_Value (Prefix_Type.Kind)) = "access" then
          Prefix_Type := Access_Target_Type (Prefix_Type, Type_Env);
       end if;
-      if not Prefix_Type.Has_Discriminant or else Prefix_Type.Variant_Fields.Is_Empty then
+      Disc_Name_Text := FT.To_UString (Variant_Discriminant_Name (Prefix_Type));
+      if not Has_Text (Disc_Name_Text) or else Prefix_Type.Variant_Fields.Is_Empty then
          return;
       end if;
       for Field of Prefix_Type.Variant_Fields loop
          if UString_Value (Field.Name) = UString_Value (Expr.Selector) then
-            Expected := Field.When_True;
             Found := True;
-            exit;
+            if Current.Discriminants.Contains (Base_Name_Text) then
+               Fact := Current.Discriminants.Element (Base_Name_Text);
+            end if;
+            if Fact.Known
+              and then Variant_Field_Allows (Field, Fact.Value, Prefix_Type.Variant_Fields)
+            then
+               return;
+            end if;
+            Diag.Reason := FT.To_UString ("discriminant_check_not_established");
+            Diag.Message :=
+              FT.To_UString
+                ("access to variant field '" & UString_Value (Expr.Selector)
+                 & "' requires established discriminant '" & UString_Value (Disc_Name_Text) & "'");
+            Diag.Span := Expr.Span;
+            Diag.Has_Highlight_Span := True;
+            Diag.Highlight_Span := Expr.Span;
+            if Fact.Invalidated then
+               Diag.Notes.Append
+                 (FT.To_UString
+                    ("the discriminant fact for '" & Base_Name_Text
+                     & "' was invalidated by assignment or an out/in out call."));
+            else
+               Diag.Notes.Append
+                 (FT.To_UString
+                    ("the discriminant '" & UString_Value (Disc_Name_Text)
+                     & "' was not established on all paths before this access."));
+            end if;
+            Raise_Diag (Diag);
          end if;
       end loop;
       if not Found then
          return;
-      end if;
-      if Current.Discriminants.Contains (Base_Name_Text) then
-         Fact := Current.Discriminants.Element (Base_Name_Text);
-      end if;
-      if not Fact.Known or else Fact.Value /= Expected then
-         Diag.Reason := FT.To_UString ("discriminant_check_not_established");
-         Diag.Message :=
-           FT.To_UString
-             ("access to variant field '" & UString_Value (Expr.Selector)
-              & "' requires established discriminant '" & UString_Value (Prefix_Type.Discriminant_Name) & "'");
-         Diag.Span := Expr.Span;
-         Diag.Has_Highlight_Span := True;
-         Diag.Highlight_Span := Expr.Span;
-         if Fact.Invalidated then
-            Diag.Notes.Append
-              (FT.To_UString
-                 ("the discriminant fact for '" & Base_Name_Text
-                  & "' was invalidated by assignment or an out/in out call."));
-         else
-            Diag.Notes.Append
-              (FT.To_UString
-                 ("the discriminant '" & UString_Value (Prefix_Type.Discriminant_Name)
-                  & "' was not established on all paths before this access."));
-         end if;
-         Raise_Diag (Diag);
       end if;
    end Ensure_Discriminant_Safe;
 
@@ -3275,6 +3356,8 @@ package body Safe_Frontend.Mir_Analyze is
             if Lower (UString_Value (Prefix.Kind)) = "record" then
                Ensure_Discriminant_Safe (Expr, Current, Var_Types, Type_Env, Functions);
                return Range_Interval (Field_Type (Prefix, UString_Value (Expr.Selector), Type_Env));
+            elsif Lower (UString_Value (Prefix.Kind)) = "tuple" then
+               return Range_Interval (Field_Type (Prefix, UString_Value (Expr.Selector), Type_Env));
             elsif Lower (UString_Value (Prefix.Kind)) = "access" then
                Fact := Eval_Access_Expr (Expr.Prefix, Current, Var_Types, Type_Env, Functions);
                pragma Unreferenced (Fact);
@@ -3304,6 +3387,8 @@ package body Safe_Frontend.Mir_Analyze is
          when GM.Expr_Annotated =>
             return Eval_Int_Expr (Expr.Inner, Current, Var_Types, Type_Env, Functions);
          when GM.Expr_Aggregate =>
+            return (Low => INT64_LOW, High => INT64_HIGH, Excludes_Zero => False);
+         when GM.Expr_Tuple =>
             return (Low => INT64_LOW, High => INT64_HIGH, Excludes_Zero => False);
          when GM.Expr_Allocator =>
             declare
@@ -3611,8 +3696,141 @@ package body Safe_Frontend.Mir_Analyze is
             Current.Access_Facts.Include (Left_Name, (State => Access_Null, others => <>));
          end if;
       end if;
+
+      declare
+         Disc_Expr       : GM.Expr_Access := null;
+         Value_Expr      : GM.Expr_Access := null;
+         Disc_Value      : GM.Scalar_Value;
+         Prefix_Type     : GM.Type_Descriptor;
+         Base_Name_Text  : FT.UString := FT.To_UString ("");
+         Disc_Name_Text  : FT.UString := FT.To_UString ("");
+      begin
+         if Expr.Left /= null
+           and then Expr.Left.Kind = GM.Expr_Select
+           and then Expr.Right /= null
+         then
+            Disc_Expr := Expr.Left;
+            Value_Expr := Expr.Right;
+         elsif Expr.Right /= null
+           and then Expr.Right.Kind = GM.Expr_Select
+           and then Expr.Left /= null
+         then
+            Disc_Expr := Expr.Right;
+            Value_Expr := Expr.Left;
+         end if;
+
+         if Disc_Expr /= null and then Expr_Scalar_Value (Value_Expr, Disc_Value) then
+            Base_Name_Text := FT.To_UString (Root_Name (Disc_Expr.Prefix));
+            Prefix_Type := Expr_Type (Disc_Expr.Prefix, Var_Types, Type_Env, Function_Maps.Empty_Map);
+            Disc_Name_Text := FT.To_UString (Variant_Discriminant_Name (Prefix_Type));
+            if Has_Text (Base_Name_Text)
+              and then Has_Text (Disc_Name_Text)
+              and then UString_Value (Disc_Expr.Selector) = UString_Value (Disc_Name_Text)
+            then
+               if (Op = "==" and then Truthy) or else (Op = "!=" and then not Truthy) then
+                  Current.Discriminants.Include
+                    (UString_Value (Base_Name_Text),
+                     (Known       => True,
+                      Value       => Disc_Value,
+                      Invalidated => False));
+               elsif ((Op = "!=" and then Truthy) or else (Op = "==" and then not Truthy))
+                 and then Current.Discriminants.Contains (UString_Value (Base_Name_Text))
+                 and then Current.Discriminants.Element (UString_Value (Base_Name_Text)).Known
+                 and then Scalar_Value_Equal (Current.Discriminants.Element (UString_Value (Base_Name_Text)).Value, Disc_Value)
+               then
+                  Current.Discriminants.Include
+                    (UString_Value (Base_Name_Text),
+                     (Known       => False,
+                      Value       => (others => <>),
+                      Invalidated => False));
+               end if;
+            end if;
+         end if;
+      end;
       pragma Unreferenced (Have_Left_Const, Left_Const);
    end Apply_Comparison_Refinement;
+
+   function Scalar_Value_Equal
+     (Left, Right : GM.Scalar_Value) return Boolean is
+      use type GM.Scalar_Value_Kind;
+   begin
+      if Left.Kind /= Right.Kind then
+         return False;
+      end if;
+      case Left.Kind is
+         when GM.Scalar_Value_Integer =>
+            return Left.Int_Value = Right.Int_Value;
+         when GM.Scalar_Value_Boolean =>
+            return Left.Bool_Value = Right.Bool_Value;
+         when GM.Scalar_Value_Character =>
+            return UString_Value (Left.Text) = UString_Value (Right.Text);
+         when others =>
+            return False;
+      end case;
+   end Scalar_Value_Equal;
+
+   function Expr_Scalar_Value
+     (Expr  : GM.Expr_Access;
+      Value : out GM.Scalar_Value) return Boolean
+   is
+      Inner : GM.Expr_Access := Expr;
+   begin
+      Value := (others => <>);
+      if Inner = null then
+         return False;
+      end if;
+
+      while Inner /= null and then Inner.Kind in GM.Expr_Conversion | GM.Expr_Annotated loop
+         Inner := Inner.Inner;
+      end loop;
+      if Inner = null then
+         return False;
+      end if;
+
+      case Inner.Kind is
+         when GM.Expr_Int =>
+            Value.Kind := GM.Scalar_Value_Integer;
+            Value.Int_Value := Inner.Int_Value;
+            return True;
+         when GM.Expr_Bool =>
+            Value.Kind := GM.Scalar_Value_Boolean;
+            Value.Bool_Value := Inner.Bool_Value;
+            return True;
+         when GM.Expr_Char =>
+            Value.Kind := GM.Scalar_Value_Character;
+            Value.Text := Inner.Text;
+            return True;
+         when others =>
+            return False;
+      end case;
+   end Expr_Scalar_Value;
+
+   function Variant_Discriminant_Name (Info : GM.Type_Descriptor) return String is
+   begin
+      if Has_Text (Info.Variant_Discriminant_Name) then
+         return UString_Value (Info.Variant_Discriminant_Name);
+      elsif Info.Has_Discriminant then
+         return UString_Value (Info.Discriminant_Name);
+      end if;
+      return "";
+   end Variant_Discriminant_Name;
+
+   function Variant_Field_Allows
+     (Field      : GM.Variant_Field;
+      Value      : GM.Scalar_Value;
+      All_Fields : GM.Variant_Field_Vectors.Vector) return Boolean
+   is
+   begin
+      if not Field.Is_Others then
+         return Scalar_Value_Equal (Field.Choice, Value);
+      end if;
+      for Item of All_Fields loop
+         if not Item.Is_Others and then Scalar_Value_Equal (Item.Choice, Value) then
+            return False;
+         end if;
+      end loop;
+      return True;
+   end Variant_Field_Allows;
 
    procedure Apply_Discriminant_Refinement
      (Current  : in out State;
@@ -3623,6 +3841,9 @@ package body Safe_Frontend.Mir_Analyze is
    is
       Base_Name_Text : constant String := Root_Name (Expr);
       Prefix_Type    : GM.Type_Descriptor;
+      Disc_Name_Text : String := "";
+      Disc_Type      : GM.Type_Descriptor;
+      Fact_Value     : GM.Scalar_Value;
    begin
       if Expr = null
         or else Expr.Kind /= GM.Expr_Select
@@ -3632,15 +3853,22 @@ package body Safe_Frontend.Mir_Analyze is
          return;
       end if;
       Prefix_Type := Expr_Type (Expr.Prefix, Var_Types, Type_Env, Function_Maps.Empty_Map);
-      if not Prefix_Type.Has_Discriminant
-        or else UString_Value (Prefix_Type.Discriminant_Name) /= UString_Value (Expr.Selector)
+      Disc_Name_Text := Variant_Discriminant_Name (Prefix_Type);
+      if Disc_Name_Text = ""
+        or else UString_Value (Expr.Selector) /= Disc_Name_Text
       then
          return;
       end if;
+      Disc_Type := Field_Type (Prefix_Type, Disc_Name_Text, Type_Env);
+      if UString_Value (Disc_Type.Name) /= "Boolean" then
+         return;
+      end if;
+      Fact_Value.Kind := GM.Scalar_Value_Boolean;
+      Fact_Value.Bool_Value := Truthy;
       Current.Discriminants.Include
         (Base_Name_Text,
          (Known       => True,
-          Value       => Truthy,
+          Value       => Fact_Value,
           Invalidated => False));
    end Apply_Discriminant_Refinement;
 
@@ -3745,7 +3973,7 @@ package body Safe_Frontend.Mir_Analyze is
       Current.Discriminants.Include
         (Name,
          (Known       => False,
-          Value       => False,
+          Value       => (others => <>),
           Invalidated => True));
    end Invalidate_Discriminant_Fact;
 
@@ -4009,7 +4237,7 @@ package body Safe_Frontend.Mir_Analyze is
                begin
                   if L_Item.Known
                     and then R_Item.Known
-                    and then L_Item.Value = R_Item.Value
+                    and then Scalar_Value_Equal (L_Item.Value, R_Item.Value)
                     and then not L_Item.Invalidated
                     and then not R_Item.Invalidated
                   then
@@ -4017,14 +4245,14 @@ package body Safe_Frontend.Mir_Analyze is
                   else
                      Merged :=
                        (Known       => False,
-                        Value       => False,
+                        Value       => (others => <>),
                         Invalidated => L_Item.Invalidated or else R_Item.Invalidated);
                   end if;
                end;
             else
                Merged :=
                  (Known       => False,
-                  Value       => False,
+                  Value       => (others => <>),
                   Invalidated => L_Item.Invalidated);
             end if;
             Result.Discriminants.Include (Name, Merged);
@@ -4042,7 +4270,7 @@ package body Safe_Frontend.Mir_Analyze is
                Result.Discriminants.Include
                  (Name,
                   (Known       => False,
-                   Value       => False,
+                   Value       => (others => <>),
                    Invalidated => Item.Invalidated));
             end if;
             Discriminant_Maps.Next (Discriminant_Cursor);
@@ -4438,7 +4666,7 @@ package body Safe_Frontend.Mir_Analyze is
             return Null_Diagnostic;
          elsif UString_Value (Target_Type.Name) = "String" then
             return Null_Diagnostic;
-         elsif Lower (UString_Value (Target_Type.Kind)) = "record" then
+         elsif Lower (UString_Value (Target_Type.Kind)) in "record" | "tuple" then
             return Null_Diagnostic;
          end if;
          Interval_Value :=
@@ -4849,6 +5077,22 @@ package body Safe_Frontend.Mir_Analyze is
                   end if;
                end loop;
             end if;
+         when GM.Expr_Tuple =>
+            if not Expr.Elements.Is_Empty then
+               for Index in Expr.Elements.First_Index .. Expr.Elements.Last_Index loop
+                  Diag :=
+                    Analyze_Runtime_Expr
+                      (Expr.Elements (Index),
+                       Current,
+                       Var_Types,
+                       Owner_Vars,
+                       Type_Env,
+                       Functions);
+                  if Has_Text (Diag.Reason) then
+                     return Diag;
+                  end if;
+               end loop;
+            end if;
          when others =>
             null;
       end case;
@@ -4998,6 +5242,44 @@ package body Safe_Frontend.Mir_Analyze is
          if Has_Diag then
             return Diag;
          end if;
+         return Null_Diagnostic;
+      elsif Is_Tuple_Type (Return_Type) then
+         declare
+            Actual_Type : constant GM.Type_Descriptor :=
+              Expr_Type (Expr, Var_Types, Type_Env, Functions);
+         begin
+            if not Is_Tuple_Type (Actual_Type)
+              or else Natural (Actual_Type.Tuple_Element_Types.Length) /=
+                       Natural (Return_Type.Tuple_Element_Types.Length)
+            then
+               Diag.Reason := FT.To_UString ("type_check_failure");
+               Diag.Message := FT.To_UString ("return expression type does not match function result type");
+               Diag.Span := Expr.Span;
+               Diag.Has_Highlight_Span := True;
+               Diag.Highlight_Span := Expr.Span;
+               Diag.Notes.Append
+                 (FT.To_UString ("expected result type '" & UString_Value (Return_Type.Name) & "'"));
+               Diag.Notes.Append
+                 (FT.To_UString ("expression has type '" & UString_Value (Actual_Type.Name) & "'"));
+               return Diag;
+            end if;
+            for Index in Return_Type.Tuple_Element_Types.First_Index .. Return_Type.Tuple_Element_Types.Last_Index loop
+               if UString_Value (Return_Type.Tuple_Element_Types (Index)) /=
+                    UString_Value (Actual_Type.Tuple_Element_Types (Index))
+               then
+                  Diag.Reason := FT.To_UString ("type_check_failure");
+                  Diag.Message := FT.To_UString ("return expression type does not match function result type");
+                  Diag.Span := Expr.Span;
+                  Diag.Has_Highlight_Span := True;
+                  Diag.Highlight_Span := Expr.Span;
+                  Diag.Notes.Append
+                    (FT.To_UString ("expected result type '" & UString_Value (Return_Type.Name) & "'"));
+                  Diag.Notes.Append
+                    (FT.To_UString ("expression has type '" & UString_Value (Actual_Type.Name) & "'"));
+                  return Diag;
+               end if;
+            end loop;
+         end;
          return Null_Diagnostic;
       elsif UString_Value (Return_Type.Name) = "Boolean"
         or else UString_Value (Return_Type.Name) = "Character"

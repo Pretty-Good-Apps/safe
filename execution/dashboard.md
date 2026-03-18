@@ -3,17 +3,17 @@
 - **Schema version:** `1`
 - **Frozen spec SHA:** `468cf72332724b04b7c193b4d2a3b02f1584125d`
 - **Active task:** `none`
-- **Next task:** `PR11.3`
+- **Next task:** `PR11.3a`
 - **Updated at:** `2026-03-18T00:00:00Z`
 
 ## Repo Facts
 
-- `tests/positive`: 53
-- `tests/negative`: 93
+- `tests/positive`: 58
+- `tests/negative`: 106
 - `tests/golden`: 3
 - `tests/concurrency`: 14
 - `tests/diagnostics_golden`: 22
-- **Total test corpus entries:** 185
+- **Total test corpus entries:** 203
 
 ## Task Ledger
 
@@ -60,7 +60,7 @@
 | PR10.6 | done | PR10.3 | 1 |
 | PR11.1 | done | PR10.4, PR10.5, PR10.6 | 1 |
 | PR11.2 | done | PR11.1 | 1 |
-| PR11.3 | planned | PR11.2 | 0 |
+| PR11.3 | done | PR11.2 | 1 |
 | PR11.3a | planned | PR11.3 | 0 |
 | PR11.4 | planned | PR11.3a | 0 |
 | PR11.5 | planned | PR11.4 | 0 |
@@ -633,25 +633,27 @@
 - **Evidence:**
   - `execution/reports/pr112-parser-completeness-phase1-report.json`
 
-### PR11.3 — Discriminated Types and Constraints
+### PR11.3 — Discriminated Types, Tuples, and Structured Returns
 
-- **Status:** `planned`
+- **Status:** `done`
 - **Depends on:** PR11.2
 - **Blockers:** none
 - **Acceptance:**
-  - The accepted subset covers record discriminants only, including multiple scalar discriminants, defaults, explicit constraints on objects/parameters/results, and bounded variant-part support.
-  - Access discriminants, private/limited-view issues, discriminant-constrained dispatch, generic interactions, and ownership-specific discriminant extensions remain explicitly deferred rather than being absorbed into the milestone.
-  - A deterministic non-shrinkable `check` -> `emit` -> Ada-compile corpus plus emitted-structure assertions lock the accepted discriminant surface without silently flattening away semantics.
+  - The accepted subset covers record discriminants only, including multiple scalar discriminants, defaults, explicit constraints on objects/parameters/results, bounded variant-part support, and a compile-only emitted corpus that locks those semantics.
+  - Anonymous tuple types, tuple returns/destructuring/field access/channel elements, and the predefined builtin `result` plus `ok` / `fail(String)` conventions are admitted for the current value-type subset rather than being deferred beyond PR11.3.
+  - Access discriminants, nested tuples, access/task/channel tuple elements, richer variant alternatives, generic `result` forms, and general user-declared `String` fields remain explicitly deferred rather than being absorbed into the milestone.
+- **Evidence:**
+  - `execution/reports/pr113-discriminated-types-tuples-structured-returns-report.json`
 
-### PR11.3a — Proof checkpoint 1 for parser and discriminant expansion
+### PR11.3a — Proof checkpoint 1 for parser, tuple, and discriminant expansion
 
 - **Status:** `planned`
 - **Depends on:** PR11.3
 - **Blockers:** none
 - **Acceptance:**
-  - The emitted sequential fixtures newly admitted by PR11.2 and PR11.3 are explicitly enumerated as a non-shrinkable proof checkpoint corpus rather than being left as open proof debt.
-  - That checkpoint corpus passes compile, GNATprove flow, and GNATprove prove under the all-proved-only policy with dedicated deterministic evidence, and any previously proved sequential fixtures affected by parser or discriminant emission changes are revalidated in the same checkpoint.
-  - Any deallocation-ordering semantics (`PS-029`) required by the admitted discriminant corpus are resolved or explicitly bounded before PR11.3a claims proof closure.
+  - The emitted sequential fixtures newly admitted by PR11.2 and PR11.3, including tuples and structured-return/result support, are explicitly enumerated as a non-shrinkable proof checkpoint corpus rather than being left as open proof debt.
+  - That checkpoint corpus passes compile, GNATprove flow, and GNATprove prove under the all-proved-only policy with dedicated deterministic evidence, and any previously proved sequential fixtures affected by parser, tuple, or discriminant emission changes are revalidated in the same checkpoint.
+  - Any deallocation-ordering semantics (`PS-029`) required by the admitted tuple/discriminant corpus are resolved or explicitly bounded before PR11.3a claims proof closure.
 
 ### PR11.4 — Signature and Control-Flow Syntax
 

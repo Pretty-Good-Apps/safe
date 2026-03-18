@@ -8,6 +8,7 @@ package Safe_Frontend.Builtin_Types is
    function Boolean_Type return GM.Type_Descriptor;
    function Character_Type return GM.Type_Descriptor;
    function String_Type return GM.Type_Descriptor;
+   function Result_Type return GM.Type_Descriptor;
    function Float_Type (With_Analysis_Metadata : Boolean := False) return GM.Type_Descriptor;
    function Long_Float_Type (With_Analysis_Metadata : Boolean := False) return GM.Type_Descriptor;
    function Duration_Type (With_Analysis_Metadata : Boolean := False) return GM.Type_Descriptor;

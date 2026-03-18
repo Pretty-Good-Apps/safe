@@ -80,6 +80,7 @@ package body Safe_Frontend.Check_Lower is
       Type_Env.Include ("Boolean", BT.Boolean_Type);
       Type_Env.Include ("Character", BT.Character_Type);
       Type_Env.Include ("String", BT.String_Type);
+      Type_Env.Include ("result", BT.Result_Type);
       Type_Env.Include ("Float", BT.Float_Type);
       Type_Env.Include ("Long_Float", BT.Long_Float_Type);
       Type_Env.Include ("Duration", BT.Duration_Type);
@@ -188,6 +189,8 @@ package body Safe_Frontend.Check_Lower is
             return GM.Expr_Allocator;
          when CM.Expr_Aggregate =>
             return GM.Expr_Aggregate;
+         when CM.Expr_Tuple =>
+            return GM.Expr_Tuple;
          when CM.Expr_Annotated =>
             return GM.Expr_Annotated;
          when CM.Expr_Unary =>
@@ -254,6 +257,10 @@ package body Safe_Frontend.Check_Lower is
                Field.Expr := Lower_Expr (Item.Expr, Var_Types, Type_Env);
                Field.Span := Item.Span;
                Result.Fields.Append (Field);
+            end loop;
+         when CM.Expr_Tuple =>
+            for Item of Expr.Elements loop
+               Result.Elements.Append (Lower_Expr (Item, Var_Types, Type_Env));
             end loop;
          when CM.Expr_Annotated =>
             Result.Inner := Lower_Expr (Expr.Inner, Var_Types, Type_Env);
@@ -815,6 +822,22 @@ package body Safe_Frontend.Check_Lower is
            others    => <>);
    end Binary_Expr;
 
+   function Is_Stable_Case_Scrutinee (Expr : CM.Expr_Access) return Boolean is
+   begin
+      if Expr = null then
+         return False;
+      end if;
+
+      case Expr.Kind is
+         when CM.Expr_Ident | CM.Expr_Select =>
+            return True;
+         when CM.Expr_Conversion | CM.Expr_Annotated =>
+            return Is_Stable_Case_Scrutinee (Expr.Inner);
+         when others =>
+            return False;
+      end case;
+   end Is_Stable_Case_Scrutinee;
+
    procedure Collect_Scopes
      (Statements : CM.Statement_Access_Vectors.Vector;
       Visible    : Type_Maps.Map;
@@ -839,6 +862,49 @@ package body Safe_Frontend.Check_Lower is
                      Is_Constant => Stmt.Decl.Is_Constant));
                Current_Visible.Include (UString_Value (Name), Stmt.Decl.Type_Info);
             end loop;
+         elsif Stmt.Kind = CM.Stmt_Destructure_Decl then
+            declare
+               Tuple_Type : constant GM.Type_Descriptor := Stmt.Destructure.Type_Info;
+               Temp_Name  : constant String :=
+                 (if Has_Text (Stmt.Destructure.Temp_Name)
+                  then UString_Value (Stmt.Destructure.Temp_Name)
+                  else "__safe_destructure_" & Trimmed (Natural (Locals.Length)));
+            begin
+               Stmt.Destructure.Temp_Name := FT.To_UString (Temp_Name);
+               Work.Scopes (Parent_Index).Local_Ids.Append
+                 (Append_Local
+                    (Locals,
+                     Temp_Name,
+                     "local",
+                     "in",
+                     Tuple_Type,
+                     Stmt.Destructure.Span,
+                     Parent_Id,
+                     Is_Constant => True));
+               Current_Visible.Include (Temp_Name, Tuple_Type);
+               for Index in Stmt.Destructure.Names.First_Index .. Stmt.Destructure.Names.Last_Index loop
+                  declare
+                     Element_Type : constant GM.Type_Descriptor :=
+                       Resolve_Type
+                         (UString_Value (Tuple_Type.Tuple_Element_Types (Index)),
+                          Current_Visible,
+                          Visible);
+                  begin
+                     Work.Scopes (Parent_Index).Local_Ids.Append
+                       (Append_Local
+                          (Locals,
+                           UString_Value (Stmt.Destructure.Names (Index)),
+                           "local",
+                           "in",
+                           Element_Type,
+                           Stmt.Destructure.Span,
+                           Parent_Id));
+                     Current_Visible.Include
+                       (UString_Value (Stmt.Destructure.Names (Index)),
+                        Element_Type);
+                  end;
+               end loop;
+            end;
          elsif Stmt.Kind = CM.Stmt_Block then
             declare
                Scope_Id : constant String := "scope" & Trimmed (Natural (Work.Scopes.Length));
@@ -993,6 +1059,22 @@ package body Safe_Frontend.Check_Lower is
             for Name of Stmt.Decl.Names loop
                Local_Types.Include (UString_Value (Name), Stmt.Decl.Type_Info);
             end loop;
+         elsif Stmt.Kind = CM.Stmt_Destructure_Decl then
+            declare
+               Tuple_Type : constant GM.Type_Descriptor := Stmt.Destructure.Type_Info;
+            begin
+               if Has_Text (Stmt.Destructure.Temp_Name) then
+                  Local_Types.Include (UString_Value (Stmt.Destructure.Temp_Name), Tuple_Type);
+               end if;
+               for Index in Stmt.Destructure.Names.First_Index .. Stmt.Destructure.Names.Last_Index loop
+                  Local_Types.Include
+                    (UString_Value (Stmt.Destructure.Names (Index)),
+                     Resolve_Type
+                       (UString_Value (Tuple_Type.Tuple_Element_Types (Index)),
+                        Local_Types,
+                        Type_Env));
+               end loop;
+            end;
          end if;
       end loop;
       return Block_Id;
@@ -1118,6 +1200,69 @@ package body Safe_Frontend.Check_Lower is
                end loop;
             end if;
             return Current_Id;
+
+         when CM.Stmt_Destructure_Decl =>
+            declare
+               Tuple_Type : constant GM.Type_Descriptor := Stmt.Destructure.Type_Info;
+               Temp_Name  : constant String := UString_Value (Stmt.Destructure.Temp_Name);
+               Temp_Target : constant CM.Expr_Access :=
+                 Ident_Expr
+                   (Temp_Name,
+                    Stmt.Destructure.Span,
+                    UString_Value (Tuple_Type.Name));
+               Temp_Visible : Type_Maps.Map := Visible_Types;
+            begin
+               Temp_Visible.Include (Temp_Name, Tuple_Type);
+               for Index in Stmt.Destructure.Names.First_Index .. Stmt.Destructure.Names.Last_Index loop
+                  Temp_Visible.Include
+                    (UString_Value (Stmt.Destructure.Names (Index)),
+                     Resolve_Type
+                       (UString_Value (Tuple_Type.Tuple_Element_Types (Index)),
+                        Temp_Visible,
+                        Type_Env));
+               end loop;
+
+               Assign_Op := (others => <>);
+               Assign_Op.Kind := GM.Op_Assign;
+               Assign_Op.Span := Stmt.Destructure.Span;
+               Assign_Op.Target := Lower_Target (Temp_Target, Temp_Visible, Type_Env);
+               Assign_Op.Value := Lower_Expr (Stmt.Destructure.Initializer, Visible_Types, Type_Env);
+               Assign_Op.Type_Name := Tuple_Type.Name;
+               Assign_Op.Ownership_Effect := GM.Ownership_None;
+               Assign_Op.Declaration_Init := True;
+               Add_Op (Work, UString_Value (Current_Id), Assign_Op);
+
+               for Index in Stmt.Destructure.Names.First_Index .. Stmt.Destructure.Names.Last_Index loop
+                  declare
+                     Element_Type_Name : constant String :=
+                       UString_Value (Tuple_Type.Tuple_Element_Types (Index));
+                     Element_Target : constant CM.Expr_Access :=
+                       Ident_Expr
+                         (UString_Value (Stmt.Destructure.Names (Index)),
+                          Stmt.Destructure.Span,
+                          Element_Type_Name);
+                     Element_Source : constant CM.Expr_Access :=
+                       new CM.Expr_Node'
+                         (Kind      => CM.Expr_Select,
+                          Span      => Stmt.Destructure.Span,
+                          Type_Name => FT.To_UString (Element_Type_Name),
+                          Prefix    => Temp_Target,
+                          Selector  => FT.To_UString (Trimmed (Natural (Index))),
+                          others    => <>);
+                  begin
+                     Assign_Op := (others => <>);
+                     Assign_Op.Kind := GM.Op_Assign;
+                     Assign_Op.Span := Stmt.Destructure.Span;
+                     Assign_Op.Target := Lower_Target (Element_Target, Temp_Visible, Type_Env);
+                     Assign_Op.Value := Lower_Expr (Element_Source, Temp_Visible, Type_Env);
+                     Assign_Op.Type_Name := FT.To_UString (Element_Type_Name);
+                     Assign_Op.Ownership_Effect := GM.Ownership_None;
+                     Assign_Op.Declaration_Init := True;
+                     Add_Op (Work, UString_Value (Current_Id), Assign_Op);
+                  end;
+               end loop;
+               return Current_Id;
+            end;
 
          when CM.Stmt_Assign =>
             Assign_Op.Kind := GM.Op_Assign;
@@ -1408,6 +1553,10 @@ package body Safe_Frontend.Check_Lower is
                    (Temp_Name,
                     Stmt.Case_Expr.Span,
                     UString_Value (Case_Type.Name));
+               Compare_Target : constant CM.Expr_Access :=
+                 (if Is_Stable_Case_Scrutinee (Stmt.Case_Expr)
+                  then Stmt.Case_Expr
+                  else Temp_Target);
                procedure Close_Case_Scope
                  (Block_Id : FT.UString;
                   Span     : FT.Source_Span) is
@@ -1461,7 +1610,7 @@ package body Safe_Frontend.Check_Lower is
                            then New_Block (Work, Others_Arm.Span, "case_others", Scope_Id)
                            else New_Block (Work, Arm.Span, "case_next", Scope_Id));
                         Cond_Expr : constant CM.Expr_Access :=
-                          Binary_Expr ("==", Temp_Target, Arm.Choice, Arm.Span);
+                          Binary_Expr ("==", Compare_Target, Arm.Choice, Arm.Span);
                      begin
                         Lower_Branch_Condition
                           (Work,

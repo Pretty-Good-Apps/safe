@@ -1,7 +1,8 @@
 # PR11.x Rosetta Corpus
 
 This directory started as the PR11.1 language-evaluation corpus and now carries
-the first PR11.2 text/control-flow additions as well.
+the PR11.2 text/control-flow additions plus the first PR11.3 structured-return
+examples.
 
 The milestone boundary is compile-only:
 
@@ -9,8 +10,9 @@ The milestone boundary is compile-only:
 - `safec emit --ada-out-dir`
 - `gprbuild -c`
 
-PR11.1 and PR11.2 do not treat this corpus as a proof-bearing milestone. Proof coverage
-re-enters later through `PR11.3a`, `PR11.8a`, and `PR11.8b`.
+PR11.1, PR11.2, and PR11.3 do not treat this corpus as a proof-bearing
+milestone. Proof coverage re-enters later through `PR11.3a`, `PR11.8a`, and
+`PR11.8b`.
 
 ## Status of Current Candidates
 
@@ -40,6 +42,12 @@ PR11.2 text/control-flow additions:
 - `text/grade_message.safe`
 - `text/opcode_dispatch.safe`
 
+PR11.3 structured-return additions:
+
+- `data_structures/parse_result.safe`
+- `text/lookup_pair.safe`
+- `text/lookup_result.safe`
+
 ## Running the Corpus Gate
 
 Use:
@@ -60,3 +68,12 @@ python3 scripts/run_pr112_parser_completeness_phase1.py
 
 That gate keeps the new string/character literal and strict `case` samples in
 the same `safec check` -> `safec emit --ada-out-dir` -> `gprbuild -c` compile-only chain.
+
+For the PR11.3 discriminant/tuple/result slice, use:
+
+```bash
+python3 scripts/run_pr113_discriminated_types_tuples_structured_returns.py
+```
+
+That gate keeps the new discriminant constraints, tuples, tuple channels,
+destructuring, and builtin `result` samples in the same compile-only chain.

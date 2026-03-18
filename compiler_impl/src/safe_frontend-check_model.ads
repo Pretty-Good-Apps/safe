@@ -26,6 +26,7 @@ package Safe_Frontend.Check_Model is
       Expr_Call,
       Expr_Allocator,
       Expr_Aggregate,
+      Expr_Tuple,
       Expr_Annotated,
       Expr_Unary,
       Expr_Binary,
@@ -71,15 +72,35 @@ package Safe_Frontend.Check_Model is
       Target           : Expr_Access := null;
       Args             : Expr_Access_Vectors.Vector;
       Fields           : Aggregate_Field_Vectors.Vector;
+      Elements         : Expr_Access_Vectors.Vector;
       Has_Call_Span    : Boolean := False;
       Call_Span        : FT.Source_Span := FT.Null_Span;
    end record;
 
+   type Type_Spec;
+   type Type_Spec_Access is access all Type_Spec;
+
+   package Type_Spec_Access_Vectors is new Ada.Containers.Indefinite_Vectors
+     (Index_Type   => Positive,
+      Element_Type => Type_Spec_Access);
+
    type Type_Spec_Kind is
      (Type_Spec_Unknown,
       Type_Spec_Name,
+      Type_Spec_Tuple,
       Type_Spec_Subtype_Indication,
       Type_Spec_Access_Def);
+
+   type Constraint_Association is record
+      Is_Named : Boolean := False;
+      Name     : FT.UString := FT.To_UString ("");
+      Value    : Expr_Access := null;
+      Span     : FT.Source_Span := FT.Null_Span;
+   end record;
+
+   package Constraint_Association_Vectors is new Ada.Containers.Indefinite_Vectors
+     (Index_Type   => Positive,
+      Element_Type => Constraint_Association);
 
    type Type_Spec is record
       Kind        : Type_Spec_Kind := Type_Spec_Unknown;
@@ -90,6 +111,8 @@ package Safe_Frontend.Check_Model is
       Is_Constant : Boolean := False;
       Anonymous   : Boolean := False;
       Target_Name : Expr_Access := null;
+      Tuple_Elements : Type_Spec_Access_Vectors.Vector;
+      Constraints : Constraint_Association_Vectors.Vector;
    end record;
 
    type Discrete_Range_Kind is (Range_Unknown, Range_Subtype, Range_Explicit);
@@ -116,12 +139,14 @@ package Safe_Frontend.Check_Model is
    type Static_Value_Kind is
      (Static_Value_None,
       Static_Value_Integer,
-      Static_Value_Boolean);
+      Static_Value_Boolean,
+      Static_Value_Character);
 
    type Static_Value is record
       Kind       : Static_Value_Kind := Static_Value_None;
       Int_Value  : Wide_Integer := 0;
       Bool_Value : Boolean := False;
+      Text       : FT.UString := FT.To_UString ("");
    end record;
 
    type Object_Decl is record
@@ -157,8 +182,14 @@ package Safe_Frontend.Check_Model is
       Span         : FT.Source_Span := FT.Null_Span;
    end record;
 
+   package Discriminant_Spec_Vectors is new Ada.Containers.Indefinite_Vectors
+     (Index_Type   => Positive,
+      Element_Type => Discriminant_Spec);
+
    type Variant_Alternative is record
       When_Value : Boolean := False;
+      Is_Others  : Boolean := False;
+      Choice_Expr : Expr_Access := null;
       Components : Component_Decl_Vectors.Vector;
       Span       : FT.Source_Span := FT.Null_Span;
    end record;
@@ -204,6 +235,8 @@ package Safe_Frontend.Check_Model is
       Components     : Component_Decl_Vectors.Vector;
       Has_Discriminant : Boolean := False;
       Discriminant     : Discriminant_Spec;
+      Discriminants    : Discriminant_Spec_Vectors.Vector;
+      Variant_Discriminant_Name : FT.UString := FT.To_UString ("");
       Variants         : Variant_Alternative_Vectors.Vector;
       Access_Type    : Type_Spec;
    end record;
@@ -281,6 +314,7 @@ package Safe_Frontend.Check_Model is
      (Stmt_Unknown,
       Stmt_Null,
       Stmt_Object_Decl,
+      Stmt_Destructure_Decl,
       Stmt_Assign,
       Stmt_Call,
       Stmt_Return,
@@ -298,10 +332,21 @@ package Safe_Frontend.Check_Model is
       Stmt_Select,
       Stmt_Delay);
 
+   type Destructure_Decl is record
+      Names           : FT.UString_Vectors.Vector;
+      Decl_Type       : Type_Spec;
+      Type_Info       : GM.Type_Descriptor;
+      Temp_Name       : FT.UString := FT.To_UString ("");
+      Has_Initializer : Boolean := False;
+      Initializer     : Expr_Access := null;
+      Span            : FT.Source_Span := FT.Null_Span;
+   end record;
+
    type Statement is record
       Kind          : Statement_Kind := Stmt_Unknown;
       Span          : FT.Source_Span := FT.Null_Span;
       Decl          : Object_Decl;
+      Destructure   : Destructure_Decl;
       Target        : Expr_Access := null;
       Value         : Expr_Access := null;
       Call          : Expr_Access := null;

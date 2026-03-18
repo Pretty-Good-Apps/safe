@@ -73,6 +73,25 @@ package body Safe_Frontend.Builtin_Types is
       return Result;
    end String_Type;
 
+   function Result_Type return GM.Type_Descriptor is
+      Result : GM.Type_Descriptor;
+      Field  : GM.Type_Field;
+   begin
+      Result.Name := FT.To_UString ("result");
+      Result.Kind := FT.To_UString ("record");
+      Result.Is_Result_Builtin := True;
+
+      Field.Name := FT.To_UString ("ok");
+      Field.Type_Name := FT.To_UString ("Boolean");
+      Result.Fields.Append (Field);
+
+      Field.Name := FT.To_UString ("message");
+      Field.Type_Name := FT.To_UString ("String");
+      Result.Fields.Append (Field);
+
+      return Result;
+   end Result_Type;
+
    function Float_Type (With_Analysis_Metadata : Boolean := False) return GM.Type_Descriptor is
    begin
       return Make_Float_Type ("Float", With_Analysis_Metadata);

@@ -97,6 +97,19 @@ EXPECTED_PR112_ACCEPTANCE = [
 EXPECTED_PR112_EVIDENCE = [
     "execution/reports/pr112-parser-completeness-phase1-report.json",
 ]
+EXPECTED_PR113_ACCEPTANCE = [
+    "The accepted subset covers record discriminants only, including multiple scalar discriminants, defaults, explicit constraints on objects/parameters/results, bounded variant-part support, and a compile-only emitted corpus that locks those semantics.",
+    "Anonymous tuple types, tuple returns/destructuring/field access/channel elements, and the predefined builtin `result` plus `ok` / `fail(String)` conventions are admitted for the current value-type subset rather than being deferred beyond PR11.3.",
+    "Access discriminants, nested tuples, access/task/channel tuple elements, richer variant alternatives, generic `result` forms, and general user-declared `String` fields remain explicitly deferred rather than being absorbed into the milestone.",
+]
+EXPECTED_PR113_EVIDENCE = [
+    "execution/reports/pr113-discriminated-types-tuples-structured-returns-report.json",
+]
+EXPECTED_PR113A_ACCEPTANCE = [
+    "The emitted sequential fixtures newly admitted by PR11.2 and PR11.3, including tuples and structured-return/result support, are explicitly enumerated as a non-shrinkable proof checkpoint corpus rather than being left as open proof debt.",
+    "That checkpoint corpus passes compile, GNATprove flow, and GNATprove prove under the all-proved-only policy with dedicated deterministic evidence, and any previously proved sequential fixtures affected by parser, tuple, or discriminant emission changes are revalidated in the same checkpoint.",
+    "Any deallocation-ordering semantics (`PS-029`) required by the admitted tuple/discriminant corpus are resolved or explicitly bounded before PR11.3a claims proof closure.",
+]
 EXPECTED_PR102_ACCEPTANCE = [
     "The exact six-fixture PR10.2 Rule 5 positive corpus is tests/positive/rule5_filter.safe, tests/positive/rule5_interpolate.safe, tests/positive/rule5_normalize.safe, tests/positive/rule5_statistics.safe, tests/positive/rule5_temperature.safe, and tests/positive/rule5_vector_normalize.safe; that merged PR07-plus-PR10 set is non-shrinkable and each fixture is frontend-accepted, Ada-emitted, compile-valid, and passes emitted GNATprove flow and prove under the all-proved-only policy.",
     "The source-level Rule 5 negative contract remains tests/negative/neg_rule5_div_zero.safe -> fp_division_by_zero, tests/negative/neg_rule5_infinity.safe -> infinity_at_narrowing, tests/negative/neg_rule5_nan.safe -> nan_at_narrowing, tests/negative/neg_rule5_overflow.safe -> fp_overflow_at_narrowing, and tests/negative/neg_rule5_uninitialized.safe -> fp_uninitialized_at_narrowing; unsupported float-evaluator shapes use the new fp_unsupported_expression_at_narrowing reason under MIR analysis parity coverage instead of being mislabeled as overflow.",
@@ -194,6 +207,9 @@ EXPECTED_WORKFLOW_SNIPPETS = [
     "pr112-parser-completeness-phase1:",
     "python3 scripts/run_pr112_parser_completeness_phase1.py",
     "git diff --exit-code execution/reports/pr112-parser-completeness-phase1-report.json",
+    "pr113-discriminated-types-tuples-structured-returns:",
+    "python3 scripts/run_pr113_discriminated_types_tuples_structured_returns.py",
+    "git diff --exit-code execution/reports/pr113-discriminated-types-tuples-structured-returns-report.json",
 ]
 EXPECTED_PRE_PUSH_SNIPPETS = [
     "\"scripts/run_pr09_ada_emission_baseline.py\"",
@@ -203,6 +219,7 @@ EXPECTED_PRE_PUSH_SNIPPETS = [
     "\"scripts/run_pr106_sequential_proof_corpus_expansion.py\"",
     "\"scripts/run_pr111_language_evaluation_harness.py\"",
     "\"scripts/run_pr112_parser_completeness_phase1.py\"",
+    "\"scripts/run_pr113_discriminated_types_tuples_structured_returns.py\"",
 ]
 EXPECTED_TUTORIAL_SNIPPETS = [
     "Ada-native `safec` frontend plus emitted-output proof",
@@ -259,6 +276,20 @@ def task_is_at_or_beyond_pr113(value: object) -> bool:
         return False
     major, minor = parsed
     return major > 11 or (major == 11 and minor is not None and minor >= 3)
+
+
+def task_is_at_or_beyond_pr113a(value: object) -> bool:
+    if value is None:
+        return True
+    if not isinstance(value, str):
+        return False
+    if re.fullmatch(r"PR11\.3[A-Za-z0-9]+", value):
+        return True
+    parsed = parse_task_id(value)
+    if parsed is None:
+        return False
+    major, minor = parsed
+    return major > 11 or (major == 11 and minor is not None and minor > 3)
 
 
 def compact_result(result: dict[str, Any]) -> dict[str, Any]:
@@ -577,8 +608,31 @@ def build_report(*, baseline_truth: dict[str, Any]) -> dict[str, Any]:
     )
     require("PR11.3" in task_map, "tracker must define PR11.3")
     require(
-        task_map["PR11.3"]["status"] in {"planned", "ready", "in_progress", "done"},
-        "PR11.3 must remain a live tracked follow-on milestone",
+        task_map["PR11.3"]["status"] == "done",
+        "PR11.3 must be marked done",
+    )
+    require(task_map["PR11.3"]["depends_on"] == ["PR11.2"], "PR11.3 must depend on PR11.2")
+    require(
+        task_map["PR11.3"]["acceptance"] == EXPECTED_PR113_ACCEPTANCE,
+        "PR11.3 acceptance text must match the committed discriminant/tuple/result contract",
+    )
+    require(
+        task_map["PR11.3"]["evidence"] == EXPECTED_PR113_EVIDENCE,
+        "PR11.3 evidence must list the committed discriminant/tuple/result report",
+    )
+    require(
+        task_is_at_or_beyond_pr113a(tracker.get("next_task_id")),
+        "next_task_id must remain at or beyond PR11.3a after PR11.3",
+    )
+    require("PR11.3a" in task_map, "tracker must define PR11.3a")
+    require(task_map["PR11.3a"]["depends_on"] == ["PR11.3"], "PR11.3a must depend on PR11.3")
+    require(
+        task_map["PR11.3a"]["acceptance"] == EXPECTED_PR113A_ACCEPTANCE,
+        "PR11.3a acceptance text must match the committed tuple/discriminant proof-checkpoint contract",
+    )
+    require(
+        task_map["PR11.3a"]["status"] in {"planned", "ready", "in_progress", "done"},
+        "PR11.3a must remain a live tracked follow-on milestone",
     )
     for task_id in PROMOTED_TASKS:
         require(task_id in task_map, f"tracker must define promoted task {task_id}")
@@ -626,8 +680,8 @@ def build_report(*, baseline_truth: dict[str, Any]) -> dict[str, Any]:
     next_task_match = re.search(r"- \*\*Next task:\*\* `([^`]+)`", dashboard_text)
     require(next_task_match is not None, "execution/dashboard.md must render the next-task line")
     require(
-        task_is_at_or_beyond_pr113(next_task_match.group(1) if next_task_match is not None else None),
-        "execution/dashboard.md must show a next task at or beyond PR11.3 (or none)",
+        task_is_at_or_beyond_pr113a(next_task_match.group(1) if next_task_match is not None else None),
+        "execution/dashboard.md must show a next task at or beyond PR11.3a (or none)",
     )
     require(
         re.search(r"\| PR10\.4 \| done \| PR10\.1 \| \d+ \|", dashboard_text)

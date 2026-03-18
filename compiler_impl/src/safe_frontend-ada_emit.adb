@@ -3,9 +3,11 @@ with Ada.Containers;
 with Ada.Containers.Indefinite_Vectors;
 with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;
+with Safe_Frontend.Builtin_Types;
 
 package body Safe_Frontend.Ada_Emit is
    package SU renames Ada.Strings.Unbounded;
+   package BT renames Safe_Frontend.Builtin_Types;
 
    use type Ada.Containers.Count_Type;
    use type CM.Expr_Access;
@@ -15,6 +17,7 @@ package body Safe_Frontend.Ada_Emit is
    use type CM.Discrete_Range_Kind;
    use type CM.Select_Arm_Kind;
    use type FT.UString;
+   use type GM.Scalar_Value_Kind;
 
    Indent_Width : constant Positive := 3;
 
@@ -140,6 +143,7 @@ package body Safe_Frontend.Ada_Emit is
       Depth  : Natural);
    function Has_Active_Cleanup_Items (State : Emit_State) return Boolean;
    function Starts_With (Text : String; Prefix : String) return Boolean;
+   function Ada_Safe_Name (Name : String) return String;
    function Normalize_Aspect_Name
      (Subprogram_Name : String;
       Raw_Name        : String) return String;
@@ -186,9 +190,26 @@ package body Safe_Frontend.Ada_Emit is
      (Unit     : CM.Resolved_Unit;
       Document : GM.Mir_Document;
       Info     : GM.Type_Descriptor) return Boolean;
+   function Is_Tuple_Type (Info : GM.Type_Descriptor) return Boolean;
+   function Is_Result_Builtin (Info : GM.Type_Descriptor) return Boolean;
    function Is_Access_Type (Info : GM.Type_Descriptor) return Boolean;
    function Is_Owner_Access (Info : GM.Type_Descriptor) return Boolean;
    function Is_Alias_Access (Info : GM.Type_Descriptor) return Boolean;
+   function Is_String_Type_Name (Name : String) return Boolean;
+   function Tuple_Field_Name (Index : Positive) return String;
+   function Tuple_String_Discriminant_Name (Index : Positive) return String;
+   function Render_Scalar_Value (Value : GM.Scalar_Value) return String;
+   function Render_Record_Aggregate_For_Type
+     (Unit      : CM.Resolved_Unit;
+      Document  : GM.Mir_Document;
+      Expr      : CM.Expr_Access;
+      Type_Info : GM.Type_Descriptor;
+      State     : in out Emit_State) return String;
+   function Render_String_Length_Expr
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Expr     : CM.Expr_Access;
+      State    : in out Emit_State) return String;
    function Default_Value_Expr (Type_Name : String) return String;
    function Default_Value_Expr (Info : GM.Type_Descriptor) return String;
    function Render_Type_Name (Info : GM.Type_Descriptor) return String;
@@ -213,6 +234,10 @@ package body Safe_Frontend.Ada_Emit is
    function Render_Type_Decl
      (Type_Item : GM.Type_Descriptor;
       State     : in out Emit_State) return String;
+   procedure Collect_Synthetic_Types
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Result   : in out GM.Type_Descriptor_Vectors.Vector);
    function Render_Object_Decl_Text
      (Unit     : CM.Resolved_Unit;
       Document : GM.Mir_Document;
@@ -655,6 +680,16 @@ package body Safe_Frontend.Ada_Emit is
         and then Text (Text'First .. Text'First + Prefix'Length - 1) = Prefix;
    end Starts_With;
 
+   function Ada_Safe_Name (Name : String) return String is
+   begin
+      if Starts_With (Name, "__") then
+         return "Safe_" & Name (Name'First + 2 .. Name'Last);
+      elsif Name'Length > 0 and then Name (Name'First) = '_' then
+         return "Safe" & Name;
+      end if;
+      return Name;
+   end Ada_Safe_Name;
+
    function Normalize_Aspect_Name
      (Subprogram_Name : String;
       Raw_Name        : String) return String is
@@ -1040,6 +1075,16 @@ package body Safe_Frontend.Ada_Emit is
       return False;
    end Is_Float_Type;
 
+   function Is_Tuple_Type (Info : GM.Type_Descriptor) return Boolean is
+   begin
+      return FT.Lowercase (FT.To_String (Info.Kind)) = "tuple";
+   end Is_Tuple_Type;
+
+   function Is_Result_Builtin (Info : GM.Type_Descriptor) return Boolean is
+   begin
+      return Info.Is_Result_Builtin;
+   end Is_Result_Builtin;
+
    function Is_Access_Type (Info : GM.Type_Descriptor) return Boolean is
    begin
       return FT.To_String (Info.Kind) = "access";
@@ -1059,16 +1104,143 @@ package body Safe_Frontend.Ada_Emit is
         and then Role in "Borrow" | "Observe";
    end Is_Alias_Access;
 
+   function Is_String_Type_Name (Name : String) return Boolean is
+   begin
+      return FT.Lowercase (Name) = "string";
+   end Is_String_Type_Name;
+
+   function Tuple_Field_Name (Index : Positive) return String is
+   begin
+      return "F" & Ada.Strings.Fixed.Trim (Positive'Image (Index), Ada.Strings.Both);
+   end Tuple_Field_Name;
+
+   function Tuple_String_Discriminant_Name (Index : Positive) return String is
+   begin
+      return Tuple_Field_Name (Index) & "_Length";
+   end Tuple_String_Discriminant_Name;
+
+   function Render_Scalar_Value (Value : GM.Scalar_Value) return String is
+   begin
+      case Value.Kind is
+         when GM.Scalar_Value_Integer =>
+            return Trim_Image (Value.Int_Value);
+         when GM.Scalar_Value_Boolean =>
+            return (if Value.Bool_Value then "True" else "False");
+         when GM.Scalar_Value_Character =>
+            return FT.To_String (Value.Text);
+         when others =>
+            return "";
+      end case;
+   end Render_Scalar_Value;
+
+   function Render_Record_Aggregate_For_Type
+     (Unit      : CM.Resolved_Unit;
+      Document  : GM.Mir_Document;
+      Expr      : CM.Expr_Access;
+      Type_Info : GM.Type_Descriptor;
+      State     : in out Emit_State) return String
+   is
+      Result : SU.Unbounded_String := SU.To_Unbounded_String ("(");
+      First_Association : Boolean := True;
+   begin
+      if Expr = null then
+         return "()";
+      end if;
+
+      if not Type_Info.Discriminant_Constraints.Is_Empty then
+         for Constraint of Type_Info.Discriminant_Constraints loop
+            if not First_Association then
+               Result := Result & SU.To_Unbounded_String (", ");
+            end if;
+            Result :=
+              Result
+              & SU.To_Unbounded_String
+                  (FT.To_String (Constraint.Name)
+                   & " => "
+                   & Render_Scalar_Value (Constraint.Value));
+            First_Association := False;
+         end loop;
+      end if;
+
+      for Field of Expr.Fields loop
+         if not First_Association then
+            Result := Result & SU.To_Unbounded_String (", ");
+         end if;
+         Result :=
+           Result
+           & SU.To_Unbounded_String
+               (FT.To_String (Field.Field_Name)
+                & " => "
+                & Render_Expr (Unit, Document, Field.Expr, State));
+         First_Association := False;
+      end loop;
+
+      Result := Result & SU.To_Unbounded_String (")");
+      return SU.To_String (Result);
+   end Render_Record_Aggregate_For_Type;
+
+   function Render_String_Length_Expr
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Expr     : CM.Expr_Access;
+      State    : in out Emit_State) return String
+   is
+   begin
+      if Expr = null then
+         Raise_Unsupported
+           (State,
+            FT.Null_Span,
+            "encountered null string expression during Ada emission");
+      elsif Expr.Kind = CM.Expr_String and then Has_Text (Expr.Text) then
+         return "String'(" & FT.To_String (Expr.Text) & ")'Length";
+      end if;
+
+      return
+        "String'("
+        & Render_Expr (Unit, Document, Expr, State)
+        & ")'Length";
+   end Render_String_Length_Expr;
+
    function Render_Type_Name (Info : GM.Type_Descriptor) return String is
+      Result : SU.Unbounded_String;
    begin
       if Info.Anonymous and then Is_Access_Type (Info) then
          return
            (if Info.Not_Null then "not null " else "")
            & "access "
            & (if Info.Is_Constant then "constant " else "")
-           & FT.To_String (Info.Target);
+           & Ada_Safe_Name (FT.To_String (Info.Target));
+      elsif FT.To_String (Info.Kind) = "subtype"
+        and then not Info.Discriminant_Constraints.Is_Empty
+        and then not Starts_With (FT.To_String (Info.Name), "__constraint")
+      then
+         Result :=
+           SU.To_Unbounded_String
+             (Ada_Safe_Name
+                ((if Info.Has_Base then FT.To_String (Info.Base) else FT.To_String (Info.Name)))
+              & " (");
+         for Index in Info.Discriminant_Constraints.First_Index .. Info.Discriminant_Constraints.Last_Index loop
+            declare
+               Constraint : constant GM.Discriminant_Constraint :=
+                 Info.Discriminant_Constraints (Index);
+            begin
+               if Index /= Info.Discriminant_Constraints.First_Index then
+                  Result := Result & SU.To_Unbounded_String (", ");
+               end if;
+               if Constraint.Is_Named then
+                  Result :=
+                    Result
+                    & SU.To_Unbounded_String
+                        (FT.To_String (Constraint.Name) & " => ");
+               end if;
+               Result :=
+                 Result & SU.To_Unbounded_String (Render_Scalar_Value (Constraint.Value));
+            end;
+         end loop;
+         Result := Result & SU.To_Unbounded_String (")");
+         return SU.To_String (Result);
       end if;
-      return FT.To_String (Info.Name);
+      return Ada_Safe_Name (FT.To_String (Info.Name));
    end Render_Type_Name;
 
    function Render_Param_Type_Name (Info : GM.Type_Descriptor) return String is
@@ -1089,7 +1261,7 @@ package body Safe_Frontend.Ada_Emit is
       if Has_Type (Unit, Document, Name) then
          return Render_Type_Name (Lookup_Type (Unit, Document, Name));
       end if;
-      return Name;
+      return Ada_Safe_Name (Name);
    end Render_Type_Name;
 
    function Default_Value_Expr (Type_Name : String) return String is
@@ -1111,9 +1283,44 @@ package body Safe_Frontend.Ada_Emit is
    function Default_Value_Expr (Info : GM.Type_Descriptor) return String is
       Type_Name : constant String := Render_Type_Name (Info);
       Kind      : constant String := FT.To_String (Info.Kind);
+      Result    : SU.Unbounded_String;
    begin
       if Kind = "access" then
          return "null";
+      elsif Is_Tuple_Type (Info) then
+         declare
+            First_Association : Boolean := True;
+         begin
+            Result := SU.To_Unbounded_String ("(");
+            for Index in Info.Tuple_Element_Types.First_Index .. Info.Tuple_Element_Types.Last_Index loop
+               if Is_String_Type_Name (FT.To_String (Info.Tuple_Element_Types (Index))) then
+                  if not First_Association then
+                     Result := Result & SU.To_Unbounded_String (", ");
+                  end if;
+                  Result :=
+                    Result
+                    & SU.To_Unbounded_String
+                        (Tuple_String_Discriminant_Name (Positive (Index)) & " => 0");
+                  First_Association := False;
+               end if;
+            end loop;
+            for Index in Info.Tuple_Element_Types.First_Index .. Info.Tuple_Element_Types.Last_Index loop
+               if not First_Association then
+                  Result := Result & SU.To_Unbounded_String (", ");
+               end if;
+               Result :=
+                 Result
+                 & SU.To_Unbounded_String
+                     (Tuple_Field_Name (Positive (Index))
+                      & " => "
+                      & Default_Value_Expr (FT.To_String (Info.Tuple_Element_Types (Index))));
+               First_Association := False;
+            end loop;
+         end;
+         Result := Result & SU.To_Unbounded_String (")");
+         return SU.To_String (Result);
+      elsif Is_Result_Builtin (Info) then
+         return "(Message_Length => 0, Ok => True, Message => """")";
       end if;
       return Default_Value_Expr (Type_Name);
    end Default_Value_Expr;
@@ -1136,10 +1343,168 @@ package body Safe_Frontend.Ada_Emit is
       return (others => <>);
    end Lookup_Channel;
 
+   procedure Collect_Synthetic_Types
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Result   : in out GM.Type_Descriptor_Vectors.Vector)
+   is
+      Seen : FT.UString_Vectors.Vector;
+
+      procedure Add_From_Info (Info : GM.Type_Descriptor);
+      procedure Add_From_Statements (Statements : CM.Statement_Access_Vectors.Vector);
+
+      procedure Add_Unique (Info : GM.Type_Descriptor) is
+      begin
+         if Has_Text (Info.Name)
+           and then not Contains_Name (Seen, FT.To_String (Info.Name))
+         then
+            Seen.Append (Info.Name);
+            Result.Append (Info);
+         end if;
+      end Add_Unique;
+
+      procedure Add_From_Name (Name : String) is
+      begin
+         if Name'Length = 0 then
+            return;
+         elsif Has_Type (Unit, Document, Name) then
+            Add_From_Info (Lookup_Type (Unit, Document, Name));
+         elsif FT.Lowercase (Name) = "result" then
+            Add_From_Info (BT.Result_Type);
+         elsif Starts_With (Name, "__tuple") then
+            declare
+               Info : GM.Type_Descriptor;
+            begin
+               Info.Name := FT.To_UString (Name);
+               Info.Kind := FT.To_UString ("tuple");
+               Add_Unique (Info);
+            end;
+         end if;
+      end Add_From_Name;
+
+      procedure Add_From_Info (Info : GM.Type_Descriptor) is
+      begin
+         if not Has_Text (Info.Name) then
+            return;
+         end if;
+
+         if Info.Has_Base then
+            Add_From_Name (FT.To_String (Info.Base));
+         end if;
+         if Info.Has_Component_Type then
+            Add_From_Name (FT.To_String (Info.Component_Type));
+         end if;
+         if Info.Has_Target then
+            Add_From_Name (FT.To_String (Info.Target));
+         end if;
+         for Item of Info.Tuple_Element_Types loop
+            Add_From_Name (FT.To_String (Item));
+         end loop;
+         for Field of Info.Fields loop
+            Add_From_Name (FT.To_String (Field.Type_Name));
+         end loop;
+         for Field of Info.Variant_Fields loop
+            Add_From_Name (FT.To_String (Field.Type_Name));
+         end loop;
+
+         if (FT.To_String (Info.Kind) = "subtype" and then not Info.Discriminant_Constraints.Is_Empty)
+           or else Is_Tuple_Type (Info)
+           or else Is_Result_Builtin (Info)
+         then
+            Add_Unique (Info);
+         end if;
+      end Add_From_Info;
+
+      procedure Add_From_Decls (Decls : CM.Resolved_Object_Decl_Vectors.Vector) is
+      begin
+         for Decl of Decls loop
+            Add_From_Info (Decl.Type_Info);
+         end loop;
+      end Add_From_Decls;
+
+      procedure Add_From_Decls (Decls : CM.Object_Decl_Vectors.Vector) is
+      begin
+         for Decl of Decls loop
+            Add_From_Info (Decl.Type_Info);
+         end loop;
+      end Add_From_Decls;
+
+      procedure Add_From_Statements (Statements : CM.Statement_Access_Vectors.Vector) is
+      begin
+         for Item of Statements loop
+            if Item = null then
+               null;
+            else
+               case Item.Kind is
+                  when CM.Stmt_Object_Decl =>
+                     Add_From_Info (Item.Decl.Type_Info);
+                  when CM.Stmt_Destructure_Decl =>
+                     Add_From_Info (Item.Destructure.Type_Info);
+                  when CM.Stmt_If =>
+                     Add_From_Statements (Item.Then_Stmts);
+                     for Part of Item.Elsifs loop
+                        Add_From_Statements (Part.Statements);
+                     end loop;
+                     if Item.Has_Else then
+                        Add_From_Statements (Item.Else_Stmts);
+                     end if;
+                  when CM.Stmt_Case =>
+                     for Arm of Item.Case_Arms loop
+                        Add_From_Statements (Arm.Statements);
+                     end loop;
+                  when CM.Stmt_Block =>
+                     Add_From_Decls (Item.Declarations);
+                     Add_From_Statements (Item.Body_Stmts);
+                  when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
+                     Add_From_Statements (Item.Body_Stmts);
+                  when CM.Stmt_Select =>
+                     for Arm of Item.Arms loop
+                        case Arm.Kind is
+                           when CM.Select_Arm_Channel =>
+                              Add_From_Info (Arm.Channel_Data.Type_Info);
+                              Add_From_Statements (Arm.Channel_Data.Statements);
+                           when CM.Select_Arm_Delay =>
+                              Add_From_Statements (Arm.Delay_Data.Statements);
+                           when others =>
+                              null;
+                        end case;
+                     end loop;
+                  when others =>
+                     null;
+               end case;
+            end if;
+         end loop;
+      end Add_From_Statements;
+   begin
+      for Item of Unit.Types loop
+         Add_From_Info (Item);
+      end loop;
+      for Item of Unit.Objects loop
+         Add_From_Info (Item.Type_Info);
+      end loop;
+      for Item of Unit.Channels loop
+         Add_From_Info (Item.Element_Type);
+      end loop;
+      for Item of Unit.Subprograms loop
+         for Param of Item.Params loop
+            Add_From_Info (Param.Type_Info);
+         end loop;
+         if Item.Has_Return_Type then
+            Add_From_Info (Item.Return_Type);
+         end if;
+         Add_From_Decls (Item.Declarations);
+         Add_From_Statements (Item.Statements);
+      end loop;
+      for Item of Unit.Tasks loop
+         Add_From_Decls (Item.Declarations);
+         Add_From_Statements (Item.Statements);
+      end loop;
+   end Collect_Synthetic_Types;
+
    function Render_Type_Decl
      (Type_Item : GM.Type_Descriptor;
       State     : in out Emit_State) return String is
-      Name : constant String := FT.To_String (Type_Item.Name);
+      Name : constant String := Ada_Safe_Name (FT.To_String (Type_Item.Name));
       Kind : constant String := FT.To_String (Type_Item.Kind);
       Result : SU.Unbounded_String;
    begin
@@ -1155,17 +1520,45 @@ package body Safe_Frontend.Ada_Emit is
            & Trim_Image (Type_Item.High)
            & ";";
       elsif Kind = "subtype" then
-         if Is_Builtin_Integer_Name (FT.To_String (Type_Item.Base))
+         if not Type_Item.Discriminant_Constraints.Is_Empty then
+            Result :=
+              SU.To_Unbounded_String
+                ("subtype "
+                 & Ada_Safe_Name (Name)
+                 & " is "
+                 & Ada_Safe_Name (FT.To_String (Type_Item.Base))
+                 & " (");
+            for Index in Type_Item.Discriminant_Constraints.First_Index .. Type_Item.Discriminant_Constraints.Last_Index loop
+               declare
+                  Constraint : constant GM.Discriminant_Constraint :=
+                    Type_Item.Discriminant_Constraints (Index);
+               begin
+                  if Index /= Type_Item.Discriminant_Constraints.First_Index then
+                     Result := Result & SU.To_Unbounded_String (", ");
+                  end if;
+                  if Constraint.Is_Named then
+                     Result :=
+                       Result
+                       & SU.To_Unbounded_String
+                           (FT.To_String (Constraint.Name) & " => ");
+                  end if;
+                  Result :=
+                    Result & SU.To_Unbounded_String (Render_Scalar_Value (Constraint.Value));
+               end;
+            end loop;
+            Result := Result & SU.To_Unbounded_String (");");
+            return SU.To_String (Result);
+         elsif Is_Builtin_Integer_Name (FT.To_String (Type_Item.Base))
            or else Is_Builtin_Float_Name (FT.To_String (Type_Item.Base))
          then
             return
-              "subtype " & Name & " is " & FT.To_String (Type_Item.Base) & ";";
+              "subtype " & Ada_Safe_Name (Name) & " is " & Ada_Safe_Name (FT.To_String (Type_Item.Base)) & ";";
          elsif Type_Item.Has_Low and then Type_Item.Has_High then
             return
               "subtype "
-              & Name
+              & Ada_Safe_Name (Name)
               & " is "
-              & FT.To_String (Type_Item.Base)
+              & Ada_Safe_Name (FT.To_String (Type_Item.Base))
               & " range "
               & Trim_Image (Type_Item.Low)
               & " .. "
@@ -1173,24 +1566,76 @@ package body Safe_Frontend.Ada_Emit is
               & ";";
          else
             return
-              "subtype " & Name & " is " & FT.To_String (Type_Item.Base) & ";";
+              "subtype " & Ada_Safe_Name (Name) & " is " & Ada_Safe_Name (FT.To_String (Type_Item.Base)) & ";";
          end if;
       elsif Kind = "array" then
          return
            "type "
-           & Name
+           & Ada_Safe_Name (Name)
            & " is array ("
            & Join_Names (Type_Item.Index_Types)
            & ") of "
-           & FT.To_String (Type_Item.Component_Type)
+           & Ada_Safe_Name (FT.To_String (Type_Item.Component_Type))
            & ";";
+      elsif Kind = "tuple" then
+         Result := SU.To_Unbounded_String ("type " & Ada_Safe_Name (Name));
+         declare
+            First_Discriminant : Boolean := True;
+         begin
+            for Index in Type_Item.Tuple_Element_Types.First_Index .. Type_Item.Tuple_Element_Types.Last_Index loop
+               if Is_String_Type_Name (FT.To_String (Type_Item.Tuple_Element_Types (Index))) then
+                  if First_Discriminant then
+                     Result := Result & SU.To_Unbounded_String (" (");
+                     First_Discriminant := False;
+                  else
+                     Result := Result & SU.To_Unbounded_String ("; ");
+                  end if;
+                  Result :=
+                    Result
+                    & SU.To_Unbounded_String
+                        (Tuple_String_Discriminant_Name (Positive (Index))
+                         & " : Natural := 0");
+               end if;
+            end loop;
+            if not First_Discriminant then
+               Result := Result & SU.To_Unbounded_String (")");
+            end if;
+         end;
+         Result := Result & SU.To_Unbounded_String (" is record" & ASCII.LF);
+         for Index in Type_Item.Tuple_Element_Types.First_Index .. Type_Item.Tuple_Element_Types.Last_Index loop
+            Result :=
+              Result
+              & SU.To_Unbounded_String
+                  (Indentation (1)
+                   & Tuple_Field_Name (Positive (Index))
+                   & " : "
+                   & (if Is_String_Type_Name (FT.To_String (Type_Item.Tuple_Element_Types (Index)))
+                      then
+                        "String (1 .. "
+                        & Tuple_String_Discriminant_Name (Positive (Index))
+                        & ")"
+                      else
+                        Ada_Safe_Name (FT.To_String (Type_Item.Tuple_Element_Types (Index))))
+                   & ";"
+                   & ASCII.LF);
+         end loop;
+         Result := Result & SU.To_Unbounded_String ("end record;");
+         return SU.To_String (Result);
+      elsif Is_Result_Builtin (Type_Item) then
+         return
+           "type "
+           & Ada_Safe_Name (Name)
+           & " (Message_Length : Natural := 0) is record"
+           & ASCII.LF
+           & Indentation (1)
+           & "Ok : Boolean := True;"
+           & ASCII.LF
+           & Indentation (1)
+           & "Message : String (1 .. Message_Length);"
+           & ASCII.LF
+           & "end record;";
       elsif Kind = "record" then
          declare
-            function Is_Boolean_Discriminant return Boolean is
-            begin
-               return FT.To_String (Type_Item.Discriminant_Type) = "Boolean";
-            end Is_Boolean_Discriminant;
-
             function Is_Variant_Field_Name (Field_Name : String) return Boolean is
             begin
                for Field of Type_Item.Variant_Fields loop
@@ -1201,15 +1646,16 @@ package body Safe_Frontend.Ada_Emit is
                return False;
             end Is_Variant_Field_Name;
 
-            function Has_Variant_Alternative (When_True : Boolean) return Boolean is
+            function Same_Choice
+              (Left, Right : GM.Variant_Field) return Boolean is
             begin
-               for Field of Type_Item.Variant_Fields loop
-                  if Field.When_True = When_True then
-                     return True;
-                  end if;
-               end loop;
-               return False;
-            end Has_Variant_Alternative;
+               return Left.Is_Others = Right.Is_Others
+                 and then
+                   (if Left.Is_Others
+                    then True
+                    else Left.Choice.Kind = Right.Choice.Kind
+                      and then Render_Scalar_Value (Left.Choice) = Render_Scalar_Value (Right.Choice));
+            end Same_Choice;
 
             procedure Append_Field_Line
               (Field_Name : String;
@@ -1226,49 +1672,41 @@ package body Safe_Frontend.Ada_Emit is
                       & ";"
                       & ASCII.LF);
             end Append_Field_Line;
-
-            procedure Append_Variant_Alternative (When_True : Boolean) is
-               Choice_Text : constant String := (if When_True then "True" else "False");
-            begin
+         begin
+            Result := SU.To_Unbounded_String ("type " & Name);
+            if not Type_Item.Discriminants.Is_Empty then
                Result :=
                  Result
                  & SU.To_Unbounded_String
-                     (Indentation (1) & "when " & Choice_Text & " =>" & ASCII.LF);
-               for Field of Type_Item.Variant_Fields loop
-                  if Field.When_True = When_True then
-                     Append_Field_Line
-                       (FT.To_String (Field.Name),
-                        FT.To_String (Field.Type_Name),
-                        2);
-                  end if;
+                     (" (");
+               for Index in Type_Item.Discriminants.First_Index .. Type_Item.Discriminants.Last_Index loop
+                  declare
+                     Disc : constant GM.Discriminant_Descriptor :=
+                       Type_Item.Discriminants (Index);
+                  begin
+                     if Index /= Type_Item.Discriminants.First_Index then
+                        Result := Result & SU.To_Unbounded_String ("; ");
+                     end if;
+                     Result :=
+                       Result
+                       & SU.To_Unbounded_String
+                           (FT.To_String (Disc.Name)
+                            & " : "
+                            & Ada_Safe_Name (FT.To_String (Disc.Type_Name))
+                            & (if Disc.Has_Default
+                               then " := " & Render_Scalar_Value (Disc.Default_Value)
+                               else ""));
+                  end;
                end loop;
-            end Append_Variant_Alternative;
-         begin
-            if Type_Item.Has_Discriminant and then not Is_Boolean_Discriminant then
-               Raise_Unsupported
-                 (State,
-                  FT.Null_Span,
-                  "PR09 emitter only supports the current boolean-discriminant record subset");
-            elsif not Type_Item.Variant_Fields.Is_Empty
-              and then (not Type_Item.Has_Discriminant
-                        or else not Has_Variant_Alternative (True)
-                        or else not Has_Variant_Alternative (False))
-            then
-               Raise_Unsupported
-                 (State,
-                  FT.Null_Span,
-                  "PR09 emitter only supports boolean variant parts with explicit True/False alternatives");
-            end if;
-
-            Result := SU.To_Unbounded_String ("type " & Name);
-            if Type_Item.Has_Discriminant then
+               Result := Result & SU.To_Unbounded_String (")");
+            elsif Type_Item.Has_Discriminant then
                Result :=
                  Result
                  & SU.To_Unbounded_String
                      (" ("
                       & FT.To_String (Type_Item.Discriminant_Name)
                       & " : "
-                      & FT.To_String (Type_Item.Discriminant_Type)
+                      & Ada_Safe_Name (FT.To_String (Type_Item.Discriminant_Type))
                       & (if Type_Item.Has_Discriminant_Default
                          then " := " & (if Type_Item.Discriminant_Default_Bool then "True" else "False")
                          else "")
@@ -1279,7 +1717,7 @@ package body Safe_Frontend.Ada_Emit is
                if not Is_Variant_Field_Name (FT.To_String (Field.Name)) then
                   Append_Field_Line
                     (FT.To_String (Field.Name),
-                     FT.To_String (Field.Type_Name),
+                     Ada_Safe_Name (FT.To_String (Field.Type_Name)),
                      1);
                end if;
             end loop;
@@ -1289,11 +1727,45 @@ package body Safe_Frontend.Ada_Emit is
                  & SU.To_Unbounded_String
                      (Indentation (1)
                       & "case "
-                      & FT.To_String (Type_Item.Discriminant_Name)
+                      & FT.To_String
+                          ((if Has_Text (Type_Item.Variant_Discriminant_Name)
+                            then Type_Item.Variant_Discriminant_Name
+                            else Type_Item.Discriminant_Name))
                       & " is"
                       & ASCII.LF);
-               Append_Variant_Alternative (True);
-               Append_Variant_Alternative (False);
+               declare
+                  Index : Positive := Type_Item.Variant_Fields.First_Index;
+               begin
+                  while Index <= Type_Item.Variant_Fields.Last_Index loop
+                     declare
+                        First_Field : constant GM.Variant_Field :=
+                          Type_Item.Variant_Fields (Index);
+                     begin
+                        Result :=
+                          Result
+                          & SU.To_Unbounded_String
+                              (Indentation (1)
+                               & "when "
+                               & (if First_Field.Is_Others
+                                  then "others"
+                                  else Render_Scalar_Value (First_Field.Choice))
+                               & " =>"
+                               & ASCII.LF);
+                        loop
+                           Append_Field_Line
+                             (FT.To_String (Type_Item.Variant_Fields (Index).Name),
+                              Ada_Safe_Name (FT.To_String (Type_Item.Variant_Fields (Index).Type_Name)),
+                              2);
+                           exit when Index = Type_Item.Variant_Fields.Last_Index;
+                           exit when not Same_Choice
+                             (First_Field,
+                              Type_Item.Variant_Fields (Index + 1));
+                           Index := Index + 1;
+                        end loop;
+                        Index := Index + 1;
+                     end;
+                  end loop;
+               end;
                Result :=
                  Result
                  & SU.To_Unbounded_String
@@ -1391,6 +1863,11 @@ package body Safe_Frontend.Ada_Emit is
          when CM.Expr_Null =>
             return "null";
          when CM.Expr_Ident =>
+            if FT.Lowercase (FT.To_String (Expr.Name)) = "ok"
+              and then FT.Lowercase (FT.To_String (Expr.Type_Name)) = "result"
+            then
+               return "(Message_Length => 0, Ok => True, Message => """")";
+            end if;
             return FT.To_String (Expr.Name);
          when CM.Expr_Select =>
             declare
@@ -1412,6 +1889,24 @@ package body Safe_Frontend.Ada_Emit is
                  and then not Selector_Is_Record_Field (Unit, Document, Expr.Prefix, Selector_Name)
                then
                   return Prefix_Image & "'" & Selector_Name;
+               elsif Expr.Prefix /= null
+                 and then Selector_Name'Length > 0
+                 and then Selector_Name (Selector_Name'First) in '0' .. '9'
+                 and then Has_Text (Expr.Prefix.Type_Name)
+                 and then
+                   (Starts_With (FT.To_String (Expr.Prefix.Type_Name), "__tuple")
+                    or else
+                      (Has_Type (Unit, Document, FT.To_String (Expr.Prefix.Type_Name))
+                       and then Is_Tuple_Type
+                         (Lookup_Type
+                            (Unit,
+                             Document,
+                             FT.To_String (Expr.Prefix.Type_Name)))))
+               then
+                  return
+                    Prefix_Image
+                    & "."
+                    & Tuple_Field_Name (Positive (Natural'Value (Selector_Name)));
                end if;
                return Prefix_Image & "." & Selector_Name;
             end;
@@ -1438,6 +1933,8 @@ package body Safe_Frontend.Ada_Emit is
               & ")";
          when CM.Expr_Call =>
             declare
+               Callee_Flat : constant String := CM.Flatten_Name (Expr.Callee);
+               Lower_Callee : constant String := FT.Lowercase (Callee_Flat);
                Callee_Image : constant String :=
                  (if Expr.Callee /= null
                    and then Expr.Callee.Kind = CM.Expr_Select
@@ -1468,6 +1965,20 @@ package body Safe_Frontend.Ada_Emit is
                     & FT.To_String (Expr.Callee.Selector)
                   else Render_Expr (Unit, Document, Expr.Callee, State));
             begin
+               if Lower_Callee = "ok" and then Expr.Args.Is_Empty then
+                  return "(Message_Length => 0, Ok => True, Message => """")";
+               elsif Lower_Callee = "fail" and then Natural (Expr.Args.Length) = 1 then
+                  return
+                    "(Message_Length => "
+                    & Render_String_Length_Expr
+                        (Unit,
+                         Document,
+                         Expr.Args (Expr.Args.First_Index),
+                         State)
+                    & ", Ok => False, Message => "
+                    & Render_Expr (Unit, Document, Expr.Args (Expr.Args.First_Index), State)
+                    & ")";
+               end if;
                if Expr.Args.Is_Empty then
                   return Callee_Image;
                end if;
@@ -1503,6 +2014,46 @@ package body Safe_Frontend.Ada_Emit is
                          & Render_Expr (Unit, Document, Field.Expr, State));
                end;
             end loop;
+            Result := Result & SU.To_Unbounded_String (")");
+            return SU.To_String (Result);
+         when CM.Expr_Tuple =>
+            declare
+               First_Association : Boolean := True;
+            begin
+               Result := SU.To_Unbounded_String ("(");
+               for Index in Expr.Elements.First_Index .. Expr.Elements.Last_Index loop
+                  if Expr.Elements (Index) /= null
+                    and then Is_String_Type_Name (FT.To_String (Expr.Elements (Index).Type_Name))
+                  then
+                     if not First_Association then
+                        Result := Result & SU.To_Unbounded_String (", ");
+                     end if;
+                     Result :=
+                       Result
+                       & SU.To_Unbounded_String
+                           (Tuple_String_Discriminant_Name (Positive (Index))
+                            & " => "
+                            & Render_String_Length_Expr
+                                (Unit,
+                                 Document,
+                                 Expr.Elements (Index),
+                                 State));
+                     First_Association := False;
+                  end if;
+               end loop;
+               for Index in Expr.Elements.First_Index .. Expr.Elements.Last_Index loop
+                  if not First_Association then
+                     Result := Result & SU.To_Unbounded_String (", ");
+                  end if;
+                  Result :=
+                    Result
+                    & SU.To_Unbounded_String
+                        (Tuple_Field_Name (Positive (Index))
+                         & " => "
+                         & Render_Expr (Unit, Document, Expr.Elements (Index), State));
+                  First_Association := False;
+               end loop;
+            end;
             Result := Result & SU.To_Unbounded_String (")");
             return SU.To_String (Result);
          when CM.Expr_Annotated =>
@@ -1779,12 +2330,19 @@ package body Safe_Frontend.Ada_Emit is
          end loop;
       end loop;
       for Item of Statements loop
-         if Item /= null and then Item.Kind = CM.Stmt_Object_Decl then
-            for Name of Item.Decl.Names loop
-               if not Contains_Name (Names, FT.To_String (Name)) then
-                  Names.Append (Name);
-               end if;
-            end loop;
+         if Item /= null and then Item.Kind in CM.Stmt_Object_Decl | CM.Stmt_Destructure_Decl then
+            declare
+               Decl_Names : constant FT.UString_Vectors.Vector :=
+                 (if Item.Kind = CM.Stmt_Object_Decl
+                  then Item.Decl.Names
+                  else Item.Destructure.Names);
+            begin
+               for Name of Decl_Names loop
+                  if not Contains_Name (Names, FT.To_String (Name)) then
+                     Names.Append (Name);
+                  end if;
+               end loop;
+            end;
          end if;
       end loop;
    end Collect_Local_Names;
@@ -1802,12 +2360,19 @@ package body Safe_Frontend.Ada_Emit is
          end loop;
       end loop;
       for Item of Statements loop
-         if Item /= null and then Item.Kind = CM.Stmt_Object_Decl then
-            for Name of Item.Decl.Names loop
-               if not Contains_Name (Names, FT.To_String (Name)) then
-                  Names.Append (Name);
-               end if;
-            end loop;
+         if Item /= null and then Item.Kind in CM.Stmt_Object_Decl | CM.Stmt_Destructure_Decl then
+            declare
+               Decl_Names : constant FT.UString_Vectors.Vector :=
+                 (if Item.Kind = CM.Stmt_Object_Decl
+                  then Item.Decl.Names
+                  else Item.Destructure.Names);
+            begin
+               for Name of Decl_Names loop
+                  if not Contains_Name (Names, FT.To_String (Name)) then
+                     Names.Append (Name);
+                  end if;
+               end loop;
+            end;
          end if;
       end loop;
    end Collect_Local_Names;
@@ -1858,6 +2423,8 @@ package body Safe_Frontend.Ada_Emit is
             case Item.Kind is
                when CM.Stmt_Object_Decl =>
                   Mark_Wide_Declaration (Unit, Document, State, Item.Decl);
+               when CM.Stmt_Destructure_Decl =>
+                  null;
                when CM.Stmt_Assign =>
                   if Item.Target /= null
                     and then Item.Target.Kind = CM.Expr_Ident
@@ -2108,6 +2675,26 @@ package body Safe_Frontend.Ada_Emit is
            & (if Type_Info.Is_Constant then "constant " else "")
            & FT.To_String (Type_Info.Target)
          else Render_Type_Name (Type_Info));
+      function Render_Initializer return String is
+      begin
+         if Initializer /= null
+           and then Initializer.Kind = CM.Expr_Aggregate
+           and then not Type_Info.Discriminant_Constraints.Is_Empty
+           and then Type_Name /= "Safe_Runtime.Wide_Integer"
+         then
+            return
+              Type_Name
+              & "'"
+              & Render_Record_Aggregate_For_Type
+                  (Unit, Document, Initializer, Type_Info, State);
+         elsif Initializer /= null
+           and then Initializer.Kind in CM.Expr_Aggregate | CM.Expr_Tuple
+           and then Type_Name /= "Safe_Runtime.Wide_Integer"
+         then
+            return Type_Name & "'" & Render_Expr (Unit, Document, Initializer, State);
+         end if;
+         return Render_Expr (Unit, Document, Initializer, State);
+      end Render_Initializer;
    begin
       if Type_Name = "Safe_Runtime.Wide_Integer" then
          State.Needs_Safe_Runtime := True;
@@ -2144,7 +2731,7 @@ package body Safe_Frontend.Ada_Emit is
                Result :=
                  Result
                  & SU.To_Unbounded_String
-                     (" := " & Render_Expr (Unit, Document, Initializer, State));
+                     (" := " & Render_Initializer);
             end if;
          end if;
       end loop;
@@ -3771,6 +4358,10 @@ package body Safe_Frontend.Ada_Emit is
       Return_Type : String;
       Depth      : Natural)
    is
+      Return_Info : constant GM.Type_Descriptor :=
+        (if Return_Type'Length > 0 and then Has_Type (Unit, Document, Return_Type)
+         then Lookup_Type (Unit, Document, Return_Type)
+         else (others => <>));
    begin
       if Value = null then
          if Return_Type'Length > 0 then
@@ -3804,7 +4395,20 @@ package body Safe_Frontend.Ada_Emit is
       else
          Append_Line
            (Buffer,
-           "return " & Render_Expr (Unit, Document, Value, State) & ";",
+           "return "
+           & (if Return_Type'Length > 0
+                and then Value.Kind = CM.Expr_Aggregate
+                and then not Return_Info.Discriminant_Constraints.Is_Empty
+              then
+                Return_Type
+                & "'"
+                & Render_Record_Aggregate_For_Type
+                    (Unit, Document, Value, Return_Info, State)
+              elsif Return_Type'Length > 0
+                and then Value.Kind in CM.Expr_Aggregate | CM.Expr_Tuple
+              then Return_Type & "'" & Render_Expr (Unit, Document, Value, State)
+              else Render_Expr (Unit, Document, Value, State))
+           & ";",
            Depth);
       end if;
    end Append_Return;
@@ -3988,8 +4592,28 @@ package body Safe_Frontend.Ada_Emit is
       Return_Type : String := "";
       In_Loop    : Boolean := False)
    is
+      function Tail_Statements
+        (First : Positive) return CM.Statement_Access_Vectors.Vector
+      is
+         Result : CM.Statement_Access_Vectors.Vector;
+      begin
+         if Statements.Is_Empty or else First > Statements.Last_Index then
+            return Result;
+         end if;
+         for Index in First .. Statements.Last_Index loop
+            Result.Append (Statements (Index));
+         end loop;
+         return Result;
+      end Tail_Statements;
    begin
-      for Item of Statements loop
+      if Statements.Is_Empty then
+         return;
+      end if;
+
+      for Index in Statements.First_Index .. Statements.Last_Index loop
+         declare
+            Item : constant CM.Statement_Access := Statements (Index);
+         begin
          if Item = null then
             Raise_Unsupported
               (State,
@@ -4001,13 +4625,115 @@ package body Safe_Frontend.Ada_Emit is
             when CM.Stmt_Null =>
                Append_Line (Buffer, "null;", Depth);
             when CM.Stmt_Object_Decl =>
+               declare
+                  Tail                : constant CM.Statement_Access_Vectors.Vector :=
+                    Tail_Statements (Index + 1);
+                  Previous_Wide_Count : constant Ada.Containers.Count_Type :=
+                    State.Wide_Local_Names.Length;
+                  Block_Declarations  : CM.Object_Decl_Vectors.Vector;
+               begin
+                  Block_Declarations.Append (Item.Decl);
+                  Collect_Wide_Locals
+                    (Unit,
+                     Document,
+                     State,
+                     Block_Declarations,
+                     Tail);
+                  Push_Cleanup_Frame (State);
+                  Register_Cleanup_Items (State, Block_Declarations);
+                  Append_Line (Buffer, "declare", Depth);
                   Append_Line
                     (Buffer,
                      Render_Object_Decl_Text (Unit, Document, State, Item.Decl, Local_Context => True),
-                     Depth);
-               if Is_Owner_Access (Item.Decl.Type_Info) then
-                  State.Needs_Unchecked_Deallocation := True;
-               end if;
+                     Depth + 1);
+                  Render_Free_Declarations (Buffer, Block_Declarations, Depth + 1);
+                  Append_Line (Buffer, "begin", Depth);
+                  if not Tail.Is_Empty then
+                     Render_Statements
+                       (Buffer,
+                        Unit,
+                        Document,
+                        Tail,
+                        State,
+                        Depth + 1,
+                        Return_Type,
+                        In_Loop);
+                  end if;
+                  if Tail.Is_Empty or else Statements_Fall_Through (Tail) then
+                     Render_Cleanup (Buffer, Block_Declarations, Depth + 1);
+                  end if;
+                  Append_Line (Buffer, "end;", Depth);
+                  Pop_Cleanup_Frame (State);
+                  Restore_Wide_Names (State, Previous_Wide_Count);
+               end;
+               return;
+            when CM.Stmt_Destructure_Decl =>
+               declare
+                  Tail                : constant CM.Statement_Access_Vectors.Vector :=
+                    Tail_Statements (Index + 1);
+                  Previous_Wide_Count : constant Ada.Containers.Count_Type :=
+                    State.Wide_Local_Names.Length;
+                  Empty_Declarations  : CM.Object_Decl_Vectors.Vector;
+                  Tuple_Type          : constant GM.Type_Descriptor :=
+                    Base_Type (Unit, Document, Item.Destructure.Type_Info);
+                  Temp_Name           : constant String :=
+                    "Safe_Destructure_"
+                    & Ada.Strings.Fixed.Trim (Natural'Image (Index), Ada.Strings.Both);
+               begin
+                  Collect_Wide_Locals
+                    (Unit,
+                     Document,
+                     State,
+                     Empty_Declarations,
+                     Tail_Statements (Index));
+                  Push_Cleanup_Frame (State);
+                  Append_Line (Buffer, "declare", Depth);
+                  Append_Line
+                    (Buffer,
+                     Temp_Name
+                     & " : "
+                     & Render_Type_Name (Item.Destructure.Type_Info)
+                     & " := "
+                     & Render_Expr
+                         (Unit,
+                          Document,
+                          Item.Destructure.Initializer,
+                          State)
+                     & ";",
+                     Depth + 1);
+                  for Tuple_Index in Item.Destructure.Names.First_Index .. Item.Destructure.Names.Last_Index loop
+                     Append_Line
+                       (Buffer,
+                        FT.To_String (Item.Destructure.Names (Tuple_Index))
+                        & " : "
+                        & Render_Type_Name
+                            (Unit,
+                             Document,
+                             FT.To_String (Tuple_Type.Tuple_Element_Types (Tuple_Index)))
+                        & " := "
+                        & Temp_Name
+                        & "."
+                        & Tuple_Field_Name (Positive (Tuple_Index))
+                        & ";",
+                        Depth + 1);
+                  end loop;
+                  Append_Line (Buffer, "begin", Depth);
+                  if not Tail.Is_Empty then
+                     Render_Statements
+                       (Buffer,
+                        Unit,
+                        Document,
+                        Tail,
+                        State,
+                        Depth + 1,
+                        Return_Type,
+                        In_Loop);
+                  end if;
+                  Append_Line (Buffer, "end;", Depth);
+                  Pop_Cleanup_Frame (State);
+                  Restore_Wide_Names (State, Previous_Wide_Count);
+               end;
+               return;
             when CM.Stmt_Assign =>
                Append_Assignment (Buffer, Unit, Document, State, Item.all, Depth);
                if In_Loop then
@@ -4381,6 +5107,7 @@ package body Safe_Frontend.Ada_Emit is
                   & Item.Kind'Image
                   & "'");
          end case;
+         end;
       end loop;
    end Render_Statements;
 
@@ -4796,6 +5523,7 @@ package body Safe_Frontend.Ada_Emit is
       Spec_Text  : SU.Unbounded_String;
       Body_Text  : SU.Unbounded_String;
       Body_Withs : FT.UString_Vectors.Vector;
+      Synthetic_Types : GM.Type_Descriptor_Vectors.Vector;
 
       procedure Add_Body_With (Name : String) is
       begin
@@ -4834,6 +5562,12 @@ package body Safe_Frontend.Ada_Emit is
          if FT.To_String (Type_Item.Kind) = "record" then
             Append_Line (Spec_Inner);
          end if;
+      end loop;
+
+      Collect_Synthetic_Types (Unit, Document, Synthetic_Types);
+      for Type_Item of Synthetic_Types loop
+         Append_Line (Spec_Inner, Render_Type_Decl (Type_Item, State), 1);
+         Append_Line (Spec_Inner);
       end loop;
 
       if not Unit.Objects.Is_Empty then

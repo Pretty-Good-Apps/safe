@@ -150,11 +150,17 @@ class Pr111LanguageEvalTests(unittest.TestCase):
         self.assertEqual(grammar_payload["scopeName"], "source.safe")
         keyword_matchers = grammar_payload["repository"]["keywords"]["patterns"]
         type_matchers = grammar_payload["repository"]["types"]["patterns"]
+        builtin_matchers = grammar_payload["repository"]["builtins"]["patterns"]
+        tuple_selector_matchers = grammar_payload["repository"]["tuple_selectors"]["patterns"]
         character_matchers = grammar_payload["repository"]["characters"]["patterns"]
         self.assertIn("case", keyword_matchers[0]["match"])
         self.assertIn("others", keyword_matchers[0]["match"])
         self.assertIn("Character", type_matchers[0]["match"])
         self.assertIn("String", type_matchers[0]["match"])
+        self.assertIn("result", type_matchers[0]["match"])
+        self.assertIn("ok", builtin_matchers[0]["match"])
+        self.assertIn("fail", builtin_matchers[0]["match"])
+        self.assertIn("(?<=\\.)\\d+\\b", tuple_selector_matchers[0]["match"])
         self.assertEqual(character_matchers[0]["name"], "constant.character.safe")
         self.assertEqual(config_payload["comments"]["lineComment"], "--")
 

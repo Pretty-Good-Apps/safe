@@ -1,0 +1,23 @@
+-- Test: pr113_structured_result
+-- Description: Builtin result plus tuple-based structured return conventions.
+-- Expected: ACCEPT
+
+package PR113_Structured_Result is
+
+   function Parse (Input : in Integer) return (result, Integer) is
+   begin
+      if Input >= 0 then
+         return (ok (), Input);
+      end if;
+      return (fail ("negative"), 0);
+   end Parse;
+
+   function Legacy (Input : in Integer) return (Boolean, Integer) is
+   begin
+      if Input >= 0 then
+         return (True, Input);
+      end if;
+      return (False, 0);
+   end Legacy;
+
+end PR113_Structured_Result;

@@ -43,6 +43,7 @@ package body Safe_Frontend.Check_Emit is
       Resolved : CM.Statement_Access) return String;
 
    function Expression_Node (Expr : CM.Expr_Access) return String;
+   function Object_Type_Node (Spec : CM.Type_Spec) return String;
 
    function Type_Json (Info : GM.Type_Descriptor) return String;
 
@@ -325,9 +326,50 @@ package body Safe_Frontend.Check_Emit is
    begin
       if Spec.Kind = CM.Type_Spec_Access_Def then
          return Name_Node (Spec.Target_Name);
+      elsif Spec.Kind = CM.Type_Spec_Tuple then
+         declare
+            Elements : String_Vectors.Vector;
+         begin
+            for Item of Spec.Tuple_Elements loop
+               Elements.Append (Object_Type_Node (Item.all));
+            end loop;
+            return
+              "{""node_type"":""TupleTypeSpec"",""elements"":"
+              & Json_List (Elements)
+              & ",""span"":"
+              & JS.Span_Object (Spec.Span)
+              & "}";
+         end;
       end if;
       return Name_From_String (FT.To_String (Spec.Name), Spec.Span);
    end Type_Spec_Name;
+
+   function Constraint_Node
+     (Spec : CM.Type_Spec) return String is
+      Items : String_Vectors.Vector;
+   begin
+      if Spec.Constraints.Is_Empty then
+         return "null";
+      end if;
+      for Item of Spec.Constraints loop
+         Items.Append
+           ("{""node_type"":""DiscriminantConstraintAssociation"",""is_named"":"
+            & JS.Bool_Literal (Item.Is_Named)
+            & ",""name"":"
+            & (if Item.Is_Named then JS.Quote (Item.Name) else "null")
+            & ",""value"":"
+            & Expression_Node (Item.Value)
+            & ",""span"":"
+            & JS.Span_Object (Item.Span)
+            & "}");
+      end loop;
+      return
+        "{""node_type"":""DiscriminantConstraint"",""items"":"
+        & Json_List (Items)
+        & ",""span"":"
+        & JS.Span_Object (Spec.Span)
+        & "}";
+   end Constraint_Node;
 
    function Subtype_Indication_Node
      (Spec : CM.Type_Spec) return String is
@@ -337,7 +379,9 @@ package body Safe_Frontend.Check_Emit is
         & JS.Bool_Literal (Spec.Not_Null)
         & ",""subtype_mark"":"
         & Type_Spec_Name (Spec)
-        & ",""constraint"":null,""span"":"
+        & ",""constraint"":"
+        & Constraint_Node (Spec)
+        & ",""span"":"
         & JS.Span_Object (Spec.Span)
         & "}";
    end Subtype_Indication_Node;
@@ -383,6 +427,8 @@ package body Safe_Frontend.Check_Emit is
    begin
       if Spec.Kind = CM.Type_Spec_Access_Def then
          return Access_Definition_Node (Spec);
+      elsif Spec.Kind = CM.Type_Spec_Tuple then
+         return Type_Spec_Name (Spec);
       end if;
       return Subtype_Indication_Node (Spec);
    end Object_Type_Node;
@@ -607,6 +653,22 @@ package body Safe_Frontend.Check_Emit is
         & "}";
    end Record_Aggregate_Node;
 
+   function Tuple_Aggregate_Node (Expr : CM.Expr_Access) return String is
+      Elements : String_Vectors.Vector;
+   begin
+      if Expr /= null and then not Expr.Elements.Is_Empty then
+         for Item of Expr.Elements loop
+            Elements.Append (Expression_Node (Item));
+         end loop;
+      end if;
+      return
+        "{""node_type"":""TupleAggregate"",""elements"":"
+        & Json_List (Elements)
+        & ",""span"":"
+        & JS.Span_Object ((if Expr = null then FT.Null_Span else Expr.Span))
+        & "}";
+   end Tuple_Aggregate_Node;
+
    function Real_Range_Constraint_Node (Decl : CM.Type_Decl) return String is
    begin
       return
@@ -620,9 +682,31 @@ package body Safe_Frontend.Check_Emit is
    end Real_Range_Constraint_Node;
 
    function Discriminant_Part_Node (Decl : CM.Type_Decl) return String is
+      Items : String_Vectors.Vector;
    begin
-      if not Decl.Has_Discriminant then
+      if Decl.Discriminants.Is_Empty and then not Decl.Has_Discriminant then
          return "null";
+      end if;
+
+      if not Decl.Discriminants.Is_Empty then
+         for Item of Decl.Discriminants loop
+            Items.Append
+              ("{""node_type"":""DiscriminantSpecification"",""names"":["
+               & JS.Quote (Item.Name)
+               & "],""subtype_mark"":"
+               & Type_Spec_Name (Item.Disc_Type)
+               & ",""default_expression"":"
+               & (if Item.Has_Default then Expression_Node (Item.Default_Expr) else "null")
+               & ",""span"":"
+               & JS.Span_Object (Item.Span)
+               & "}");
+         end loop;
+         return
+           "{""node_type"":""KnownDiscriminantPart"",""discriminants"":"
+           & Json_List (Items)
+           & ",""span"":"
+           & JS.Span_Object (Decl.Span)
+           & "}";
       end if;
 
       return
@@ -658,6 +742,10 @@ package body Safe_Frontend.Check_Emit is
    function Variant_Part_Node (Decl : CM.Type_Decl) return String is
       Variants   : String_Vectors.Vector;
       Components : String_Vectors.Vector;
+      Discriminant_Name : constant FT.UString :=
+        (if FT.To_String (Decl.Variant_Discriminant_Name)'Length > 0
+         then Decl.Variant_Discriminant_Name
+         else Decl.Discriminant.Name);
    begin
       if Decl.Variants.Is_Empty then
          return "null";
@@ -683,8 +771,20 @@ package body Safe_Frontend.Check_Emit is
          end if;
 
          Variants.Append
-           ("{""node_type"":""Variant"",""choices"":{""node_type"":""DiscreteChoiceList"",""choices"":[{""node_type"":""DiscreteChoice"",""kind"":""ChoiceExpression"",""value"":"
-            & Bool_Choice_Expression (Alternative.When_Value, Alternative.Span)
+           ("{""node_type"":""Variant"",""choices"":{""node_type"":""DiscreteChoiceList"",""choices"":[{""node_type"":""DiscreteChoice"",""kind"":"""
+            & (if Alternative.Is_Others then "Others" else "ChoiceExpression")
+            & """,""value"":"
+            & (if Alternative.Is_Others
+               then "null"
+               else Expression_Node
+                 ((if Alternative.Choice_Expr /= null
+                   then Alternative.Choice_Expr
+                   else new CM.Expr_Node'
+                     (Kind       => CM.Expr_Bool,
+                      Span       => Alternative.Span,
+                      Type_Name  => FT.To_UString ("Boolean"),
+                      Bool_Value => Alternative.When_Value,
+                      others     => <>))))
             & ",""span"":"
             & JS.Span_Object (Alternative.Span)
             & "}],""span"":"
@@ -702,7 +802,7 @@ package body Safe_Frontend.Check_Emit is
 
       return
         "{""node_type"":""VariantPart"",""discriminant_name"":"
-        & JS.Quote (Decl.Discriminant.Name)
+        & JS.Quote (Discriminant_Name)
         & ",""variants"":"
         & Json_List (Variants)
         & ",""span"":"
@@ -810,6 +910,13 @@ package body Safe_Frontend.Check_Emit is
             return
               "{""node_type"":""Primary"",""kind"":""Aggregate"",""value"":"
               & Record_Aggregate_Node (Expr)
+              & ",""span"":"
+              & JS.Span_Object (Expr.Span)
+              & "}";
+         when CM.Expr_Tuple =>
+            return
+              "{""node_type"":""Primary"",""kind"":""Tuple"",""value"":"
+              & Tuple_Aggregate_Node (Expr)
               & ",""span"":"
               & JS.Span_Object (Expr.Span)
               & "}";
@@ -1186,6 +1293,30 @@ package body Safe_Frontend.Check_Emit is
               & "}";
          when CM.Stmt_Object_Decl =>
             raise Program_Error with "object declarations must be emitted via Sequence_Node";
+         when CM.Stmt_Destructure_Decl =>
+            declare
+               Names : String_Vectors.Vector;
+               Decl  : constant CM.Destructure_Decl :=
+                 (if Resolved /= null and then Resolved.Kind = CM.Stmt_Destructure_Decl
+                  then Resolved.Destructure
+                  else Parsed.Destructure);
+            begin
+               for Name of Parsed.Destructure.Names loop
+                  Names.Append (JS.Quote (Name));
+               end loop;
+               return
+                 "{""node_type"":""DestructureDeclaration"",""names"":"
+                 & Json_List (Names)
+                 & ",""object_type"":"
+                 & Object_Type_Node (Parsed.Destructure.Decl_Type)
+                 & ",""initializer"":"
+                 & (if Decl.Has_Initializer and then Decl.Initializer /= null
+                    then Expression_Node (Decl.Initializer)
+                    else "null")
+                 & ",""span"":"
+                 & JS.Span_Object (Parsed.Span)
+                 & "}";
+            end;
          when CM.Stmt_Assign =>
             return
               "{""node_type"":""AssignmentStatement"",""target"":"
@@ -2285,6 +2416,30 @@ package body Safe_Frontend.Check_Emit is
       Items  : String_Vectors.Vector;
       Fields : String_Vectors.Vector;
    begin
+      declare
+         function Scalar_Value_Json (Value : GM.Scalar_Value) return String is
+         begin
+            case Value.Kind is
+               when GM.Scalar_Value_Integer =>
+                  return
+                    "{""kind"":""integer"",""value"":"
+                    & Trimmed (CM.Wide_Integer (Value.Int_Value))
+                    & "}";
+               when GM.Scalar_Value_Boolean =>
+                  return
+                    "{""kind"":""boolean"",""value"":"
+                    & JS.Bool_Literal (Value.Bool_Value)
+                    & "}";
+               when GM.Scalar_Value_Character =>
+                  return
+                    "{""kind"":""character"",""value"":"
+                    & JS.Quote (Value.Text)
+                    & "}";
+               when others =>
+                  return "null";
+            end case;
+         end Scalar_Value_Json;
+      begin
       Items.Append ("""name"":" & JS.Quote (Info.Name));
       Items.Append ("""kind"":" & JS.Quote (Info.Kind));
       if Info.Has_Low then
@@ -2338,6 +2493,46 @@ package body Safe_Frontend.Check_Emit is
               ("""discriminant_default"":" & JS.Bool_Literal (Info.Discriminant_Default_Bool));
          end if;
       end if;
+      if not Info.Discriminants.Is_Empty then
+         declare
+            Discriminants : String_Vectors.Vector;
+         begin
+            for Disc of Info.Discriminants loop
+               Discriminants.Append
+                 ("{""name"":"
+                  & JS.Quote (Disc.Name)
+                  & ",""type_name"":"
+                  & JS.Quote (Disc.Type_Name)
+                  & ",""has_default"":"
+                  & JS.Bool_Literal (Disc.Has_Default)
+                  & ",""default_value"":"
+                  & (if Disc.Has_Default then Scalar_Value_Json (Disc.Default_Value) else "null")
+                  & "}");
+            end loop;
+            Items.Append ("""discriminants"":" & Json_List (Discriminants));
+         end;
+      end if;
+      if not Info.Discriminant_Constraints.Is_Empty then
+         declare
+            Constraints : String_Vectors.Vector;
+         begin
+            for Constraint of Info.Discriminant_Constraints loop
+               Constraints.Append
+                 ("{""is_named"":"
+                  & JS.Bool_Literal (Constraint.Is_Named)
+                  & ",""name"":"
+                  & JS.Quote (Constraint.Name)
+                  & ",""value"":"
+                  & Scalar_Value_Json (Constraint.Value)
+                  & "}");
+            end loop;
+            Items.Append ("""discriminant_constraints"":" & Json_List (Constraints));
+         end;
+      end if;
+      if FT.To_String (Info.Variant_Discriminant_Name)'Length > 0 then
+         Items.Append
+           ("""variant_discriminant_name"":" & JS.Quote (Info.Variant_Discriminant_Name));
+      end if;
       if not Info.Variant_Fields.Is_Empty then
          declare
             Variants : String_Vectors.Vector;
@@ -2348,12 +2543,27 @@ package body Safe_Frontend.Check_Emit is
                   & JS.Quote (Variant_Field.Name)
                   & ",""type"":"
                   & JS.Quote (Variant_Field.Type_Name)
-                  & ",""when"":"
-                  & JS.Bool_Literal (Variant_Field.When_True)
+                  & ",""is_others"":"
+                  & JS.Bool_Literal (Variant_Field.Is_Others)
+                  & ",""choice"":"
+                  & (if Variant_Field.Is_Others then "null" else Scalar_Value_Json (Variant_Field.Choice))
                   & "}");
             end loop;
             Items.Append ("""variant_fields"":" & Json_List (Variants));
          end;
+      end if;
+      if not Info.Tuple_Element_Types.Is_Empty then
+         declare
+            Elements : String_Vectors.Vector;
+         begin
+            for Item of Info.Tuple_Element_Types loop
+               Elements.Append (JS.Quote (Item));
+            end loop;
+            Items.Append ("""tuple_element_types"":" & Json_List (Elements));
+         end;
+      end if;
+      if Info.Is_Result_Builtin then
+         Items.Append ("""is_result_builtin"":true");
       end if;
       if FT.To_String (Info.Kind) = "access" then
          Items.Append ("""not_null"":" & JS.Bool_Literal (Info.Not_Null));
@@ -2368,6 +2578,7 @@ package body Safe_Frontend.Check_Emit is
         "{"
         & Join_Object_Fields (Items)
         & "}";
+      end;
    end Type_Json;
 
    function Types_Json (Resolved : CM.Resolved_Unit) return String is
