@@ -180,8 +180,8 @@ PR106_SEQUENTIAL_PROOF_CORPUS: list[dict[str, Any]] = [
             "when False =>",
         ],
         "body_fragments": [
-            "return (OK => True, Value => Input);",
-            "return (OK => False, Error => 1);",
+            "return Parse_Result'(OK => True, Value => Input);",
+            "return Parse_Result'(OK => False, Error => 1);",
             "if R.OK then",
             "return R.Value;",
         ],

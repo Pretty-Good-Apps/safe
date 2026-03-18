@@ -4,6 +4,9 @@
 
 package PR113_Discriminant_Constraints is
 
+   Default_Kind : constant Character = 'A';
+   Default_Count : constant Integer = 2;
+
    type Packet (Active : Boolean = True, Kind : Character = 'A', Count : Integer = 0) is
       record
          Value : Integer;
@@ -11,12 +14,14 @@ package PR113_Discriminant_Constraints is
 
    Defaulted : Packet = (Active = True, Kind = 'A', Count = 0, Value = 1);
    Positional : Packet (True, 'A', 1) = (Value = 2);
-   Named : Packet (Active = True, Kind = 'A', Count = 2) = (Value = 3);
+   Named : Packet (Active = True, Kind = Default_Kind, Count = Default_Count) = (Value = 3);
 
-   function Take (Item : in Packet (Active = True, Kind = 'A', Count = 2))
-      return Packet (Active = True, Kind = 'A', Count = 2) is
+   function Take (Item : in Packet (Active = True, Kind = Default_Kind, Count = Default_Count))
+      return Packet (Active = True, Kind = Default_Kind, Count = Default_Count) is
+      Limit : constant Integer = Default_Count;
+      Local : Packet (Active = True, Kind = Default_Kind, Count = Limit) = Item;
    begin
-      return Item;
+      return Local;
    end Take;
 
 end PR113_Discriminant_Constraints;

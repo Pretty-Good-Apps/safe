@@ -41,6 +41,12 @@ POSITIVE_CASES = (
     {
         "source": REPO_ROOT / "tests" / "positive" / "pr113_discriminant_constraints.safe",
         "mir_tags": (),
+        "mir_snippets": (
+            '"discriminants":[',
+            '"discriminant_constraints":[',
+            '"name":"Kind"',
+            '"name":"Count"',
+        ),
         "typed_snippets": ('"discriminants":[', '"name":"Active"', '"name":"Kind"', '"name":"Count"'),
         "safei_snippets": ("__constraint_Packet_Active_true_Kind_A_Count_2",),
         "ada_snippets": (
@@ -52,6 +58,12 @@ POSITIVE_CASES = (
     {
         "source": REPO_ROOT / "tests" / "positive" / "pr113_variant_guard.safe",
         "mir_tags": (),
+        "mir_snippets": (
+            '"variant_discriminant_name":"Kind"',
+            '"variant_fields":[',
+            '"is_others":true',
+            '"choice":{"kind":"character"',
+        ),
         "typed_snippets": (
             '"variant_discriminant_name":"Kind"',
             '"variant_fields":[',
@@ -69,6 +81,7 @@ POSITIVE_CASES = (
     {
         "source": REPO_ROOT / "tests" / "positive" / "pr113_tuple_destructure.safe",
         "mir_tags": ("tuple",),
+        "mir_snippets": ('"tuple_element_types":["Boolean","Integer"]',),
         "typed_snippets": (
             '"node_type":"DestructureDeclaration"',
             '"node_type":"TupleTypeSpec"',
@@ -83,6 +96,7 @@ POSITIVE_CASES = (
     {
         "source": REPO_ROOT / "tests" / "positive" / "pr113_tuple_channel.safe",
         "mir_tags": ("tuple",),
+        "mir_snippets": ('"tuple_element_types":["Boolean","Integer"]',),
         "typed_snippets": (
             '"tuple_element_types":["Boolean","Integer"]',
             '"name":"Pair_Ch"',
@@ -99,6 +113,7 @@ POSITIVE_CASES = (
     {
         "source": REPO_ROOT / "tests" / "positive" / "pr113_structured_result.safe",
         "mir_tags": ("tuple", "string"),
+        "mir_snippets": ('"tuple_element_types":["result","Integer"]',),
         "typed_snippets": (
             '"identifier":"result"',
             '"node_type":"TupleTypeSpec"',
@@ -230,6 +245,7 @@ def run_positive_case(
     env: dict[str, str],
     temp_root: Path,
     expected_tags: tuple[str, ...],
+    expected_mir_snippets: tuple[str, ...],
     expected_typed_snippets: tuple[str, ...],
     expected_safei_snippets: tuple[str, ...],
     expected_ada_snippets: tuple[str, ...],
@@ -267,6 +283,12 @@ def run_positive_case(
         env=env,
         temp_root=temp_root,
     )
+    analyze_mir = run(
+        [str(safec), "analyze-mir", "--diag-json", str(paths["mir"])],
+        cwd=REPO_ROOT,
+        env=env,
+        temp_root=temp_root,
+    )
     compile_result = compile_emitted_ada(
         ada_dir=ada_dir,
         env=env,
@@ -277,6 +299,11 @@ def run_positive_case(
     observed_tags = collect_expr_tags(mir_payload)
     for tag in expected_tags:
         require(tag in observed_tags, f"{source.name}: MIR output is missing tag {tag!r}")
+    mir_text = paths["mir"].read_text(encoding="utf-8")
+    for snippet in expected_mir_snippets:
+        require(snippet in mir_text, f"{source.name}: MIR output is missing {snippet!r}")
+    analyze_payload = read_diag_json(analyze_mir["stdout"], display_path(paths["mir"], repo_root=REPO_ROOT))
+    require(not analyze_payload["diagnostics"], f"{source.name}: expected clean analyze-mir diagnostics")
 
     typed_text = paths["typed"].read_text(encoding="utf-8")
     for snippet in expected_typed_snippets:
@@ -308,6 +335,11 @@ def run_positive_case(
             "command": validate_mir["command"],
             "cwd": validate_mir["cwd"],
             "returncode": validate_mir["returncode"],
+        },
+        "analyze_mir": {
+            "command": analyze_mir["command"],
+            "cwd": analyze_mir["cwd"],
+            "returncode": analyze_mir["returncode"],
         },
         "compile": compile_result,
         "observed_mir_tags": sorted(observed_tags),
@@ -358,10 +390,11 @@ def generate_report(*, env: dict[str, str]) -> dict[str, Any]:
                     source=case["source"],
                     env=env,
                     temp_root=temp_root,
-                    expected_tags=case["mir_tags"],
-                    expected_typed_snippets=case["typed_snippets"],
-                    expected_safei_snippets=case["safei_snippets"],
-                    expected_ada_snippets=case["ada_snippets"],
+                expected_tags=case["mir_tags"],
+                expected_mir_snippets=case.get("mir_snippets", ()),
+                expected_typed_snippets=case["typed_snippets"],
+                expected_safei_snippets=case["safei_snippets"],
+                expected_ada_snippets=case["ada_snippets"],
                 )
                 for case in POSITIVE_CASES
             ],
@@ -383,6 +416,7 @@ def generate_report(*, env: dict[str, str]) -> dict[str, Any]:
                     env=env,
                     temp_root=temp_root,
                     expected_tags=("tuple",),
+                    expected_mir_snippets=(),
                     expected_typed_snippets=(),
                     expected_safei_snippets=(),
                     expected_ada_snippets=(

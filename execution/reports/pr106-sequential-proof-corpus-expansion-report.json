@@ -6110,8 +6110,8 @@
       "structural_assertions": {
         "absent_ada_files": [],
         "body_fragments": [
-          "return (OK => True, Value => Input);",
-          "return (OK => False, Error => 1);",
+          "return Parse_Result'(OK => True, Value => Input);",
+          "return Parse_Result'(OK => False, Error => 1);",
           "if R.OK then",
           "return R.Value;"
         ],
@@ -16433,8 +16433,8 @@
       }
     }
   ],
-  "repeat_sha256": "68ddc1bf86854400d3c1956a88ee0efd541f83188671ecc61ff3ff340461503b",
-  "report_sha256": "68ddc1bf86854400d3c1956a88ee0efd541f83188671ecc61ff3ff340461503b",
+  "repeat_sha256": "5fde51d96635c319d17fd49a16537b52e0a4d52c51edac571407bc5798bc1f0d",
+  "report_sha256": "5fde51d96635c319d17fd49a16537b52e0a4d52c51edac571407bc5798bc1f0d",
   "status": "ok",
   "task": "PR10.6"
 }

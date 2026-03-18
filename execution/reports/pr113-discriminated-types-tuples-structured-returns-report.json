@@ -8,7 +8,7 @@
       "span": {
         "end_col": 31,
         "end_line": 6,
-        "start_col": 15,
+        "start_col": 22,
         "start_line": 6
       }
     },
@@ -19,7 +19,7 @@
       "span": {
         "end_col": 37,
         "end_line": 6,
-        "start_col": 15,
+        "start_col": 28,
         "start_line": 6
       }
     },
@@ -30,7 +30,7 @@
       "span": {
         "end_col": 25,
         "end_line": 6,
-        "start_col": 15,
+        "start_col": 16,
         "start_line": 6
       }
     },
@@ -52,7 +52,7 @@
       "span": {
         "end_col": 25,
         "end_line": 6,
-        "start_col": 15,
+        "start_col": 16,
         "start_line": 6
       }
     },
@@ -63,7 +63,7 @@
       "span": {
         "end_col": 24,
         "end_line": 7,
-        "start_col": 15,
+        "start_col": 16,
         "start_line": 7
       }
     },
@@ -158,6 +158,16 @@
   ],
   "positive_fixtures": [
     {
+      "analyze_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "analyze-mir",
+          "--diag-json",
+          "$TMPDIR/pr113_discriminant_constraints/out/pr113_discriminant_constraints.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
       "check": {
         "command": [
           "compiler_impl/bin/safec",
@@ -215,6 +225,16 @@
       }
     },
     {
+      "analyze_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "analyze-mir",
+          "--diag-json",
+          "$TMPDIR/pr113_variant_guard/out/pr113_variant_guard.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
       "check": {
         "command": [
           "compiler_impl/bin/safec",
@@ -273,6 +293,16 @@
       }
     },
     {
+      "analyze_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "analyze-mir",
+          "--diag-json",
+          "$TMPDIR/pr113_tuple_destructure/out/pr113_tuple_destructure.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
       "check": {
         "command": [
           "compiler_impl/bin/safec",
@@ -331,6 +361,16 @@
       }
     },
     {
+      "analyze_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "analyze-mir",
+          "--diag-json",
+          "$TMPDIR/pr113_tuple_channel/out/pr113_tuple_channel.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
       "check": {
         "command": [
           "compiler_impl/bin/safec",
@@ -391,6 +431,16 @@
       }
     },
     {
+      "analyze_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "analyze-mir",
+          "--diag-json",
+          "$TMPDIR/pr113_structured_result/out/pr113_structured_result.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
       "check": {
         "command": [
           "compiler_impl/bin/safec",
@@ -450,10 +500,20 @@
       }
     }
   ],
-  "repeat_sha256": "679ca9aaae20cd21caebac8672a3d2186d32c9a2770593984cb1dbc632092f72",
-  "report_sha256": "679ca9aaae20cd21caebac8672a3d2186d32c9a2770593984cb1dbc632092f72",
+  "repeat_sha256": "dae7b207d25baac50ed2305e646539d4fc448d5f4dee8c89215e66f0f1f414a1",
+  "report_sha256": "dae7b207d25baac50ed2305e646539d4fc448d5f4dee8c89215e66f0f1f414a1",
   "rosetta_samples": [
     {
+      "analyze_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "analyze-mir",
+          "--diag-json",
+          "$TMPDIR/parse_result/out/parse_result.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
       "check": {
         "command": [
           "compiler_impl/bin/safec",
@@ -512,6 +572,16 @@
       }
     },
     {
+      "analyze_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "analyze-mir",
+          "--diag-json",
+          "$TMPDIR/lookup_pair/out/lookup_pair.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
       "check": {
         "command": [
           "compiler_impl/bin/safec",
@@ -569,6 +639,16 @@
       }
     },
     {
+      "analyze_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "analyze-mir",
+          "--diag-json",
+          "$TMPDIR/lookup_result/out/lookup_result.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
       "check": {
         "command": [
           "compiler_impl/bin/safec",

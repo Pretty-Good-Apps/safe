@@ -158,6 +158,39 @@ package body Safe_Frontend.Check_Resolve is
       Map.Include (Canonical_Name (Name), Value);
    end Put_Static_Value;
 
+   procedure Remove_Static_Value
+     (Map  : in out Static_Value_Maps.Map;
+      Name : String) is
+      Key : constant String := Canonical_Name (Name);
+   begin
+      if Map.Contains (Key) then
+         Map.Delete (Key);
+      end if;
+   end Remove_Static_Value;
+
+   function Try_Static_Value
+     (Expr      : CM.Expr_Access;
+      Const_Env : Static_Value_Maps.Map;
+      Result    : out CM.Static_Value) return Boolean;
+
+   procedure Update_Static_Constant_Visibility
+     (Map         : in out Static_Value_Maps.Map;
+      Name        : String;
+      Initializer : CM.Expr_Access;
+      Is_Constant : Boolean;
+      Const_Env   : Static_Value_Maps.Map) is
+      Value : CM.Static_Value;
+   begin
+      if Is_Constant
+        and then Initializer /= null
+        and then Try_Static_Value (Initializer, Const_Env, Value)
+      then
+         Put_Static_Value (Map, Name, Value);
+      else
+         Remove_Static_Value (Map, Name);
+      end if;
+   end Update_Static_Constant_Visibility;
+
    function Has_Static_Value
      (Map  : Static_Value_Maps.Map;
       Name : String) return Boolean is
@@ -953,6 +986,7 @@ package body Safe_Frontend.Check_Resolve is
    function Resolve_Type_Spec
      (Spec     : CM.Type_Spec;
       Type_Env : Type_Maps.Map;
+      Const_Env : Static_Value_Maps.Map := Static_Value_Maps.Empty_Map;
       Path     : String) return GM.Type_Descriptor
    is
       Result : GM.Type_Descriptor;
@@ -1028,7 +1062,7 @@ package body Safe_Frontend.Check_Resolve is
                            Disc_Index := Disc_Index + 1;
                         end if;
 
-                        if not Try_Static_Value (Assoc.Value, Static_Value_Maps.Empty_Map, Static_Value) then
+                        if not Try_Static_Value (Assoc.Value, Const_Env, Static_Value) then
                            Raise_Diag
                              (CM.Source_Frontend_Error
                                 (Path    => Path,
@@ -1103,7 +1137,7 @@ package body Safe_Frontend.Check_Resolve is
             for Item of Spec.Tuple_Elements loop
                declare
                   Element_Type : constant GM.Type_Descriptor :=
-                    Resolve_Type_Spec (Item.all, Type_Env, Path);
+                    Resolve_Type_Spec (Item.all, Type_Env, Const_Env, Path);
                begin
                   if not Is_Tuple_Element_Type_Allowed (Element_Type, Type_Env) then
                      Raise_Diag
@@ -1672,6 +1706,7 @@ package body Safe_Frontend.Check_Resolve is
    function Resolve_Decl_Type
      (Decl      : CM.Object_Decl;
       Type_Env  : Type_Maps.Map;
+      Const_Env : Static_Value_Maps.Map;
       Path      : String) return GM.Type_Descriptor is
    begin
       if Decl.Is_Constant and then not Decl.Has_Initializer then
@@ -1681,7 +1716,7 @@ package body Safe_Frontend.Check_Resolve is
                Span    => Decl.Span,
                Message => "constant declarations require initializers"));
       end if;
-      return Resolve_Type_Spec (Decl.Decl_Type, Type_Env, Path);
+      return Resolve_Type_Spec (Decl.Decl_Type, Type_Env, Const_Env, Path);
    end Resolve_Decl_Type;
 
    procedure Reject_Unsupported_String_Use
@@ -1807,6 +1842,7 @@ package body Safe_Frontend.Check_Resolve is
       Var_Types : Type_Maps.Map;
       Functions : Function_Maps.Map;
       Type_Env  : Type_Maps.Map;
+      Const_Env : Static_Value_Maps.Map;
       Path      : String) return CM.Object_Decl
    is
       Result : CM.Object_Decl := Decl;
@@ -1819,7 +1855,7 @@ package body Safe_Frontend.Check_Resolve is
                Message => "named statement labels are outside the current PR08.1 concurrency subset"));
       end if;
 
-      Result.Type_Info := Resolve_Decl_Type (Decl, Type_Env, Path);
+      Result.Type_Info := Resolve_Decl_Type (Decl, Type_Env, Const_Env, Path);
       if Is_String_Type (Result.Type_Info, Type_Env) then
          if not Decl.Is_Constant then
             Raise_Diag
@@ -1951,6 +1987,7 @@ package body Safe_Frontend.Check_Resolve is
       Channel_Env : Type_Maps.Map;
       Imported_Objects : Type_Maps.Map;
       Local_Constants : Type_Maps.Map;
+      Local_Static_Constants : Static_Value_Maps.Map;
       Path        : String) return CM.Statement_Access;
 
    function Normalize_Statement_List
@@ -1961,11 +1998,13 @@ package body Safe_Frontend.Check_Resolve is
       Channel_Env : Type_Maps.Map;
       Imported_Objects : Type_Maps.Map;
       Local_Constants : Type_Maps.Map;
+      Local_Static_Constants : Static_Value_Maps.Map;
       Path        : String) return CM.Statement_Access_Vectors.Vector
    is
       Result      : CM.Statement_Access_Vectors.Vector;
       Local_Types : Type_Maps.Map := Var_Types;
       Current_Constants : Type_Maps.Map := Local_Constants;
+      Current_Static_Constants : Static_Value_Maps.Map := Local_Static_Constants;
    begin
       for Item of Statements loop
          declare
@@ -1978,6 +2017,7 @@ package body Safe_Frontend.Check_Resolve is
                  Channel_Env,
                  Imported_Objects,
                  Current_Constants,
+                 Current_Static_Constants,
                  Path);
          begin
             Result.Append (Normalized);
@@ -1989,6 +2029,12 @@ package body Safe_Frontend.Check_Resolve is
                      UString_Value (Name),
                      Normalized.Decl.Type_Info,
                      Normalized.Decl.Is_Constant);
+                  Update_Static_Constant_Visibility
+                    (Current_Static_Constants,
+                     UString_Value (Name),
+                     Normalized.Decl.Initializer,
+                     Normalized.Decl.Is_Constant,
+                     Current_Static_Constants);
                end loop;
             elsif Normalized.Kind = CM.Stmt_Destructure_Decl then
                declare
@@ -2004,6 +2050,9 @@ package body Safe_Frontend.Check_Resolve is
                            "",
                            FT.Null_Span));
                      Remove_Type (Current_Constants, UString_Value (Normalized.Destructure.Names (Index)));
+                     Remove_Static_Value
+                       (Current_Static_Constants,
+                        UString_Value (Normalized.Destructure.Names (Index)));
                   end loop;
                end;
             end if;
@@ -2020,11 +2069,13 @@ package body Safe_Frontend.Check_Resolve is
       Channel_Env : Type_Maps.Map;
       Imported_Objects : Type_Maps.Map;
       Local_Constants : Type_Maps.Map;
+      Local_Static_Constants : Static_Value_Maps.Map;
       Path        : String) return CM.Statement_Access
    is
       Result         : constant CM.Statement_Access := new CM.Statement'(Stmt.all);
       Local_Types    : Type_Maps.Map := Var_Types;
       Current_Constants : Type_Maps.Map := Local_Constants;
+      Current_Static_Constants : Static_Value_Maps.Map := Local_Static_Constants;
       Loop_Type      : GM.Type_Descriptor;
       Decl_Type      : GM.Type_Descriptor;
       Channel_Type   : GM.Type_Descriptor;
@@ -2033,12 +2084,15 @@ package body Safe_Frontend.Check_Resolve is
    begin
       case Stmt.Kind is
          when CM.Stmt_Object_Decl =>
-            Result.Decl := Normalize_Object_Decl (Stmt.Decl, Var_Types, Functions, Type_Env, Path);
+            Result.Decl :=
+              Normalize_Object_Decl
+                (Stmt.Decl, Var_Types, Functions, Type_Env, Local_Static_Constants, Path);
 
          when CM.Stmt_Destructure_Decl =>
             Result.Destructure := Stmt.Destructure;
             Result.Destructure.Type_Info :=
-              Resolve_Type_Spec (Stmt.Destructure.Decl_Type, Type_Env, Path);
+              Resolve_Type_Spec
+                (Stmt.Destructure.Decl_Type, Type_Env, Local_Static_Constants, Path);
             if not Is_Tuple_Type (Result.Destructure.Type_Info, Type_Env) then
                Raise_Diag
                  (CM.Unsupported_Source_Construct
@@ -2115,6 +2169,7 @@ package body Safe_Frontend.Check_Resolve is
                  Channel_Env,
                  Imported_Objects,
                  Local_Constants,
+                 Local_Static_Constants,
                  Path);
             Result.Elsifs.Clear;
             for Part of Stmt.Elsifs loop
@@ -2132,6 +2187,7 @@ package body Safe_Frontend.Check_Resolve is
                        Channel_Env,
                        Imported_Objects,
                        Local_Constants,
+                       Local_Static_Constants,
                        Path);
                   Result.Elsifs.Append (New_Part);
                end;
@@ -2146,6 +2202,7 @@ package body Safe_Frontend.Check_Resolve is
                     Channel_Env,
                     Imported_Objects,
                     Local_Constants,
+                    Local_Static_Constants,
                     Path);
             end if;
 
@@ -2161,6 +2218,7 @@ package body Safe_Frontend.Check_Resolve is
                  Channel_Env,
                  Imported_Objects,
                  Local_Constants,
+                 Local_Static_Constants,
                  Path);
 
          when CM.Stmt_Loop =>
@@ -2173,6 +2231,7 @@ package body Safe_Frontend.Check_Resolve is
                  Channel_Env,
                  Imported_Objects,
                  Local_Constants,
+                 Local_Static_Constants,
                  Path);
 
          when CM.Stmt_Exit =>
@@ -2201,6 +2260,7 @@ package body Safe_Frontend.Check_Resolve is
             end if;
             Put_Type (Local_Types, UString_Value (Stmt.Loop_Var), Loop_Type);
             Remove_Type (Current_Constants, UString_Value (Stmt.Loop_Var));
+            Remove_Static_Value (Current_Static_Constants, UString_Value (Stmt.Loop_Var));
             Result.Body_Stmts :=
               Normalize_Statement_List
                 (Stmt.Body_Stmts,
@@ -2210,6 +2270,7 @@ package body Safe_Frontend.Check_Resolve is
                  Channel_Env,
                  Imported_Objects,
                  Current_Constants,
+                 Current_Static_Constants,
                  Path);
 
          when CM.Stmt_Block =>
@@ -2217,7 +2278,8 @@ package body Safe_Frontend.Check_Resolve is
             for Decl of Stmt.Declarations loop
                declare
                   New_Decl : constant CM.Object_Decl :=
-                    Normalize_Object_Decl (Decl, Local_Types, Functions, Type_Env, Path);
+                    Normalize_Object_Decl
+                      (Decl, Local_Types, Functions, Type_Env, Current_Static_Constants, Path);
                begin
                   Result.Declarations.Append (New_Decl);
                   Decl_Type := New_Decl.Type_Info;
@@ -2228,6 +2290,12 @@ package body Safe_Frontend.Check_Resolve is
                         UString_Value (Name),
                         Decl_Type,
                         New_Decl.Is_Constant);
+                     Update_Static_Constant_Visibility
+                       (Current_Static_Constants,
+                        UString_Value (Name),
+                        New_Decl.Initializer,
+                        New_Decl.Is_Constant,
+                        Current_Static_Constants);
                   end loop;
                end;
             end loop;
@@ -2240,6 +2308,7 @@ package body Safe_Frontend.Check_Resolve is
                  Channel_Env,
                  Imported_Objects,
                  Current_Constants,
+                 Current_Static_Constants,
                  Path);
 
          when CM.Stmt_Call =>
@@ -2404,6 +2473,7 @@ package body Safe_Frontend.Check_Resolve is
                           Channel_Env,
                           Imported_Objects,
                           Local_Constants,
+                          Local_Static_Constants,
                           Path);
                      Result.Case_Arms.Append (New_Arm);
                   end;
@@ -2438,7 +2508,7 @@ package body Safe_Frontend.Check_Resolve is
                                 Path);
                            New_Arm.Channel_Data.Type_Info :=
                              Resolve_Type_Spec
-                               (Arm.Channel_Data.Subtype_Mark, Type_Env, Path);
+                               (Arm.Channel_Data.Subtype_Mark, Type_Env, Local_Static_Constants, Path);
                            if not Compatible_Type
                              (New_Arm.Channel_Data.Type_Info,
                               Channel_Type,
@@ -2457,16 +2527,24 @@ package body Safe_Frontend.Check_Resolve is
                            Remove_Type
                              (Current_Constants,
                               UString_Value (Arm.Channel_Data.Variable_Name));
-                           New_Arm.Channel_Data.Statements :=
-                             Normalize_Statement_List
-                               (Arm.Channel_Data.Statements,
-                                Arm_Types,
-                                Functions,
-                                Type_Env,
-                                Channel_Env,
-                                Imported_Objects,
-                                Local_Constants,
-                                Path);
+                           declare
+                              Arm_Static_Constants : Static_Value_Maps.Map := Local_Static_Constants;
+                           begin
+                              Remove_Static_Value
+                                (Arm_Static_Constants,
+                                 UString_Value (Arm.Channel_Data.Variable_Name));
+                              New_Arm.Channel_Data.Statements :=
+                                Normalize_Statement_List
+                                  (Arm.Channel_Data.Statements,
+                                   Arm_Types,
+                                   Functions,
+                                   Type_Env,
+                                   Channel_Env,
+                                   Imported_Objects,
+                                   Local_Constants,
+                                   Arm_Static_Constants,
+                                   Path);
+                           end;
                         when CM.Select_Arm_Delay =>
                            Delay_Arms := Delay_Arms + 1;
                            New_Arm.Delay_Data.Duration_Expr :=
@@ -2499,6 +2577,7 @@ package body Safe_Frontend.Check_Resolve is
                                 Channel_Env,
                                 Imported_Objects,
                                 Local_Constants,
+                                Local_Static_Constants,
                                 Path);
                         when others =>
                            null;
@@ -2579,7 +2658,7 @@ package body Safe_Frontend.Check_Resolve is
             Result.Has_Component_Type := True;
             declare
                Component_Type : constant GM.Type_Descriptor :=
-                 Resolve_Type_Spec (Decl.Component_Type, Type_Env, Path);
+                 Resolve_Type_Spec (Decl.Component_Type, Type_Env, Const_Env, Path);
             begin
                Reject_Unsupported_String_Use
                  (Component_Type,
@@ -2601,7 +2680,7 @@ package body Safe_Frontend.Check_Resolve is
                for Disc_Spec of Decl_Discriminants loop
                   declare
                      Disc_Type    : constant GM.Type_Descriptor :=
-                       Resolve_Type_Spec (Disc_Spec.Disc_Type, Type_Env, Path);
+                       Resolve_Type_Spec (Disc_Spec.Disc_Type, Type_Env, Const_Env, Path);
                      Disc_Desc    : GM.Discriminant_Descriptor;
                      Static_Value : CM.Static_Value;
                   begin
@@ -2653,7 +2732,7 @@ package body Safe_Frontend.Check_Resolve is
                   Item.Name := Name;
                   declare
                      Field_Type : constant GM.Type_Descriptor :=
-                       Resolve_Type_Spec (Field_Decl.Field_Type, Type_Env, Path);
+                       Resolve_Type_Spec (Field_Decl.Field_Type, Type_Env, Const_Env, Path);
                   begin
                      Reject_Unsupported_String_Use
                        (Field_Type,
@@ -2724,7 +2803,7 @@ package body Safe_Frontend.Check_Resolve is
                               Item.Name := Name;
                               declare
                                  Field_Type : constant GM.Type_Descriptor :=
-                                   Resolve_Type_Spec (Field_Decl.Field_Type, Type_Env, Path);
+                                   Resolve_Type_Spec (Field_Decl.Field_Type, Type_Env, Const_Env, Path);
                               begin
                                  Reject_Unsupported_String_Use
                                    (Field_Type,
@@ -2780,6 +2859,7 @@ package body Safe_Frontend.Check_Resolve is
    function Register_Function
      (Decl      : CM.Subprogram_Body;
       Type_Env  : Type_Maps.Map;
+      Const_Env : Static_Value_Maps.Map;
       Path      : String) return Function_Info
    is
       Result : Function_Info;
@@ -2792,7 +2872,7 @@ package body Safe_Frontend.Check_Resolve is
       for Param of Decl.Spec.Params loop
          declare
             Param_Type : constant GM.Type_Descriptor :=
-              Resolve_Type_Spec (Param.Param_Type, Type_Env, Path);
+              Resolve_Type_Spec (Param.Param_Type, Type_Env, Const_Env, Path);
          begin
             if Is_String_Type (Param_Type, Type_Env)
               and then UString_Value (Param.Mode) in "out" | "in out"
@@ -2815,7 +2895,8 @@ package body Safe_Frontend.Check_Resolve is
       end loop;
       if Decl.Spec.Has_Return_Type then
          Result.Has_Return_Type := True;
-         Result.Return_Type := Resolve_Type_Spec (Decl.Spec.Return_Type, Type_Env, Path);
+         Result.Return_Type :=
+           Resolve_Type_Spec (Decl.Spec.Return_Type, Type_Env, Const_Env, Path);
       end if;
       return Result;
    end Register_Function;
@@ -2828,7 +2909,7 @@ package body Safe_Frontend.Check_Resolve is
    is
       Result    : CM.Resolved_Channel_Decl;
       Type_Info : constant GM.Type_Descriptor :=
-        Resolve_Type_Spec (Decl.Element_Type, Type_Env, Path);
+        Resolve_Type_Spec (Decl.Element_Type, Type_Env, Const_Env, Path);
    begin
       Reject_Unsupported_String_Use
         (Type_Info,
@@ -3111,6 +3192,7 @@ package body Safe_Frontend.Check_Resolve is
                     Resolve_Type_Spec
                       (Item.Sub_Data.Subtype_Mark,
                        Type_Env,
+                       Const_Env,
                        UString_Value (Unit.Path));
                   Info : GM.Type_Descriptor;
                begin
@@ -3153,6 +3235,7 @@ package body Safe_Frontend.Check_Resolve is
                        Package_Vars,
                        Functions,
                        Type_Env,
+                       Const_Env,
                        UString_Value (Unit.Path));
                   Local_Decl   : CM.Resolved_Object_Decl;
                   Static_Value : CM.Static_Value;
@@ -3234,6 +3317,7 @@ package body Safe_Frontend.Check_Resolve is
                     Register_Function
                       (Item.Subp_Data,
                        Type_Env,
+                       Const_Env,
                        UString_Value (Unit.Path));
                begin
                   Put_Function (Functions, UString_Value (Info.Name), Info);
@@ -3251,6 +3335,7 @@ package body Safe_Frontend.Check_Resolve is
                Subprogram   : CM.Resolved_Subprogram;
                Visible      : Type_Maps.Map := Package_Vars;
                Visible_Constants : Type_Maps.Map;
+               Visible_Static_Constants : Static_Value_Maps.Map := Const_Env;
                Local_Decl   : CM.Resolved_Object_Decl;
             begin
                Subprogram.Name := Info.Name;
@@ -3275,6 +3360,7 @@ package body Safe_Frontend.Check_Resolve is
                for Param of Info.Params loop
                   Put_Type (Visible, UString_Value (Param.Name), Param.Type_Info);
                   Remove_Type (Visible_Constants, UString_Value (Param.Name));
+                  Remove_Static_Value (Visible_Static_Constants, UString_Value (Param.Name));
                end loop;
 
                for Decl of Item.Subp_Data.Declarations loop
@@ -3285,23 +3371,40 @@ package body Safe_Frontend.Check_Resolve is
                           Visible,
                           Functions,
                           Type_Env,
+                          Visible_Static_Constants,
                           UString_Value (Unit.Path));
                   begin
+                     Local_Decl := (others => <>);
                      Local_Decl.Names := Normalized.Names;
                      Local_Decl.Type_Info := Normalized.Type_Info;
                      Local_Decl.Is_Constant := Normalized.Is_Constant;
                      Local_Decl.Has_Initializer := Normalized.Has_Initializer;
                      Local_Decl.Span := Normalized.Span;
                      Local_Decl.Initializer := Normalized.Initializer;
+                     if Local_Decl.Is_Constant
+                       and then Local_Decl.Has_Initializer
+                       and then Try_Static_Value
+                         (Local_Decl.Initializer,
+                          Visible_Static_Constants,
+                          Local_Decl.Static_Info)
+                     then
+                        null;
+                     end if;
                   end;
                   Subprogram.Declarations.Append (Local_Decl);
                   for Name of Decl.Names loop
                      Put_Type (Visible, UString_Value (Name), Local_Decl.Type_Info);
                      Update_Constant_Visibility
-                       (Visible_Constants,
+                        (Visible_Constants,
+                         UString_Value (Name),
+                         Local_Decl.Type_Info,
+                         Local_Decl.Is_Constant);
+                     Update_Static_Constant_Visibility
+                       (Visible_Static_Constants,
                         UString_Value (Name),
-                        Local_Decl.Type_Info,
-                        Local_Decl.Is_Constant);
+                        Local_Decl.Initializer,
+                        Local_Decl.Is_Constant,
+                        Visible_Static_Constants);
                   end loop;
                end loop;
 
@@ -3314,6 +3417,7 @@ package body Safe_Frontend.Check_Resolve is
                     Channel_Env,
                     Imported_Objects,
                     Visible_Constants,
+                    Visible_Static_Constants,
                     UString_Value (Unit.Path));
 
                Result.Subprograms.Append (Subprogram);
@@ -3322,6 +3426,7 @@ package body Safe_Frontend.Check_Resolve is
             declare
                Visible        : Type_Maps.Map := Package_Vars;
                Visible_Constants : Type_Maps.Map;
+               Visible_Static_Constants : Static_Value_Maps.Map := Const_Env;
                Task_Item      : CM.Resolved_Task;
                Local_Decl     : CM.Resolved_Object_Decl;
                Task_Index     : Natural := Natural (Result.Tasks.Length) + 1;
@@ -3366,23 +3471,40 @@ package body Safe_Frontend.Check_Resolve is
                           Visible,
                           Functions,
                           Type_Env,
+                          Visible_Static_Constants,
                           UString_Value (Unit.Path));
                   begin
+                     Local_Decl := (others => <>);
                      Local_Decl.Names := Normalized.Names;
                      Local_Decl.Type_Info := Normalized.Type_Info;
                      Local_Decl.Is_Constant := Normalized.Is_Constant;
                      Local_Decl.Has_Initializer := Normalized.Has_Initializer;
                      Local_Decl.Span := Normalized.Span;
                      Local_Decl.Initializer := Normalized.Initializer;
+                     if Local_Decl.Is_Constant
+                       and then Local_Decl.Has_Initializer
+                       and then Try_Static_Value
+                         (Local_Decl.Initializer,
+                          Visible_Static_Constants,
+                          Local_Decl.Static_Info)
+                     then
+                        null;
+                     end if;
                   end;
                   Task_Item.Declarations.Append (Local_Decl);
                   for Name of Decl.Names loop
                      Put_Type (Visible, UString_Value (Name), Local_Decl.Type_Info);
                      Update_Constant_Visibility
-                       (Visible_Constants,
+                        (Visible_Constants,
+                         UString_Value (Name),
+                         Local_Decl.Type_Info,
+                         Local_Decl.Is_Constant);
+                     Update_Static_Constant_Visibility
+                       (Visible_Static_Constants,
                         UString_Value (Name),
-                        Local_Decl.Type_Info,
-                        Local_Decl.Is_Constant);
+                        Local_Decl.Initializer,
+                        Local_Decl.Is_Constant,
+                        Visible_Static_Constants);
                   end loop;
                end loop;
 
@@ -3395,6 +3517,7 @@ package body Safe_Frontend.Check_Resolve is
                     Channel_Env,
                     Imported_Objects,
                     Visible_Constants,
+                    Visible_Static_Constants,
                     UString_Value (Unit.Path));
 
                if Natural (Task_Item.Statements.Length) /= 1

@@ -280,8 +280,13 @@ package body Safe_Frontend.Check_Parse is
                if Current (State).Kind in FL.Identifier | FL.Keyword
                  and then FT.To_String (Next (State).Lexeme) = "="
                then
-                  Assoc.Is_Named := True;
-                  Assoc.Name := Expect_Identifier (State).Lexeme;
+                  declare
+                     Name_Token : constant FL.Token := Expect_Identifier (State);
+                  begin
+                     Assoc.Is_Named := True;
+                     Assoc.Name := Name_Token.Lexeme;
+                     Assoc.Span := Name_Token.Span;
+                  end;
                   Require (State, "=");
                end if;
                Assoc.Value := Parse_Expression (State);
@@ -289,7 +294,7 @@ package body Safe_Frontend.Check_Parse is
                  (if Assoc.Value = null then Start_Paren.Span
                   else
                     (if Assoc.Is_Named
-                     then CM.Join (Start_Paren.Span, Assoc.Value.Span)
+                     then CM.Join (Assoc.Span, Assoc.Value.Span)
                      else Assoc.Value.Span));
                Result.Constraints.Append (Assoc);
                exit when not Match (State, ",");

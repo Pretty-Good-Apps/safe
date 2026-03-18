@@ -160,7 +160,7 @@ class Pr111LanguageEvalTests(unittest.TestCase):
         self.assertIn("result", type_matchers[0]["match"])
         self.assertIn("ok", builtin_matchers[0]["match"])
         self.assertIn("fail", builtin_matchers[0]["match"])
-        self.assertIn("(?<=\\.)\\d+\\b", tuple_selector_matchers[0]["match"])
+        self.assertIn("(?<!\\d)\\.\\d+\\b", tuple_selector_matchers[0]["match"])
         self.assertEqual(character_matchers[0]["name"], "constant.character.safe")
         self.assertEqual(config_payload["comments"]["lineComment"], "--")
 

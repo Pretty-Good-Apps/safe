@@ -99,6 +99,25 @@ package body Safe_Frontend.Mir_Write is
       return US.To_String (Result);
    end Name_From_String;
 
+   function Scalar_Value_Json (Value : GM.Scalar_Value) return String is
+      Items : String_Vectors.Vector;
+   begin
+      case Value.Kind is
+         when GM.Scalar_Value_Integer =>
+            Items.Append ("""kind"":""integer""");
+            Items.Append ("""value"":" & Long_Long_Integer'Image (Value.Int_Value));
+         when GM.Scalar_Value_Boolean =>
+            Items.Append ("""kind"":""boolean""");
+            Items.Append ("""value"":" & JS.Bool_Literal (Value.Bool_Value));
+         when GM.Scalar_Value_Character =>
+            Items.Append ("""kind"":""character""");
+            Items.Append ("""text"":" & JS.Quote (Value.Text));
+         when others =>
+            Items.Append ("""kind"":""none""");
+      end case;
+      return "{" & Join_Object_Fields (Items) & "}";
+   end Scalar_Value_Json;
+
    function Type_Json (Info : GM.Type_Descriptor) return String is
       Items  : String_Vectors.Vector;
       Fields : String_Vectors.Vector;
@@ -156,21 +175,74 @@ package body Safe_Frontend.Mir_Write is
               ("""discriminant_default"":" & JS.Bool_Literal (Info.Discriminant_Default_Bool));
          end if;
       end if;
+      if not Info.Discriminants.Is_Empty then
+         declare
+            Values : String_Vectors.Vector;
+         begin
+            for Item of Info.Discriminants loop
+               declare
+                  Disc_Items : String_Vectors.Vector;
+               begin
+                  Disc_Items.Append ("""name"":" & JS.Quote (Item.Name));
+                  Disc_Items.Append ("""type"":" & JS.Quote (Item.Type_Name));
+                  if Item.Has_Default then
+                     Disc_Items.Append ("""has_default"":true");
+                     Disc_Items.Append ("""default"":" & Scalar_Value_Json (Item.Default_Value));
+                  end if;
+                  Values.Append ("{" & Join_Object_Fields (Disc_Items) & "}");
+               end;
+            end loop;
+            Items.Append ("""discriminants"":" & Json_List (Values));
+         end;
+      end if;
+      if not Info.Discriminant_Constraints.Is_Empty then
+         declare
+            Values : String_Vectors.Vector;
+         begin
+            for Item of Info.Discriminant_Constraints loop
+               declare
+                  Constraint_Items : String_Vectors.Vector;
+               begin
+                  Constraint_Items.Append ("""is_named"":" & JS.Bool_Literal (Item.Is_Named));
+                  Constraint_Items.Append ("""name"":" & JS.Quote (Item.Name));
+                  Constraint_Items.Append ("""value"":" & Scalar_Value_Json (Item.Value));
+                  Values.Append ("{" & Join_Object_Fields (Constraint_Items) & "}");
+               end;
+            end loop;
+            Items.Append ("""discriminant_constraints"":" & Json_List (Values));
+         end;
+      end if;
+      if FT.To_String (Info.Variant_Discriminant_Name)'Length > 0 then
+         Items.Append
+           ("""variant_discriminant_name"":" & JS.Quote (Info.Variant_Discriminant_Name));
+      end if;
       if not Info.Variant_Fields.Is_Empty then
          declare
             Variants : String_Vectors.Vector;
          begin
             for Variant_Field of Info.Variant_Fields loop
-               Variants.Append
-                 ("{""name"":"
-                  & JS.Quote (Variant_Field.Name)
-                  & ",""type"":"
-                  & JS.Quote (Variant_Field.Type_Name)
-                  & ",""when"":"
-                  & JS.Bool_Literal (Variant_Field.When_True)
-                  & "}");
+               declare
+                  Variant_Items : String_Vectors.Vector;
+               begin
+                  Variant_Items.Append ("""name"":" & JS.Quote (Variant_Field.Name));
+                  Variant_Items.Append ("""type"":" & JS.Quote (Variant_Field.Type_Name));
+                  Variant_Items.Append ("""when"":" & JS.Bool_Literal (Variant_Field.When_True));
+                  Variant_Items.Append ("""is_others"":" & JS.Bool_Literal (Variant_Field.Is_Others));
+                  Variant_Items.Append ("""choice"":" & Scalar_Value_Json (Variant_Field.Choice));
+                  Variants.Append ("{" & Join_Object_Fields (Variant_Items) & "}");
+               end;
             end loop;
             Items.Append ("""variant_fields"":" & Json_List (Variants));
+         end;
+      end if;
+      if not Info.Tuple_Element_Types.Is_Empty then
+         declare
+            Values : String_Vectors.Vector;
+         begin
+            for Item of Info.Tuple_Element_Types loop
+               Values.Append (JS.Quote (Item));
+            end loop;
+            Items.Append ("""tuple_element_types"":" & Json_List (Values));
          end;
       end if;
       if FT.To_String (Info.Kind) = "access" then
@@ -181,6 +253,9 @@ package body Safe_Frontend.Mir_Write is
          if Info.Has_Access_Role then
             Items.Append ("""access_role"":" & JS.Quote (Info.Access_Role));
          end if;
+      end if;
+      if Info.Is_Result_Builtin then
+         Items.Append ("""is_result_builtin"":true");
       end if;
       return "{" & Join_Object_Fields (Items) & "}";
    end Type_Json;

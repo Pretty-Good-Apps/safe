@@ -33,7 +33,7 @@
           "sha256": "1e3f728ae24e54e6321db57eac7351b25e7e712813b0897af00252759a0db3af"
         },
         "pr09_emitter_discriminant.mir.json": {
-          "sha256": "376c122e16c88f027c28eaffe1ed2ba1a3e91a0240b0adc8c1f23f671c6eb9b7"
+          "sha256": "ad062d5b1bbbb82fce6f7bf0ad7432467bc0f8a0a595798304bc01ffed512772"
         },
         "pr09_emitter_discriminant.safei.json": {
           "sha256": "56bd62139f4f8a0659295c7b33656a2334b7eb9a643408253cfbb57d4d351268"
@@ -171,8 +171,8 @@
       }
     }
   ],
-  "repeat_sha256": "a7984a55ebb99eb8303ca199eacd1242005953467a5b67518add7d2a687a47c0",
-  "report_sha256": "a7984a55ebb99eb8303ca199eacd1242005953467a5b67518add7d2a687a47c0",
+  "repeat_sha256": "079c6f027f046e04ba5045bf98b9c2be08840b575ceff33f9b4fa9c7a029ec4f",
+  "report_sha256": "079c6f027f046e04ba5045bf98b9c2be08840b575ceff33f9b4fa9c7a029ec4f",
   "shared_support_files_preserved": {
     "after": {
       "emitter_surface_record.adb": "a3fb9d8288299088f74ca336111548be69391a079576ee3fe10f393eb45b7f1b",

@@ -3841,7 +3841,7 @@ package body Safe_Frontend.Mir_Analyze is
    is
       Base_Name_Text : constant String := Root_Name (Expr);
       Prefix_Type    : GM.Type_Descriptor;
-      Disc_Name_Text : String := "";
+      Disc_Name_Text : FT.UString := FT.To_UString ("");
       Disc_Type      : GM.Type_Descriptor;
       Fact_Value     : GM.Scalar_Value;
    begin
@@ -3853,13 +3853,13 @@ package body Safe_Frontend.Mir_Analyze is
          return;
       end if;
       Prefix_Type := Expr_Type (Expr.Prefix, Var_Types, Type_Env, Function_Maps.Empty_Map);
-      Disc_Name_Text := Variant_Discriminant_Name (Prefix_Type);
-      if Disc_Name_Text = ""
-        or else UString_Value (Expr.Selector) /= Disc_Name_Text
+      Disc_Name_Text := FT.To_UString (Variant_Discriminant_Name (Prefix_Type));
+      if not Has_Text (Disc_Name_Text)
+        or else UString_Value (Expr.Selector) /= UString_Value (Disc_Name_Text)
       then
          return;
       end if;
-      Disc_Type := Field_Type (Prefix_Type, Disc_Name_Text, Type_Env);
+      Disc_Type := Field_Type (Prefix_Type, UString_Value (Disc_Name_Text), Type_Env);
       if UString_Value (Disc_Type.Name) /= "Boolean" then
          return;
       end if;

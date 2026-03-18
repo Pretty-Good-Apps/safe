@@ -105,7 +105,7 @@
       "patterns": [
         {
           "name": "variable.other.member.tuple-index.safe",
-          "match": "(?<=\\.)\\d+\\b"
+          "match": "(?<!\\d)\\.\\d+\\b"
         }
       ]
     },

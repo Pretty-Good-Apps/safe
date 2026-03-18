@@ -151,19 +151,41 @@
             "discriminant_default": false,
             "discriminant_name": "OK",
             "discriminant_type": "Boolean",
+            "discriminants": [
+              {
+                "default": {
+                  "kind": "boolean",
+                  "value": false
+                },
+                "has_default": true,
+                "name": "OK",
+                "type": "Boolean"
+              }
+            ],
             "fields": {
               "Error": "Error_Code",
               "Value": "Integer"
             },
             "kind": "record",
             "name": "Parse_Result",
+            "variant_discriminant_name": "OK",
             "variant_fields": [
               {
+                "choice": {
+                  "kind": "boolean",
+                  "value": true
+                },
+                "is_others": false,
                 "name": "Value",
                 "type": "Integer",
                 "when": true
               },
               {
+                "choice": {
+                  "kind": "boolean",
+                  "value": false
+                },
+                "is_others": false,
                 "name": "Error",
                 "type": "Error_Code",
                 "when": false
@@ -174,22 +196,42 @@
             "discriminant_default": false,
             "discriminant_name": "OK",
             "discriminant_type": "Boolean",
+            "discriminants": [
+              {
+                "default_value": {
+                  "kind": "boolean",
+                  "value": false
+                },
+                "has_default": true,
+                "name": "OK",
+                "type_name": "Boolean"
+              }
+            ],
             "fields": {
               "Error": "Error_Code",
               "Value": "Integer"
             },
             "kind": "record",
             "name": "Parse_Result",
+            "variant_discriminant_name": "OK",
             "variant_fields": [
               {
+                "choice": {
+                  "kind": "boolean",
+                  "value": true
+                },
+                "is_others": false,
                 "name": "Value",
-                "type": "Integer",
-                "when": true
+                "type": "Integer"
               },
               {
+                "choice": {
+                  "kind": "boolean",
+                  "value": false
+                },
+                "is_others": false,
                 "name": "Error",
-                "type": "Error_Code",
-                "when": false
+                "type": "Error_Code"
               }
             ]
           }
@@ -658,8 +700,8 @@
       "source": "tests/negative/neg_result_mutated.safe"
     }
   ],
-  "repeat_sha256": "07b317e8d4ff2c89498d64d03ab80912e8f03f015f8389f5ba2b5000b27fbccf",
-  "report_sha256": "07b317e8d4ff2c89498d64d03ab80912e8f03f015f8389f5ba2b5000b27fbccf",
+  "repeat_sha256": "03df4ccec30af98c6fd0d4d74832ec180d03bc90d28feb5dbe67d9499f783f88",
+  "report_sha256": "03df4ccec30af98c6fd0d4d74832ec180d03bc90d28feb5dbe67d9499f783f88",
   "source_corpus": {
     "negatives": [
       {

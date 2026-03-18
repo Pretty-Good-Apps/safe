@@ -2,6 +2,7 @@ with GNATCOLL.JSON;
 
 package body Safe_Frontend.Mir_Json is
    package GM renames Safe_Frontend.Mir_Model;
+   use type GM.Scalar_Value_Kind;
 
    function Field_Or_Null
      (Object_Value : GNATCOLL.JSON.JSON_Value;
@@ -133,6 +134,40 @@ package body Safe_Frontend.Mir_Json is
       use GNATCOLL.JSON;
       Result : GM.Type_Descriptor;
 
+      function Parse_Scalar_Value (Item : JSON_Value) return GM.Scalar_Value is
+         Parsed : GM.Scalar_Value;
+      begin
+         if Item.Kind /= JSON_Object_Type then
+            return Parsed;
+         end if;
+         if Has_Field (Item, "kind") and then Get (Item, "kind").Kind = JSON_String_Type then
+            declare
+               Kind_Name : constant String := Get (Item, "kind");
+            begin
+               if Kind_Name = "integer"
+                 and then Has_Field (Item, "value")
+                 and then Get (Item, "value").Kind = JSON_Int_Type
+               then
+                  Parsed.Kind := GM.Scalar_Value_Integer;
+                  Parsed.Int_Value := Get (Get (Item, "value"));
+               elsif Kind_Name = "boolean"
+                 and then Has_Field (Item, "value")
+                 and then Get (Item, "value").Kind = JSON_Boolean_Type
+               then
+                  Parsed.Kind := GM.Scalar_Value_Boolean;
+                  Parsed.Bool_Value := Get (Get (Item, "value"));
+               elsif Kind_Name = "character"
+                 and then Has_Field (Item, "text")
+                 and then Get (Item, "text").Kind = JSON_String_Type
+               then
+                  Parsed.Kind := GM.Scalar_Value_Character;
+                  Parsed.Text := FT.To_UString (Get (Item, "text"));
+               end if;
+            end;
+         end if;
+         return Parsed;
+      end Parse_Scalar_Value;
+
       procedure Append_Field (Name : UTF8_String; Field_Value : JSON_Value) is
          Field_Entry : GM.Type_Field;
       begin
@@ -244,6 +279,11 @@ package body Safe_Frontend.Mir_Json is
       then
          Result.Is_All := Get (Get (Value, "is_all"));
       end if;
+      if Has_Field (Value, "is_result_builtin")
+        and then Get (Value, "is_result_builtin").Kind = JSON_Boolean_Type
+      then
+         Result.Is_Result_Builtin := Get (Get (Value, "is_result_builtin"));
+      end if;
 
       declare
          Index_Types : constant JSON_Array := Json_Array_Or_Empty (Value, "index_types");
@@ -263,6 +303,72 @@ package body Safe_Frontend.Mir_Json is
         and then Get (Value, "fields").Kind = JSON_Object_Type
       then
          Map_JSON_Object (Get (Value, "fields"), Append_Field'Access);
+      end if;
+      declare
+         Discriminants : constant JSON_Array := Json_Array_Or_Empty (Value, "discriminants");
+      begin
+         for Index in 1 .. Length (Discriminants) loop
+            declare
+               Item : constant JSON_Value := Get (Discriminants, Index);
+               Disc : GM.Discriminant_Descriptor;
+            begin
+               if Item.Kind = JSON_Object_Type then
+                  if Has_Field (Item, "name")
+                    and then Get (Item, "name").Kind = JSON_String_Type
+                  then
+                     Disc.Name := FT.To_UString (Get (Item, "name"));
+                  end if;
+                  if Has_Field (Item, "type")
+                    and then Get (Item, "type").Kind = JSON_String_Type
+                  then
+                     Disc.Type_Name := FT.To_UString (Get (Item, "type"));
+                  end if;
+                  if Has_Field (Item, "has_default")
+                    and then Get (Item, "has_default").Kind = JSON_Boolean_Type
+                  then
+                     Disc.Has_Default := Get (Get (Item, "has_default"));
+                  end if;
+                  if Has_Field (Item, "default") then
+                     Disc.Default_Value := Parse_Scalar_Value (Get (Item, "default"));
+                     Disc.Has_Default := Disc.Default_Value.Kind /= GM.Scalar_Value_None;
+                  end if;
+                  Result.Discriminants.Append (Disc);
+               end if;
+            end;
+         end loop;
+      end;
+      declare
+         Constraints : constant JSON_Array := Json_Array_Or_Empty (Value, "discriminant_constraints");
+      begin
+         for Index in 1 .. Length (Constraints) loop
+            declare
+               Item : constant JSON_Value := Get (Constraints, Index);
+               Constraint : GM.Discriminant_Constraint;
+            begin
+               if Item.Kind = JSON_Object_Type then
+                  if Has_Field (Item, "is_named")
+                    and then Get (Item, "is_named").Kind = JSON_Boolean_Type
+                  then
+                     Constraint.Is_Named := Get (Get (Item, "is_named"));
+                  end if;
+                  if Has_Field (Item, "name")
+                    and then Get (Item, "name").Kind = JSON_String_Type
+                  then
+                     Constraint.Name := FT.To_UString (Get (Item, "name"));
+                  end if;
+                  if Has_Field (Item, "value") then
+                     Constraint.Value := Parse_Scalar_Value (Get (Item, "value"));
+                  end if;
+                  Result.Discriminant_Constraints.Append (Constraint);
+               end if;
+            end;
+         end loop;
+      end;
+      if Has_Field (Value, "variant_discriminant_name")
+        and then Get (Value, "variant_discriminant_name").Kind = JSON_String_Type
+      then
+         Result.Variant_Discriminant_Name :=
+           FT.To_UString (Get (Value, "variant_discriminant_name"));
       end if;
       declare
          Variants : constant JSON_Array := Json_Array_Or_Empty (Value, "variant_fields");
@@ -288,11 +394,54 @@ package body Safe_Frontend.Mir_Json is
                   then
                      Variant_Field.When_True := Get (Get (Item, "when"));
                   end if;
+                  if Has_Field (Item, "is_others")
+                    and then Get (Item, "is_others").Kind = JSON_Boolean_Type
+                  then
+                     Variant_Field.Is_Others := Get (Get (Item, "is_others"));
+                  end if;
+                  if Has_Field (Item, "choice") then
+                     Variant_Field.Choice := Parse_Scalar_Value (Get (Item, "choice"));
+                     if Variant_Field.Choice.Kind = GM.Scalar_Value_Boolean then
+                        Variant_Field.When_True := Variant_Field.Choice.Bool_Value;
+                     end if;
+                  elsif Has_Field (Item, "when")
+                    and then Get (Item, "when").Kind = JSON_Boolean_Type
+                  then
+                     Variant_Field.Choice.Kind := GM.Scalar_Value_Boolean;
+                     Variant_Field.Choice.Bool_Value := Variant_Field.When_True;
+                  end if;
                   Result.Variant_Fields.Append (Variant_Field);
                end if;
             end;
          end loop;
       end;
+      declare
+         Tuple_Elements : constant JSON_Array := Json_Array_Or_Empty (Value, "tuple_element_types");
+      begin
+         for Index in 1 .. Length (Tuple_Elements) loop
+            declare
+               Item : constant JSON_Value := Get (Tuple_Elements, Index);
+            begin
+               if Item.Kind = JSON_String_Type then
+                  Result.Tuple_Element_Types.Append (FT.To_UString (Get (Item)));
+               end if;
+            end;
+         end loop;
+      end;
+      if Result.Discriminants.Is_Empty and then Result.Has_Discriminant then
+         declare
+            Disc : GM.Discriminant_Descriptor;
+         begin
+            Disc.Name := Result.Discriminant_Name;
+            Disc.Type_Name := Result.Discriminant_Type;
+            Disc.Has_Default := Result.Has_Discriminant_Default;
+            if Result.Has_Discriminant_Default then
+               Disc.Default_Value.Kind := GM.Scalar_Value_Boolean;
+               Disc.Default_Value.Bool_Value := Result.Discriminant_Default_Bool;
+            end if;
+            Result.Discriminants.Append (Disc);
+         end;
+      end if;
 
       return Result;
    end Parse_Type;
