@@ -14,6 +14,7 @@ from typing import Any
 
 from _lib.gate_expectations import REPRESENTATIVE_EMIT_SAMPLES
 from _lib.harness_common import (
+    compiler_build_argv,
     display_path,
     ensure_sdkroot,
     finalize_deterministic_report,
@@ -129,7 +130,7 @@ def clean_frontend_build_outputs(safec: Path) -> None:
 
 
 def build_frontend(alr: str, env: dict[str, str]) -> dict[str, Any]:
-    return run([alr, "build"], cwd=COMPILER_ROOT, env=env)
+    return run(compiler_build_argv(alr), cwd=COMPILER_ROOT, env=env)
 
 
 def emitted_paths(root: Path, sample: Path) -> dict[str, Path]:

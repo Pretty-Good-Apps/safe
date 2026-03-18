@@ -50,6 +50,10 @@ class RunLocalPrePushTests(unittest.TestCase):
         self.assertIn("Run run_pr0699_build_reproducibility.py", labels)
         self.assertIn("Rebuild compiler after reproducibility gate", labels)
         self.assertEqual(labels[-1], "Require clean tracked tree after local gates")
+        self.assertEqual(
+            steps[0].argv,
+            ("alr", "exec", "--", "gprbuild", "-P", "safec.gpr", "-j1", "-p"),
+        )
 
     def test_build_steps_include_pr084_chain_and_pr09_followup(self) -> None:
         steps = build_steps(

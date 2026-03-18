@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
-from _lib.harness_common import ensure_sdkroot, find_command, run
+from _lib.harness_common import compiler_build_argv, ensure_sdkroot, find_command, run
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -141,7 +141,8 @@ def build_steps(
     if not gate_scripts:
         return []
 
-    steps: list[Step] = [Step("Build compiler", (alr, "build"), COMPILER_ROOT)]
+    compiler_build = tuple(compiler_build_argv(alr))
+    steps: list[Step] = [Step("Build compiler", compiler_build, COMPILER_ROOT)]
     seen_scripts: set[str] = set()
 
     def append_script(script: str) -> None:
@@ -160,7 +161,7 @@ def build_steps(
     for script in FOLLOWUP_SCRIPTS[:3]:
         append_script(script)
 
-    steps.append(Step("Rebuild compiler after reproducibility gate", (alr, "build"), COMPILER_ROOT))
+    steps.append(Step("Rebuild compiler after reproducibility gate", compiler_build, COMPILER_ROOT))
 
     for script in FOLLOWUP_SCRIPTS[3:]:
         append_script(script)

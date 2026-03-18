@@ -61,6 +61,12 @@ class HarnessCommonTests(unittest.TestCase):
     def test_find_command_returns_name_for_path_discovered_tool(self) -> None:
         self.assertEqual(hc.find_command("sh"), "sh")
 
+    def test_compiler_build_argv_uses_serial_gprbuild(self) -> None:
+        self.assertEqual(
+            hc.compiler_build_argv("alr"),
+            ["alr", "exec", "--", "gprbuild", "-P", "safec.gpr", "-j1", "-p"],
+        )
+
     def test_run_enforces_return_code_and_captures_stdout_file(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_root = Path(temp_dir)

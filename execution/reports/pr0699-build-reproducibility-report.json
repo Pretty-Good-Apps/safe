@@ -4,7 +4,13 @@
     "binary_path": "compiler_impl/bin/safec",
     "command": [
       "alr",
-      "build"
+      "exec",
+      "--",
+      "gprbuild",
+      "-P",
+      "safec.gpr",
+      "-j1",
+      "-p"
     ],
     "cwd": "$REPO_ROOT/compiler_impl",
     "returncodes": [
@@ -15,9 +21,9 @@
   "delegated_reports": {
     "frontend_smoke": {
       "binary_deterministic": true,
-      "repeat_sha256": "523a8540a6b51e6d632289be814ef8170dc90dac99f2d655ebe9e600014716ad",
+      "repeat_sha256": "fa5ae6b0b7ab6636ae0e4c2d0ba1fc3120b1858b3bd7456f3c04acb28196b663",
       "report_path": "execution/reports/pr00-pr04-frontend-smoke.json",
-      "report_sha256": "523a8540a6b51e6d632289be814ef8170dc90dac99f2d655ebe9e600014716ad",
+      "report_sha256": "fa5ae6b0b7ab6636ae0e4c2d0ba1fc3120b1858b3bd7456f3c04acb28196b663",
       "run": {
         "command": [
           "python3",
@@ -30,9 +36,9 @@
       }
     },
     "gate_quality": {
-      "repeat_sha256": "9da9f2b48972cfcb17af60bac7d75aff5f7b1dd58a40ba28721bb37acdd106b4",
+      "repeat_sha256": "a1d67935d5a9d037aaea54d4b67ff71ec10d4cf2bd72901a777d6eb436241528",
       "report_path": "execution/reports/pr0697-gate-quality-report.json",
-      "report_sha256": "9da9f2b48972cfcb17af60bac7d75aff5f7b1dd58a40ba28721bb37acdd106b4",
+      "report_sha256": "a1d67935d5a9d037aaea54d4b67ff71ec10d4cf2bd72901a777d6eb436241528",
       "run": {
         "command": [
           "python3",
@@ -61,8 +67,8 @@
     }
   },
   "deterministic": true,
-  "repeat_sha256": "18b4b66f2673ebf55854272ccf6c4e69993a71cffe9c015b8bf831cf0faa28d7",
-  "report_sha256": "18b4b66f2673ebf55854272ccf6c4e69993a71cffe9c015b8bf831cf0faa28d7",
+  "repeat_sha256": "955703917e9b84860c13c6519ceaa33bff5369551abc1607c86708251856159d",
+  "report_sha256": "955703917e9b84860c13c6519ceaa33bff5369551abc1607c86708251856159d",
   "status": "ok",
   "task": "PR06.9.9"
 }

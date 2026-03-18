@@ -14,6 +14,7 @@ from typing import Any, Callable
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+COMPILER_ROOT = REPO_ROOT / "compiler_impl"
 DEFAULT_MACOS_SDKROOT = Path("/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk")
 
 
@@ -66,6 +67,12 @@ def require_repo_command(path: Path, name: str) -> Path:
     if path.exists():
         return path
     raise FileNotFoundError(f"required repo-local command not found: {name} at {path}")
+
+
+def compiler_build_argv(alr: str) -> list[str]:
+    # Serial gprbuild avoids occasional corrupt dependency archives seen with
+    # fully parallel clean frontend builds on macOS.
+    return [alr, "exec", "--", "gprbuild", "-P", "safec.gpr", "-j1", "-p"]
 
 
 def run(

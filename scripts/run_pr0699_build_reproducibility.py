@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from _lib.harness_common import (
+    compiler_build_argv,
     display_path,
     ensure_sdkroot,
     finalize_deterministic_report,
@@ -91,12 +92,12 @@ def clean_frontend_build_outputs(safec: Path) -> None:
 
 def run_build_reproducibility(*, alr: str, safec: Path, env: dict[str, str]) -> dict[str, Any]:
     clean_frontend_build_outputs(safec)
-    first_build = run([alr, "build"], cwd=COMPILER_ROOT, env=env)
+    first_build = run(compiler_build_argv(alr), cwd=COMPILER_ROOT, env=env)
     require(safec.exists(), f"expected built compiler at {safec}")
     first_binary_sha256 = stable_binary_sha256(safec)
 
     clean_frontend_build_outputs(safec)
-    second_build = run([alr, "build"], cwd=COMPILER_ROOT, env=env)
+    second_build = run(compiler_build_argv(alr), cwd=COMPILER_ROOT, env=env)
     require(safec.exists(), f"expected built compiler at {safec}")
     second_binary_sha256 = stable_binary_sha256(safec)
     require(
