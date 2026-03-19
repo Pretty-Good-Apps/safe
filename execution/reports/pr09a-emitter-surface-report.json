@@ -145,7 +145,7 @@
         },
         "json_and_interface": {
           "emitter_surface_proc.ast.json": {
-            "sha256": "68491582c3abfc6617756b99f1a9f194dc9a10e873f5cb98eeb2a74c94775719"
+            "sha256": "2b65240317172a0ce3a8f902d2620a9342a114707264906bca1adf991ed4acf1"
           },
           "emitter_surface_proc.mir.json": {
             "sha256": "dc1bcbb363f4ca9ade823cd647bfb48f31d69809af7cf43f07fcce02170d1bf6"
@@ -154,7 +154,7 @@
             "sha256": "fed43e6f329547fc4e5bbf48c6b7a7577badf20f2bc6f18955e65f1fd1003812"
           },
           "emitter_surface_proc.typed.json": {
-            "sha256": "d85c60898093430f5d0971e149b9f56e6f35b9561478b43cbd2b52bdc2a858ed"
+            "sha256": "0f6e271d47b5bbf5c384c5a790a6a3cfbfe662ff90e4989f446e935d158b874e"
           }
         }
       },
@@ -171,8 +171,8 @@
       }
     }
   ],
-  "repeat_sha256": "802479d56c133adaf7de62df560f82902c49453b4a1dd0a283c95cdea5bfed60",
-  "report_sha256": "802479d56c133adaf7de62df560f82902c49453b4a1dd0a283c95cdea5bfed60",
+  "repeat_sha256": "0aabacdef155312756997977cd2ff98c5c6637404ab19d528a4138c34e4b8c5d",
+  "report_sha256": "0aabacdef155312756997977cd2ff98c5c6637404ab19d528a4138c34e4b8c5d",
   "shared_support_files_preserved": {
     "after": {
       "emitter_surface_record.adb": "a3fb9d8288299088f74ca336111548be69391a079576ee3fe10f393eb45b7f1b",

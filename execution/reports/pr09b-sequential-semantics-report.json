@@ -79,7 +79,7 @@
         },
         "json_and_interface": {
           "ownership_move.ast.json": {
-            "sha256": "01d2efa103f052bb8a0c015724b183da64126760852d37b34d4e81b062ca10df"
+            "sha256": "b3af207c8215036e891a9f36beaa80943b0256d5b9a5c1cb26dfad6111e85405"
           },
           "ownership_move.mir.json": {
             "sha256": "4bf2456a5f834c46abe72661fc5fa7c742d14f451957e517fb17cb20561c246e"
@@ -88,7 +88,7 @@
             "sha256": "bdde05033e475a8cab85fd44e5a3ac7d30ed94394e3ef65abdbddb6037cf9e34"
           },
           "ownership_move.typed.json": {
-            "sha256": "5ad544cb297e0fa953fc8657bfb031a096894e1cdc6f3df95b6b64b1f9f3364a"
+            "sha256": "5ef8f94112263cf43d033bc4d36a9a801233cd3084b6480bbdf19a087273334a"
           }
         }
       },
@@ -153,6 +153,6 @@
       }
     }
   ],
-  "repeat_sha256": "f2e93bae798150a970b5dd7a2c3d2a58bc9bb1283c058dc78e05f585bd3ad8e6",
-  "report_sha256": "f2e93bae798150a970b5dd7a2c3d2a58bc9bb1283c058dc78e05f585bd3ad8e6"
+  "repeat_sha256": "06bfd91a14d815f9da942fcbc829ef948b696d0a72a2fa6a0807747ec6b85a4b",
+  "report_sha256": "06bfd91a14d815f9da942fcbc829ef948b696d0a72a2fa6a0807747ec6b85a4b"
 }
