@@ -120,10 +120,12 @@ POSITIVE_CASES = (
         ),
         "safei_snippets": ("__tuple_result_Integer",),
         "ada_snippets": (
-            "type result (Message_Length : Natural := 0) is record",
+            "type result is record",
+            "Message : Ada.Strings.Unbounded.Unbounded_String := Ada.Strings.Unbounded.Null_Unbounded_String;",
             "type Safe_tuple_result_Integer is record",
-            "Message_Length => String'(\"negative\")'Length",
-            "F1 => (Message_Length => 0, Ok => True, Message => \"\")",
+            "function Reject(Msg : String) return result with Global => null,",
+            "return (Ok => False, Message => Ada.Strings.Unbounded.To_Unbounded_String (Msg));",
+            "F1 => (Ok => True, Message => Ada.Strings.Unbounded.Null_Unbounded_String)",
         ),
     },
 )

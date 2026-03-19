@@ -70,6 +70,13 @@ class Pr101AuditHardeningTests(unittest.TestCase):
         self.assertFalse(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr113a("PR11.3"))
         self.assertFalse(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr113a("PR11.2"))
 
+    def test_pr101_audit_next_task_guard_accepts_pr114_and_beyond(self) -> None:
+        self.assertTrue(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr114("PR11.4"))
+        self.assertTrue(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr114("PR11.4a"))
+        self.assertTrue(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr114("PR12.1"))
+        self.assertFalse(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr114("PR11.3a"))
+        self.assertFalse(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr114("PR11.3"))
+
     def test_pr101_audit_tracks_pr111_acceptance_and_evidence(self) -> None:
         self.assertEqual(
             run_pr101_comprehensive_audit.EXPECTED_PR111_EVIDENCE,
@@ -104,8 +111,12 @@ class Pr101AuditHardeningTests(unittest.TestCase):
         )
         self.assertEqual(len(run_pr101_comprehensive_audit.EXPECTED_PR113A_ACCEPTANCE), 3)
         self.assertIn(
-            "tuples and structured-return/result support",
+            "tests/positive/pr113_tuple_channel.safe is explicitly excluded",
             run_pr101_comprehensive_audit.EXPECTED_PR113A_ACCEPTANCE[0],
+        )
+        self.assertEqual(
+            run_pr101_comprehensive_audit.EXPECTED_PR113A_EVIDENCE,
+            ["execution/reports/pr113a-proof-checkpoint1-report.json"],
         )
 
     def test_split_table_row_rejects_non_data_rows(self) -> None:

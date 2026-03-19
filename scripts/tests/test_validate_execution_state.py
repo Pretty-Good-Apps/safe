@@ -13,6 +13,7 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 from validate_execution_state import (
+    GLUE_SAFETY_ALLOWED_SAFE_SOURCE_READERS,
     GLUE_SAFETY_AUDITED_SCRIPTS,
     GLUE_SAFETY_REPORT_SCRIPTS,
     check_report_sync,
@@ -70,6 +71,9 @@ class ValidateExecutionStateTests(unittest.TestCase):
             "scripts/run_pr113_discriminated_types_tuples_structured_returns.py",
             GLUE_SAFETY_REPORT_SCRIPTS,
         )
+        self.assertIn("scripts/run_pr113a_proof_checkpoint1.py", GLUE_SAFETY_AUDITED_SCRIPTS)
+        self.assertIn("scripts/run_pr113a_proof_checkpoint1.py", GLUE_SAFETY_REPORT_SCRIPTS)
+        self.assertIn("scripts/run_pr113a_proof_checkpoint1.py", GLUE_SAFETY_ALLOWED_SAFE_SOURCE_READERS)
 
     def test_report_sync_report_accepts_matching_child_reports(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

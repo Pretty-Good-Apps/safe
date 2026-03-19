@@ -198,6 +198,24 @@ PR106_EXCLUDED_POSITIVE_CONCURRENCY_CASES = [
     "tests/positive/channel_pipeline_compute.safe",
 ]
 
+PR113A_SEQUENTIAL_PROOF_CASES = [
+    "tests/positive/pr112_character_case.safe",
+    "tests/positive/pr112_discrete_case.safe",
+    "tests/positive/pr112_string_param.safe",
+    "tests/positive/pr112_case_scrutinee_once.safe",
+    "tests/positive/pr113_discriminant_constraints.safe",
+    "tests/positive/pr113_tuple_destructure.safe",
+    "tests/positive/pr113_structured_result.safe",
+    "tests/positive/pr113_variant_guard.safe",
+    "tests/positive/constant_discriminant_default.safe",
+    "tests/positive/result_equality_check.safe",
+    "tests/positive/result_guarded_access.safe",
+]
+
+PR113A_EXCLUDED_POSITIVE_CONCURRENCY_CASES = [
+    "tests/positive/pr113_tuple_channel.safe",
+]
+
 PR07_RESULT_CASES = [
     "tests/positive/result_guarded_access.safe",
     "tests/negative/neg_result_unguarded.safe",

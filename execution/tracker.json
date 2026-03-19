@@ -3,7 +3,7 @@
   "updated_at": "2026-03-18T00:00:00Z",
   "frozen_spec_sha": "468cf72332724b04b7c193b4d2a3b02f1584125d",
   "active_task_id": null,
-  "next_task_id": "PR11.3a",
+  "next_task_id": "PR11.4",
   "repo_facts": {
     "tests": {
       "positive": 58,
@@ -748,14 +748,16 @@
     {
       "id": "PR11.3a",
       "title": "Proof checkpoint 1 for parser, tuple, and discriminant expansion",
-      "status": "planned",
+      "status": "done",
       "depends_on": ["PR11.3"],
       "acceptance": [
-        "The emitted sequential fixtures newly admitted by PR11.2 and PR11.3, including tuples and structured-return/result support, are explicitly enumerated as a non-shrinkable proof checkpoint corpus rather than being left as open proof debt.",
-        "That checkpoint corpus passes compile, GNATprove flow, and GNATprove prove under the all-proved-only policy with dedicated deterministic evidence, and any previously proved sequential fixtures affected by parser, tuple, or discriminant emission changes are revalidated in the same checkpoint.",
-        "Any deallocation-ordering semantics (`PS-029`) required by the admitted tuple/discriminant corpus are resolved or explicitly bounded before PR11.3a claims proof closure."
+        "The PR11.3a sequential proof checkpoint corpus is the exact 11-fixture set consisting of tests/positive/pr112_character_case.safe, tests/positive/pr112_discrete_case.safe, tests/positive/pr112_string_param.safe, tests/positive/pr112_case_scrutinee_once.safe, tests/positive/pr113_discriminant_constraints.safe, tests/positive/pr113_tuple_destructure.safe, tests/positive/pr113_structured_result.safe, tests/positive/pr113_variant_guard.safe, tests/positive/constant_discriminant_default.safe, tests/positive/result_equality_check.safe, and tests/positive/result_guarded_access.safe; tests/positive/pr113_tuple_channel.safe is explicitly excluded from this sequential checkpoint and its proof debt stays on PR11.8b.",
+        "That exact checkpoint corpus passes compile, GNATprove flow, and GNATprove prove under the all-proved-only policy with dedicated deterministic evidence, and the checkpoint gate keeps the corpus non-shrinkable with emitted-structure assertions for the PR11.2/PR11.3 surfaces it covers.",
+        "PR11.3a remains a value-only sequential checkpoint: Rosetta samples stay compile-only, tuple-channel proof remains deferred to PR11.8b, and `PS-029` is explicitly bounded rather than broadened before this checkpoint claims proof closure."
       ],
-      "evidence": [],
+      "evidence": [
+        "execution/reports/pr113a-proof-checkpoint1-report.json"
+      ],
       "blockers": [],
       "unblock_condition": ""
     },

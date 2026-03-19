@@ -44,6 +44,7 @@
       "scripts/run_pr111_language_evaluation_harness.py",
       "scripts/run_pr112_parser_completeness_phase1.py",
       "scripts/run_pr113_discriminated_types_tuples_structured_returns.py",
+      "scripts/run_pr113a_proof_checkpoint1.py",
       "scripts/run_local_pre_push.py",
       "scripts/validate_execution_state.py",
       "scripts/validate_ast_output.py",
@@ -96,7 +97,8 @@
       "scripts/run_rosetta_corpus.py",
       "scripts/run_pr111_language_evaluation_harness.py",
       "scripts/run_pr112_parser_completeness_phase1.py",
-      "scripts/run_pr113_discriminated_types_tuples_structured_returns.py"
+      "scripts/run_pr113_discriminated_types_tuples_structured_returns.py",
+      "scripts/run_pr113a_proof_checkpoint1.py"
     ],
     "safe_source_readers": [
       {
@@ -138,6 +140,10 @@
       {
         "category": "fixture source-fragment checks and emitted structural assertions for the fixed PR10.6 sequential corpus",
         "script": "scripts/run_pr106_sequential_proof_corpus_expansion.py"
+      },
+      {
+        "category": "fixture source-fragment checks and emitted structural assertions for the fixed PR11.3a sequential checkpoint corpus",
+        "script": "scripts/run_pr113a_proof_checkpoint1.py"
       }
     ],
     "shell_assumption_violations": [],
@@ -166,8 +172,8 @@
       "script": "scripts/run_frontend_smoke.py"
     }
   },
-  "repeat_sha256": "dcf8b000771151af903317000df227ff5a38798f52972667d2648c14fcbbdb75",
-  "report_sha256": "dcf8b000771151af903317000df227ff5a38798f52972667d2648c14fcbbdb75",
+  "repeat_sha256": "b35a348503785bcbca428ec4ecb669d307a2ff06144bbc3d68c8b503e8d3ad6f",
+  "report_sha256": "b35a348503785bcbca428ec4ecb669d307a2ff06144bbc3d68c8b503e8d3ad6f",
   "reruns": {
     "gate_quality": {
       "committed_report_path": "execution/reports/pr0697-gate-quality-report.json",

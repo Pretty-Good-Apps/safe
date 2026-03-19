@@ -32,7 +32,7 @@ that still live at the proposal/detail stage rather than in gate-backed CI.
 | ~~PR11.1~~ | `done` | Build wrapper, editor grammar, Rosetta |
 | ~~PR11.2~~ | `done` | Strings/chars and case statements |
 | ~~PR11.3~~ | `done` | Discriminants, tuples, and structured returns |
-| *PR11.3a* | `planned` | Checkpoint 1 proof closure |
+| ~~PR11.3a~~ | `done` | Checkpoint 1 proof closure |
 | *PR11.4* | `planned` | `returns` and `else if` |
 | *PR11.5* | `planned` | Optional semicolons and `var` |
 | *PR11.6* | `planned` | `pragma Strict` and whitespace blocks |

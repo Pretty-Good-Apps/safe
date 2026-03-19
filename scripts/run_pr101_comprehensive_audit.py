@@ -106,9 +106,12 @@ EXPECTED_PR113_EVIDENCE = [
     "execution/reports/pr113-discriminated-types-tuples-structured-returns-report.json",
 ]
 EXPECTED_PR113A_ACCEPTANCE = [
-    "The emitted sequential fixtures newly admitted by PR11.2 and PR11.3, including tuples and structured-return/result support, are explicitly enumerated as a non-shrinkable proof checkpoint corpus rather than being left as open proof debt.",
-    "That checkpoint corpus passes compile, GNATprove flow, and GNATprove prove under the all-proved-only policy with dedicated deterministic evidence, and any previously proved sequential fixtures affected by parser, tuple, or discriminant emission changes are revalidated in the same checkpoint.",
-    "Any deallocation-ordering semantics (`PS-029`) required by the admitted tuple/discriminant corpus are resolved or explicitly bounded before PR11.3a claims proof closure.",
+    "The PR11.3a sequential proof checkpoint corpus is the exact 11-fixture set consisting of tests/positive/pr112_character_case.safe, tests/positive/pr112_discrete_case.safe, tests/positive/pr112_string_param.safe, tests/positive/pr112_case_scrutinee_once.safe, tests/positive/pr113_discriminant_constraints.safe, tests/positive/pr113_tuple_destructure.safe, tests/positive/pr113_structured_result.safe, tests/positive/pr113_variant_guard.safe, tests/positive/constant_discriminant_default.safe, tests/positive/result_equality_check.safe, and tests/positive/result_guarded_access.safe; tests/positive/pr113_tuple_channel.safe is explicitly excluded from this sequential checkpoint and its proof debt stays on PR11.8b.",
+    "That exact checkpoint corpus passes compile, GNATprove flow, and GNATprove prove under the all-proved-only policy with dedicated deterministic evidence, and the checkpoint gate keeps the corpus non-shrinkable with emitted-structure assertions for the PR11.2/PR11.3 surfaces it covers.",
+    "PR11.3a remains a value-only sequential checkpoint: Rosetta samples stay compile-only, tuple-channel proof remains deferred to PR11.8b, and `PS-029` is explicitly bounded rather than broadened before this checkpoint claims proof closure.",
+]
+EXPECTED_PR113A_EVIDENCE = [
+    "execution/reports/pr113a-proof-checkpoint1-report.json",
 ]
 EXPECTED_PR102_ACCEPTANCE = [
     "The exact six-fixture PR10.2 Rule 5 positive corpus is tests/positive/rule5_filter.safe, tests/positive/rule5_interpolate.safe, tests/positive/rule5_normalize.safe, tests/positive/rule5_statistics.safe, tests/positive/rule5_temperature.safe, and tests/positive/rule5_vector_normalize.safe; that merged PR07-plus-PR10 set is non-shrinkable and each fixture is frontend-accepted, Ada-emitted, compile-valid, and passes emitted GNATprove flow and prove under the all-proved-only policy.",
@@ -172,6 +175,9 @@ EXPECTED_MATRIX_SNIPPETS = [
     "PS-019",
     "PS-031",
     "docs/pr10_refinement_audit.md",
+    "PR11.3a Sequential Checkpoint Corpus",
+    "`tests/positive/pr113_tuple_channel.safe` remains outside that proof set",
+    "PR11.8b",
 ]
 EXPECTED_POST_PR10_SNIPPETS = [
     "PS-001",
@@ -210,6 +216,9 @@ EXPECTED_WORKFLOW_SNIPPETS = [
     "pr113-discriminated-types-tuples-structured-returns:",
     "python3 scripts/run_pr113_discriminated_types_tuples_structured_returns.py",
     "git diff --exit-code execution/reports/pr113-discriminated-types-tuples-structured-returns-report.json",
+    "pr113a-proof-checkpoint1:",
+    "python3 scripts/run_pr113a_proof_checkpoint1.py",
+    "git diff --exit-code execution/reports/pr113a-proof-checkpoint1-report.json",
 ]
 EXPECTED_PRE_PUSH_SNIPPETS = [
     "\"scripts/run_pr09_ada_emission_baseline.py\"",
@@ -220,6 +229,7 @@ EXPECTED_PRE_PUSH_SNIPPETS = [
     "\"scripts/run_pr111_language_evaluation_harness.py\"",
     "\"scripts/run_pr112_parser_completeness_phase1.py\"",
     "\"scripts/run_pr113_discriminated_types_tuples_structured_returns.py\"",
+    "\"scripts/run_pr113a_proof_checkpoint1.py\"",
 ]
 EXPECTED_TUTORIAL_SNIPPETS = [
     "Ada-native `safec` frontend plus emitted-output proof",
@@ -290,6 +300,16 @@ def task_is_at_or_beyond_pr113a(value: object) -> bool:
         return False
     major, minor = parsed
     return major > 11 or (major == 11 and minor is not None and minor > 3)
+
+
+def task_is_at_or_beyond_pr114(value: object) -> bool:
+    if value is None:
+        return True
+    parsed = parse_task_id(value)
+    if parsed is None:
+        return False
+    major, minor = parsed
+    return major > 11 or (major == 11 and minor is not None and minor >= 4)
 
 
 def compact_result(result: dict[str, Any]) -> dict[str, Any]:
@@ -631,8 +651,16 @@ def build_report(*, baseline_truth: dict[str, Any]) -> dict[str, Any]:
         "PR11.3a acceptance text must match the committed tuple/discriminant proof-checkpoint contract",
     )
     require(
-        task_map["PR11.3a"]["status"] in {"planned", "ready", "in_progress", "done"},
-        "PR11.3a must remain a live tracked follow-on milestone",
+        task_map["PR11.3a"]["status"] == "done",
+        "PR11.3a must be marked done",
+    )
+    require(
+        task_map["PR11.3a"]["evidence"] == EXPECTED_PR113A_EVIDENCE,
+        "PR11.3a evidence must list the committed proof-checkpoint report",
+    )
+    require(
+        task_is_at_or_beyond_pr114(tracker.get("next_task_id")),
+        "next_task_id must remain at or beyond PR11.4 after PR11.3a",
     )
     for task_id in PROMOTED_TASKS:
         require(task_id in task_map, f"tracker must define promoted task {task_id}")
@@ -680,8 +708,8 @@ def build_report(*, baseline_truth: dict[str, Any]) -> dict[str, Any]:
     next_task_match = re.search(r"- \*\*Next task:\*\* `([^`]+)`", dashboard_text)
     require(next_task_match is not None, "execution/dashboard.md must render the next-task line")
     require(
-        task_is_at_or_beyond_pr113a(next_task_match.group(1) if next_task_match is not None else None),
-        "execution/dashboard.md must show a next task at or beyond PR11.3a (or none)",
+        task_is_at_or_beyond_pr114(next_task_match.group(1) if next_task_match is not None else None),
+        "execution/dashboard.md must show a next task at or beyond PR11.4 (or none)",
     )
     require(
         re.search(r"\| PR10\.4 \| done \| PR10\.1 \| \d+ \|", dashboard_text)

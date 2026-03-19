@@ -78,6 +78,7 @@ package body Safe_Frontend.Ada_Emit is
 
    type Emit_State is record
       Needs_Safe_Runtime : Boolean := False;
+      Needs_Ada_Strings_Unbounded : Boolean := False;
       Needs_Unevaluated_Use_Of_Old : Boolean := False;
       Needs_Gnat_Adc     : Boolean := False;
       Needs_Unchecked_Deallocation : Boolean := False;
@@ -192,6 +193,8 @@ package body Safe_Frontend.Ada_Emit is
       Info     : GM.Type_Descriptor) return Boolean;
    function Is_Tuple_Type (Info : GM.Type_Descriptor) return Boolean;
    function Is_Result_Builtin (Info : GM.Type_Descriptor) return Boolean;
+   function Render_Result_Empty_Aggregate return String;
+   function Render_Result_Fail_Aggregate (Message_Image : String) return String;
    function Is_Access_Type (Info : GM.Type_Descriptor) return Boolean;
    function Is_Owner_Access (Info : GM.Type_Descriptor) return Boolean;
    function Is_Alias_Access (Info : GM.Type_Descriptor) return Boolean;
@@ -1085,6 +1088,20 @@ package body Safe_Frontend.Ada_Emit is
       return Info.Is_Result_Builtin;
    end Is_Result_Builtin;
 
+   function Render_Result_Empty_Aggregate return String is
+   begin
+      return
+        "(Ok => True, Message => Ada.Strings.Unbounded.Null_Unbounded_String)";
+   end Render_Result_Empty_Aggregate;
+
+   function Render_Result_Fail_Aggregate (Message_Image : String) return String is
+   begin
+      return
+        "(Ok => False, Message => Ada.Strings.Unbounded.To_Unbounded_String ("
+        & Message_Image
+        & "))";
+   end Render_Result_Fail_Aggregate;
+
    function Is_Access_Type (Info : GM.Type_Descriptor) return Boolean is
    begin
       return FT.To_String (Info.Kind) = "access";
@@ -1312,15 +1329,15 @@ package body Safe_Frontend.Ada_Emit is
                  Result
                  & SU.To_Unbounded_String
                      (Tuple_Field_Name (Positive (Index))
-                      & " => "
-                      & Default_Value_Expr (FT.To_String (Info.Tuple_Element_Types (Index))));
+                     & " => "
+                     & Default_Value_Expr (FT.To_String (Info.Tuple_Element_Types (Index))));
                First_Association := False;
             end loop;
          end;
          Result := Result & SU.To_Unbounded_String (")");
          return SU.To_String (Result);
       elsif Is_Result_Builtin (Info) then
-         return "(Message_Length => 0, Ok => True, Message => """")";
+         return Render_Result_Empty_Aggregate;
       end if;
       return Default_Value_Expr (Type_Name);
    end Default_Value_Expr;
@@ -1622,17 +1639,19 @@ package body Safe_Frontend.Ada_Emit is
          Result := Result & SU.To_Unbounded_String ("end record;");
          return SU.To_String (Result);
       elsif Is_Result_Builtin (Type_Item) then
+         State.Needs_Ada_Strings_Unbounded := True;
          return
            "type "
            & Ada_Safe_Name (Name)
-           & " (Message_Length : Natural := 0) is record"
+           & " is record"
            & ASCII.LF
            & Indentation (1)
            & "Ok : Boolean := True;"
            & ASCII.LF
            & Indentation (1)
-           & "Message : String (1 .. Message_Length);"
+           & "Message : Ada.Strings.Unbounded.Unbounded_String := Ada.Strings.Unbounded.Null_Unbounded_String;"
            & ASCII.LF
+           & Indentation (1)
            & "end record;";
       elsif Kind = "record" then
          declare
@@ -1866,7 +1885,8 @@ package body Safe_Frontend.Ada_Emit is
             if FT.Lowercase (FT.To_String (Expr.Name)) = "ok"
               and then FT.Lowercase (FT.To_String (Expr.Type_Name)) = "result"
             then
-               return "(Message_Length => 0, Ok => True, Message => """")";
+               State.Needs_Ada_Strings_Unbounded := True;
+               return Render_Result_Empty_Aggregate;
             end if;
             return FT.To_String (Expr.Name);
          when CM.Expr_Select =>
@@ -1907,6 +1927,15 @@ package body Safe_Frontend.Ada_Emit is
                     Prefix_Image
                     & "."
                     & Tuple_Field_Name (Positive (Natural'Value (Selector_Name)));
+               elsif Expr.Prefix /= null
+                 and then FT.Lowercase (Selector_Name) = "message"
+                 and then Has_Text (Expr.Prefix.Type_Name)
+                 and then Has_Type (Unit, Document, FT.To_String (Expr.Prefix.Type_Name))
+                 and then Is_Result_Builtin
+                   (Lookup_Type (Unit, Document, FT.To_String (Expr.Prefix.Type_Name)))
+               then
+                  State.Needs_Ada_Strings_Unbounded := True;
+                  return "Ada.Strings.Unbounded.To_String (" & Prefix_Image & ".Message)";
                end if;
                return Prefix_Image & "." & Selector_Name;
             end;
@@ -1966,18 +1995,13 @@ package body Safe_Frontend.Ada_Emit is
                   else Render_Expr (Unit, Document, Expr.Callee, State));
             begin
                if Lower_Callee = "ok" and then Expr.Args.Is_Empty then
-                  return "(Message_Length => 0, Ok => True, Message => """")";
+                  State.Needs_Ada_Strings_Unbounded := True;
+                  return Render_Result_Empty_Aggregate;
                elsif Lower_Callee = "fail" and then Natural (Expr.Args.Length) = 1 then
+                  State.Needs_Ada_Strings_Unbounded := True;
                   return
-                    "(Message_Length => "
-                    & Render_String_Length_Expr
-                        (Unit,
-                         Document,
-                         Expr.Args (Expr.Args.First_Index),
-                         State)
-                    & ", Ok => False, Message => "
-                    & Render_Expr (Unit, Document, Expr.Args (Expr.Args.First_Index), State)
-                    & ")";
+                    Render_Result_Fail_Aggregate
+                      (Render_Expr (Unit, Document, Expr.Args (Expr.Args.First_Index), State));
                end if;
                if Expr.Args.Is_Empty then
                   return Callee_Image;
@@ -3526,6 +3550,15 @@ package body Safe_Frontend.Ada_Emit is
                  and then not Selector_Is_Record_Field (Unit, Document, Expr.Prefix, Selector_Name)
                then
                   return Prefix_Image & "'" & Selector_Name;
+               elsif Expr.Prefix /= null
+                 and then FT.Lowercase (Selector_Name) = "message"
+                 and then Has_Text (Expr.Prefix.Type_Name)
+                 and then Has_Type (Unit, Document, FT.To_String (Expr.Prefix.Type_Name))
+                 and then Is_Result_Builtin
+                   (Lookup_Type (Unit, Document, FT.To_String (Expr.Prefix.Type_Name)))
+               then
+                  State.Needs_Ada_Strings_Unbounded := True;
+                  return "Ada.Strings.Unbounded.To_String (" & Prefix_Image & ".Message)";
                end if;
                return Prefix_Image & "." & Selector_Name;
             end;
@@ -3569,6 +3602,8 @@ package body Safe_Frontend.Ada_Emit is
             return "";
          when CM.Expr_Call =>
             declare
+               Callee_Flat  : constant String := CM.Flatten_Name (Expr.Callee);
+               Lower_Callee : constant String := FT.Lowercase (Callee_Flat);
                Callee_Image : SU.Unbounded_String;
             begin
                if Expr.Callee /= null
@@ -3631,6 +3666,27 @@ package body Safe_Frontend.Ada_Emit is
 
                if not Supported then
                   return "";
+               elsif Lower_Callee = "ok" and then Expr.Args.Is_Empty then
+                  State.Needs_Ada_Strings_Unbounded := True;
+                  return Render_Result_Empty_Aggregate;
+               elsif Lower_Callee = "fail" and then Natural (Expr.Args.Length) = 1 then
+                  declare
+                     Message_Image : constant String :=
+                       Render_Expr_With_Target_Substitution
+                         (Unit,
+                          Document,
+                          Expr.Args (Expr.Args.First_Index),
+                          Target,
+                          Replacement,
+                          State,
+                          Supported);
+                  begin
+                     if not Supported then
+                        return "";
+                     end if;
+                     State.Needs_Ada_Strings_Unbounded := True;
+                     return Render_Result_Fail_Aggregate (Message_Image);
+                  end;
                elsif Expr.Args.Is_Empty then
                   return SU.To_String (Callee_Image);
                end if;
@@ -4614,14 +4670,14 @@ package body Safe_Frontend.Ada_Emit is
          declare
             Item : constant CM.Statement_Access := Statements (Index);
          begin
-         if Item = null then
-            Raise_Unsupported
-              (State,
-               FT.Null_Span,
-               "encountered null statement during Ada emission");
-         end if;
+            if Item = null then
+               Raise_Unsupported
+                 (State,
+                  FT.Null_Span,
+                  "encountered null statement during Ada emission");
+            end if;
 
-         case Item.Kind is
+            case Item.Kind is
             when CM.Stmt_Null =>
                Append_Line (Buffer, "null;", Depth);
             when CM.Stmt_Object_Decl =>
@@ -5099,14 +5155,14 @@ package body Safe_Frontend.Ada_Emit is
                  (Buffer,
                   "delay " & Render_Expr (Unit, Document, Item.Value, State) & ";",
                   Depth);
-            when others =>
-               Raise_Unsupported
-                 (State,
-                  Item.Span,
-                  "PR09 emitter does not yet support statement kind '"
-                  & Item.Kind'Image
-                  & "'");
-         end case;
+               when others =>
+                  Raise_Unsupported
+                    (State,
+                     Item.Span,
+                     "PR09 emitter does not yet support statement kind '"
+                     & Item.Kind'Image
+                     & "'");
+            end case;
          end;
       end loop;
    end Render_Statements;
@@ -5641,6 +5697,9 @@ package body Safe_Frontend.Ada_Emit is
       if State.Needs_Unchecked_Deallocation then
          Add_Body_With ("Ada.Unchecked_Deallocation");
       end if;
+      if State.Needs_Ada_Strings_Unbounded then
+         Add_Body_With ("Ada.Strings.Unbounded");
+      end if;
       if State.Needs_Safe_Runtime then
          Add_Body_With ("Safe_Runtime");
       end if;
@@ -5661,8 +5720,12 @@ package body Safe_Frontend.Ada_Emit is
            "pragma SPARK_Mode (On);" & ASCII.LF & ASCII.LF;
          Spec_Needs_Safe_Runtime : constant Boolean :=
            Ada.Strings.Fixed.Index (Original_Spec, "Safe_Runtime.") > 0;
+         Spec_Needs_Ada_Strings_Unbounded : constant Boolean :=
+           State.Needs_Ada_Strings_Unbounded;
       begin
-         if (Spec_Needs_Safe_Runtime or else State.Needs_Unevaluated_Use_Of_Old)
+         if (Spec_Needs_Safe_Runtime
+             or else Spec_Needs_Ada_Strings_Unbounded
+             or else State.Needs_Unevaluated_Use_Of_Old)
            and then Original_Spec'Length >= Pragma_Block'Length
            and then
              Original_Spec
@@ -5672,6 +5735,9 @@ package body Safe_Frontend.Ada_Emit is
             Append_Line (Spec_Text, "pragma SPARK_Mode (On);");
             if State.Needs_Unevaluated_Use_Of_Old then
                Append_Line (Spec_Text, "pragma Unevaluated_Use_Of_Old (Allow);");
+            end if;
+            if Spec_Needs_Ada_Strings_Unbounded then
+               Append_Line (Spec_Text, "with Ada.Strings.Unbounded;");
             end if;
             if Spec_Needs_Safe_Runtime then
                Append_Line (Spec_Text, "with Safe_Runtime;");

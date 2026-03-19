@@ -127,6 +127,35 @@ Fixed-point Rule 5 support and the broader spec-level floating-point semantics
 question remain open as `PS-002` and `PS-026` in
 [`docs/post_pr10_scope.md`](post_pr10_scope.md).
 
+## PR11.3a Sequential Checkpoint Corpus
+
+PR11.3a adds a distinct post-PR10 sequential proof checkpoint for the parser,
+text, discriminant, tuple, and structured-return surfaces admitted by PR11.2
+and PR11.3.
+
+That checkpoint corpus is exactly:
+
+- `tests/positive/pr112_character_case.safe`
+- `tests/positive/pr112_discrete_case.safe`
+- `tests/positive/pr112_string_param.safe`
+- `tests/positive/pr112_case_scrutinee_once.safe`
+- `tests/positive/pr113_discriminant_constraints.safe`
+- `tests/positive/pr113_tuple_destructure.safe`
+- `tests/positive/pr113_structured_result.safe`
+- `tests/positive/pr113_variant_guard.safe`
+- `tests/positive/constant_discriminant_default.safe`
+- `tests/positive/result_equality_check.safe`
+- `tests/positive/result_guarded_access.safe`
+
+PR11.3a proves that exact set through emitted Ada compile, GNATprove `flow`,
+and GNATprove `prove` under the same all-proved-only policy used by the earlier
+sequential checkpoints.
+
+`tests/positive/pr113_tuple_channel.safe` remains outside that proof set. It is
+accepted compile-only from PR11.3, but its concurrency proof debt is explicitly
+deferred to `PR11.8b` rather than being silently pulled into the sequential
+checkpoint.
+
 ## PR10 Assurance Policy
 
 Inside the selected emitted corpus, PR10 uses an **all-proved-only** policy:

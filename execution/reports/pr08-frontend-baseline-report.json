@@ -6,8 +6,8 @@
     "frontend_baseline": "docs/frontend_architecture_baseline.md",
     "readme": "README.md"
   },
-  "repeat_sha256": "5dc11690e2406e83ff44e9476867de276ef6df9e607e39409fc6f97754d42339",
-  "report_sha256": "5dc11690e2406e83ff44e9476867de276ef6df9e607e39409fc6f97754d42339",
+  "repeat_sha256": "453383c272efc6ab811e9132811403c32a2c723ec4907f3ed636da0655812203",
+  "report_sha256": "453383c272efc6ab811e9132811403c32a2c723ec4907f3ed636da0655812203",
   "status": "ok",
   "subgates": {
     "run_pr081_local_concurrency_frontend.py": {
@@ -63,7 +63,7 @@
   },
   "task": "PR08",
   "tracker": {
-    "next_task_id": "PR11.3a",
+    "next_task_id": "PR11.4",
     "pr084_evidence": [
       "execution/reports/pr084-transitive-concurrency-integration-report.json"
     ],

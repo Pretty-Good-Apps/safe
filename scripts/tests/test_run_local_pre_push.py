@@ -155,6 +155,18 @@ class RunLocalPrePushTests(unittest.TestCase):
             ),
         )
 
+    def test_gate_scripts_for_branch_maps_pr113a_branch(self) -> None:
+        self.assertEqual(
+            gate_scripts_for_branch("codex/pr113a-proof-checkpoint1"),
+            (
+                "scripts/run_pr111_language_evaluation_harness.py",
+                "scripts/run_pr112_parser_completeness_phase1.py",
+                "scripts/run_pr113_discriminated_types_tuples_structured_returns.py",
+                "scripts/run_pr113a_proof_checkpoint1.py",
+                "scripts/run_pr101_comprehensive_audit.py",
+            ),
+        )
+
     def test_build_steps_include_stateful_baseline_scripts_for_pr111(self) -> None:
         steps = build_steps(
             branch="codex/pr111-language-eval-harness",
@@ -219,6 +231,24 @@ class RunLocalPrePushTests(unittest.TestCase):
         self.assertIn("Run run_pr111_language_evaluation_harness.py", labels)
         self.assertIn("Run run_pr112_parser_completeness_phase1.py", labels)
         self.assertIn("Run run_pr113_discriminated_types_tuples_structured_returns.py", labels)
+        self.assertIn("Run run_pr08_frontend_baseline.py", labels)
+        self.assertIn("Run run_pr09_ada_emission_baseline.py", labels)
+        self.assertIn("Run run_pr10_emitted_baseline.py", labels)
+        self.assertEqual(labels.count("Run run_pr101_comprehensive_audit.py"), 1)
+
+    def test_build_steps_include_pr111_pr112_pr113_and_pr113a_for_pr113a_branch(self) -> None:
+        steps = build_steps(
+            branch="codex/pr113a-proof-checkpoint1",
+            python="python3",
+            alr="alr",
+            git="git",
+            include_diff=False,
+        )
+        labels = [step.label for step in steps]
+        self.assertIn("Run run_pr111_language_evaluation_harness.py", labels)
+        self.assertIn("Run run_pr112_parser_completeness_phase1.py", labels)
+        self.assertIn("Run run_pr113_discriminated_types_tuples_structured_returns.py", labels)
+        self.assertIn("Run run_pr113a_proof_checkpoint1.py", labels)
         self.assertIn("Run run_pr08_frontend_baseline.py", labels)
         self.assertIn("Run run_pr09_ada_emission_baseline.py", labels)
         self.assertIn("Run run_pr10_emitted_baseline.py", labels)
