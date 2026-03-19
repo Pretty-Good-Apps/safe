@@ -3739,7 +3739,7 @@
             },
             "Data Dependencies": {
               "flow": {
-                "count": 2,
+                "count": 3,
                 "detail": ""
               },
               "justified": {
@@ -3751,7 +3751,7 @@
                 "detail": ""
               },
               "total": {
-                "count": 2,
+                "count": 3,
                 "detail": ""
               },
               "unproved": {
@@ -3761,7 +3761,7 @@
             },
             "Flow Dependencies": {
               "flow": {
-                "count": 3,
+                "count": 4,
                 "detail": ""
               },
               "justified": {
@@ -3773,7 +3773,7 @@
                 "detail": ""
               },
               "total": {
-                "count": 3,
+                "count": 4,
                 "detail": ""
               },
               "unproved": {
@@ -3893,7 +3893,7 @@
             },
             "Termination": {
               "flow": {
-                "count": 2,
+                "count": 3,
                 "detail": ""
               },
               "justified": {
@@ -3905,7 +3905,7 @@
                 "detail": ""
               },
               "total": {
-                "count": 2,
+                "count": 3,
                 "detail": ""
               },
               "unproved": {
@@ -3915,7 +3915,7 @@
             },
             "Total": {
               "flow": {
-                "count": 7,
+                "count": 10,
                 "detail": "100%"
               },
               "justified": {
@@ -3927,7 +3927,7 @@
                 "detail": ""
               },
               "total": {
-                "count": 7,
+                "count": 10,
                 "detail": ""
               },
               "unproved": {
@@ -3938,7 +3938,7 @@
           },
           "total": {
             "flow": {
-              "count": 7,
+              "count": 10,
               "detail": "100%"
             },
             "justified": {
@@ -3950,7 +3950,7 @@
               "detail": ""
             },
             "total": {
-              "count": 7,
+              "count": 10,
               "detail": ""
             },
             "unproved": {
@@ -4027,7 +4027,7 @@
             },
             "Data Dependencies": {
               "flow": {
-                "count": 2,
+                "count": 3,
                 "detail": ""
               },
               "justified": {
@@ -4039,7 +4039,7 @@
                 "detail": ""
               },
               "total": {
-                "count": 2,
+                "count": 3,
                 "detail": ""
               },
               "unproved": {
@@ -4049,7 +4049,7 @@
             },
             "Flow Dependencies": {
               "flow": {
-                "count": 3,
+                "count": 4,
                 "detail": ""
               },
               "justified": {
@@ -4061,7 +4061,7 @@
                 "detail": ""
               },
               "total": {
-                "count": 3,
+                "count": 4,
                 "detail": ""
               },
               "unproved": {
@@ -4167,11 +4167,11 @@
                 "detail": ""
               },
               "provers": {
-                "count": 2,
-                "detail": "CVC5 67%, Trivial 33%"
+                "count": 0,
+                "detail": ""
               },
               "total": {
-                "count": 2,
+                "count": 0,
                 "detail": ""
               },
               "unproved": {
@@ -4181,7 +4181,7 @@
             },
             "Termination": {
               "flow": {
-                "count": 2,
+                "count": 3,
                 "detail": ""
               },
               "justified": {
@@ -4193,7 +4193,7 @@
                 "detail": ""
               },
               "total": {
-                "count": 2,
+                "count": 3,
                 "detail": ""
               },
               "unproved": {
@@ -4203,19 +4203,19 @@
             },
             "Total": {
               "flow": {
-                "count": 7,
-                "detail": "78%"
+                "count": 10,
+                "detail": "100%"
               },
               "justified": {
                 "count": 0,
                 "detail": ""
               },
               "provers": {
-                "count": 2,
-                "detail": "22%"
+                "count": 0,
+                "detail": ""
               },
               "total": {
-                "count": 9,
+                "count": 10,
                 "detail": ""
               },
               "unproved": {
@@ -4226,19 +4226,19 @@
           },
           "total": {
             "flow": {
-              "count": 7,
-              "detail": "78%"
+              "count": 10,
+              "detail": "100%"
             },
             "justified": {
               "count": 0,
               "detail": ""
             },
             "provers": {
-              "count": 2,
-              "detail": "22%"
+              "count": 0,
+              "detail": ""
             },
             "total": {
-              "count": 9,
+              "count": 10,
               "detail": ""
             },
             "unproved": {
@@ -4250,22 +4250,26 @@
       },
       "structural_assertions": {
         "body_fragments": [
-          "F1 => (Message_Length => 0, Ok => True, Message => \"\")",
-          "Message_Length => String'(\"negative\")'Length",
-          "F1 => (Message_Length => String'(\"negative\")'Length, Ok => False, Message => \"negative\")"
+          "return (Ok => False, Message => Ada.Strings.Unbounded.To_Unbounded_String (Msg));",
+          "F1 => (Ok => True, Message => Ada.Strings.Unbounded.Null_Unbounded_String)",
+          "return Safe_tuple_result_Integer'(F1 => Reject (\"negative\"), F2 => 0);"
         ],
         "body_order": [],
         "body_regexes": [],
-        "coverage_note": "Builtin result plus tuple structured returns remain explicit in emitted Ada while using a proof-friendly bounded message-length subtype.",
+        "coverage_note": "Builtin result plus tuple structured returns remain explicit in emitted Ada while keeping fail(String) unbounded through Ada.Strings.Unbounded storage.",
         "source_fragments": [
+          "function Reject (Msg : in String) return result is",
+          "return fail (Msg);",
           "function Parse (Input : in Integer) return (result, Integer) is",
           "return (ok (), Input);",
-          "return (fail (\"negative\"), 0);"
+          "return (Reject (\"negative\"), 0);"
         ],
         "spec_fragments": [
-          "subtype Safe_Builtin_Result_Message_Length is Natural range 0 .. 65536;",
-          "type result (Message_Length : Safe_Builtin_Result_Message_Length := 0) is record",
-          "type Safe_tuple_result_Integer is record"
+          "with Ada.Strings.Unbounded;",
+          "type result is record",
+          "Message : Ada.Strings.Unbounded.Unbounded_String := Ada.Strings.Unbounded.Null_Unbounded_String;",
+          "type Safe_tuple_result_Integer is record",
+          "function Reject(Msg : String) return result with Global => null,"
         ],
         "spec_regexes": []
       }
@@ -6703,8 +6707,8 @@
       }
     }
   ],
-  "repeat_sha256": "90c07e151f1d99ea7ff76182eeb88dc63e390c47e526905e0a51fb3cdafb2a0c",
-  "report_sha256": "90c07e151f1d99ea7ff76182eeb88dc63e390c47e526905e0a51fb3cdafb2a0c",
+  "repeat_sha256": "5148eab33e2674667601c48e6a09e9c5177f828a2d35d719c83ad650fe3e23bc",
+  "report_sha256": "5148eab33e2674667601c48e6a09e9c5177f828a2d35d719c83ad650fe3e23bc",
   "status": "ok",
   "task": "PR11.3a"
 }

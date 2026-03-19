@@ -112,21 +112,25 @@ PR113A_SEQUENTIAL_PROOF_CORPUS: list[dict[str, Any]] = [
     {
         "fixture": "tests/positive/pr113_structured_result.safe",
         "family": "pr113",
-        "coverage_note": "Builtin result plus tuple structured returns remain explicit in emitted Ada while using a proof-friendly bounded message-length subtype.",
+        "coverage_note": "Builtin result plus tuple structured returns remain explicit in emitted Ada while keeping fail(String) unbounded through Ada.Strings.Unbounded storage.",
         "source_fragments": [
+            "function Reject (Msg : in String) return result is",
+            "return fail (Msg);",
             "function Parse (Input : in Integer) return (result, Integer) is",
             "return (ok (), Input);",
-            "return (fail (\"negative\"), 0);",
+            "return (Reject (\"negative\"), 0);",
         ],
         "spec_fragments": [
-            "subtype Safe_Builtin_Result_Message_Length is Natural range 0 .. 65536;",
-            "type result (Message_Length : Safe_Builtin_Result_Message_Length := 0) is record",
+            "with Ada.Strings.Unbounded;",
+            "type result is record",
+            "Message : Ada.Strings.Unbounded.Unbounded_String := Ada.Strings.Unbounded.Null_Unbounded_String;",
             "type Safe_tuple_result_Integer is record",
+            "function Reject(Msg : String) return result with Global => null,",
         ],
         "body_fragments": [
-            "F1 => (Message_Length => 0, Ok => True, Message => \"\")",
-            "Message_Length => String'(\"negative\")'Length",
-            "F1 => (Message_Length => String'(\"negative\")'Length, Ok => False, Message => \"negative\")",
+            "return (Ok => False, Message => Ada.Strings.Unbounded.To_Unbounded_String (Msg));",
+            "F1 => (Ok => True, Message => Ada.Strings.Unbounded.Null_Unbounded_String)",
+            "return Safe_tuple_result_Integer'(F1 => Reject (\"negative\"), F2 => 0);",
         ],
     },
     {

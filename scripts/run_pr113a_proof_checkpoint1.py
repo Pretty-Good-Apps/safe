@@ -34,6 +34,7 @@ from _lib.pr10_emit import emit_fixture, gnatprove_emitted_ada
 from _lib.pr113a_sequential import (
     corpus_paths,
     excluded_positive_concurrency_paths,
+    normalize_source_text,
     normalized_source_fragments,
     sequential_proof_corpus,
 )
@@ -48,11 +49,6 @@ def compact_result(result: dict[str, Any]) -> dict[str, Any]:
         "cwd": result["cwd"],
         "returncode": result["returncode"],
     }
-
-
-def normalize_source_text(text: str) -> str:
-    return " ".join(text.split())
-
 
 def assert_normalized_source_fragments(path: Path, fragments: list[str]) -> list[str]:
     normalized = normalize_source_text(path.read_text(encoding="utf-8"))
