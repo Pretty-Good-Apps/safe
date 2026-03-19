@@ -193,9 +193,14 @@ class RunLocalPrePushTests(unittest.TestCase):
         self.assertIn("Run run_pr08_frontend_baseline.py", labels)
         self.assertIn("Run run_pr09_ada_emission_baseline.py", labels)
         self.assertIn("Run run_pr10_emitted_baseline.py", labels)
+        self.assertIn("Rebuild compiler before stateful baselines", labels)
         self.assertLess(
+            labels.index("Run run_pr111_language_evaluation_harness.py"),
+            labels.index("Rebuild compiler before stateful baselines"),
+        )
+        self.assertLess(
+            labels.index("Rebuild compiler before stateful baselines"),
             labels.index("Run run_pr08_frontend_baseline.py"),
-            labels.index("Rebuild compiler after reproducibility gate"),
         )
         self.assertLess(
             labels.index("Run run_pr09_ada_emission_baseline.py"),
@@ -227,6 +232,7 @@ class RunLocalPrePushTests(unittest.TestCase):
         )
         labels = [step.label for step in steps]
         self.assertIn("Run run_pr112_parser_completeness_phase1.py", labels)
+        self.assertIn("Rebuild compiler before stateful baselines", labels)
         self.assertIn("Run run_pr08_frontend_baseline.py", labels)
         self.assertIn("Run run_pr09_ada_emission_baseline.py", labels)
         self.assertIn("Run run_pr10_emitted_baseline.py", labels)
@@ -244,6 +250,7 @@ class RunLocalPrePushTests(unittest.TestCase):
         self.assertIn("Run run_pr111_language_evaluation_harness.py", labels)
         self.assertIn("Run run_pr112_parser_completeness_phase1.py", labels)
         self.assertIn("Run run_pr113_discriminated_types_tuples_structured_returns.py", labels)
+        self.assertIn("Rebuild compiler before stateful baselines", labels)
         self.assertIn("Run run_pr08_frontend_baseline.py", labels)
         self.assertIn("Run run_pr09_ada_emission_baseline.py", labels)
         self.assertIn("Run run_pr10_emitted_baseline.py", labels)
@@ -262,6 +269,7 @@ class RunLocalPrePushTests(unittest.TestCase):
         self.assertIn("Run run_pr112_parser_completeness_phase1.py", labels)
         self.assertIn("Run run_pr113_discriminated_types_tuples_structured_returns.py", labels)
         self.assertIn("Run run_pr113a_proof_checkpoint1.py", labels)
+        self.assertIn("Rebuild compiler before stateful baselines", labels)
         self.assertIn("Run run_pr08_frontend_baseline.py", labels)
         self.assertIn("Run run_pr09_ada_emission_baseline.py", labels)
         self.assertIn("Run run_pr10_emitted_baseline.py", labels)
@@ -281,6 +289,15 @@ class RunLocalPrePushTests(unittest.TestCase):
         self.assertIn("Run run_pr113_discriminated_types_tuples_structured_returns.py", labels)
         self.assertIn("Run run_pr113a_proof_checkpoint1.py", labels)
         self.assertIn("Run run_pr114_signature_control_flow_syntax.py", labels)
+        self.assertIn("Rebuild compiler before stateful baselines", labels)
+        self.assertLess(
+            labels.index("Run run_pr114_signature_control_flow_syntax.py"),
+            labels.index("Rebuild compiler before stateful baselines"),
+        )
+        self.assertLess(
+            labels.index("Rebuild compiler before stateful baselines"),
+            labels.index("Run run_pr101_comprehensive_audit.py"),
+        )
         self.assertIn("Run run_pr08_frontend_baseline.py", labels)
         self.assertIn("Run run_pr09_ada_emission_baseline.py", labels)
         self.assertIn("Run run_pr10_emitted_baseline.py", labels)
