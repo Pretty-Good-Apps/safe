@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
@@ -236,6 +237,78 @@ class Pr101AuditHardeningTests(unittest.TestCase):
         )
         self.assertEqual(results[2]["deterministic"], True)
 
+    def test_pr10_standalone_local_reuses_ci_authoritative_slice_reports(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            generated_root = Path(temp_dir)
+            report_root = generated_root / "execution" / "reports"
+            report_root.mkdir(parents=True, exist_ok=True)
+            for filename, report_sha in (
+                ("pr10-emitted-flow-report.json", "2" * 64),
+                ("pr10-emitted-prove-report.json", "3" * 64),
+            ):
+                (report_root / filename).write_text(
+                    json.dumps(
+                        {
+                            "deterministic": True,
+                            "report_sha256": report_sha,
+                            "repeat_sha256": report_sha,
+                        },
+                        indent=2,
+                        sort_keys=True,
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+
+            executed: list[str] = []
+
+            def fake_run(argv: list[str], **_kwargs: object) -> dict[str, object]:
+                executed.append(Path(str(argv[1])).name)
+                report_path = Path(str(argv[argv.index("--report") + 1]))
+                report_path.write_text(
+                    json.dumps(
+                        {
+                            "deterministic": True,
+                            "report_sha256": "1" * 64,
+                            "repeat_sha256": "1" * 64,
+                        },
+                        indent=2,
+                        sort_keys=True,
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+                return {
+                    "command": ["python3", "scripts/run_pr10_contract_baseline.py", "--report", "$TMPDIR/run_pr10_contract_baseline.json"],
+                    "cwd": "$REPO_ROOT",
+                    "returncode": 0,
+                    "stdout": "pr10 contract baseline: OK ($TMPDIR/run_pr10_contract_baseline.json)\n",
+                    "stderr": "",
+                }
+
+            with mock.patch.object(run_pr10_emitted_baseline, "find_command", return_value="python3"), mock.patch.object(
+                run_pr10_emitted_baseline,
+                "run",
+                side_effect=fake_run,
+            ):
+                results = run_pr10_emitted_baseline.build_slice_reports_standalone(
+                    env={},
+                    authority="local",
+                    generated_root=generated_root,
+                )
+
+        self.assertEqual(executed, ["run_pr10_contract_baseline.py"])
+        self.assertEqual(results[1]["report_sha256"], "2" * 64)
+        self.assertEqual(results[2]["report_sha256"], "3" * 64)
+        self.assertEqual(
+            results[1]["stdout"],
+            "pr10 emitted flow: OK ($TMPDIR/run_pr10_emitted_flow.json)\n",
+        )
+        self.assertEqual(
+            results[2]["stdout"],
+            "pr10 emitted prove: OK ($TMPDIR/run_pr10_emitted_prove.json)\n",
+        )
+
     def test_pr101_semantic_floor_tracks_baseline_hashes_and_anchor_hashes(self) -> None:
         baseline_truth = {
             "python_gates": [
@@ -338,6 +411,36 @@ class Pr101AuditHardeningTests(unittest.TestCase):
         )
         self.assertEqual(canonical["verification_reports"][0]["report_sha256"], "2" * 64)
         self.assertNotIn("verification_reports", machine)
+
+    def test_pr101_canonicalize_baseline_gate_result_strips_authority_and_generated_root(self) -> None:
+        canonical = run_pr101_comprehensive_audit.canonicalize_baseline_gate_result(
+            script=Path("scripts/run_pr10_emitted_baseline.py"),
+            result={
+                "command": [
+                    "python3",
+                    "scripts/run_pr10_emitted_baseline.py",
+                    "--authority",
+                    "local",
+                    "--generated-root",
+                    "/tmp/stage",
+                    "--pipeline-input",
+                    "/tmp/pipeline.json",
+                    "--report",
+                    "/tmp/report.json",
+                ],
+                "cwd": "$REPO_ROOT",
+                "returncode": 0,
+            },
+        )
+        self.assertEqual(
+            canonical["command"],
+            [
+                "python3",
+                "scripts/run_pr10_emitted_baseline.py",
+                "--report",
+                "$TMPDIR/run_pr10_emitted_baseline.json",
+            ],
+        )
 
     def test_pr06910_pipeline_rerun_reuses_cached_result(self) -> None:
         rerun = run_pr06910_portability_environment.pipeline_rerun(
@@ -515,6 +618,108 @@ class Pr101AuditHardeningTests(unittest.TestCase):
                 "--report",
                 "$TMPDIR/run_pr08_frontend_baseline.json",
             ],
+        )
+
+    def test_pr101_run_baseline_truth_local_reuses_ci_authoritative_baselines(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            generated_root = Path(temp_dir)
+            report_root = generated_root / "execution" / "reports"
+            report_root.mkdir(parents=True, exist_ok=True)
+            emitted_report = report_root / "emitted-hardening-regressions-report.json"
+            emitted_report.write_text(
+                json.dumps(
+                    {
+                        "deterministic": True,
+                        "report_sha256": "4" * 64,
+                        "repeat_sha256": "4" * 64,
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            invocations: list[tuple[str, list[str]]] = []
+
+            def fake_run_python_gate(
+                *,
+                python: str,
+                script: Path,
+                env: dict[str, str],
+                temp_root: Path,
+                extra_argv: list[str] | None = None,
+            ) -> dict[str, object]:
+                invocations.append((script.name, list(extra_argv or [])))
+                sha = str(len(invocations)) * 64
+                return {
+                    "script": f"scripts/{script.name}",
+                    "result": {
+                        "command": ["python3", f"scripts/{script.name}", "--report", f"$TMPDIR/{script.stem}.json"],
+                        "cwd": "$REPO_ROOT",
+                        "returncode": 0,
+                    },
+                    "report_sha256": sha,
+                    "deterministic": True,
+                }
+
+            with mock.patch.object(run_pr101_comprehensive_audit, "find_command", return_value="python3"), mock.patch.object(
+                run_pr101_comprehensive_audit,
+                "run_python_gate",
+                side_effect=fake_run_python_gate,
+            ), mock.patch.object(
+                run_pr101_comprehensive_audit,
+                "load_verification_report_reference",
+                side_effect=[
+                    {
+                        "node_id": "pr101a_companion_proof_verification",
+                        "script": "scripts/run_pr101a_companion_proof_verification.py",
+                        "report_sha256": "5" * 64,
+                        "deterministic": True,
+                    },
+                    {
+                        "node_id": "pr101b_template_proof_verification",
+                        "script": "scripts/run_pr101b_template_proof_verification.py",
+                        "report_sha256": "6" * 64,
+                        "deterministic": True,
+                    },
+                ],
+            ):
+                baseline_truth = run_pr101_comprehensive_audit.run_baseline_truth(
+                    env={},
+                    authority="local",
+                    generated_root=generated_root,
+                )
+
+        self.assertEqual(
+            [script for script, _extra in invocations],
+            [
+                "run_pr08_frontend_baseline.py",
+                "run_pr09_ada_emission_baseline.py",
+                "run_pr10_emitted_baseline.py",
+            ],
+        )
+        self.assertEqual(
+            invocations[-1][1],
+            ["--authority", "local", "--generated-root", str(generated_root)],
+        )
+        self.assertEqual(
+            baseline_truth["python_gates"][-1],
+            {
+                "script": "scripts/run_emitted_hardening_regressions.py",
+                "result": {
+                    "command": [
+                        "python3",
+                        "scripts/run_emitted_hardening_regressions.py",
+                        "--report",
+                        "$TMPDIR/run_emitted_hardening_regressions.json",
+                    ],
+                    "cwd": "$REPO_ROOT",
+                    "returncode": 0,
+                },
+                "report_sha256": "4" * 64,
+                "deterministic": True,
+            },
         )
 
     def test_split_table_row_rejects_non_data_rows(self) -> None:

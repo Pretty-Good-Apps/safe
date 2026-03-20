@@ -13,6 +13,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
+from _lib.gate_manifest import DeterminismClass, NODES
 from _lib.harness_common import (
     compact_result,
     display_path,
@@ -59,6 +60,11 @@ PIPELINE_BASELINE_IDS = {
     "run_pr09_ada_emission_baseline.py": "pr09_ada_emission_baseline",
     "run_pr10_emitted_baseline.py": "pr10_emitted_baseline",
     "run_emitted_hardening_regressions.py": "emitted_hardening_regressions",
+}
+BASELINE_NODES = {
+    node.id: node
+    for node in NODES
+    if node.id in set(PIPELINE_BASELINE_IDS.values())
 }
 EVIDENCE_POLICY = load_evidence_policy()
 EXPECTED_PR101_ACCEPTANCE = [
@@ -234,7 +240,7 @@ EXPECTED_COMPILER_README_SNIPPETS = [
 ]
 EXPECTED_WORKFLOW_SNIPPETS = [
     "pr101-comprehensive-audit:",
-    "python3 scripts/run_pr101_comprehensive_audit.py",
+    "python3 scripts/run_pr101_comprehensive_audit.py --authority ci",
     "git diff --exit-code execution/reports/pr101-comprehensive-audit-report.json",
     "pr104-gnatprove-evidence-parser-hardening:",
     "python3 scripts/run_pr104_gnatprove_evidence_parser_hardening.py",
@@ -429,10 +435,43 @@ def parse_summary_counts(text: str) -> dict[str, int]:
     return counts
 
 
-def run_python_gate(*, python: str, script: Path, env: dict[str, str], temp_root: Path) -> dict[str, Any]:
+def canonicalize_baseline_gate_result(*, script: Path, result: dict[str, Any]) -> dict[str, Any]:
+    canonical = dict(result)
+    command = list(canonical["command"])
+    for flag in ("--pipeline-input", "--generated-root", "--authority"):
+        if flag in command:
+            index = command.index(flag)
+            del command[index:index + 2]
+    if "--report" in command:
+        index = command.index("--report")
+        command[index + 1] = f"$TMPDIR/{script.stem}.json"
+    canonical["command"] = command
+    return canonical
+
+
+def local_reused_gate_result(*, python: str, script: Path) -> dict[str, Any]:
+    return {
+        "command": [python, display_path(script, repo_root=REPO_ROOT), "--report", f"$TMPDIR/{script.stem}.json"],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+    }
+
+
+def run_python_gate(
+    *,
+    python: str,
+    script: Path,
+    env: dict[str, str],
+    temp_root: Path,
+    extra_argv: list[str] | None = None,
+) -> dict[str, Any]:
     report_path = temp_root / f"{script.stem}.json"
+    argv = [python, str(script)]
+    if extra_argv:
+        argv.extend(extra_argv)
+    argv.extend(["--report", str(report_path)])
     result = run(
-        [python, str(script), "--report", str(report_path)],
+        argv,
         cwd=REPO_ROOT,
         env=env,
         temp_root=temp_root,
@@ -440,7 +479,36 @@ def run_python_gate(*, python: str, script: Path, env: dict[str, str], temp_root
     payload = json.loads(report_path.read_text(encoding="utf-8"))
     return {
         "script": display_path(script, repo_root=REPO_ROOT),
-        "result": compact_result(result),
+        "result": compact_result(canonicalize_baseline_gate_result(script=script, result=result)),
+        "report_sha256": payload["report_sha256"],
+        "deterministic": payload["deterministic"],
+    }
+
+
+def load_baseline_gate_reference(
+    *,
+    python: str,
+    script: Path,
+    generated_root: Path | None = None,
+) -> dict[str, Any]:
+    node_id = PIPELINE_BASELINE_IDS[script.name]
+    node = BASELINE_NODES[node_id]
+    require(node.report_path is not None, f"{node_id}: report path required")
+    report_path = resolve_generated_path(
+        node.report_path,
+        generated_root=generated_root,
+        policy=EVIDENCE_POLICY,
+        repo_root=REPO_ROOT,
+    )
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    require(payload.get("deterministic") is True, f"{display_path(report_path, repo_root=REPO_ROOT)} must be deterministic")
+    require(
+        payload.get("report_sha256") == payload.get("repeat_sha256"),
+        f"{display_path(report_path, repo_root=REPO_ROOT)} report hashes must match",
+    )
+    return {
+        "script": display_path(script, repo_root=REPO_ROOT),
+        "result": local_reused_gate_result(python=python, script=script),
         "report_sha256": payload["report_sha256"],
         "deterministic": payload["deterministic"],
     }
@@ -472,11 +540,42 @@ def load_verification_report_reference(
     )
 
 
-def run_baseline_truth(*, env: dict[str, str], generated_root: Path | None = None) -> dict[str, Any]:
+def run_baseline_truth(
+    *,
+    env: dict[str, str],
+    authority: str,
+    generated_root: Path | None = None,
+) -> dict[str, Any]:
     python = find_command("python3")
     with tempfile.TemporaryDirectory(prefix="pr101-audit-") as temp_root_str:
         temp_root = Path(temp_root_str)
-        gates = [run_python_gate(python=python, script=script, env=env, temp_root=temp_root) for script in BASELINE_SCRIPTS]
+        gates: list[dict[str, Any]] = []
+        for script in BASELINE_SCRIPTS:
+            node_id = PIPELINE_BASELINE_IDS[script.name]
+            node = BASELINE_NODES[node_id]
+            if authority == "local" and node.determinism_class is DeterminismClass.CI_AUTHORITATIVE:
+                gates.append(
+                    load_baseline_gate_reference(
+                        python=python,
+                        script=script,
+                        generated_root=generated_root,
+                    )
+                )
+                continue
+            extra_argv: list[str] = []
+            if authority and script.name == "run_pr10_emitted_baseline.py":
+                extra_argv.extend(["--authority", authority])
+            if node.supports_generated_root and generated_root is not None:
+                extra_argv.extend(["--generated-root", str(generated_root)])
+            gates.append(
+                run_python_gate(
+                    python=python,
+                    script=script,
+                    env=env,
+                    temp_root=temp_root,
+                    extra_argv=extra_argv,
+                )
+            )
         return {
             "python_gates": gates,
             "verification_reports": [
@@ -484,22 +583,6 @@ def run_baseline_truth(*, env: dict[str, str], generated_root: Path | None = Non
                 for node_id in VERIFICATION_REPORT_ORDER
             ],
         }
-
-
-def canonicalize_pipeline_gate_result(*, script: Path, result: dict[str, Any]) -> dict[str, Any]:
-    canonical = dict(result)
-    command = list(canonical["command"])
-    if "--pipeline-input" in command:
-        index = command.index("--pipeline-input")
-        del command[index:index + 2]
-    if "--generated-root" in command:
-        index = command.index("--generated-root")
-        del command[index:index + 2]
-    if "--report" in command:
-        index = command.index("--report")
-        command[index + 1] = f"$TMPDIR/{script.stem}.json"
-    canonical["command"] = command
-    return canonical
 
 
 def pipeline_baseline_truth(*, env: dict[str, Any], pipeline_input: dict[str, Any]) -> dict[str, Any]:
@@ -511,7 +594,7 @@ def pipeline_baseline_truth(*, env: dict[str, Any], pipeline_input: dict[str, An
         gates.append(
             {
                 "script": display_path(script, repo_root=REPO_ROOT),
-                "result": compact_result(canonicalize_pipeline_gate_result(script=script, result=result)),
+                "result": compact_result(canonicalize_baseline_gate_result(script=script, result=result)),
                 "report_sha256": payload["report_sha256"],
                 "deterministic": payload["deterministic"],
             }
@@ -960,6 +1043,7 @@ def main() -> int:
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     parser.add_argument("--pipeline-input", type=Path)
     parser.add_argument("--generated-root", type=Path)
+    parser.add_argument("--authority", choices=("local", "ci"), default="local")
     args = parser.parse_args()
 
     env = ensure_sdkroot(os.environ.copy())
@@ -967,7 +1051,11 @@ def main() -> int:
     baseline_truth = (
         pipeline_baseline_truth(env=env, pipeline_input=pipeline_input)
         if pipeline_input
-        else run_baseline_truth(env=env, generated_root=args.generated_root)
+        else run_baseline_truth(
+            env=env,
+            authority=args.authority,
+            generated_root=args.generated_root,
+        )
     )
     report = finalize_deterministic_report(
         lambda: build_report(

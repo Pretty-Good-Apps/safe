@@ -11,6 +11,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from _lib.gate_manifest import DeterminismClass, NODES
 from _lib.harness_common import (
     display_path,
     ensure_sdkroot,
@@ -52,6 +53,11 @@ SLICE_PIPELINE_IDS = {
     "run_pr10_emitted_flow.py": "pr10_emitted_flow",
     "run_pr10_emitted_prove.py": "pr10_emitted_prove",
 }
+SLICE_NODES = {
+    node.id: node
+    for node in NODES
+    if node.id in set(SLICE_PIPELINE_IDS.values())
+}
 EVIDENCE_POLICY = load_evidence_policy()
 
 
@@ -86,6 +92,41 @@ def canonicalize_pipeline_slice_stdout(*, script: Path, node_id: str, stdout: st
     return re.sub(r"\$TMPDIR/[^\s)]+\.json", f"$TMPDIR/{script.stem}.json", normalized)
 
 
+def local_reused_slice_stdout(*, script: Path) -> str:
+    label = script.stem
+    if label.startswith("run_"):
+        label = label[4:]
+    return f"{label.replace('_', ' ')}: OK ($TMPDIR/{script.stem}.json)\n"
+
+
+def load_reused_slice_report(
+    *,
+    script: Path,
+    generated_root: Path | None,
+) -> dict[str, object]:
+    node_id = SLICE_PIPELINE_IDS[script.name]
+    node = SLICE_NODES[node_id]
+    require(node.report_path is not None, f"{node_id}: report path required")
+    report_path = resolve_generated_path(
+        node.report_path,
+        generated_root=generated_root,
+        policy=EVIDENCE_POLICY,
+        repo_root=REPO_ROOT,
+    )
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    require(payload.get("deterministic") is True, f"{display_path(report_path, repo_root=REPO_ROOT)} must be deterministic")
+    require(
+        payload.get("report_sha256") == payload.get("repeat_sha256"),
+        f"{display_path(report_path, repo_root=REPO_ROOT)} report hashes must match",
+    )
+    return {
+        "script": display_path(script, repo_root=REPO_ROOT),
+        "stdout": local_reused_slice_stdout(script=script),
+        "report_sha256": payload["report_sha256"],
+        "deterministic": payload["deterministic"],
+    }
+
+
 def build_slice_reports_from_pipeline(*, pipeline_input: dict[str, object]) -> list[dict[str, object]]:
     results: list[dict[str, object]] = []
     for script in SLICE_SCRIPTS:
@@ -107,12 +148,22 @@ def build_slice_reports_from_pipeline(*, pipeline_input: dict[str, object]) -> l
     return results
 
 
-def build_slice_reports_standalone(*, env: dict[str, str]) -> list[dict[str, object]]:
+def build_slice_reports_standalone(
+    *,
+    env: dict[str, str],
+    authority: str,
+    generated_root: Path | None,
+) -> list[dict[str, object]]:
     python = find_command("python3")
     with tempfile.TemporaryDirectory(prefix="pr10-baseline-") as temp_root_str:
         temp_root = Path(temp_root_str)
         results: list[dict[str, object]] = []
         for script in SLICE_SCRIPTS:
+            node_id = SLICE_PIPELINE_IDS[script.name]
+            node = SLICE_NODES[node_id]
+            if authority == "local" and node.determinism_class is DeterminismClass.CI_AUTHORITATIVE:
+                results.append(load_reused_slice_report(script=script, generated_root=generated_root))
+                continue
             report_path = temp_root / f"{script.stem}.json"
             completed = run(
                 [python, str(script), "--report", str(report_path)],
@@ -242,6 +293,7 @@ def main() -> int:
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     parser.add_argument("--pipeline-input", type=Path)
     parser.add_argument("--generated-root", type=Path)
+    parser.add_argument("--authority", choices=("local", "ci"), default="local")
     args = parser.parse_args()
 
     env = ensure_sdkroot(os.environ.copy())
@@ -249,7 +301,11 @@ def main() -> int:
     results = (
         build_slice_reports_from_pipeline(pipeline_input=pipeline_input)
         if pipeline_input
-        else build_slice_reports_standalone(env=env)
+        else build_slice_reports_standalone(
+            env=env,
+            authority=args.authority,
+            generated_root=args.generated_root,
+        )
     )
     report = finalize_deterministic_report(
         lambda: generate_report(

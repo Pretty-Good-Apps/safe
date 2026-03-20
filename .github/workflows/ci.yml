@@ -1188,7 +1188,7 @@ jobs:
 
       - name: Run PR10 emitted baseline gate
         working-directory: .
-        run: python3 scripts/run_pr10_emitted_baseline.py
+        run: python3 scripts/run_pr10_emitted_baseline.py --authority ci
 
       - name: Verify committed PR10 baseline evidence is up to date
         working-directory: .
@@ -1264,7 +1264,7 @@ jobs:
 
       - name: Run PR10.1 comprehensive audit gate
         working-directory: .
-        run: python3 scripts/run_pr101_comprehensive_audit.py
+        run: python3 scripts/run_pr101_comprehensive_audit.py --authority ci
 
       - name: Verify committed PR10.1 audit evidence is up to date
         working-directory: .

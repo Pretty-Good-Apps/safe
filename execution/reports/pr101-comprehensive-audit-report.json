@@ -8,7 +8,7 @@
       "post_pr10_scope": "52d74391fcb697b6cc620bbeb8ed8aaff90f6d5689f99c9f093da972d9f55237",
       "readme": "73534babc9d154334fee79584911bcfe33eeab4552f61708ed79c0dabff162ad",
       "tracker": "0ec86b67a51599994ed33915f233c30a4651376ae90cd8b26ec89a35e9aaa32f",
-      "workflow": "34fb9945e6263b55f6b3d55093760fe5b305ceb736f8562dfa1faa36ad9c0aac"
+      "workflow": "7c427e2265750a9d9026ca30aef6ae98a2678edab8c7361263d0fde5aa1abb30"
     },
     "audited_surfaces": [
       "spec/TBD consistency",
@@ -56,7 +56,7 @@
         },
         {
           "deterministic": true,
-          "report_sha256": "cb034f3ea9e5624534384b8993dac5fbd412c741026d849aa5c970a11e7a8bd0",
+          "report_sha256": "0cde7644ccd2647fa258621159a414bc5a2e3c732c6fe795ac4e0ed23e0aa6c8",
           "result": {
             "command_profile": {
               "args": [
@@ -72,7 +72,7 @@
         },
         {
           "deterministic": true,
-          "report_sha256": "3f84ff42577ca0a50269aa187e2549f33bf901bdc1d25e9554a4e1c64e666657",
+          "report_sha256": "947298fd7b2ba594b81cfe8f9b5f27cfd63d2b6c9acfcd4fe3bf823c6b40b464",
           "result": {
             "command_profile": {
               "args": [
@@ -463,14 +463,14 @@
       ]
     }
   },
-  "repeat_sha256": "5846db9beb3f7dbb0d771b7f9acadc794e9ea1154f99606a2ed8298d0d8f0228",
-  "report_sha256": "5846db9beb3f7dbb0d771b7f9acadc794e9ea1154f99606a2ed8298d0d8f0228",
+  "repeat_sha256": "cb8b9794e50954c13fc97f8a7d4c36645faacdcb916295aac200d1cabfd2df6d",
+  "report_sha256": "cb8b9794e50954c13fc97f8a7d4c36645faacdcb916295aac200d1cabfd2df6d",
   "semantic_floor": {
     "baseline_gate_hashes": {
-      "emitted_hardening_regressions": "3f84ff42577ca0a50269aa187e2549f33bf901bdc1d25e9554a4e1c64e666657",
+      "emitted_hardening_regressions": "947298fd7b2ba594b81cfe8f9b5f27cfd63d2b6c9acfcd4fe3bf823c6b40b464",
       "pr08_frontend_baseline": "f32fa20c1175cf09812b97d406ab45a27e6413c11db99e95ac8d5aa1baa62aca",
       "pr09_ada_emission_baseline": "e6fdf929d4d89443fff95885a98a132295b98d6331ab7023462f6889e41b19b4",
-      "pr10_emitted_baseline": "cb034f3ea9e5624534384b8993dac5fbd412c741026d849aa5c970a11e7a8bd0"
+      "pr10_emitted_baseline": "0cde7644ccd2647fa258621159a414bc5a2e3c732c6fe795ac4e0ed23e0aa6c8"
     },
     "child_report_hashes": {
       "pr101a_companion_proof_verification": "55a8952139d7595cc08bd25eec7493a328dc871fc8dd36665c35a34a4165c6e5",
