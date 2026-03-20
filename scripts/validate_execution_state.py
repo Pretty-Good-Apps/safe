@@ -578,6 +578,11 @@ def check_environment_preconditions(*, authority: str, env: dict[str, str]) -> d
     if python_version not in python_versions:
         fail(f"python {python_version} not permitted for authority {authority}: {python_versions}")
 
+    gnat_versions = ENVIRONMENT_POLICY[authority]["gnat_versions"]
+    gnat_version = tool_first_line([find_command("gnat"), "--version"], env=env)
+    if not any(gnat_version.startswith(prefix) for prefix in gnat_versions):
+        fail(f"gnat version {gnat_version!r} not permitted for authority {authority}: {gnat_versions}")
+
     gnatprove_versions = ENVIRONMENT_POLICY[authority]["gnatprove_versions"]
     gnatprove_version = tool_first_line([find_command("gnatprove"), "--version"], env=env)
     if not any(gnatprove_version.startswith(prefix) for prefix in gnatprove_versions):
@@ -612,9 +617,11 @@ def check_environment_preconditions(*, authority: str, env: dict[str, str]) -> d
         "authority": authority,
         "required_env": required_env,
         "python_version": python_version,
+        "gnat_version": gnat_version,
         "gnatprove_version": gnatprove_version,
         "gprbuild_version": gprbuild_version,
         "alr_path": alr_path,
+        "toolchain_pins": dict(ENVIRONMENT_POLICY[authority].get("toolchain_pins", {})),
     }
 
 

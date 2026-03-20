@@ -98,6 +98,9 @@
       "alr_paths": [
         "alr"
       ],
+      "gnat_versions": [
+        "GNAT 15.0.1"
+      ],
       "gnatprove_versions": [
         "FSF 15.0"
       ],
@@ -106,12 +109,20 @@
       ],
       "python_versions": [
         "3.11"
-      ]
+      ],
+      "toolchain_pins": {
+        "gnat_native": "15.1.2",
+        "gnatprove": "15.1.0",
+        "gprbuild": "25.0.1"
+      }
     },
     "local": {
       "alr_paths": [
         "alr",
         "~/bin/alr"
+      ],
+      "gnat_versions": [
+        "GNAT 15.0.1"
       ],
       "gnatprove_versions": [
         "FSF 15.0"
@@ -121,7 +132,12 @@
       ],
       "python_versions": [
         "3.9"
-      ]
+      ],
+      "toolchain_pins": {
+        "gnat_native": "15.1.2",
+        "gnatprove": "15.1.0",
+        "gprbuild": "25.0.1"
+      }
     },
     "required_env": {
       "LC_ALL": "C.UTF-8",

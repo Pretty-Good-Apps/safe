@@ -45,12 +45,12 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Install GNATprove
         working-directory: .
         run: |
-          alr install gnatprove=14.1.1
+          alr install gnatprove=15.1.0
           echo "${HOME}/.alire/bin" >> "$GITHUB_PATH"
 
       - name: Validate execution tracker and repo facts
@@ -90,7 +90,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Run frontend smoke checks
         working-directory: .
@@ -114,7 +114,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -142,7 +142,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -170,7 +170,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -198,7 +198,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -226,7 +226,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -258,7 +258,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -289,7 +289,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -317,7 +317,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -348,7 +348,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -376,7 +376,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -404,7 +404,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -432,7 +432,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -460,7 +460,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -488,7 +488,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -520,7 +520,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -548,7 +548,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -576,7 +576,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -604,7 +604,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -632,7 +632,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -660,7 +660,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -692,7 +692,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -724,7 +724,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -756,7 +756,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -788,7 +788,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -820,7 +820,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -852,7 +852,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -884,7 +884,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -916,7 +916,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -948,7 +948,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -980,7 +980,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -1012,7 +1012,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -1044,7 +1044,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -1098,12 +1098,12 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Install GNATprove
         working-directory: .
         run: |
-          alr install gnatprove=14.1.1
+          alr install gnatprove=15.1.0
           echo "${HOME}/.alire/bin" >> "$GITHUB_PATH"
 
       - name: Build compiler frontend
@@ -1136,12 +1136,12 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Install GNATprove
         working-directory: .
         run: |
-          alr install gnatprove=14.1.1
+          alr install gnatprove=15.1.0
           echo "${HOME}/.alire/bin" >> "$GITHUB_PATH"
 
       - name: Build compiler frontend
@@ -1174,12 +1174,12 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Install GNATprove
         working-directory: .
         run: |
-          alr install gnatprove=14.1.1
+          alr install gnatprove=15.1.0
           echo "${HOME}/.alire/bin" >> "$GITHUB_PATH"
 
       - name: Build compiler frontend
@@ -1212,12 +1212,12 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Install GNATprove
         working-directory: .
         run: |
-          alr install gnatprove=14.1.1
+          alr install gnatprove=15.1.0
           echo "${HOME}/.alire/bin" >> "$GITHUB_PATH"
 
       - name: Build compiler frontend
@@ -1250,12 +1250,12 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Install GNATprove
         working-directory: .
         run: |
-          alr install gnatprove=14.1.1
+          alr install gnatprove=15.1.0
           echo "${HOME}/.alire/bin" >> "$GITHUB_PATH"
 
       - name: Build compiler frontend
@@ -1288,12 +1288,12 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Install GNATprove
         working-directory: .
         run: |
-          alr install gnatprove=14.1.1
+          alr install gnatprove=15.1.0
           echo "${HOME}/.alire/bin" >> "$GITHUB_PATH"
 
       - name: Build compiler frontend
@@ -1326,12 +1326,12 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Install GNATprove
         working-directory: .
         run: |
-          alr install gnatprove=14.1.1
+          alr install gnatprove=15.1.0
           echo "${HOME}/.alire/bin" >> "$GITHUB_PATH"
 
       - name: Build compiler frontend
@@ -1364,12 +1364,12 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Install GNATprove
         working-directory: .
         run: |
-          alr install gnatprove=14.1.1
+          alr install gnatprove=15.1.0
           echo "${HOME}/.alire/bin" >> "$GITHUB_PATH"
 
       - name: Build compiler frontend
@@ -1402,12 +1402,12 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Install GNATprove
         working-directory: .
         run: |
-          alr install gnatprove=14.1.1
+          alr install gnatprove=15.1.0
           echo "${HOME}/.alire/bin" >> "$GITHUB_PATH"
 
       - name: Build compiler frontend
@@ -1440,12 +1440,12 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Install GNATprove
         working-directory: .
         run: |
-          alr install gnatprove=14.1.1
+          alr install gnatprove=15.1.0
           echo "${HOME}/.alire/bin" >> "$GITHUB_PATH"
 
       - name: Build compiler frontend
@@ -1478,7 +1478,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -1510,7 +1510,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -1542,7 +1542,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -1574,12 +1574,12 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Install GNATprove
         working-directory: .
         run: |
-          alr install gnatprove=14.1.1
+          alr install gnatprove=15.1.0
           echo "${HOME}/.alire/bin" >> "$GITHUB_PATH"
 
       - name: Build compiler frontend
@@ -1612,7 +1612,7 @@ jobs:
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
           version: 2.1.0
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Build compiler frontend
         working-directory: .
@@ -1644,11 +1644,11 @@ jobs:
       - name: Install Alire
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Initialize Alire workspace and install GNATprove
         run: |
-          alr install gnatprove=14.1.1
+          alr install gnatprove=15.1.0
           echo "${HOME}/.alire/bin" >> "$GITHUB_PATH"
 
       - name: Verify tools
@@ -1778,11 +1778,11 @@ jobs:
       - name: Install Alire
         uses: alire-project/setup-alire@b607671067a8ca5d7b7f4a12dadb4dc009cd2cc7 # v3
         with:
-          toolchain: gnat_native gprbuild
+          toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
       - name: Initialize Alire workspace and install GNATprove
         run: |
-          alr install gnatprove=14.1.1
+          alr install gnatprove=15.1.0
           echo "${HOME}/.alire/bin" >> "$GITHUB_PATH"
 
       - name: Record toolchain version for cache key
