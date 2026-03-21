@@ -200,9 +200,6 @@
           "command_profile": {
             "checks_as_errors": null,
             "explicit_gnatec": true,
-            "extra_args": [
-              "build.gpr"
-            ],
             "level": null,
             "mode": "flow",
             "program": "alr",
@@ -308,9 +305,6 @@
           "command_profile": {
             "checks_as_errors": "on",
             "explicit_gnatec": true,
-            "extra_args": [
-              "build.gpr"
-            ],
             "level": "2",
             "mode": "prove",
             "program": "alr",
@@ -644,8 +638,8 @@
       }
     ]
   },
-  "repeat_sha256": "947298fd7b2ba594b81cfe8f9b5f27cfd63d2b6c9acfcd4fe3bf823c6b40b464",
-  "report_sha256": "947298fd7b2ba594b81cfe8f9b5f27cfd63d2b6c9acfcd4fe3bf823c6b40b464",
+  "repeat_sha256": "3f84ff42577ca0a50269aa187e2549f33bf901bdc1d25e9554a4e1c64e666657",
+  "report_sha256": "3f84ff42577ca0a50269aa187e2549f33bf901bdc1d25e9554a4e1c64e666657",
   "semantic_floor": {
     "fixture_count": 1,
     "fixtures": [

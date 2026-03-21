@@ -43,9 +43,6 @@
         "command_profile": {
           "checks_as_errors": null,
           "explicit_gnatec": true,
-          "extra_args": [
-            "build.gpr"
-          ],
           "level": null,
           "mode": "flow",
           "program": "alr",
@@ -151,9 +148,6 @@
         "command_profile": {
           "checks_as_errors": "on",
           "explicit_gnatec": true,
-          "extra_args": [
-            "build.gpr"
-          ],
           "level": "2",
           "mode": "prove",
           "program": "alr",
@@ -263,9 +257,6 @@
         "command_profile": {
           "checks_as_errors": "on",
           "explicit_gnatec": true,
-          "extra_args": [
-            "build.gpr"
-          ],
           "level": "2",
           "mode": "prove",
           "program": "alr",
@@ -426,8 +417,8 @@
       "cwd": "$REPO_ROOT"
     }
   },
-  "repeat_sha256": "80eaa73f183c6e5275bd0507bd011afa225d5c68f58b57915a6d8ea24c8a7ebb",
-  "report_sha256": "80eaa73f183c6e5275bd0507bd011afa225d5c68f58b57915a6d8ea24c8a7ebb",
+  "repeat_sha256": "2502e4f72a9d1f4a67333a142ec61924d54fcaeed10f33a9cf949b68c147d247",
+  "report_sha256": "2502e4f72a9d1f4a67333a142ec61924d54fcaeed10f33a9cf949b68c147d247",
   "semantic_floor": {
     "fixture_count": 1,
     "fixtures": [

@@ -23,9 +23,6 @@
           "command_profile": {
             "checks_as_errors": null,
             "explicit_gnatec": false,
-            "extra_args": [
-              "build.gpr"
-            ],
             "level": null,
             "mode": "flow",
             "program": "alr",
@@ -150,9 +147,6 @@
           "command_profile": {
             "checks_as_errors": null,
             "explicit_gnatec": false,
-            "extra_args": [
-              "build.gpr"
-            ],
             "level": null,
             "mode": "flow",
             "program": "alr",
@@ -277,9 +271,6 @@
           "command_profile": {
             "checks_as_errors": null,
             "explicit_gnatec": false,
-            "extra_args": [
-              "build.gpr"
-            ],
             "level": null,
             "mode": "flow",
             "program": "alr",
@@ -404,9 +395,6 @@
           "command_profile": {
             "checks_as_errors": null,
             "explicit_gnatec": false,
-            "extra_args": [
-              "build.gpr"
-            ],
             "level": null,
             "mode": "flow",
             "program": "alr",
@@ -531,9 +519,6 @@
           "command_profile": {
             "checks_as_errors": null,
             "explicit_gnatec": false,
-            "extra_args": [
-              "build.gpr"
-            ],
             "level": null,
             "mode": "flow",
             "program": "alr",
@@ -658,9 +643,6 @@
           "command_profile": {
             "checks_as_errors": null,
             "explicit_gnatec": false,
-            "extra_args": [
-              "build.gpr"
-            ],
             "level": null,
             "mode": "flow",
             "program": "alr",
@@ -785,9 +767,6 @@
           "command_profile": {
             "checks_as_errors": null,
             "explicit_gnatec": false,
-            "extra_args": [
-              "build.gpr"
-            ],
             "level": null,
             "mode": "flow",
             "program": "alr",
@@ -914,9 +893,6 @@
           "command_profile": {
             "checks_as_errors": null,
             "explicit_gnatec": true,
-            "extra_args": [
-              "build.gpr"
-            ],
             "level": null,
             "mode": "flow",
             "program": "alr",
@@ -1043,9 +1019,6 @@
           "command_profile": {
             "checks_as_errors": null,
             "explicit_gnatec": true,
-            "extra_args": [
-              "build.gpr"
-            ],
             "level": null,
             "mode": "flow",
             "program": "alr",
@@ -1172,9 +1145,6 @@
           "command_profile": {
             "checks_as_errors": null,
             "explicit_gnatec": true,
-            "extra_args": [
-              "build.gpr"
-            ],
             "level": null,
             "mode": "flow",
             "program": "alr",
@@ -1700,8 +1670,8 @@
       }
     ]
   },
-  "repeat_sha256": "fce63db04765a4776b8c86f01961c03f21a7140943e7b054ff2c7aad08a6ca67",
-  "report_sha256": "fce63db04765a4776b8c86f01961c03f21a7140943e7b054ff2c7aad08a6ca67",
+  "repeat_sha256": "aa8d7ab515de721eec113134a19564e0d1a5de3e3c4c58f87cb36520ecfd03b6",
+  "report_sha256": "aa8d7ab515de721eec113134a19564e0d1a5de3e3c4c58f87cb36520ecfd03b6",
   "semantic_floor": {
     "fixture_count": 10,
     "fixtures": [
