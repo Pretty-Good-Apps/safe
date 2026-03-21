@@ -522,6 +522,12 @@ jobs:
           version: 2.1.0
           toolchain: gnat_native=15.1.2 gprbuild=25.0.1
 
+      - name: Install GNATprove
+        working-directory: .
+        run: |
+          alr install gnatprove=15.1.0
+          echo "${HOME}/.alire/bin" >> "$GITHUB_PATH"
+
       - name: Build compiler frontend
         working-directory: .
         run: cd compiler_impl && alr build
