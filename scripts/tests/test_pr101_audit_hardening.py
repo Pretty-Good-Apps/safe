@@ -452,6 +452,8 @@ class Pr101AuditHardeningTests(unittest.TestCase):
                         "command": [
                             "python3",
                             "scripts/run_pr0693_runtime_boundary.py",
+                            "--generated-root",
+                            "/tmp/stage",
                             "--report",
                             "$TMPDIR/pr0693_runtime_boundary.json",
                         ],
@@ -543,6 +545,8 @@ class Pr101AuditHardeningTests(unittest.TestCase):
                     "command": [
                         "python3",
                         "scripts/run_pr06910_portability_environment.py",
+                        "--generated-root",
+                        "/tmp/stage",
                         "--report",
                         "$TMPDIR/pr06910_portability_environment.json",
                     ],
@@ -678,6 +682,8 @@ class Pr101AuditHardeningTests(unittest.TestCase):
                     "command": [
                         "python3",
                         "scripts/run_pr06910_portability_environment.py",
+                        "--generated-root",
+                        "/tmp/stage",
                         "--report",
                         "$TMPDIR/pr06910_portability_environment.json",
                     ],

@@ -58,6 +58,9 @@ def pipeline_rerun(
 ) -> dict[str, Any]:
     result = require_pipeline_result(pipeline_input, node_id=node_id)
     command = list(result["command"])
+    if "--generated-root" in command:
+        index = command.index("--generated-root")
+        del command[index:index + 2]
     if "--report" in command:
         index = command.index("--report")
         command[index + 1] = f"$TMPDIR/{committed_report_path.name}"
