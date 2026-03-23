@@ -3,17 +3,17 @@
 - **Schema version:** `1`
 - **Frozen spec SHA:** `468cf72332724b04b7c193b4d2a3b02f1584125d`
 - **Active task:** `none`
-- **Next task:** `PR11.5`
+- **Next task:** `PR11.6`
 - **Updated at:** `2026-03-19T00:00:00Z`
 
 ## Repo Facts
 
-- `tests/positive`: 58
-- `tests/negative`: 110
+- `tests/positive`: 63
+- `tests/negative`: 115
 - `tests/golden`: 3
 - `tests/concurrency`: 14
 - `tests/diagnostics_golden`: 22
-- **Total test corpus entries:** 207
+- **Total test corpus entries:** 217
 
 ## Task Ledger
 
@@ -63,7 +63,7 @@
 | PR11.3 | done | PR11.2 | 1 |
 | PR11.3a | done | PR11.3 | 1 |
 | PR11.4 | done | PR11.3a | 1 |
-| PR11.5 | planned | PR11.4 | 0 |
+| PR11.5 | done | PR11.4 | 1 |
 | PR11.6 | planned | PR11.5 | 0 |
 | PR11.7 | planned | PR11.6 | 0 |
 | PR11.8 | planned | PR11.7 | 0 |
@@ -673,13 +673,15 @@
 
 ### PR11.5 — Statement Ergonomics
 
-- **Status:** `planned`
+- **Status:** `done`
 - **Depends on:** PR11.4
 - **Blockers:** none
 - **Acceptance:**
   - Optional semicolons and statement-local `var` declarations are the only syntax admissions in scope for this milestone.
-  - Semicolon insertion and statement-local declaration legality are bounded so they do not accidentally broaden task, block, or unrelated statement semantics.
-  - Corpus migration guidance plus Rosetta-side readability and ambiguity evidence back the admitted statement-ergonomics surface.
+  - Semicolon omission is parser-side and bounded to executable statement terminators; declaration semicolons, same-line statement separators, and `case` arm `end when;` separators remain explicit.
+  - A dedicated deterministic gate, selective corpus migration, and Rosetta readability evidence demonstrate the additive statement-ergonomics surface while deferring task channel direction constraints and scoped-binding `receive` to PR11.8b.
+- **Evidence:**
+  - `execution/reports/pr115-statement-ergonomics-report.json`
 
 ### PR11.6 — Alternate Block Syntax Modes
 
@@ -728,7 +730,8 @@
 - **Blockers:** none
 - **Acceptance:**
   - The currently accepted emitted concurrency subset beyond the frozen PR10 representatives and the already-proved supplemental hardening fixture is explicitly enumerated as a non-shrinkable proof corpus: channel_ceiling_priority.safe, exclusive_variable.safe, fifo_ordering.safe, multi_task_channel.safe, select_delay_local_scope.safe, select_priority.safe, task_global_owner.safe, task_priority_delay.safe, and try_ops.safe.
-  - That bounded concurrency corpus passes compile, GNATprove flow, and GNATprove prove under the all-proved-only policy with dedicated deterministic evidence, without restating spec-excluded fixtures as proof debt.
+  - Task channel direction constraints (`sends` / `receives`) and scoped-binding `receive` / `try_receive` land alongside PR11.8b's concurrency proof expansion, with legality boundaries and emitted/proof coverage aligned to the admitted concurrency subset rather than staged earlier in PR11.5.
+  - That bounded concurrency corpus, plus the admitted PR11.8b source-surface additions, passes compile, GNATprove flow, and GNATprove prove under the all-proved-only policy with dedicated deterministic evidence, without restating spec-excluded fixtures as proof debt.
   - Tracker/docs surfaces keep source-level select semantics (`PS-007`), I/O seam wrapper obligations (`PS-019`), and Jorvik/Ravenscar runtime obligations (`PS-031`) explicitly open even as emitted concurrency proof coverage expands.
 
 ### PR11.9 — Artifact Contract Stabilization

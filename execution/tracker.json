@@ -3,15 +3,15 @@
   "updated_at": "2026-03-19T00:00:00Z",
   "frozen_spec_sha": "468cf72332724b04b7c193b4d2a3b02f1584125d",
   "active_task_id": null,
-  "next_task_id": "PR11.5",
+  "next_task_id": "PR11.6",
   "repo_facts": {
     "tests": {
-      "positive": 58,
-      "negative": 110,
+      "positive": 63,
+      "negative": 115,
       "golden": 3,
       "concurrency": 14,
       "diagnostics_golden": 22,
-      "total": 207
+      "total": 217
     }
   },
   "tasks": [
@@ -782,14 +782,16 @@
     {
       "id": "PR11.5",
       "title": "Statement Ergonomics",
-      "status": "planned",
+      "status": "done",
       "depends_on": ["PR11.4"],
       "acceptance": [
         "Optional semicolons and statement-local `var` declarations are the only syntax admissions in scope for this milestone.",
-        "Semicolon insertion and statement-local declaration legality are bounded so they do not accidentally broaden task, block, or unrelated statement semantics.",
-        "Corpus migration guidance plus Rosetta-side readability and ambiguity evidence back the admitted statement-ergonomics surface."
+        "Semicolon omission is parser-side and bounded to executable statement terminators; declaration semicolons, same-line statement separators, and `case` arm `end when;` separators remain explicit.",
+        "A dedicated deterministic gate, selective corpus migration, and Rosetta readability evidence demonstrate the additive statement-ergonomics surface while deferring task channel direction constraints and scoped-binding `receive` to PR11.8b."
       ],
-      "evidence": [],
+      "evidence": [
+        "execution/reports/pr115-statement-ergonomics-report.json"
+      ],
       "blockers": [],
       "unblock_condition": ""
     },
@@ -856,7 +858,8 @@
       "depends_on": ["PR10.5", "PR10.6"],
       "acceptance": [
         "The currently accepted emitted concurrency subset beyond the frozen PR10 representatives and the already-proved supplemental hardening fixture is explicitly enumerated as a non-shrinkable proof corpus: channel_ceiling_priority.safe, exclusive_variable.safe, fifo_ordering.safe, multi_task_channel.safe, select_delay_local_scope.safe, select_priority.safe, task_global_owner.safe, task_priority_delay.safe, and try_ops.safe.",
-        "That bounded concurrency corpus passes compile, GNATprove flow, and GNATprove prove under the all-proved-only policy with dedicated deterministic evidence, without restating spec-excluded fixtures as proof debt.",
+        "Task channel direction constraints (`sends` / `receives`) and scoped-binding `receive` / `try_receive` land alongside PR11.8b's concurrency proof expansion, with legality boundaries and emitted/proof coverage aligned to the admitted concurrency subset rather than staged earlier in PR11.5.",
+        "That bounded concurrency corpus, plus the admitted PR11.8b source-surface additions, passes compile, GNATprove flow, and GNATprove prove under the all-proved-only policy with dedicated deterministic evidence, without restating spec-excluded fixtures as proof debt.",
         "Tracker/docs surfaces keep source-level select semantics (`PS-007`), I/O seam wrapper obligations (`PS-019`), and Jorvik/Ravenscar runtime obligations (`PS-031`) explicitly open even as emitted concurrency proof coverage expands."
       ],
       "evidence": [],

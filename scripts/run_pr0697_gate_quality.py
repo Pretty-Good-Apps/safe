@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,7 @@ from _lib.harness_common import (
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_REPORT = REPO_ROOT / "execution" / "reports" / "pr0697-gate-quality-report.json"
+REPORTS_ROOT_REL = Path("execution") / "reports"
 OUTPUT_CONTRACT_FIXTURES = REPO_ROOT / "scripts" / "tests" / "fixtures" / "output_contracts"
 OUTPUT_VALIDATOR = REPO_ROOT / "scripts" / "validate_output_contracts.py"
 EXPECTED_TEST_MODULES = (
@@ -27,6 +29,7 @@ EXPECTED_TEST_MODULES = (
     "scripts.tests.test_gate_manifest",
     "scripts.tests.test_harness_common",
     "scripts.tests.test_migrate_pr114_syntax",
+    "scripts.tests.test_migrate_pr115_syntax",
     "scripts.tests.test_pr06912_performance_scale_sanity",
     "scripts.tests.test_pr0694_output_contract_stability",
     "scripts.tests.test_pr0697_gate_quality",
@@ -40,6 +43,7 @@ EXPECTED_TEST_MODULES = (
     "scripts.tests.test_pr113_discriminated_types_tuples_structured_returns",
     "scripts.tests.test_pr113a_proof_checkpoint1",
     "scripts.tests.test_pr114_signature_control_flow_syntax",
+    "scripts.tests.test_pr115_statement_ergonomics",
     "scripts.tests.test_proof_report",
     "scripts.tests.test_render_execution_status",
     "scripts.tests.test_run_frontend_smoke",
@@ -158,10 +162,29 @@ def extract_observed_test_count(*, stdout: str, stderr: str) -> int:
     )
 
 
-def run_unittest_suite(python: str) -> dict[str, Any]:
+def infer_generated_root(*, report_path: Path) -> Path | None:
+    if not report_path.is_absolute():
+        return None
+    try:
+        report_path.relative_to(REPO_ROOT)
+        return None
+    except ValueError:
+        pass
+    report_rel = DEFAULT_REPORT.relative_to(REPO_ROOT)
+    if report_path.parts[-len(report_rel.parts):] != report_rel.parts:
+        return None
+    return report_path.parents[len(REPORTS_ROOT_REL.parts)]
+
+
+def run_unittest_suite(python: str, *, generated_root: Path | None = None) -> dict[str, Any]:
+    env = None
+    if generated_root is not None:
+        env = os.environ.copy()
+        env["SAFE_GENERATED_ROOT"] = str(generated_root)
     result = run(
         [python, "-m", "unittest", *EXPECTED_TEST_MODULES],
         cwd=REPO_ROOT,
+        env=env,
     )
     normalized_stdout = normalize_unittest_output(result["stdout"])
     normalized_stderr = normalize_unittest_output(result["stderr"])
@@ -238,11 +261,11 @@ def run_valid_contract_cases(python: str) -> list[dict[str, Any]]:
     return results
 
 
-def generate_report(*, python: str) -> dict[str, Any]:
+def generate_report(*, python: str, generated_root: Path | None) -> dict[str, Any]:
     return {
         "task": "PR06.9.7",
         "status": "ok",
-        "unit_tests": run_unittest_suite(python),
+        "unit_tests": run_unittest_suite(python, generated_root=generated_root),
         "valid_output_contracts": run_valid_contract_cases(python),
         "negative_output_contracts": run_invalid_contract_cases(python),
     }
@@ -254,8 +277,9 @@ def main() -> int:
     args = parser.parse_args()
 
     python = find_command("python3")
+    generated_root = infer_generated_root(report_path=args.report)
     report = finalize_deterministic_report(
-        lambda: generate_report(python=python),
+        lambda: generate_report(python=python, generated_root=generated_root),
         label="PR06.9.7 gate quality",
     )
 

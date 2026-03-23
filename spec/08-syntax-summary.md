@@ -430,13 +430,46 @@ delta_aggregate ::=
 
 ## 8.7 Statements
 
+Within executable statement sequences, `statement_terminator` may be either an
+explicit `;` or an omitted terminator when the next significant token begins on
+a later source line. This omission rule applies only to executable statement
+sequences. Declarative parts, package items, and `case` arm `end when;`
+separators keep explicit semicolons.
+
 ```
 sequence_of_statements ::=
-    statement { statement }
-  | statement { interleaved_item }
+    statement_item { statement_item }
 
-interleaved_item ::=
-    statement | basic_declaration
+statement_item ::=
+    statement
+  | statement_local_declaration
+
+statement_local_declaration ::=
+    local_object_declaration
+  | var_statement
+
+local_object_declaration ::=
+    defining_identifier_list ':' [ 'aliased' ] [ 'constant' ]
+        subtype_indication [ '=' expression ] statement_terminator
+  | defining_identifier_list ':' [ 'aliased' ] [ 'constant' ]
+        array_type_definition [ '=' expression ] statement_terminator
+  | defining_identifier_list ':' [ 'aliased' ] [ 'constant' ]
+        access_definition [ '=' expression ] statement_terminator
+
+var_statement ::=
+    'var' defining_identifier_list ':' [ 'aliased' ]
+        subtype_indication [ '=' expression ] statement_terminator
+  | 'var' defining_identifier_list ':' [ 'aliased' ]
+        array_type_definition [ '=' expression ] statement_terminator
+  | 'var' defining_identifier_list ':' [ 'aliased' ]
+        access_definition [ '=' expression ] statement_terminator
+
+statement_terminator ::=
+    ';'
+  | omitted_statement_terminator
+
+omitted_statement_terminator ::=
+    <no token; permitted only when the next significant token begins on a later source line>
 
 statement ::=
     [ label ] simple_statement
@@ -460,19 +493,19 @@ simple_statement ::=
   | pragma
 
 null_statement ::=
-    'null' ';'
+    'null' statement_terminator
 
 assignment_statement ::=
-    name '=' expression ';'
+    name '=' expression statement_terminator
 
 procedure_call_statement ::=
-    name [ actual_parameter_part ] ';'
+    name [ actual_parameter_part ] statement_terminator
 
 return_statement ::=
     simple_return_statement | extended_return_statement
 
 simple_return_statement ::=
-    'return' [ expression ] ';'
+    'return' [ expression ] statement_terminator
 
 extended_return_statement ::=
     'return' defining_identifier ':' [ 'aliased' ] subtype_indication
@@ -485,13 +518,13 @@ extended_return_statement ::=
     'end' 'return' ';'
 
 exit_statement ::=
-    'exit' [ loop_name ] [ 'when' condition ] ';'
+    'exit' [ loop_name ] [ 'when' condition ] statement_terminator
 
 goto_statement ::=
-    'goto' label_name ';'
+    'goto' label_name statement_terminator
 
 delay_statement ::=
-    'delay' expression ';'
+    'delay' expression statement_terminator
 
 compound_statement ::=
     if_statement
@@ -507,24 +540,25 @@ if_statement ::=
         sequence_of_statements }
     [ 'else'
         sequence_of_statements ]
-    'end' 'if' ';'
+    'end' 'if' statement_terminator
 
 case_statement ::=
     'case' expression 'is'
         case_statement_alternative { case_statement_alternative }
-    'end' 'case' ';'
+    'end' 'case' statement_terminator
 
 case_statement_alternative ::=
     'when' discrete_choice_list 'then'
         sequence_of_statements
+    'end' 'when' ';'
 
 loop_statement ::=
     [ loop_name ':' ] iteration_scheme 'loop'
         sequence_of_statements
-    'end' 'loop' [ loop_name ] ';'
+    'end' 'loop' [ loop_name ] statement_terminator
   | [ loop_name ':' ] 'loop'
         sequence_of_statements
-    'end' 'loop' [ loop_name ] ';'
+    'end' 'loop' [ loop_name ] statement_terminator
 
 iteration_scheme ::=
     'while' condition
@@ -537,7 +571,7 @@ block_statement ::=
         { basic_declaration } ]
     'begin'
         handled_sequence_of_statements
-    'end' [ block_name ] ';'
+    'end' [ block_name ] statement_terminator
 
 handled_sequence_of_statements ::=
     sequence_of_statements
@@ -662,22 +696,22 @@ channel_declaration ::=
         'capacity' static_expression ';'
 
 send_statement ::=
-    'send' channel_name ',' expression ';'
+    'send' channel_name ',' expression statement_terminator
 
 receive_statement ::=
-    'receive' channel_name ',' name ';'
+    'receive' channel_name ',' name statement_terminator
 
 try_send_statement ::=
-    'try_send' channel_name ',' expression ',' name ';'
+    'try_send' channel_name ',' expression ',' name statement_terminator
 
 try_receive_statement ::=
-    'try_receive' channel_name ',' name ',' name ';'
+    'try_receive' channel_name ',' name ',' name statement_terminator
 
 select_statement ::=
     'select'
         select_arm
     { 'or' select_arm }
-    'end' 'select' ';'
+    'end' 'select' statement_terminator
 
 select_arm ::=
     channel_arm | delay_arm
