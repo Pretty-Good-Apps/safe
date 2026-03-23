@@ -22,6 +22,7 @@ class NodeKind(str, Enum):
 class DeterminismClass(str, Enum):
     BYTE_EXACT = "byte_exact"
     CI_AUTHORITATIVE = "ci_authoritative"
+    LOCAL_HOST_SENSITIVE = "local_host_sensitive"
 
 
 @dataclass(frozen=True)
@@ -414,6 +415,7 @@ NODES: tuple[Node, ...] = (
         report_path=_report("pr0699-build-reproducibility-report.json"),
         supports_authority=True,
         depends_on=(BUILD_POST_REPRO,),
+        determinism_class=DeterminismClass.LOCAL_HOST_SENSITIVE,
     ),
     Node(
         id="pr0693_runtime_boundary",

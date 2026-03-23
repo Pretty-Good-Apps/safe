@@ -5,7 +5,7 @@ from __future__ import annotations
 SUPPORTED_FRONTEND_ENVIRONMENTS = ("linux", "macos")
 UNSUPPORTED_FRONTEND_ENVIRONMENTS = ("windows",)
 
-SUPPORTED_PLATFORM_POLICY_TEXT = "Ubuntu/Linux CI and local macOS"
+SUPPORTED_PLATFORM_POLICY_TEXT = "Ubuntu/Linux CI and local Linux or macOS"
 UNSUPPORTED_PLATFORM_POLICY_TEXT = "Windows is explicitly unsupported"
 PATH_LOOKUP_POLICY_TEXT = "PATH-based command discovery"
 TEMPDIR_POLICY_TEXT = "deterministic TemporaryDirectory prefixes"

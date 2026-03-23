@@ -122,7 +122,7 @@
         "~/bin/alr"
       ],
       "gnat_versions": [
-        "GNAT 15.0.1"
+        "GNAT 15.1.0"
       ],
       "gnatprove_versions": [
         "FSF 15.0"
@@ -131,7 +131,7 @@
         "GPRBUILD 25.0.0"
       ],
       "python_versions": [
-        "3.9"
+        "3.12"
       ],
       "toolchain_pins": {
         "gnat_native": "15.1.2",

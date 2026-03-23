@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .harness_common import normalize_source_text, normalized_source_fragments, require, run
+from .harness_common import find_command, normalize_source_text, normalized_source_fragments, require, run
 from .pr09_emit import (
     COMPILER_ROOT,
     REPO_ROOT,
@@ -251,11 +251,12 @@ def gnatprove_command(
     mode: str,
 ) -> list[str]:
     switches = FLOW_SWITCHES if mode == "flow" else PROVE_SWITCHES
+    gnatprove = find_command("gnatprove", Path.home() / ".alire" / "bin" / "gnatprove")
     argv = [
         alr_command(),
         "exec",
         "--",
-        "gnatprove",
+        gnatprove,
         "-P",
         str(gpr_path),
         *switches,

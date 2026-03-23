@@ -98,6 +98,31 @@ class RunGatePipelineTests(unittest.TestCase):
             "repeat_sha256": report_sha,
         }
 
+    @staticmethod
+    def _local_host_sensitive_payload(
+        *,
+        safec_binary_sha256: str,
+        gate_quality_hash: str,
+        report_sha256: str,
+    ) -> dict[str, object]:
+        return {
+            "task": "PR06.9.9",
+            "status": "ok",
+            "build_reproducibility": {
+                "binary_deterministic": True,
+            },
+            "delegated_reports": {
+                "frontend_smoke": {"report_sha256": "f" * 64, "repeat_sha256": "f" * 64},
+                "gate_quality": {"report_sha256": "g" * 64, "repeat_sha256": "g" * 64},
+                "legacy_package_cleanup": {"report_sha256": "l" * 64, "repeat_sha256": "l" * 64},
+            },
+            "child_gate_input_hashes": {"gate_quality": gate_quality_hash},
+            "safec_binary_sha256": safec_binary_sha256,
+            "deterministic": True,
+            "report_sha256": report_sha256,
+            "repeat_sha256": report_sha256,
+        }
+
     @classmethod
     def _write_report(cls, path: Path, payload: dict[str, object]) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -301,6 +326,87 @@ class RunGatePipelineTests(unittest.TestCase):
                         0,
                     )
             run_node.assert_called_once()
+
+    def test_report_compare_text_normalizes_local_host_sensitive_fields(self) -> None:
+        node = Node(
+            id="pr0699_build_reproducibility",
+            kind=NodeKind.GATE,
+            report_path=Path("/tmp/pr0699.json"),
+            determinism_class=DeterminismClass.LOCAL_HOST_SENSITIVE,
+        )
+        payload = self._local_host_sensitive_payload(
+            safec_binary_sha256="a" * 64,
+            gate_quality_hash="b" * 64,
+            report_sha256="c" * 64,
+        )
+
+        normalized = run_gate_pipeline.report_compare_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            node=node,
+            authority="local",
+        )
+
+        normalized_payload = json.loads(normalized)
+        self.assertNotIn("safec_binary_sha256", normalized_payload)
+        self.assertNotIn("child_gate_input_hashes", normalized_payload)
+        self.assertNotIn("report_sha256", normalized_payload)
+        self.assertNotIn("repeat_sha256", normalized_payload)
+
+    def test_verify_local_accepts_local_host_sensitive_report_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            expected_path = Path(temp_dir) / "expected.json"
+            self._write_report(
+                expected_path,
+                self._local_host_sensitive_payload(
+                    safec_binary_sha256="1" * 64,
+                    gate_quality_hash="2" * 64,
+                    report_sha256="3" * 64,
+                ),
+            )
+            node = Node(
+                id="pr0699_build_reproducibility",
+                kind=NodeKind.GATE,
+                script=Path("/tmp/run_pr0699_build_reproducibility.py"),
+                report_path=expected_path,
+                determinism_class=DeterminismClass.LOCAL_HOST_SENSITIVE,
+            )
+
+            def fake_run_node(
+                _node: Node,
+                *,
+                write_generated_root: Path | None,
+                **_kwargs: object,
+            ) -> tuple[dict[str, object], dict[str, object], Path]:
+                assert write_generated_root is not None
+                actual_path = write_generated_root / "expected.json"
+                actual_payload = self._local_host_sensitive_payload(
+                    safec_binary_sha256="4" * 64,
+                    gate_quality_hash="5" * 64,
+                    report_sha256="6" * 64,
+                )
+                self._write_report(actual_path, actual_payload)
+                return (
+                    {"command": ["python3"], "cwd": "$REPO_ROOT", "returncode": 0, "stdout": "", "stderr": ""},
+                    actual_payload,
+                    actual_path,
+                )
+
+            with mock.patch.object(run_gate_pipeline, "NODES", (node,)), mock.patch.object(
+                run_gate_pipeline,
+                "tracked_diff_snapshot",
+                side_effect=["", ""],
+            ), mock.patch.object(run_gate_pipeline, "run_node", side_effect=fake_run_node):
+                with redirect_stdout(io.StringIO()):
+                    self.assertEqual(
+                        run_gate_pipeline.verify_pipeline(
+                            authority="local",
+                            python="python3",
+                            git="git",
+                            alr="alr",
+                            env={},
+                        ),
+                        0,
+                    )
 
     def test_run_node_passes_authority_to_supporting_nodes(self) -> None:
         node = Node(
@@ -542,7 +648,7 @@ class RunGatePipelineTests(unittest.TestCase):
             self._write_report(generated_path, self._report_payload("generated"))
             node = Node(id="sample_gate", kind=NodeKind.GATE, report_path=committed_path)
             with mock.patch.object(run_gate_pipeline, "NODES", (node,)):
-                changed = run_gate_pipeline.changed_report_nodes(generated_root=stage_root)
+                changed = run_gate_pipeline.changed_report_nodes(generated_root=stage_root, authority="local")
         self.assertEqual(changed, ["sample_gate"])
 
     def test_changed_report_nodes_rejects_missing_generated_report(self) -> None:
@@ -555,8 +661,44 @@ class RunGatePipelineTests(unittest.TestCase):
             node = Node(id="sample_gate", kind=NodeKind.GATE, report_path=committed_path)
             with mock.patch.object(run_gate_pipeline, "NODES", (node,)):
                 with self.assertRaises(RuntimeError) as exc:
-                    run_gate_pipeline.changed_report_nodes(generated_root=stage_root)
+                    run_gate_pipeline.changed_report_nodes(generated_root=stage_root, authority="local")
         self.assertIn("sample_gate: missing generated report", str(exc.exception))
+
+    def test_changed_report_nodes_ignores_local_host_sensitive_only_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            stage_root = root / "stage"
+            stage_root.mkdir()
+            committed_path = root / "pr0699.json"
+            stage_path = stage_root / committed_path.name
+            self._write_report(
+                committed_path,
+                self._local_host_sensitive_payload(
+                    safec_binary_sha256="1" * 64,
+                    gate_quality_hash="2" * 64,
+                    report_sha256="3" * 64,
+                ),
+            )
+            self._write_report(
+                stage_path,
+                self._local_host_sensitive_payload(
+                    safec_binary_sha256="4" * 64,
+                    gate_quality_hash="5" * 64,
+                    report_sha256="6" * 64,
+                ),
+            )
+            node = Node(
+                id="pr0699_build_reproducibility",
+                kind=NodeKind.GATE,
+                report_path=committed_path,
+                determinism_class=DeterminismClass.LOCAL_HOST_SENSITIVE,
+            )
+            with mock.patch.object(run_gate_pipeline, "NODES", (node,)):
+                changed = run_gate_pipeline.changed_report_nodes(
+                    generated_root=stage_root,
+                    authority="local",
+                )
+        self.assertEqual(changed, [])
 
     def test_execution_indices_rerun_preflight_before_suffix(self) -> None:
         indices = run_gate_pipeline.execution_indices(
@@ -718,42 +860,51 @@ class RunGatePipelineTests(unittest.TestCase):
             stage_root = root / "stage"
             committed_reports = repo_root / "execution" / "reports"
             committed_dashboard = repo_root / "execution" / "dashboard.md"
-            stage_reports = stage_root / "execution" / "reports"
             stage_dashboard = stage_root / "execution" / "dashboard.md"
 
             committed_reports.mkdir(parents=True)
             committed_dashboard.parent.mkdir(parents=True, exist_ok=True)
-            stage_reports.mkdir(parents=True)
             stage_dashboard.parent.mkdir(parents=True, exist_ok=True)
 
             (committed_reports / "kept.json").write_text("old report\n", encoding="utf-8")
             committed_dashboard.write_text("old dashboard\n", encoding="utf-8")
-            (stage_reports / "new.json").write_text("new report\n", encoding="utf-8")
+            staged_report = stage_root / "execution" / "reports" / "new.json"
+            staged_report.parent.mkdir(parents=True, exist_ok=True)
+            staged_report.write_text("new report\n", encoding="utf-8")
             stage_dashboard.write_text("new dashboard\n", encoding="utf-8")
 
-            original_copytree = run_gate_pipeline.shutil.copytree
+            node = Node(
+                id="sample_gate",
+                kind=NodeKind.GATE,
+                report_path=repo_root / "execution" / "reports" / "new.json",
+            )
+            original_copy2 = run_gate_pipeline.shutil.copy2
 
-            def flaky_copytree(src: str | Path, dst: str | Path, *args: object, **kwargs: object) -> str:
+            def flaky_copy2(src: str | Path, dst: str | Path, *args: object, **kwargs: object) -> str:
                 src_path = Path(src)
-                dst_path = Path(dst)
-                if src_path == stage_reports:
-                    dst_path.mkdir(parents=True, exist_ok=True)
-                    (dst_path / "partial.json").write_text("partial stage artifact\n", encoding="utf-8")
+                if src_path == staged_report:
                     raise RuntimeError("simulated copy failure")
-                return original_copytree(src_path, dst_path, *args, **kwargs)
+                return original_copy2(src_path, dst, *args, **kwargs)
 
             with mock.patch.object(run_gate_pipeline, "REPO_ROOT", repo_root), mock.patch.object(
+                run_gate_pipeline,
+                "NODES_BY_ID",
+                {"sample_gate": node},
+            ), mock.patch.object(
                 run_gate_pipeline.shutil,
-                "copytree",
-                side_effect=flaky_copytree,
+                "copy2",
+                side_effect=flaky_copy2,
             ):
                 with self.assertRaises(RuntimeError) as exc:
-                    run_gate_pipeline.promote_stage(stage_root)
+                    run_gate_pipeline.promote_stage(
+                        stage_root,
+                        changed_nodes=["sample_gate"],
+                        dashboard_changed_flag=True,
+                    )
 
             self.assertEqual(str(exc.exception), "simulated copy failure")
             self.assertEqual((committed_reports / "kept.json").read_text(encoding="utf-8"), "old report\n")
             self.assertFalse((committed_reports / "new.json").exists())
-            self.assertFalse((committed_reports / "partial.json").exists())
             self.assertEqual(committed_dashboard.read_text(encoding="utf-8"), "old dashboard\n")
 
     def test_verify_local_reuse_rejects_ci_proof_report_missing_three_way_sections(self) -> None:

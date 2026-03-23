@@ -1,8 +1,8 @@
 # macOS Alire Toolchain Repair
 
 This note is a developer recovery procedure, not a compiler runtime dependency.
-The current frontend supports Ubuntu/Linux CI and local macOS development, and
-the macOS host assumption is that an SDK is discoverable through
+The current frontend supports Ubuntu/Linux CI and local Linux or macOS
+development, and the macOS host assumption is that an SDK is discoverable through
 `xcrun --show-sdk-path` or `SDKROOT`.
 
 ## Symptom

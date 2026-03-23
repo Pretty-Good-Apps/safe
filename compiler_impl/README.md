@@ -35,7 +35,7 @@ file with the same linker `syslibroot` pattern as `safec.gpr`.
 
 ## Current Doctrine
 
-- Supported frontend environments: Ubuntu/Linux CI and local macOS.
+- Supported frontend environments: Ubuntu/Linux CI and local Linux or macOS.
 - Unsupported frontend environments: Windows.
 - On macOS, repo glue assumes an SDK is discoverable through `xcrun --show-sdk-path` or `SDKROOT`.
 - Portability-sensitive repo glue uses PATH-based command discovery instead of hard-coded tool paths.

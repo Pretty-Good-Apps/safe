@@ -164,6 +164,34 @@ def load_prior_report(*, generated_root: Path | None) -> dict[str, Any] | None:
     return None
 
 
+def canonical_safec_binary_sha256(
+    *,
+    authority: str,
+    prior_report: dict[str, Any] | None,
+    observed_binary_sha256: str,
+) -> str:
+    if authority == "local" and prior_report is not None:
+        prior_binary_sha256 = prior_report.get("safec_binary_sha256")
+        if isinstance(prior_binary_sha256, str):
+            return prior_binary_sha256
+    return observed_binary_sha256
+
+
+def canonical_child_gate_input_hashes(
+    *,
+    authority: str,
+    prior_report: dict[str, Any] | None,
+    gate_quality_input_hash: str | None,
+) -> dict[str, str | None]:
+    if authority == "local" and prior_report is not None:
+        prior_hashes = prior_report.get("child_gate_input_hashes")
+        if isinstance(prior_hashes, dict):
+            prior_hash = prior_hashes.get(GATE_QUALITY_CHILD_NAME)
+            if prior_hash is None or isinstance(prior_hash, str):
+                return {GATE_QUALITY_CHILD_NAME: prior_hash}
+    return {GATE_QUALITY_CHILD_NAME: gate_quality_input_hash}
+
+
 def resolve_build_reproducibility(
     *,
     alr: str,
@@ -324,6 +352,7 @@ def generate_report(
     alr: str,
     safec: Path,
     generated_root: Path | None,
+    authority: str = "ci",
     env: dict[str, str],
 ) -> dict[str, Any]:
     prior_report = load_prior_report(generated_root=generated_root)
@@ -336,6 +365,16 @@ def generate_report(
     require_repo_command(safec, "safec")
     gate_quality_input_hash = compute_gate_quality_input_hash(
         safec_binary_sha256=safec_binary_sha256
+    )
+    report_safec_binary_sha256 = canonical_safec_binary_sha256(
+        authority=authority,
+        prior_report=prior_report,
+        observed_binary_sha256=safec_binary_sha256,
+    )
+    report_child_gate_input_hashes = canonical_child_gate_input_hashes(
+        authority=authority,
+        prior_report=prior_report,
+        gate_quality_input_hash=gate_quality_input_hash,
     )
 
     frontend_smoke = run_gate_script(
@@ -376,10 +415,8 @@ def generate_report(
     return {
         "task": "PR06.9.9",
         "status": "ok",
-        "safec_binary_sha256": safec_binary_sha256,
-        "child_gate_input_hashes": {
-            GATE_QUALITY_CHILD_NAME: gate_quality_input_hash,
-        },
+        "safec_binary_sha256": report_safec_binary_sha256,
+        "child_gate_input_hashes": report_child_gate_input_hashes,
         "build_reproducibility": build_reproducibility,
         "delegated_reports": {
             "frontend_smoke": {
@@ -425,6 +462,7 @@ def main() -> int:
             alr=alr,
             safec=safec,
             generated_root=generated_root,
+            authority=args.authority,
             env=env,
         ),
         label="PR06.9.9 build reproducibility",

@@ -43,6 +43,13 @@ from validate_execution_state import (
     run_preflight_phase,
     runtime_boundary_report,
 )
+from _lib.platform_assumptions import (
+    PATH_LOOKUP_POLICY_TEXT,
+    SHELL_POLICY_TEXT,
+    SUPPORTED_PLATFORM_POLICY_TEXT,
+    TEMPDIR_POLICY_TEXT,
+    UNSUPPORTED_PLATFORM_POLICY_TEXT,
+)
 
 
 class ValidateExecutionStateTests(unittest.TestCase):
@@ -499,7 +506,7 @@ class ValidateExecutionStateTests(unittest.TestCase):
             docs_dir = repo_root / "docs"
             docs_dir.mkdir()
             (docs_dir / "policy.md").write_text(
-                "Ubuntu/Linux CI and local macOS\nWindows is explicitly unsupported\n",
+                f"{SUPPORTED_PLATFORM_POLICY_TEXT}\n{UNSUPPORTED_PLATFORM_POLICY_TEXT}\n",
                 encoding="utf-8",
             )
             scripts_dir = repo_root / "scripts"
@@ -514,7 +521,7 @@ class ValidateExecutionStateTests(unittest.TestCase):
             )
             report = environment_assumptions_report(
                 repo_root=repo_root,
-                doc_requirements={"docs/policy.md": ["Ubuntu/Linux CI and local macOS", "Windows is explicitly unsupported"]},
+                doc_requirements={"docs/policy.md": [SUPPORTED_PLATFORM_POLICY_TEXT, UNSUPPORTED_PLATFORM_POLICY_TEXT]},
                 runtime_source_globs=("compiler_impl/src/*.adb",),
                 module_requirements={"scripts/runtime_gate.py": ["MASKED_PYTHON_INTERPRETERS"]},
                 tempdir_scripts=("scripts/runtime_gate.py",),
@@ -537,11 +544,11 @@ class ValidateExecutionStateTests(unittest.TestCase):
                 repo_root=repo_root,
                 doc_requirements={
                     "docs/policy.md": [
-                        "Ubuntu/Linux CI and local macOS",
-                        "Windows is explicitly unsupported",
-                        "PATH-based command discovery",
-                        "deterministic TemporaryDirectory prefixes",
-                        "shell-free",
+                        SUPPORTED_PLATFORM_POLICY_TEXT,
+                        UNSUPPORTED_PLATFORM_POLICY_TEXT,
+                        PATH_LOOKUP_POLICY_TEXT,
+                        TEMPDIR_POLICY_TEXT,
+                        SHELL_POLICY_TEXT,
                     ]
                 },
                 runtime_source_globs=(),
@@ -550,7 +557,7 @@ class ValidateExecutionStateTests(unittest.TestCase):
                 path_lookup_scripts=("scripts/runtime_gate.py",),
             )
             self.assertIn(
-                "docs/policy.md:Ubuntu/Linux CI and local macOS",
+                f"docs/policy.md:{SUPPORTED_PLATFORM_POLICY_TEXT}",
                 report["doc_policy_violations"],
             )
             self.assertIn(
@@ -567,11 +574,11 @@ class ValidateExecutionStateTests(unittest.TestCase):
             docs_dir = repo_root / "docs"
             docs_dir.mkdir()
             (docs_dir / "policy.md").write_text(
-                "Ubuntu/Linux CI and local macOS\n"
-                "Windows is explicitly unsupported\n"
-                "PATH-based command discovery\n"
-                "deterministic TemporaryDirectory prefixes\n"
-                "shell-free\n",
+                f"{SUPPORTED_PLATFORM_POLICY_TEXT}\n"
+                f"{UNSUPPORTED_PLATFORM_POLICY_TEXT}\n"
+                f"{PATH_LOOKUP_POLICY_TEXT}\n"
+                f"{TEMPDIR_POLICY_TEXT}\n"
+                f"{SHELL_POLICY_TEXT}\n",
                 encoding="utf-8",
             )
             scripts_dir = repo_root / "scripts"
@@ -590,11 +597,11 @@ class ValidateExecutionStateTests(unittest.TestCase):
                 repo_root=repo_root,
                 doc_requirements={
                     "docs/policy.md": [
-                        "Ubuntu/Linux CI and local macOS",
-                        "Windows is explicitly unsupported",
-                        "PATH-based command discovery",
-                        "deterministic TemporaryDirectory prefixes",
-                        "shell-free",
+                        SUPPORTED_PLATFORM_POLICY_TEXT,
+                        UNSUPPORTED_PLATFORM_POLICY_TEXT,
+                        PATH_LOOKUP_POLICY_TEXT,
+                        TEMPDIR_POLICY_TEXT,
+                        SHELL_POLICY_TEXT,
                     ]
                 },
                 runtime_source_globs=(),
@@ -613,11 +620,11 @@ class ValidateExecutionStateTests(unittest.TestCase):
             docs_dir = repo_root / "docs"
             docs_dir.mkdir()
             (docs_dir / "policy.md").write_text(
-                "Ubuntu/Linux CI and local macOS\n"
-                "Windows is explicitly unsupported\n"
-                "PATH-based command discovery\n"
-                "deterministic TemporaryDirectory prefixes\n"
-                "shell-free\n"
+                f"{SUPPORTED_PLATFORM_POLICY_TEXT}\n"
+                f"{UNSUPPORTED_PLATFORM_POLICY_TEXT}\n"
+                f"{PATH_LOOKUP_POLICY_TEXT}\n"
+                f"{TEMPDIR_POLICY_TEXT}\n"
+                f"{SHELL_POLICY_TEXT}\n"
                 "`python`\n",
                 encoding="utf-8",
             )
@@ -638,11 +645,11 @@ class ValidateExecutionStateTests(unittest.TestCase):
                 repo_root=repo_root,
                 doc_requirements={
                     "docs/policy.md": [
-                        "Ubuntu/Linux CI and local macOS",
-                        "Windows is explicitly unsupported",
-                        "PATH-based command discovery",
-                        "deterministic TemporaryDirectory prefixes",
-                        "shell-free",
+                        SUPPORTED_PLATFORM_POLICY_TEXT,
+                        UNSUPPORTED_PLATFORM_POLICY_TEXT,
+                        PATH_LOOKUP_POLICY_TEXT,
+                        TEMPDIR_POLICY_TEXT,
+                        SHELL_POLICY_TEXT,
                     ]
                 },
                 runtime_source_globs=("compiler_impl/src/*.adb",),
@@ -655,11 +662,11 @@ class ValidateExecutionStateTests(unittest.TestCase):
                 repo_root=repo_root,
                 doc_requirements={
                     "docs/policy.md": [
-                        "Ubuntu/Linux CI and local macOS",
-                        "Windows is explicitly unsupported",
-                        "PATH-based command discovery",
-                        "deterministic TemporaryDirectory prefixes",
-                        "shell-free",
+                        SUPPORTED_PLATFORM_POLICY_TEXT,
+                        UNSUPPORTED_PLATFORM_POLICY_TEXT,
+                        PATH_LOOKUP_POLICY_TEXT,
+                        TEMPDIR_POLICY_TEXT,
+                        SHELL_POLICY_TEXT,
                     ]
                 },
                 runtime_source_globs=("compiler_impl/src/*.adb",),
@@ -674,11 +681,11 @@ class ValidateExecutionStateTests(unittest.TestCase):
             docs_dir = repo_root / "docs"
             docs_dir.mkdir()
             (docs_dir / "policy.md").write_text(
-                "Ubuntu/Linux CI and local macOS\n"
-                "Windows is explicitly unsupported\n"
-                "PATH-based command discovery\n"
-                "deterministic TemporaryDirectory prefixes\n"
-                "shell-free\n",
+                f"{SUPPORTED_PLATFORM_POLICY_TEXT}\n"
+                f"{UNSUPPORTED_PLATFORM_POLICY_TEXT}\n"
+                f"{PATH_LOOKUP_POLICY_TEXT}\n"
+                f"{TEMPDIR_POLICY_TEXT}\n"
+                f"{SHELL_POLICY_TEXT}\n",
                 encoding="utf-8",
             )
             scripts_dir = repo_root / "scripts"
@@ -695,11 +702,11 @@ class ValidateExecutionStateTests(unittest.TestCase):
                 repo_root=repo_root,
                 doc_requirements={
                     "docs/policy.md": [
-                        "Ubuntu/Linux CI and local macOS",
-                        "Windows is explicitly unsupported",
-                        "PATH-based command discovery",
-                        "deterministic TemporaryDirectory prefixes",
-                        "shell-free",
+                        SUPPORTED_PLATFORM_POLICY_TEXT,
+                        UNSUPPORTED_PLATFORM_POLICY_TEXT,
+                        PATH_LOOKUP_POLICY_TEXT,
+                        TEMPDIR_POLICY_TEXT,
+                        SHELL_POLICY_TEXT,
                     ]
                 },
                 runtime_source_globs=(),

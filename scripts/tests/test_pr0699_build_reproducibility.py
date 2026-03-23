@@ -256,6 +256,30 @@ class Pr0699BuildReproducibilityTests(unittest.TestCase):
             "[pr0699] gate_quality inputs unchanged, reusing cached result (0.1s hash check)\n",
         )
 
+    def test_canonical_safec_binary_sha256_preserves_prior_local_value(self) -> None:
+        self.assertEqual(
+            run_pr0699_build_reproducibility.canonical_safec_binary_sha256(
+                authority="local",
+                prior_report={"safec_binary_sha256": "prior-hash"},
+                observed_binary_sha256="observed-hash",
+            ),
+            "prior-hash",
+        )
+
+    def test_canonical_child_gate_input_hashes_preserve_prior_local_value(self) -> None:
+        self.assertEqual(
+            run_pr0699_build_reproducibility.canonical_child_gate_input_hashes(
+                authority="local",
+                prior_report={
+                    "child_gate_input_hashes": {
+                        run_pr0699_build_reproducibility.GATE_QUALITY_CHILD_NAME: "prior-hash"
+                    }
+                },
+                gate_quality_input_hash="observed-hash",
+            ),
+            {run_pr0699_build_reproducibility.GATE_QUALITY_CHILD_NAME: "prior-hash"},
+        )
+
     def test_generate_report_runs_child_gates_after_binary_skip(self) -> None:
         frontend_smoke = {
             "run": {"returncode": 0},
@@ -318,6 +342,73 @@ class Pr0699BuildReproducibilityTests(unittest.TestCase):
             {run_pr0699_build_reproducibility.GATE_QUALITY_CHILD_NAME: "gate-input-hash"},
         )
         self.assertEqual(report["build_reproducibility"], {"binary_deterministic": True})
+
+    def test_generate_report_local_preserves_prior_host_sensitive_fields(self) -> None:
+        frontend_smoke = {
+            "run": {"returncode": 0},
+            "report_path": "execution/reports/pr00-pr04-frontend-smoke.json",
+            "report_sha256": "frontend",
+            "repeat_sha256": "frontend",
+        }
+        gate_quality = {
+            "run": {"returncode": 0},
+            "report_path": "execution/reports/pr0697-gate-quality-report.json",
+            "report_sha256": "gate",
+            "repeat_sha256": "gate",
+        }
+        legacy_cleanup = {
+            "run": {"returncode": 0},
+            "report_path": "execution/reports/pr0698-legacy-package-cleanup-report.json",
+            "report_sha256": "legacy",
+            "repeat_sha256": "legacy",
+        }
+        with mock.patch.object(
+            run_pr0699_build_reproducibility,
+            "load_prior_report",
+            return_value={
+                "safec_binary_sha256": "prior-binary-hash",
+                "child_gate_input_hashes": {
+                    run_pr0699_build_reproducibility.GATE_QUALITY_CHILD_NAME: "prior-gate-hash"
+                },
+            },
+        ), mock.patch.object(
+            run_pr0699_build_reproducibility,
+            "resolve_build_reproducibility",
+            return_value=({"binary_deterministic": True}, "observed-binary-hash"),
+        ), mock.patch.object(
+            run_pr0699_build_reproducibility,
+            "compute_gate_quality_input_hash",
+            return_value="observed-gate-hash",
+        ), mock.patch.object(
+            run_pr0699_build_reproducibility,
+            "require_repo_command",
+        ), mock.patch.object(
+            run_pr0699_build_reproducibility,
+            "run_gate_script",
+            side_effect=[frontend_smoke, gate_quality, legacy_cleanup],
+        ), mock.patch.object(
+            run_pr0699_build_reproducibility,
+            "resolve_generated_path",
+            return_value=run_pr0699_build_reproducibility.FRONTEND_SMOKE_REPORT,
+        ), mock.patch.object(
+            run_pr0699_build_reproducibility,
+            "load_json",
+            return_value={"build": {"binary_deterministic": True}},
+        ):
+            report = run_pr0699_build_reproducibility.generate_report(
+                python="python3",
+                alr="alr",
+                safec=Path("/tmp/safec"),
+                generated_root=None,
+                authority="local",
+                env={},
+            )
+
+        self.assertEqual(report["safec_binary_sha256"], "prior-binary-hash")
+        self.assertEqual(
+            report["child_gate_input_hashes"],
+            {run_pr0699_build_reproducibility.GATE_QUALITY_CHILD_NAME: "prior-gate-hash"},
+        )
 
     def test_gate_quality_skipped_when_input_hash_matches(self) -> None:
         frontend_smoke = {

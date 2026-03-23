@@ -23,7 +23,7 @@ Python is glue/orchestration only.
 
 Current environment policy:
 
-- Supported frontend environments: Ubuntu/Linux CI and local macOS.
+- Supported frontend environments: Ubuntu/Linux CI and local Linux or macOS.
 - Unsupported frontend environments: Windows.
 - Omitted task `Priority` aspects currently lower to the documented frontend default priority `31` so emitted typed/MIR artifacts remain stable across the supported hosts; explicit priorities are still checked against `System.Any_Priority`.
 - On macOS, repo glue assumes an SDK is discoverable through `xcrun --show-sdk-path` or `SDKROOT`.

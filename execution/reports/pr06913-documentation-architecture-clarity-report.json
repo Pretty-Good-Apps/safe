@@ -14,7 +14,7 @@
     "policy_sections_used": [
       "documentation_architecture"
     ],
-    "policy_sha256": "36af5e4d43ed1c55cf583918ed7b30695c9f24fa3c788bff822ff3c5e7f118ee",
+    "policy_sha256": "97660f3a6bbcdb4f0ff99f330b1f23c53cb9cc886736f698b21bfd0b82fde363",
     "stale_boundary_violations": [],
     "unresolved_local_links": []
   },
@@ -31,9 +31,9 @@
   "policy_sections_used": [
     "documentation_architecture"
   ],
-  "policy_sha256": "36af5e4d43ed1c55cf583918ed7b30695c9f24fa3c788bff822ff3c5e7f118ee",
-  "repeat_sha256": "c46c83e45ccee409f7467183d076e62b58f0963ad5cc9e4af697b5963f774cc0",
-  "report_sha256": "c46c83e45ccee409f7467183d076e62b58f0963ad5cc9e4af697b5963f774cc0",
+  "policy_sha256": "97660f3a6bbcdb4f0ff99f330b1f23c53cb9cc886736f698b21bfd0b82fde363",
+  "repeat_sha256": "d6f53f406f40ebfebcfca637c5896456001740505d4f27feb42bc1b393752bea",
+  "report_sha256": "d6f53f406f40ebfebcfca637c5896456001740505d4f27feb42bc1b393752bea",
   "reruns": {
     "gate_quality": {
       "committed_report_path": "execution/reports/pr0697-gate-quality-report.json",

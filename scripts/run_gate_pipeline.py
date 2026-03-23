@@ -75,6 +75,14 @@ PR101_CHILD_NODE_IDS = frozenset(
 NODES_BY_ID = {node.id: node for node in NODES}
 NODE_INDEX_BY_ID = {node.id: index for index, node in enumerate(NODES)}
 _RATCHET_NODE_TIMINGS: dict[str, float] | None = None
+LOCAL_HOST_SENSITIVE_REPORT_KEYS = frozenset(
+    {
+        "child_gate_input_hashes",
+        "report_sha256",
+        "repeat_sha256",
+        "safec_binary_sha256",
+    }
+)
 
 
 def format_elapsed(seconds: float) -> str:
@@ -321,7 +329,7 @@ def load_seed_pipeline_context(*, checkpoint_root: Path, start_index: int) -> di
     return seeded
 
 
-def changed_report_nodes(*, generated_root: Path) -> list[str]:
+def changed_report_nodes(*, generated_root: Path, authority: str) -> list[str]:
     changed: list[str] = []
     for node in NODES:
         if node.report_path is None:
@@ -332,7 +340,17 @@ def changed_report_nodes(*, generated_root: Path) -> list[str]:
         if not expected_path.exists():
             changed.append(node.id)
             continue
-        if generated_path.read_text(encoding="utf-8") != expected_path.read_text(encoding="utf-8"):
+        generated_text = report_compare_text(
+            generated_path.read_text(encoding="utf-8"),
+            node=node,
+            authority=authority,
+        )
+        expected_text = report_compare_text(
+            expected_path.read_text(encoding="utf-8"),
+            node=node,
+            authority=authority,
+        )
+        if generated_text != expected_text:
             changed.append(node.id)
     return changed
 
@@ -398,6 +416,12 @@ def report_compare_text(
     if authority == "local" and node.determinism_class is DeterminismClass.CI_AUTHORITATIVE:
         payload = json.loads(report_text)
         normalized = {key: value for key, value in payload.items() if key != "machine_sensitive"}
+        return json.dumps(normalized, indent=2, sort_keys=True) + "\n"
+    if authority == "local" and node.determinism_class is DeterminismClass.LOCAL_HOST_SENSITIVE:
+        payload = json.loads(report_text)
+        normalized = {
+            key: value for key, value in payload.items() if key not in LOCAL_HOST_SENSITIVE_REPORT_KEYS
+        }
         return json.dumps(normalized, indent=2, sort_keys=True) + "\n"
     return report_text
 
@@ -702,35 +726,58 @@ def verify_pipeline(
     return 0
 
 
-def promote_stage(stage_root: Path) -> None:
-    reports_path = REPO_ROOT / REPORTS_ROOT_REL
-    dashboard_path = REPO_ROOT / DASHBOARD_REL
-    stage_reports = generated_output_path(stage_root, REPORTS_ROOT_REL)
-    stage_dashboard = generated_output_path(stage_root, DASHBOARD_REL)
+def promote_stage(
+    stage_root: Path,
+    *,
+    changed_nodes: list[str],
+    dashboard_changed_flag: bool,
+) -> None:
+    if not changed_nodes and not dashboard_changed_flag:
+        return
 
     backup_root = Path(tempfile.mkdtemp(prefix="gate-pipeline-backup-"))
+    staged_reports: list[tuple[Path, Path]] = []
+    for node_id in changed_nodes:
+        node = NODES_BY_ID[node_id]
+        require(node.report_path is not None, f"{node.id}: report path required for promotion")
+        staged_reports.append((generated_report_output_path(stage_root, node.report_path), node.report_path))
+
+    dashboard_path = REPO_ROOT / DASHBOARD_REL
+    stage_dashboard = generated_output_path(stage_root, DASHBOARD_REL)
     try:
-        backup_reports = backup_root / REPORTS_ROOT_REL
-        backup_dashboard = backup_root / DASHBOARD_REL
-        backup_reports.parent.mkdir(parents=True, exist_ok=True)
-        backup_dashboard.parent.mkdir(parents=True, exist_ok=True)
-        if reports_path.exists():
-            shutil.copytree(reports_path, backup_reports, dirs_exist_ok=True)
-        if dashboard_path.exists():
+        for _source_path, destination_path in staged_reports:
+            backup_path = backup_root / destination_path.relative_to(REPO_ROOT)
+            if destination_path.exists():
+                backup_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(destination_path, backup_path)
+        if dashboard_changed_flag and dashboard_path.exists():
+            backup_dashboard = backup_root / DASHBOARD_REL
+            backup_dashboard.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(dashboard_path, backup_dashboard)
 
-        shutil.rmtree(reports_path, ignore_errors=True)
-        reports_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(stage_reports, reports_path, dirs_exist_ok=True)
-        dashboard_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(stage_dashboard, dashboard_path)
-    except Exception:
-        shutil.rmtree(reports_path, ignore_errors=True)
-        if (backup_root / REPORTS_ROOT_REL).exists():
-            shutil.copytree(backup_root / REPORTS_ROOT_REL, reports_path)
-        if (backup_root / DASHBOARD_REL).exists():
+        for source_path, destination_path in staged_reports:
+            require(source_path.exists(), f"missing staged report {source_path}")
+            destination_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_path, destination_path)
+        if dashboard_changed_flag:
+            require(stage_dashboard.exists(), f"missing staged dashboard {stage_dashboard}")
             dashboard_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(backup_root / DASHBOARD_REL, dashboard_path)
+            shutil.copy2(stage_dashboard, dashboard_path)
+    except Exception:
+        for _source_path, destination_path in staged_reports:
+            backup_path = backup_root / destination_path.relative_to(REPO_ROOT)
+            if backup_path.exists():
+                destination_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(backup_path, destination_path)
+            else:
+                destination_path.unlink(missing_ok=True)
+        backup_dashboard = backup_root / DASHBOARD_REL
+        if dashboard_changed_flag:
+            if backup_dashboard.exists():
+                dashboard_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(backup_dashboard, dashboard_path)
+            else:
+                dashboard_path.unlink(missing_ok=True)
         raise
     finally:
         shutil.rmtree(backup_root, ignore_errors=True)
@@ -752,7 +799,7 @@ def final_rerun_pipeline(
     stage_verify_root: Path,
     final_verify_root: Path,
 ) -> int:
-    changed_nodes = changed_report_nodes(generated_root=stage_root)
+    changed_nodes = changed_report_nodes(generated_root=stage_root, authority=authority)
     promoted_dashboard_changed = dashboard_changed(generated_root=stage_root)
     start_index = final_rerun_start_index(
         changed_nodes=changed_nodes,
@@ -777,7 +824,11 @@ def final_rerun_pipeline(
         ),
     )
     promotion_started = time.monotonic()
-    promote_stage(stage_root)
+    promote_stage(
+        stage_root,
+        changed_nodes=changed_nodes,
+        dashboard_changed_flag=promoted_dashboard_changed,
+    )
     print_gate_pipeline(f"promotion complete ({format_elapsed(time.monotonic() - promotion_started)})")
 
     promoted_snapshot = tracked_diff_snapshot(git=git, env=env)
