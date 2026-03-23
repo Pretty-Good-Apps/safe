@@ -9,7 +9,7 @@ inputs:
   toolchain:
     description: Toolchain releases to select with `alr toolchain --select`
     required: false
-    default: "gnat_native=15.1.2 gprbuild=25.0.1"
+    default: "gnat_native=15.2.1 gprbuild=25.0.1"
   gnatprove-version:
     description: GNATprove version to install into the default Alire prefix
     required: false

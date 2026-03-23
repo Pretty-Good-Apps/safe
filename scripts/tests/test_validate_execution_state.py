@@ -1498,7 +1498,7 @@ class ValidateExecutionStateTests(unittest.TestCase):
     def test_resolve_tool_command_prefers_pinned_alire_toolchain_binary(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             home = Path(temp_dir)
-            pinned = home / ".local" / "share" / "alire" / "toolchains" / "gnat_native_15.1.2_deadbeef" / "bin" / "gnat"
+            pinned = home / ".local" / "share" / "alire" / "toolchains" / "gnat_native_15.2.1_deadbeef" / "bin" / "gnat"
             pinned.parent.mkdir(parents=True, exist_ok=True)
             pinned.write_text("", encoding="utf-8")
             with mock.patch("validate_execution_state.Path.home", return_value=home), mock.patch(

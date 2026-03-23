@@ -487,8 +487,8 @@
               "Assertions": {
                 "flow": 0,
                 "justified": 0,
-                "provers": 0,
-                "total": 0,
+                "provers": 2,
+                "total": 2,
                 "unproved": 0
               },
               "Concurrency": {
@@ -543,8 +543,8 @@
               "Run-time Checks": {
                 "flow": 0,
                 "justified": 0,
-                "provers": 4,
-                "total": 4,
+                "provers": 8,
+                "total": 8,
                 "unproved": 0
               },
               "Termination": {
@@ -557,19 +557,27 @@
               "Total": {
                 "flow": 8,
                 "justified": 0,
-                "provers": 4,
-                "total": 12,
+                "provers": 10,
+                "total": 18,
                 "unproved": 0
               }
             },
             "total": {
               "flow": 8,
               "justified": 0,
-              "provers": 4,
-              "total": 12,
+              "provers": 10,
+              "total": 18,
               "unproved": 0
             }
           }
+        },
+        "structural_assertions": {
+          "low_pass_filter.adb": [
+            "Narrowed_Float_Value : constant Long_Float := Long_Float (Result);",
+            "pragma Assert (Narrowed_Float_Value = Narrowed_Float_Value);",
+            "pragma Assert (Narrowed_Float_Value >= Long_Float'First and then Narrowed_Float_Value <= Long_Float'Last);",
+            "State.Output := Signal (Narrowed_Float_Value);"
+          ]
         }
       },
       {
@@ -720,8 +728,8 @@
               "Assertions": {
                 "flow": 0,
                 "justified": 0,
-                "provers": 0,
-                "total": 0,
+                "provers": 2,
+                "total": 2,
                 "unproved": 0
               },
               "Concurrency": {
@@ -776,8 +784,8 @@
               "Run-time Checks": {
                 "flow": 0,
                 "justified": 0,
-                "provers": 4,
-                "total": 4,
+                "provers": 8,
+                "total": 8,
                 "unproved": 0
               },
               "Termination": {
@@ -790,19 +798,30 @@
               "Total": {
                 "flow": 5,
                 "justified": 0,
-                "provers": 4,
-                "total": 9,
+                "provers": 10,
+                "total": 15,
                 "unproved": 0
               }
             },
             "total": {
               "flow": 5,
               "justified": 0,
-              "provers": 4,
-              "total": 9,
+              "provers": 10,
+              "total": 15,
               "unproved": 0
             }
           }
+        },
+        "structural_assertions": {
+          "safe_interpolate.adb": [
+            "if Long_Float (T) <= 0.5 then",
+            "Result := (Long_Float (A) + (Long_Float (T) * (Long_Float (B) - Long_Float (A))));",
+            "Result := (Long_Float (B) - ((1.0 - Long_Float (T)) * (Long_Float (B) - Long_Float (A))));",
+            "Narrowed_Float_Value : constant Long_Float := Long_Float (Result);",
+            "pragma Assert (Narrowed_Float_Value = Narrowed_Float_Value);",
+            "pragma Assert (Narrowed_Float_Value >= Long_Float'First and then Narrowed_Float_Value <= Long_Float'Last);",
+            "return Value (Narrowed_Float_Value);"
+          ]
         }
       },
       {
@@ -953,8 +972,8 @@
               "Assertions": {
                 "flow": 0,
                 "justified": 0,
-                "provers": 0,
-                "total": 0,
+                "provers": 2,
+                "total": 2,
                 "unproved": 0
               },
               "Concurrency": {
@@ -1023,19 +1042,27 @@
               "Total": {
                 "flow": 5,
                 "justified": 0,
-                "provers": 3,
-                "total": 8,
+                "provers": 5,
+                "total": 10,
                 "unproved": 0
               }
             },
             "total": {
               "flow": 5,
               "justified": 0,
-              "provers": 3,
-              "total": 8,
+              "provers": 5,
+              "total": 10,
               "unproved": 0
             }
           }
+        },
+        "structural_assertions": {
+          "vector_normalize.adb": [
+            "Narrowed_Float_Value : constant Long_Float := Long_Float (Result);",
+            "pragma Assert (Narrowed_Float_Value = Narrowed_Float_Value);",
+            "pragma Assert (Narrowed_Float_Value >= Long_Float'First and then Narrowed_Float_Value <= Long_Float'Last);",
+            "return Ratio (Narrowed_Float_Value);"
+          ]
         }
       },
       {
@@ -1186,8 +1213,8 @@
               "Assertions": {
                 "flow": 0,
                 "justified": 0,
-                "provers": 2,
-                "total": 2,
+                "provers": 4,
+                "total": 4,
                 "unproved": 0
               },
               "Concurrency": {
@@ -1256,16 +1283,16 @@
               "Total": {
                 "flow": 9,
                 "justified": 0,
-                "provers": 13,
-                "total": 22,
+                "provers": 15,
+                "total": 24,
                 "unproved": 0
               }
             },
             "total": {
               "flow": 9,
               "justified": 0,
-              "provers": 13,
-              "total": 22,
+              "provers": 15,
+              "total": 24,
               "unproved": 0
             }
           }
@@ -1419,8 +1446,8 @@
               "Assertions": {
                 "flow": 0,
                 "justified": 0,
-                "provers": 0,
-                "total": 0,
+                "provers": 4,
+                "total": 4,
                 "unproved": 0
               },
               "Concurrency": {
@@ -1489,16 +1516,16 @@
               "Total": {
                 "flow": 7,
                 "justified": 0,
-                "provers": 10,
-                "total": 17,
+                "provers": 14,
+                "total": 21,
                 "unproved": 0
               }
             },
             "total": {
               "flow": 7,
               "justified": 0,
-              "provers": 10,
-              "total": 17,
+              "provers": 14,
+              "total": 21,
               "unproved": 0
             }
           }
@@ -1935,17 +1962,20 @@
           "cwd": "$REPO_ROOT/compiler_impl",
           "summary": {
             "rows": {
+              "Assertions": {
+                "provers": "CVC5"
+              },
               "Run-time Checks": {
                 "provers": "CVC5 75%, Trivial 25%"
               },
               "Total": {
-                "flow": "67%",
-                "provers": "33%"
+                "flow": "44%",
+                "provers": "56%"
               }
             },
             "total": {
-              "flow": "67%",
-              "provers": "33%"
+              "flow": "44%",
+              "provers": "56%"
             }
           }
         }
@@ -2009,17 +2039,20 @@
           "cwd": "$REPO_ROOT/compiler_impl",
           "summary": {
             "rows": {
+              "Assertions": {
+                "provers": "CVC5"
+              },
               "Run-time Checks": {
-                "provers": "Trivial 75%, Z3 25%"
+                "provers": "CVC5 13%, Trivial 88%"
               },
               "Total": {
-                "flow": "56%",
-                "provers": "44%"
+                "flow": "33%",
+                "provers": "67%"
               }
             },
             "total": {
-              "flow": "56%",
-              "provers": "44%"
+              "flow": "33%",
+              "provers": "67%"
             }
           }
         }
@@ -2083,17 +2116,20 @@
           "cwd": "$REPO_ROOT/compiler_impl",
           "summary": {
             "rows": {
+              "Assertions": {
+                "provers": "CVC5"
+              },
               "Run-time Checks": {
                 "provers": "CVC5 67%, Trivial 33%"
               },
               "Total": {
-                "flow": "63%",
-                "provers": "38%"
+                "flow": "50%",
+                "provers": "50%"
               }
             },
             "total": {
-              "flow": "63%",
-              "provers": "38%"
+              "flow": "50%",
+              "provers": "50%"
             }
           }
         }
@@ -2164,13 +2200,13 @@
                 "provers": "CVC5 62%, Trivial 38%"
               },
               "Total": {
-                "flow": "41%",
-                "provers": "59%"
+                "flow": "38%",
+                "provers": "63%"
               }
             },
             "total": {
-              "flow": "41%",
-              "provers": "59%"
+              "flow": "38%",
+              "provers": "63%"
             }
           }
         }
@@ -2234,17 +2270,20 @@
           "cwd": "$REPO_ROOT/compiler_impl",
           "summary": {
             "rows": {
+              "Assertions": {
+                "provers": "CVC5"
+              },
               "Run-time Checks": {
-                "provers": "CVC5 30%, Trivial 70%"
+                "provers": "CVC5 40%, Trivial 60%"
               },
               "Total": {
-                "flow": "41%",
-                "provers": "59%"
+                "flow": "33%",
+                "provers": "67%"
               }
             },
             "total": {
-              "flow": "41%",
-              "provers": "59%"
+              "flow": "33%",
+              "provers": "67%"
             }
           }
         }
@@ -2325,8 +2364,8 @@
       }
     ]
   },
-  "repeat_sha256": "6c006023c59f98bef94e1c61b4a76d970f612ba39bfd3baff823d926c9ce5509",
-  "report_sha256": "6c006023c59f98bef94e1c61b4a76d970f612ba39bfd3baff823d926c9ce5509",
+  "repeat_sha256": "7bd494450becbb68f66f00b66af121351f6985c58100ccaa0338eeaa18ac778c",
+  "report_sha256": "7bd494450becbb68f66f00b66af121351f6985c58100ccaa0338eeaa18ac778c",
   "semantic_floor": {
     "fixture_count": 6,
     "fixtures": [
@@ -2339,7 +2378,7 @@
         "flow_unproved": 0,
         "prove_justified": 0,
         "prove_returncode": 0,
-        "prove_total_checks": 12,
+        "prove_total_checks": 18,
         "prove_unproved": 0
       },
       {
@@ -2351,7 +2390,7 @@
         "flow_unproved": 0,
         "prove_justified": 0,
         "prove_returncode": 0,
-        "prove_total_checks": 9,
+        "prove_total_checks": 15,
         "prove_unproved": 0
       },
       {
@@ -2363,7 +2402,7 @@
         "flow_unproved": 0,
         "prove_justified": 0,
         "prove_returncode": 0,
-        "prove_total_checks": 8,
+        "prove_total_checks": 10,
         "prove_unproved": 0
       },
       {
@@ -2375,7 +2414,7 @@
         "flow_unproved": 0,
         "prove_justified": 0,
         "prove_returncode": 0,
-        "prove_total_checks": 22,
+        "prove_total_checks": 24,
         "prove_unproved": 0
       },
       {
@@ -2387,7 +2426,7 @@
         "flow_unproved": 0,
         "prove_justified": 0,
         "prove_returncode": 0,
-        "prove_total_checks": 17,
+        "prove_total_checks": 21,
         "prove_unproved": 0
       },
       {

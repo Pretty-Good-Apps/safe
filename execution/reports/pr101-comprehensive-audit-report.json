@@ -80,13 +80,13 @@
         {
           "deterministic": true,
           "node_id": "pr101a_companion_proof_verification",
-          "report_sha256": "55a8952139d7595cc08bd25eec7493a328dc871fc8dd36665c35a34a4165c6e5",
+          "report_sha256": "b3b658cef10da6109187495b5d5960b005f4255c9bd7640ed8b0f7bf689bf803",
           "script": "scripts/run_pr101a_companion_proof_verification.py"
         },
         {
           "deterministic": true,
           "node_id": "pr101b_template_proof_verification",
-          "report_sha256": "5495a2d8855a20862d336309ef71a7db05c6b5f8c65c6812f1bf957a0842102e",
+          "report_sha256": "199bd938efaa7e3169bc70c5cacf4ed706e8a6d64f749b98acb5d459ec1a02b7",
           "script": "scripts/run_pr101b_template_proof_verification.py"
         }
       ]
@@ -444,8 +444,8 @@
       ]
     }
   },
-  "repeat_sha256": "0a4676fb430595f9c718bf080ee25e578d41b63d9c67768c127ad12ace288017",
-  "report_sha256": "0a4676fb430595f9c718bf080ee25e578d41b63d9c67768c127ad12ace288017",
+  "repeat_sha256": "897cf5fc26d5d69ea327dec1f9d22c45d41c92eeb6bcf3b37ae255b7a145a72d",
+  "report_sha256": "897cf5fc26d5d69ea327dec1f9d22c45d41c92eeb6bcf3b37ae255b7a145a72d",
   "semantic_floor": {
     "baseline_gate_hashes": {
       "emitted_hardening_regressions": "3f84ff42577ca0a50269aa187e2549f33bf901bdc1d25e9554a4e1c64e666657",
@@ -454,8 +454,8 @@
       "pr10_emitted_baseline": "cb034f3ea9e5624534384b8993dac5fbd412c741026d849aa5c970a11e7a8bd0"
     },
     "child_report_hashes": {
-      "pr101a_companion_proof_verification": "55a8952139d7595cc08bd25eec7493a328dc871fc8dd36665c35a34a4165c6e5",
-      "pr101b_template_proof_verification": "5495a2d8855a20862d336309ef71a7db05c6b5f8c65c6812f1bf957a0842102e"
+      "pr101a_companion_proof_verification": "b3b658cef10da6109187495b5d5960b005f4255c9bd7640ed8b0f7bf689bf803",
+      "pr101b_template_proof_verification": "199bd938efaa7e3169bc70c5cacf4ed706e8a6d64f749b98acb5d459ec1a02b7"
     }
   },
   "task": "PR10.1"

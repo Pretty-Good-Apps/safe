@@ -33,6 +33,7 @@ EXPECTED_TEST_MODULES = (
     "scripts.tests.test_pr0699_build_reproducibility",
     "scripts.tests.test_pr09_emit",
     "scripts.tests.test_pr101_audit_hardening",
+    "scripts.tests.test_pr101_verification",
     "scripts.tests.test_pr10_emit",
     "scripts.tests.test_pr111_language_eval",
     "scripts.tests.test_pr112_parser_completeness_phase1",

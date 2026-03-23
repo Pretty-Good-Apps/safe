@@ -352,6 +352,7 @@ class ProofReportGateShapeTests(unittest.TestCase):
             "run_positive_fixture",
             return_value={
                 **sample_fixture(),
+                "structural_assertions": {"safe_sample.adb": ["return Value (Narrowed_Float_Value);"]},
                 "flow": {
                     **sample_result(
                         [
@@ -397,6 +398,7 @@ class ProofReportGateShapeTests(unittest.TestCase):
         self.assertIn("negative_diagnostics", report["canonical_proof_detail"])
         self.assertIn("mir_parity", report["canonical_proof_detail"])
         self.assertNotIn("negative_diagnostics", report["semantic_floor"])
+        self.assertIn("structural_assertions", report["canonical_proof_detail"]["positive_rule5_corpus"][0])
 
     def test_pr104_generate_report_keeps_parser_regressions_in_canonical_detail(self) -> None:
         flow_fixture = {

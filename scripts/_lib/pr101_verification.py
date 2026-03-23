@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -54,13 +55,19 @@ def _run_verification(
 ) -> dict[str, Any]:
     bash = find_command("bash")
     alr = alr_command()
+    gnatprove = find_command("gnatprove", Path.home() / ".alire" / "bin" / "gnatprove")
+    tool_env = env.copy()
+    if gnatprove != "gnatprove":
+        alire_bin = str(Path(gnatprove).parent)
+        current_path = tool_env.get("PATH", "")
+        tool_env["PATH"] = alire_bin if not current_path else alire_bin + os.pathsep + current_path
     assumptions_path = REPO_ROOT / "companion" / "assumptions_extracted.txt"
     original_assumptions = snapshot_text(assumptions_path)
-    build = run([alr, "build"], cwd=root, env=env)
+    build = run([alr, "build"], cwd=root, env=tool_env)
     flow = run(
         [alr, "exec", "--", "gnatprove", "-P", project, "--mode=flow", "--report=all", "--warnings=error"],
         cwd=root,
-        env=env,
+        env=tool_env,
     )
     prove = run(
         [
@@ -80,12 +87,12 @@ def _run_verification(
             "--checks-as-errors=on",
         ],
         cwd=root,
-        env=env,
+        env=tool_env,
     )
-    extract_env = env.copy()
+    extract_env = tool_env.copy()
     if extract_prove_out is not None:
         extract_env["PROVE_OUT"] = extract_prove_out
-    diff_env = env.copy()
+    diff_env = tool_env.copy()
     if diff_prove_golden is not None:
         diff_env["PROVE_GOLDEN"] = diff_prove_golden
     if diff_prove_out is not None:

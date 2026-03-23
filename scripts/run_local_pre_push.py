@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run branch-aware local pre-push checks via the canonical gate pipeline."""
+"""Run full local pre-push checks via the canonical gate pipeline."""
 
 from __future__ import annotations
 
@@ -7,9 +7,8 @@ import argparse
 import os
 from pathlib import Path
 
-from _lib.gate_manifest import resolve_branch
 from _lib.harness_common import ensure_deterministic_env, ensure_sdkroot, find_command, run
-from run_gate_pipeline import EVIDENCE_POLICY, current_branch, print_plan, verify_pipeline
+from run_gate_pipeline import EVIDENCE_POLICY, current_branch, verify_pipeline
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -56,14 +55,12 @@ def main() -> int:
     branch = args.branch or current_branch(git=git, env=env)
 
     if args.dry_run:
-        print_plan(branch)
-        return 0
-    if not resolve_branch(branch):
         print(f"[pre-push] branch: {branch}")
-        print("[pre-push] no enforced local gate chain for this branch")
+        print("[pre-push] plan: full canonical gate pipeline verify (authority=local)")
         return 0
 
-    verify_pipeline(authority="local", python=python, git=git, alr=alr, env=env, branch=branch)
+    print(f"[pre-push] branch: {branch}")
+    verify_pipeline(authority="local", python=python, git=git, alr=alr, env=env)
     if not args.skip_diff:
         run([git, "diff", "--exit-code"], cwd=REPO_ROOT, env=env)
     print("[pre-push] local gate chain passed")

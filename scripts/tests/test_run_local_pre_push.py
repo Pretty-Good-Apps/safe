@@ -17,19 +17,17 @@ import run_local_pre_push
 
 
 class RunLocalPrePushTests(unittest.TestCase):
-    def test_dry_run_delegates_to_plan(self) -> None:
+    def test_dry_run_reports_full_verify_plan(self) -> None:
         args = argparse.Namespace(branch="codex/pr114-signature-control-flow-syntax", dry_run=True, skip_diff=False)
+        stdout = io.StringIO()
         with mock.patch.object(run_local_pre_push, "parse_args", return_value=args), mock.patch.object(
-            run_local_pre_push,
-            "print_plan",
-            return_value=None,
-        ) as print_plan, mock.patch.object(
             run_local_pre_push,
             "verify_pipeline",
         ) as verify_pipeline:
-            with redirect_stdout(io.StringIO()):
+            with redirect_stdout(stdout):
                 self.assertEqual(run_local_pre_push.main(), 0)
-        print_plan.assert_called_once_with("codex/pr114-signature-control-flow-syntax")
+        self.assertIn("[pre-push] branch: codex/pr114-signature-control-flow-syntax", stdout.getvalue())
+        self.assertIn("[pre-push] plan: full canonical gate pipeline verify (authority=local)", stdout.getvalue())
         verify_pipeline.assert_not_called()
 
     def test_main_verifies_and_checks_diff(self) -> None:
@@ -46,12 +44,7 @@ class RunLocalPrePushTests(unittest.TestCase):
             run_local_pre_push,
             "find_command",
             side_effect=["git", "python3", "alr"],
-        ), mock.patch.object(
-            run_local_pre_push,
-            "resolve_branch",
-            return_value=[object()],
-        ), mock.patch.object(
-            run_local_pre_push,
+        ), mock.patch.object(run_local_pre_push,
             "verify_pipeline",
             return_value=0,
         ) as verify_pipeline, mock.patch.object(
@@ -74,7 +67,6 @@ class RunLocalPrePushTests(unittest.TestCase):
             git="git",
             alr="alr",
             env={},
-            branch="codex/pr114-signature-control-flow-syntax",
         )
         run_command.assert_called_once()
         self.assertEqual(run_command.call_args.args[0], ["git", "diff", "--exit-code"])
@@ -93,12 +85,7 @@ class RunLocalPrePushTests(unittest.TestCase):
             run_local_pre_push,
             "find_command",
             side_effect=["git", "python3", "alr"],
-        ), mock.patch.object(
-            run_local_pre_push,
-            "resolve_branch",
-            return_value=[object()],
-        ), mock.patch.object(
-            run_local_pre_push,
+        ), mock.patch.object(run_local_pre_push,
             "verify_pipeline",
             return_value=0,
         ) as verify_pipeline, mock.patch.object(
@@ -114,7 +101,6 @@ class RunLocalPrePushTests(unittest.TestCase):
             git="git",
             alr="alr",
             env={},
-            branch="codex/pr114-signature-control-flow-syntax",
         )
         run_command.assert_not_called()
 
@@ -136,12 +122,7 @@ class RunLocalPrePushTests(unittest.TestCase):
             run_local_pre_push,
             "current_branch",
             return_value="codex/pr114-signature-control-flow-syntax",
-        ) as current_branch, mock.patch.object(
-            run_local_pre_push,
-            "resolve_branch",
-            return_value=[object()],
-        ), mock.patch.object(
-            run_local_pre_push,
+        ) as current_branch, mock.patch.object(run_local_pre_push,
             "verify_pipeline",
             return_value=0,
         ) as verify_pipeline:
@@ -154,10 +135,9 @@ class RunLocalPrePushTests(unittest.TestCase):
             git="git",
             alr="alr",
             env={},
-            branch="codex/pr114-signature-control-flow-syntax",
         )
 
-    def test_main_noops_when_branch_has_no_enforced_plan(self) -> None:
+    def test_main_verifies_full_pipeline_even_without_branch_plan(self) -> None:
         args = argparse.Namespace(branch="codex/misc-cleanup", dry_run=False, skip_diff=False)
         stdout = io.StringIO()
         with mock.patch.object(run_local_pre_push, "parse_args", return_value=args), mock.patch.object(
@@ -172,23 +152,31 @@ class RunLocalPrePushTests(unittest.TestCase):
             run_local_pre_push,
             "find_command",
             side_effect=["git", "python3", "alr"],
-        ), mock.patch.object(
-            run_local_pre_push,
-            "resolve_branch",
-            return_value=[],
-        ), mock.patch.object(
-            run_local_pre_push,
+        ), mock.patch.object(run_local_pre_push,
             "verify_pipeline",
+            return_value=0,
         ) as verify_pipeline, mock.patch.object(
             run_local_pre_push,
             "run",
+            return_value={
+                "command": ["git", "diff", "--exit-code"],
+                "cwd": "$REPO_ROOT",
+                "returncode": 0,
+                "stdout": "",
+                "stderr": "",
+            },
         ) as run_command:
             with redirect_stdout(stdout):
                 self.assertEqual(run_local_pre_push.main(), 0)
         self.assertIn("[pre-push] branch: codex/misc-cleanup", stdout.getvalue())
-        self.assertIn("[pre-push] no enforced local gate chain for this branch", stdout.getvalue())
-        verify_pipeline.assert_not_called()
-        run_command.assert_not_called()
+        verify_pipeline.assert_called_once_with(
+            authority="local",
+            python="python3",
+            git="git",
+            alr="alr",
+            env={},
+        )
+        run_command.assert_called_once()
 
 
 if __name__ == "__main__":

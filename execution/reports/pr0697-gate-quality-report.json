@@ -266,8 +266,8 @@
       }
     }
   ],
-  "repeat_sha256": "7797ecd0e9d63c8c11a8d9d45c72e75b50e602f3b78f4068f84696cb3b1e7492",
-  "report_sha256": "7797ecd0e9d63c8c11a8d9d45c72e75b50e602f3b78f4068f84696cb3b1e7492",
+  "repeat_sha256": "36953df5a8757853f1a267080a0ae7ac9399ab5c6cd2863dfd37127925b556bc",
+  "report_sha256": "36953df5a8757853f1a267080a0ae7ac9399ab5c6cd2863dfd37127925b556bc",
   "status": "ok",
   "task": "PR06.9.7",
   "unit_tests": {
@@ -285,6 +285,7 @@
       "scripts.tests.test_pr0699_build_reproducibility",
       "scripts.tests.test_pr09_emit",
       "scripts.tests.test_pr101_audit_hardening",
+      "scripts.tests.test_pr101_verification",
       "scripts.tests.test_pr10_emit",
       "scripts.tests.test_pr111_language_eval",
       "scripts.tests.test_pr112_parser_completeness_phase1",
@@ -311,6 +312,7 @@
       "scripts.tests.test_pr0699_build_reproducibility",
       "scripts.tests.test_pr09_emit",
       "scripts.tests.test_pr101_audit_hardening",
+      "scripts.tests.test_pr101_verification",
       "scripts.tests.test_pr10_emit",
       "scripts.tests.test_pr111_language_eval",
       "scripts.tests.test_pr112_parser_completeness_phase1",
@@ -325,9 +327,9 @@
       "scripts.tests.test_validate_execution_state",
       "scripts.tests.test_validate_output_contracts"
     ],
-    "observed_count": 287,
+    "observed_count": 288,
     "returncode": 0,
-    "stderr": "...............................................................................................................................................................................................................................................................................................\n----------------------------------------------------------------------\nRan 287 tests in <elapsed>\n\nOK\n",
+    "stderr": "................................................................................................................................................................................................................................................................................................\n----------------------------------------------------------------------\nRan 288 tests in <elapsed>\n\nOK\n",
     "stdout": "[gate-pipeline] total wall time: 0.0s\n"
   },
   "valid_output_contracts": [

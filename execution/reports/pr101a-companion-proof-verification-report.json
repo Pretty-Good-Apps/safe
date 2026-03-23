@@ -1,6 +1,6 @@
 {
   "canonical_proof_detail": {
-    "assumptions_extracted_sha256": "04becc81d8705c62493fe616c44b417475ec5273432b5a7723bfcd128eecdcc2",
+    "assumptions_extracted_sha256": "bdd90e90b20f41d3aef0c1b2061a1fba13a17854119f2413bc94cba669bffc9e",
     "build": {
       "command_profile": {
         "args": [
@@ -126,10 +126,10 @@
       "cwd": "$REPO_ROOT/companion/gen"
     }
   },
-  "repeat_sha256": "55a8952139d7595cc08bd25eec7493a328dc871fc8dd36665c35a34a4165c6e5",
-  "report_sha256": "55a8952139d7595cc08bd25eec7493a328dc871fc8dd36665c35a34a4165c6e5",
+  "repeat_sha256": "b3b658cef10da6109187495b5d5960b005f4255c9bd7640ed8b0f7bf689bf803",
+  "report_sha256": "b3b658cef10da6109187495b5d5960b005f4255c9bd7640ed8b0f7bf689bf803",
   "semantic_floor": {
-    "assumptions_extracted_sha256": "04becc81d8705c62493fe616c44b417475ec5273432b5a7723bfcd128eecdcc2",
+    "assumptions_extracted_sha256": "bdd90e90b20f41d3aef0c1b2061a1fba13a17854119f2413bc94cba669bffc9e",
     "build_returncode": 0,
     "diff_assumptions_returncode": 0,
     "extract_assumptions_returncode": 0,

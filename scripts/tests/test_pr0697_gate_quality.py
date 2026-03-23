@@ -55,7 +55,7 @@ class Pr0697GateQualityTests(unittest.TestCase):
             "stderr": (
                 "." * 22
                 + "\n----------------------------------------------------------------------\n"
-                + "Ran 22 tests in 0.123s\n\nOK\n"
+                + "Ran 23 tests in 0.123s\n\nOK\n"
             ),
         }
         with mock.patch.object(run_pr0697_gate_quality, "run", return_value=command_result) as run_mock:
@@ -66,10 +66,10 @@ class Pr0697GateQualityTests(unittest.TestCase):
             cwd=run_pr0697_gate_quality.REPO_ROOT,
         )
         self.assertEqual(result["modules"], list(run_pr0697_gate_quality.EXPECTED_TEST_MODULES))
-        self.assertEqual(result["observed_count"], 22)
+        self.assertEqual(result["observed_count"], 23)
         self.assertEqual(
             result["stderr"],
-            run_pr0697_gate_quality.canonical_unittest_success_output(count=22),
+            run_pr0697_gate_quality.canonical_unittest_success_output(count=23),
         )
 
     def test_extract_observed_test_count_reads_normalized_output(self) -> None:
