@@ -91,18 +91,21 @@ def legacy_surface_normalize(text: str) -> str:
     rewritten: list[str] = []
     inside_signature = False
     paren_depth = 0
+    signature_lines: list[str] = []
+    signature_has_returns = False
 
-    for line in lines:
+    def rewrite_line(
+        line: str,
+        *,
+        rewrite_function_as_procedure: bool,
+        allow_returns_rewrite: bool,
+        first_code_pending: bool,
+        returns_replaced: bool,
+    ) -> tuple[str, bool, bool]:
         segments = split_segments(line)
-        visible_code = "".join(segment for kind, segment in segments if kind == "code")
-        if DECLARATION_START_RE.match(visible_code):
-            inside_signature = True
-            paren_depth = 0
-
-        has_returns = "returns" in visible_code
-        replaced_returns = False
-        first_code = True
         updated_segments: list[str] = []
+        first_code = first_code_pending
+        replaced_returns = returns_replaced
 
         for kind, segment in segments:
             if kind != "code":
@@ -110,32 +113,78 @@ def legacy_surface_normalize(text: str) -> str:
                 continue
 
             updated = segment
-            if first_code and inside_signature and not has_returns:
+            if first_code and rewrite_function_as_procedure:
                 updated = FUNCTION_DECL_RE.sub(r"\1procedure", updated, count=1)
-                first_code = False
-            elif first_code:
+            if first_code:
                 first_code = False
 
-            if inside_signature and has_returns and not replaced_returns and re.search(r"\breturns\b", updated):
+            if allow_returns_rewrite and not replaced_returns and re.search(r"\breturns\b", updated):
                 updated = re.sub(r"\breturns\b", "return", updated, count=1)
                 replaced_returns = True
 
             updated = re.sub(r"\belse\s+if\b", "elsif", updated)
             updated_segments.append(updated)
 
-        rewritten_line = "".join(updated_segments)
-        rewritten.append(rewritten_line)
+        return "".join(updated_segments), first_code, replaced_returns
 
-        visible_rewritten = "".join(
-            segment for kind, segment in split_segments(rewritten_line) if kind == "code"
-        )
+    def flush_signature() -> None:
+        nonlocal signature_lines
+        nonlocal signature_has_returns
+
+        first_code_pending = True
+        returns_replaced = False
+        for signature_line in signature_lines:
+            rewritten_line, first_code_pending, returns_replaced = rewrite_line(
+                signature_line,
+                rewrite_function_as_procedure=not signature_has_returns,
+                allow_returns_rewrite=signature_has_returns,
+                first_code_pending=first_code_pending,
+                returns_replaced=returns_replaced,
+            )
+            rewritten.append(rewritten_line)
+        signature_lines = []
+        signature_has_returns = False
+
+    for line in lines:
+        segments = split_segments(line)
+        visible_code = "".join(segment for kind, segment in segments if kind == "code")
+
         if inside_signature:
-            paren_depth += visible_rewritten.count("(") - visible_rewritten.count(")")
+            signature_lines.append(line)
+            signature_has_returns = signature_has_returns or ("returns" in visible_code)
+            paren_depth += visible_code.count("(") - visible_code.count(")")
             if paren_depth <= 0 and (
-                re.search(r"\bis\b", visible_rewritten) or visible_rewritten.rstrip().endswith(";")
+                re.search(r"\bis\b", visible_code) or visible_code.rstrip().endswith(";")
             ):
+                flush_signature()
                 inside_signature = False
                 paren_depth = 0
+            continue
+
+        if DECLARATION_START_RE.match(visible_code):
+            inside_signature = True
+            paren_depth = visible_code.count("(") - visible_code.count(")")
+            signature_lines = [line]
+            signature_has_returns = "returns" in visible_code
+            if paren_depth <= 0 and (
+                re.search(r"\bis\b", visible_code) or visible_code.rstrip().endswith(";")
+            ):
+                flush_signature()
+                inside_signature = False
+                paren_depth = 0
+            continue
+
+        rewritten_line, _first_code_pending, _returns_replaced = rewrite_line(
+            line,
+            rewrite_function_as_procedure=False,
+            allow_returns_rewrite=False,
+            first_code_pending=True,
+            returns_replaced=False,
+        )
+        rewritten.append(rewritten_line)
+
+    if signature_lines:
+        flush_signature()
 
     return "".join(rewritten)
 

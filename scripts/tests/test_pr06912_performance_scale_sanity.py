@@ -99,6 +99,22 @@ class Pr06912PerformanceScaleSanityTests(unittest.TestCase):
                 ),
             )
 
+    def test_legacy_surface_normalize_preserves_multiline_function_with_returns(self) -> None:
+        source = (
+            "public function Normalize\n"
+            "  (Input : Sample)\n"
+            "  returns Ratio is\n"
+            "begin\n"
+            "   else if Ready then\n"
+            "      null;\n"
+            "end Normalize;\n"
+        )
+        normalized = run_pr06912_performance_scale_sanity.legacy_surface_normalize(source)
+        self.assertIn("public function Normalize", normalized)
+        self.assertIn("return Ratio is", normalized)
+        self.assertNotIn("procedure Normalize", normalized)
+        self.assertIn("elsif Ready then", normalized)
+
 
 if __name__ == "__main__":
     unittest.main()
