@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -28,9 +29,16 @@ class GateManifestTests(unittest.TestCase):
                 self.assertLess(positions[dependency], positions[node.id])
 
     def test_all_report_paths_exist(self) -> None:
+        repo_root = SCRIPTS_DIR.parent
+        generated_root_env = os.environ.get("SAFE_GENERATED_ROOT")
+        generated_root = Path(generated_root_env) if generated_root_env else None
         for node in NODES:
             if node.report_path is not None:
-                self.assertTrue(node.report_path.exists(), node.report_path)
+                report_exists = node.report_path.exists()
+                if not report_exists and generated_root is not None:
+                    generated_path = generated_root / node.report_path.relative_to(repo_root)
+                    report_exists = generated_path.exists()
+                self.assertTrue(report_exists, node.report_path)
 
     def test_manifest_covers_done_tracker_evidence_reports(self) -> None:
         tracker = json.loads((SCRIPTS_DIR.parent / "execution" / "tracker.json").read_text(encoding="utf-8"))
@@ -170,12 +178,18 @@ class GateManifestTests(unittest.TestCase):
             ],
         )
 
-    def test_branch_resolution_generic_pr11(self) -> None:
+    def test_branch_resolution_pr115(self) -> None:
         self.assertEqual(
             [node.id for node in resolve_branch("codex/pr115-statement-ergonomics")],
             [
                 "validate_execution_state_preflight",
                 "build_initial",
+                "pr111_language_eval",
+                "pr112_parser_completeness",
+                "pr113_discriminated_types",
+                "pr113a_proof_checkpoint",
+                "pr114_signature_control_flow",
+                "pr115_statement_ergonomics",
                 "pr081_local_concurrency_frontend",
                 "pr082_local_concurrency_analysis",
                 "pr083_interface_contracts",

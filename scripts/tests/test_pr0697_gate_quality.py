@@ -64,6 +64,7 @@ class Pr0697GateQualityTests(unittest.TestCase):
         run_mock.assert_called_once_with(
             ["python3", "-m", "unittest", *run_pr0697_gate_quality.EXPECTED_TEST_MODULES],
             cwd=run_pr0697_gate_quality.REPO_ROOT,
+            env=None,
         )
         self.assertEqual(result["modules"], list(run_pr0697_gate_quality.EXPECTED_TEST_MODULES))
         self.assertEqual(result["observed_count"], 23)
@@ -71,6 +72,22 @@ class Pr0697GateQualityTests(unittest.TestCase):
             result["stderr"],
             run_pr0697_gate_quality.canonical_unittest_success_output(count=23),
         )
+
+    def test_run_unittest_suite_exports_generated_root_for_manifest_checks(self) -> None:
+        command_result = {
+            "command": ["python3", "-m", "unittest", *run_pr0697_gate_quality.EXPECTED_TEST_MODULES],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0,
+            "stdout": "",
+            "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.123s\n\nOK\n",
+        }
+        generated_root = Path("/tmp/generated")
+        with mock.patch.object(run_pr0697_gate_quality, "run", return_value=command_result) as run_mock:
+            run_pr0697_gate_quality.run_unittest_suite("python3", generated_root=generated_root)
+
+        env = run_mock.call_args.kwargs["env"]
+        self.assertIsNotNone(env)
+        self.assertEqual(env["SAFE_GENERATED_ROOT"], str(generated_root))
 
     def test_extract_observed_test_count_reads_normalized_output(self) -> None:
         observed_count = run_pr0697_gate_quality.extract_observed_test_count(

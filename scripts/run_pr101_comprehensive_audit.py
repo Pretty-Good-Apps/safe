@@ -29,6 +29,7 @@ from _lib.harness_common import (
     resolve_generated_path,
     run,
     sha256_file,
+    sha256_text,
     write_report,
 )
 from _lib.pr09_emit import REPO_ROOT
@@ -158,6 +159,14 @@ EXPECTED_PR114_ACCEPTANCE = [
 ]
 EXPECTED_PR114_EVIDENCE = [
     "execution/reports/pr114-signature-control-flow-syntax-report.json",
+]
+EXPECTED_PR115_ACCEPTANCE = [
+    "Optional semicolons and statement-local `var` declarations are the only syntax admissions in scope for this milestone.",
+    "Semicolon omission is parser-side and bounded to executable statement terminators; declaration semicolons, same-line statement separators, and `case` arm `end when;` separators remain explicit.",
+    "A dedicated deterministic gate, selective corpus migration, and Rosetta readability evidence demonstrate the additive statement-ergonomics surface while deferring task channel direction constraints and scoped-binding `receive` to PR11.8b.",
+]
+EXPECTED_PR115_EVIDENCE = [
+    "execution/reports/pr115-statement-ergonomics-report.json",
 ]
 EXPECTED_PR102_ACCEPTANCE = [
     "The exact six-fixture PR10.2 Rule 5 positive corpus is tests/positive/rule5_filter.safe, tests/positive/rule5_interpolate.safe, tests/positive/rule5_normalize.safe, tests/positive/rule5_statistics.safe, tests/positive/rule5_temperature.safe, and tests/positive/rule5_vector_normalize.safe; that merged PR07-plus-PR10 set is non-shrinkable and each fixture is frontend-accepted, Ada-emitted, compile-valid, and passes emitted GNATprove flow and prove under the all-proved-only policy.",
@@ -356,6 +365,16 @@ def task_is_at_or_beyond_pr115(value: object) -> bool:
         return False
     major, minor = parsed
     return major > 11 or (major == 11 and minor is not None and minor >= 5)
+
+
+def task_is_at_or_beyond_pr116(value: object) -> bool:
+    if value is None:
+        return True
+    parsed = parse_task_id(value)
+    if parsed is None:
+        return False
+    major, minor = parsed
+    return major > 11 or (major == 11 and minor is not None and minor >= 6)
 
 def split_table_row(line: str) -> list[str] | None:
     stripped = line.strip()
@@ -773,9 +792,23 @@ def build_report(*, baseline_truth: dict[str, Any], generated_root: Path | None)
         task_map["PR11.4"]["evidence"] == EXPECTED_PR114_EVIDENCE,
         "PR11.4 evidence must list the committed syntax-cutover report",
     )
+    require("PR11.5" in task_map, "tracker must define PR11.5")
+    require(task_map["PR11.5"]["depends_on"] == ["PR11.4"], "PR11.5 must depend on PR11.4")
     require(
-        task_is_at_or_beyond_pr115(tracker.get("next_task_id")),
-        "next_task_id must remain at or beyond PR11.5 after PR11.4",
+        task_map["PR11.5"]["acceptance"] == EXPECTED_PR115_ACCEPTANCE,
+        "PR11.5 acceptance text must match the committed statement-ergonomics contract",
+    )
+    require(
+        task_map["PR11.5"]["status"] == "done",
+        "PR11.5 must be marked done",
+    )
+    require(
+        task_map["PR11.5"]["evidence"] == EXPECTED_PR115_EVIDENCE,
+        "PR11.5 evidence must list the committed statement-ergonomics report",
+    )
+    require(
+        task_is_at_or_beyond_pr116(tracker.get("next_task_id")),
+        "next_task_id must remain at or beyond PR11.6 after PR11.5",
     )
     for task_id in PROMOTED_TASKS:
         require(task_id in task_map, f"tracker must define promoted task {task_id}")
@@ -832,8 +865,8 @@ def build_report(*, baseline_truth: dict[str, Any], generated_root: Path | None)
     next_task_match = re.search(r"- \*\*Next task:\*\* `([^`]+)`", dashboard_text)
     require(next_task_match is not None, "execution/dashboard.md must render the next-task line")
     require(
-        task_is_at_or_beyond_pr115(next_task_match.group(1) if next_task_match is not None else None),
-        "execution/dashboard.md must show a next task at or beyond PR11.5 (or none)",
+        task_is_at_or_beyond_pr116(next_task_match.group(1) if next_task_match is not None else None),
+        "execution/dashboard.md must show a next task at or beyond PR11.6 (or none)",
     )
     require(
         re.search(r"\| PR10\.4 \| done \| PR10\.1 \| \d+ \|", dashboard_text)
@@ -958,7 +991,7 @@ def build_report(*, baseline_truth: dict[str, Any], generated_root: Path | None)
         "post_pr10_scope": sha256_file(POST_PR10_SCOPE_PATH),
         "matrix": sha256_file(MATRIX_PATH),
         "tracker": sha256_file(TRACKER_PATH),
-        "dashboard": sha256_file(DASHBOARD_PATH),
+        "dashboard": sha256_text(rendered_dashboard["stdout"]),
         "readme": sha256_file(README_PATH),
         "compiler_readme": sha256_file(COMPILER_README_PATH),
         "ci_workflow": sha256_file(WORKFLOW_PATH),

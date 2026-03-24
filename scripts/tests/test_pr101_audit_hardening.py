@@ -90,6 +90,13 @@ class Pr101AuditHardeningTests(unittest.TestCase):
         self.assertFalse(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr115("PR11.4"))
         self.assertFalse(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr115("PR11.3a"))
 
+    def test_pr101_audit_next_task_guard_accepts_pr116_and_beyond(self) -> None:
+        self.assertTrue(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr116("PR11.6"))
+        self.assertTrue(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr116("PR11.6a"))
+        self.assertTrue(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr116("PR12.1"))
+        self.assertFalse(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr116("PR11.5"))
+        self.assertFalse(run_pr101_comprehensive_audit.task_is_at_or_beyond_pr116("PR11.4"))
+
     def test_pr101_audit_tracks_pr111_acceptance_and_evidence(self) -> None:
         self.assertEqual(
             run_pr101_comprehensive_audit.EXPECTED_PR111_EVIDENCE,
@@ -139,6 +146,19 @@ class Pr101AuditHardeningTests(unittest.TestCase):
         self.assertIn(
             "legacy `procedure`, signature `return`, `elsif`, and `..` spellings are removed",
             run_pr101_comprehensive_audit.EXPECTED_PR114_ACCEPTANCE[0],
+        )
+        self.assertEqual(
+            run_pr101_comprehensive_audit.EXPECTED_PR115_EVIDENCE,
+            ["execution/reports/pr115-statement-ergonomics-report.json"],
+        )
+        self.assertEqual(len(run_pr101_comprehensive_audit.EXPECTED_PR115_ACCEPTANCE), 3)
+        self.assertIn(
+            "Optional semicolons and statement-local `var` declarations",
+            run_pr101_comprehensive_audit.EXPECTED_PR115_ACCEPTANCE[0],
+        )
+        self.assertIn(
+            "to PR11.8b",
+            run_pr101_comprehensive_audit.EXPECTED_PR115_ACCEPTANCE[2],
         )
 
     def test_pr101_audit_workflow_contract_tracks_single_pipeline_ci_path(self) -> None:

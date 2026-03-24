@@ -70,9 +70,9 @@
       "environment",
       "portability"
     ],
-    "policy_sha256": "0def5cfd661e53394a6f7662727ee25d56ed6da9687df332df781eb8f493c542"
+    "policy_sha256": "89bb742fb414c273b39b4523cab641e9e2bc59e9cb2e12a543a200152c4ea1d0"
   },
-  "repeat_sha256": "0b96ab0785e4027ac2c95dc0af13cd4d79e7454d212271357ed1c70d34539cba",
+  "repeat_sha256": "66aeb1d0ead006c146bb4cc42c766f53c9465a14dd2d3a13e5766552c7fd52cf",
   "repeated_scenarios": {
     "analyze_mir": [
       {
@@ -221,7 +221,7 @@
     "check": 5,
     "emit": 3
   },
-  "report_sha256": "0b96ab0785e4027ac2c95dc0af13cd4d79e7454d212271357ed1c70d34539cba",
+  "report_sha256": "66aeb1d0ead006c146bb4cc42c766f53c9465a14dd2d3a13e5766552c7fd52cf",
   "status": "ok",
   "task": "PR06.9.12"
 }

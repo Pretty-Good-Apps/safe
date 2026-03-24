@@ -17,9 +17,10 @@ package body Safe_Frontend.Check_Parse is
    Raised_Diag     : CM.MD.Diagnostic;
 
    type Parser_State is record
-      Input  : FS.Source_File;
-      Tokens : FL.Token_Vectors.Vector;
-      Index  : Natural := 1;
+      Input                : FS.Source_File;
+      Tokens               : FL.Token_Vectors.Vector;
+      Index                : Natural := 1;
+      Return_Value_Allowed : Boolean := False;
    end record;
 
    function Eof_Token (State : Parser_State) return FL.Token is
@@ -53,6 +54,21 @@ package body Safe_Frontend.Check_Parse is
       end if;
       return State.Tokens (Positive (Candidate));
    end Next;
+
+   function Previous (State : Parser_State) return FL.Token is
+   begin
+      if State.Tokens.Is_Empty or else State.Index <= 1 then
+         return Eof_Token (State);
+      end if;
+      return State.Tokens (Positive (State.Index - 1));
+   end Previous;
+
+   function Starts_On_Later_Line
+     (Before : FT.Source_Span;
+      After  : FT.Source_Span) return Boolean is
+   begin
+      return Before.End_Pos.Line < After.Start_Pos.Line;
+   end Starts_On_Later_Line;
 
    function Current_Lower (State : Parser_State) return String is
    begin
@@ -120,6 +136,32 @@ package body Safe_Frontend.Check_Parse is
       Ignore := Expect (State, Lexeme);
    end Require;
 
+   function Expect_Statement_Terminator
+     (State : in out Parser_State) return FT.Source_Span
+   is
+      Token : constant FL.Token := Current (State);
+      Last  : constant FL.Token := Previous (State);
+   begin
+      if Match (State, ";") then
+         return Token.Span;
+      end if;
+
+      if Token.Kind /= FL.End_Of_File
+        and then Last.Kind /= FL.End_Of_File
+        and then Starts_On_Later_Line (Last.Span, Token.Span)
+      then
+         return Last.Span;
+      end if;
+
+      Raise_Diag
+        (CM.Source_Frontend_Error
+           (Path    => Path_String (State),
+            Span    => Token.Span,
+            Message => "expected `;`",
+            Note    => "saw `" & FT.To_String (Token.Lexeme) & "`"));
+      return Token.Span;
+   end Expect_Statement_Terminator;
+
    procedure Reject_Legacy_Keyword
      (State       : Parser_State;
       Legacy      : String;
@@ -134,6 +176,16 @@ package body Safe_Frontend.Check_Parse is
               "legacy `" & Legacy & "` is not allowed in " & Context
               & "; use `" & Replacement & "`"));
    end Reject_Legacy_Keyword;
+
+   procedure Reject_Statement_Local_Var_Outside_Statements
+     (State : Parser_State) is
+   begin
+      Raise_Diag
+        (CM.Source_Frontend_Error
+           (Path    => Path_String (State),
+            Span    => Current (State).Span,
+            Message => "statement-local `var` declarations are only allowed in executable statement sequences"));
+   end Reject_Statement_Local_Var_Outside_Statements;
 
    procedure Require_Returns_Keyword (State : in out Parser_State) is
    begin
@@ -208,6 +260,10 @@ package body Safe_Frontend.Check_Parse is
      (State : in out Parser_State) return CM.Statement_Access;
    function Case_Choice_Is_Literal
      (Expr : CM.Expr_Access) return Boolean;
+   procedure Parse_Object_Declaration_Tail
+     (State          : in out Parser_State;
+      Result         : in out CM.Object_Decl;
+      Allow_Constant : Boolean := True);
 
    function Parse_Package_Name
      (State : in out Parser_State) return CM.Expr_Access
@@ -767,6 +823,34 @@ package body Safe_Frontend.Check_Parse is
       return Result;
    end Parse_Subprogram_Spec;
 
+   procedure Parse_Object_Declaration_Tail
+     (State          : in out Parser_State;
+      Result         : in out CM.Object_Decl;
+      Allow_Constant : Boolean := True) is
+   begin
+      Require (State, ":");
+      if Match (State, "constant") then
+         if not Allow_Constant then
+            Raise_Diag
+              (CM.Source_Frontend_Error
+                 (Path    => Path_String (State),
+                  Span    => Previous (State).Span,
+                  Message => "`var` declarations cannot be constant"));
+         end if;
+         Result.Is_Constant := True;
+         if Match (State, "=") then
+            Reject_Unsupported
+              (State,
+               "named number declarations are outside the current PR08.3a constant subset");
+         end if;
+      end if;
+      Result.Decl_Type := Parse_Object_Type (State);
+      if Match (State, "=") then
+         Result.Has_Initializer := True;
+         Result.Initializer := Parse_Expression (State);
+      end if;
+   end Parse_Object_Declaration_Tail;
+
    function Parse_Object_Declaration
      (State        : in out Parser_State;
       Is_Public    : Boolean) return CM.Object_Decl
@@ -780,20 +864,7 @@ package body Safe_Frontend.Check_Parse is
       while Match (State, ",") loop
          Result.Names.Append (Expect_Identifier (State).Lexeme);
       end loop;
-      Require (State, ":");
-      if Match (State, "constant") then
-         Result.Is_Constant := True;
-         if Match (State, "=") then
-            Reject_Unsupported
-              (State,
-               "named number declarations are outside the current PR08.3a constant subset");
-         end if;
-      end if;
-      Result.Decl_Type := Parse_Object_Type (State);
-      if Match (State, "=") then
-         Result.Has_Initializer := True;
-         Result.Initializer := Parse_Expression (State);
-      end if;
+      Parse_Object_Declaration_Tail (State, Result);
       Semi := Expect (State, ";");
       Result.Span := CM.Join (First.Span, Semi.Span);
       return Result;
@@ -802,14 +873,41 @@ package body Safe_Frontend.Check_Parse is
    function Parse_Object_Declaration_Statement
      (State : in out Parser_State) return CM.Statement_Access
    is
-      Decl   : constant CM.Object_Decl := Parse_Object_Declaration (State, False);
       Result : constant CM.Statement_Access := new CM.Statement;
+      First  : constant FL.Token := Expect_Identifier (State);
+      Semi   : FT.Source_Span;
    begin
       Result.Kind := CM.Stmt_Object_Decl;
-      Result.Decl := Decl;
-      Result.Span := Decl.Span;
+      Result.Decl.Names.Append (First.Lexeme);
+      while Match (State, ",") loop
+         Result.Decl.Names.Append (Expect_Identifier (State).Lexeme);
+      end loop;
+      Parse_Object_Declaration_Tail (State, Result.Decl);
+      Semi := Expect_Statement_Terminator (State);
+      Result.Decl.Span := CM.Join (First.Span, Semi);
+      Result.Span := Result.Decl.Span;
       return Result;
    end Parse_Object_Declaration_Statement;
+
+   function Parse_Var_Declaration_Statement
+     (State : in out Parser_State) return CM.Statement_Access
+   is
+      Result : constant CM.Statement_Access := new CM.Statement;
+      Start  : constant FL.Token := Expect (State, "var");
+      First  : constant FL.Token := Expect_Identifier (State);
+      Semi   : FT.Source_Span;
+   begin
+      Result.Kind := CM.Stmt_Object_Decl;
+      Result.Decl.Names.Append (First.Lexeme);
+      while Match (State, ",") loop
+         Result.Decl.Names.Append (Expect_Identifier (State).Lexeme);
+      end loop;
+      Parse_Object_Declaration_Tail (State, Result.Decl, Allow_Constant => False);
+      Semi := Expect_Statement_Terminator (State);
+      Result.Decl.Span := CM.Join (Start.Span, Semi);
+      Result.Span := Result.Decl.Span;
+      return Result;
+   end Parse_Var_Declaration_Statement;
 
    function Looks_Like_Destructure_Decl
      (State : Parser_State) return Boolean
@@ -859,7 +957,7 @@ package body Safe_Frontend.Check_Parse is
       Start  : constant FL.Token := Expect (State, "(");
       Result : constant CM.Statement_Access := new CM.Statement;
       Ender  : FL.Token;
-      Semi   : FL.Token;
+      Semi   : FT.Source_Span;
    begin
       Result.Kind := CM.Stmt_Destructure_Decl;
       Result.Destructure.Names.Append (Expect_Identifier (State).Lexeme);
@@ -878,8 +976,8 @@ package body Safe_Frontend.Check_Parse is
       end if;
       Result.Destructure.Has_Initializer := True;
       Result.Destructure.Initializer := Parse_Expression (State);
-      Semi := Expect (State, ";");
-      Result.Destructure.Span := CM.Join (Start.Span, Semi.Span);
+      Semi := Expect_Statement_Terminator (State);
+      Result.Destructure.Span := CM.Join (Start.Span, Semi);
       Result.Span := Result.Destructure.Span;
       return Result;
    end Parse_Destructure_Declaration_Statement;
@@ -933,14 +1031,18 @@ package body Safe_Frontend.Check_Parse is
    is
       Start  : constant FL.Token := Expect (State, "return");
       Result : constant CM.Statement_Access := new CM.Statement;
-      Semi   : FL.Token;
+      Semi   : FT.Source_Span;
    begin
       Result.Kind := CM.Stmt_Return;
-      if Current (State).Lexeme /= FT.To_UString (";") then
+      if Current (State).Lexeme /= FT.To_UString (";")
+        and then (State.Return_Value_Allowed
+                  or else Current (State).Kind = FL.End_Of_File
+                  or else not Starts_On_Later_Line (Start.Span, Current (State).Span))
+      then
          Result.Value := Parse_Expression (State);
       end if;
-      Semi := Expect (State, ";");
-      Result.Span := CM.Join (Start.Span, Semi.Span);
+      Semi := Expect_Statement_Terminator (State);
+      Result.Span := CM.Join (Start.Span, Semi);
       return Result;
    end Parse_Return_Statement;
 
@@ -951,7 +1053,7 @@ package body Safe_Frontend.Check_Parse is
       Start       : constant FL.Token := Expect (State, "if");
       Result      : constant CM.Statement_Access := new CM.Statement;
       Elsif_Part  : CM.Elsif_Part;
-      Semi        : FL.Token;
+      Semi        : FT.Source_Span;
 
       procedure Collapse_Wrapped_Else_If is
          Wrapped : constant CM.Statement_Access :=
@@ -1037,8 +1139,8 @@ package body Safe_Frontend.Check_Parse is
 
       Require (State, "end");
       Require (State, "if");
-      Semi := Expect (State, ";");
-      Result.Span := CM.Join (Start.Span, Semi.Span);
+      Semi := Expect_Statement_Terminator (State);
+      Result.Span := CM.Join (Start.Span, Semi);
       return Result;
    end Parse_If_Statement;
 
@@ -1051,7 +1153,7 @@ package body Safe_Frontend.Check_Parse is
       Arm        : CM.Case_Arm;
       Arm_Start  : FL.Token;
       Arm_End    : FL.Token;
-      Final_Semi : FL.Token;
+      Final_Semi : FT.Source_Span;
       Saw_Others : Boolean := False;
    begin
       Result.Kind := CM.Stmt_Case;
@@ -1122,8 +1224,8 @@ package body Safe_Frontend.Check_Parse is
 
       Require (State, "end");
       Require (State, "case");
-      Final_Semi := Expect (State, ";");
-      Result.Span := CM.Join (Start.Span, Final_Semi.Span);
+      Final_Semi := Expect_Statement_Terminator (State);
+      Result.Span := CM.Join (Start.Span, Final_Semi);
       return Result;
    end Parse_Case_Statement;
 
@@ -1133,7 +1235,7 @@ package body Safe_Frontend.Check_Parse is
       Ends   : FT.UString_Vectors.Vector;
       Start  : constant FL.Token := Expect (State, "while");
       Result : constant CM.Statement_Access := new CM.Statement;
-      Semi   : FL.Token;
+      Semi   : FT.Source_Span;
    begin
       Result.Kind := CM.Stmt_While;
       Result.Condition := Parse_Expression (State);
@@ -1142,8 +1244,8 @@ package body Safe_Frontend.Check_Parse is
       Result.Body_Stmts := Parse_Statement_Sequence (State, Ends);
       Require (State, "end");
       Require (State, "loop");
-      Semi := Expect (State, ";");
-      Result.Span := CM.Join (Start.Span, Semi.Span);
+      Semi := Expect_Statement_Terminator (State);
+      Result.Span := CM.Join (Start.Span, Semi);
       return Result;
    end Parse_While_Statement;
 
@@ -1153,7 +1255,7 @@ package body Safe_Frontend.Check_Parse is
       Ends   : FT.UString_Vectors.Vector;
       Start  : constant FL.Token := Expect (State, "for");
       Result : constant CM.Statement_Access := new CM.Statement;
-      Semi   : FL.Token;
+      Semi   : FT.Source_Span;
    begin
       Result.Kind := CM.Stmt_For;
       Result.Loop_Var := Expect_Identifier (State).Lexeme;
@@ -1175,8 +1277,8 @@ package body Safe_Frontend.Check_Parse is
       Result.Body_Stmts := Parse_Statement_Sequence (State, Ends);
       Require (State, "end");
       Require (State, "loop");
-      Semi := Expect (State, ";");
-      Result.Span := CM.Join (Start.Span, Semi.Span);
+      Semi := Expect_Statement_Terminator (State);
+      Result.Span := CM.Join (Start.Span, Semi);
       return Result;
    end Parse_For_Statement;
 
@@ -1186,18 +1288,21 @@ package body Safe_Frontend.Check_Parse is
       Ends   : FT.UString_Vectors.Vector;
       Start  : constant FL.Token := Expect (State, "declare");
       Result : constant CM.Statement_Access := new CM.Statement;
-      Semi   : FL.Token;
+      Semi   : FT.Source_Span;
    begin
       Result.Kind := CM.Stmt_Block;
       while Current_Lower (State) /= "begin" loop
+         if Current_Lower (State) = "var" then
+            Reject_Statement_Local_Var_Outside_Statements (State);
+         end if;
          Result.Declarations.Append (Parse_Object_Declaration (State, False));
       end loop;
       Require (State, "begin");
       Ends.Append (FT.To_UString ("end"));
       Result.Body_Stmts := Parse_Statement_Sequence (State, Ends);
       Require (State, "end");
-      Semi := Expect (State, ";");
-      Result.Span := CM.Join (Start.Span, Semi.Span);
+      Semi := Expect_Statement_Terminator (State);
+      Result.Span := CM.Join (Start.Span, Semi);
       return Result;
    end Parse_Block_Statement;
 
@@ -1207,15 +1312,15 @@ package body Safe_Frontend.Check_Parse is
       Ends   : FT.UString_Vectors.Vector;
       Start  : constant FL.Token := Expect (State, "loop");
       Result : constant CM.Statement_Access := new CM.Statement;
-      Semi   : FL.Token;
+      Semi   : FT.Source_Span;
    begin
       Result.Kind := CM.Stmt_Loop;
       Ends.Append (FT.To_UString ("end"));
       Result.Body_Stmts := Parse_Statement_Sequence (State, Ends);
       Require (State, "end");
       Require (State, "loop");
-      Semi := Expect (State, ";");
-      Result.Span := CM.Join (Start.Span, Semi.Span);
+      Semi := Expect_Statement_Terminator (State);
+      Result.Span := CM.Join (Start.Span, Semi);
       return Result;
    end Parse_Loop_Statement;
 
@@ -1224,7 +1329,7 @@ package body Safe_Frontend.Check_Parse is
    is
       Start  : constant FL.Token := Expect (State, "exit");
       Result : constant CM.Statement_Access := new CM.Statement;
-      Semi   : FL.Token;
+      Semi   : FT.Source_Span;
    begin
       if Current (State).Kind in FL.Identifier | FL.Keyword
         and then Current_Lower (State) /= "when"
@@ -1239,8 +1344,8 @@ package body Safe_Frontend.Check_Parse is
       if Match (State, "when") then
          Result.Condition := Parse_Expression (State);
       end if;
-      Semi := Expect (State, ";");
-      Result.Span := CM.Join (Start.Span, Semi.Span);
+      Semi := Expect_Statement_Terminator (State);
+      Result.Span := CM.Join (Start.Span, Semi);
       return Result;
    end Parse_Exit_Statement;
 
@@ -1249,14 +1354,14 @@ package body Safe_Frontend.Check_Parse is
    is
       Start  : constant FL.Token := Expect (State, "send");
       Result : constant CM.Statement_Access := new CM.Statement;
-      Semi   : FL.Token;
+      Semi   : FT.Source_Span;
    begin
       Result.Kind := CM.Stmt_Send;
       Result.Channel_Name := Parse_Name_Expression (State);
       Require (State, ",");
       Result.Value := Parse_Expression (State);
-      Semi := Expect (State, ";");
-      Result.Span := CM.Join (Start.Span, Semi.Span);
+      Semi := Expect_Statement_Terminator (State);
+      Result.Span := CM.Join (Start.Span, Semi);
       return Result;
    end Parse_Send_Statement;
 
@@ -1265,14 +1370,14 @@ package body Safe_Frontend.Check_Parse is
    is
       Start  : constant FL.Token := Expect (State, "receive");
       Result : constant CM.Statement_Access := new CM.Statement;
-      Semi   : FL.Token;
+      Semi   : FT.Source_Span;
    begin
       Result.Kind := CM.Stmt_Receive;
       Result.Channel_Name := Parse_Name_Expression (State);
       Require (State, ",");
       Result.Target := Parse_Expression (State);
-      Semi := Expect (State, ";");
-      Result.Span := CM.Join (Start.Span, Semi.Span);
+      Semi := Expect_Statement_Terminator (State);
+      Result.Span := CM.Join (Start.Span, Semi);
       return Result;
    end Parse_Receive_Statement;
 
@@ -1281,7 +1386,7 @@ package body Safe_Frontend.Check_Parse is
    is
       Start  : constant FL.Token := Expect (State, "try_send");
       Result : constant CM.Statement_Access := new CM.Statement;
-      Semi   : FL.Token;
+      Semi   : FT.Source_Span;
    begin
       Result.Kind := CM.Stmt_Try_Send;
       Result.Channel_Name := Parse_Name_Expression (State);
@@ -1289,8 +1394,8 @@ package body Safe_Frontend.Check_Parse is
       Result.Value := Parse_Expression (State);
       Require (State, ",");
       Result.Success_Var := Parse_Name_Expression (State);
-      Semi := Expect (State, ";");
-      Result.Span := CM.Join (Start.Span, Semi.Span);
+      Semi := Expect_Statement_Terminator (State);
+      Result.Span := CM.Join (Start.Span, Semi);
       return Result;
    end Parse_Try_Send_Statement;
 
@@ -1299,7 +1404,7 @@ package body Safe_Frontend.Check_Parse is
    is
       Start  : constant FL.Token := Expect (State, "try_receive");
       Result : constant CM.Statement_Access := new CM.Statement;
-      Semi   : FL.Token;
+      Semi   : FT.Source_Span;
    begin
       Result.Kind := CM.Stmt_Try_Receive;
       Result.Channel_Name := Parse_Name_Expression (State);
@@ -1307,8 +1412,8 @@ package body Safe_Frontend.Check_Parse is
       Result.Target := Parse_Expression (State);
       Require (State, ",");
       Result.Success_Var := Parse_Name_Expression (State);
-      Semi := Expect (State, ";");
-      Result.Span := CM.Join (Start.Span, Semi.Span);
+      Semi := Expect_Statement_Terminator (State);
+      Result.Span := CM.Join (Start.Span, Semi);
       return Result;
    end Parse_Try_Receive_Statement;
 
@@ -1317,7 +1422,7 @@ package body Safe_Frontend.Check_Parse is
    is
       Start  : constant FL.Token := Expect (State, "delay");
       Result : constant CM.Statement_Access := new CM.Statement;
-      Semi   : FL.Token;
+      Semi   : FT.Source_Span;
    begin
       if Current_Lower (State) = "until" then
          Reject_Unsupported
@@ -1326,8 +1431,8 @@ package body Safe_Frontend.Check_Parse is
       end if;
       Result.Kind := CM.Stmt_Delay;
       Result.Value := Parse_Expression (State);
-      Semi := Expect (State, ";");
-      Result.Span := CM.Join (Start.Span, Semi.Span);
+      Semi := Expect_Statement_Terminator (State);
+      Result.Span := CM.Join (Start.Span, Semi);
       return Result;
    end Parse_Delay_Statement;
 
@@ -1337,7 +1442,7 @@ package body Safe_Frontend.Check_Parse is
       Arm_Ends  : FT.UString_Vectors.Vector;
       Start     : constant FL.Token := Expect (State, "select");
       Result    : constant CM.Statement_Access := new CM.Statement;
-      Semi      : FL.Token;
+      Semi      : FT.Source_Span;
       New_Arm   : CM.Select_Arm;
    begin
       Result.Kind := CM.Stmt_Select;
@@ -1404,31 +1509,31 @@ package body Safe_Frontend.Check_Parse is
 
       Require (State, "end");
       Require (State, "select");
-      Semi := Expect (State, ";");
-      Result.Span := CM.Join (Start.Span, Semi.Span);
+      Semi := Expect_Statement_Terminator (State);
+      Result.Span := CM.Join (Start.Span, Semi);
       return Result;
    end Parse_Select_Statement;
 
    function Parse_Simple_Statement
-     (State : in out Parser_State) return CM.Statement_Access
+      (State : in out Parser_State) return CM.Statement_Access
    is
       Start_Expr : constant CM.Expr_Access := Parse_Expression (State);
       Result     : constant CM.Statement_Access := new CM.Statement;
-      Semi       : FL.Token;
+      Semi       : FT.Source_Span;
    begin
       if Match (State, "=") then
          Result.Kind := CM.Stmt_Assign;
          Result.Target := Start_Expr;
          Result.Value := Parse_Expression (State);
-         Semi := Expect (State, ";");
-         Result.Span := CM.Join (Start_Expr.Span, Semi.Span);
+         Semi := Expect_Statement_Terminator (State);
+         Result.Span := CM.Join (Start_Expr.Span, Semi);
          return Result;
       end if;
 
       Result.Kind := CM.Stmt_Call;
       Result.Call := Start_Expr;
-      Semi := Expect (State, ";");
-      Result.Span := CM.Join (Start_Expr.Span, Semi.Span);
+      Semi := Expect_Statement_Terminator (State);
+      Result.Span := CM.Join (Start_Expr.Span, Semi);
       return Result;
    end Parse_Simple_Statement;
 
@@ -1465,14 +1570,16 @@ package body Safe_Frontend.Check_Parse is
          return Parse_Delay_Statement (State);
       elsif Lower = "select" then
          return Parse_Select_Statement (State);
+      elsif Lower = "var" then
+         return Parse_Var_Declaration_Statement (State);
       elsif Lower = "null" then
          declare
             Start  : constant FL.Token := Expect (State, "null");
-            Semi   : constant FL.Token := Expect (State, ";");
+            Semi   : constant FT.Source_Span := Expect_Statement_Terminator (State);
             Result : constant CM.Statement_Access := new CM.Statement;
          begin
             Result.Kind := CM.Stmt_Null;
-            Result.Span := CM.Join (Start.Span, Semi.Span);
+            Result.Span := CM.Join (Start.Span, Semi);
             return Result;
          end;
       elsif Lower in "raise" | "accept" | "goto" then
@@ -1875,22 +1982,28 @@ package body Safe_Frontend.Check_Parse is
      (State     : in out Parser_State;
       Is_Public : Boolean) return CM.Package_Item
    is
-      Result : CM.Package_Item;
-      Ends   : FT.UString_Vectors.Vector;
-      Start  : constant FT.Source_Span := Current (State).Span;
-      Semi   : FL.Token;
+      Result                   : CM.Package_Item;
+      Ends                     : FT.UString_Vectors.Vector;
+      Start                    : constant FT.Source_Span := Current (State).Span;
+      Semi                     : FL.Token;
+      Saved_Return_Value_Flag  : constant Boolean := State.Return_Value_Allowed;
    begin
       Result.Kind := CM.Item_Subprogram;
       Result.Subp_Data.Is_Public := Is_Public;
       Result.Subp_Data.Spec := Parse_Subprogram_Spec (State);
       Require (State, "is");
       while Current_Lower (State) /= "begin" loop
+         if Current_Lower (State) = "var" then
+            Reject_Statement_Local_Var_Outside_Statements (State);
+         end if;
          Result.Subp_Data.Declarations.Append
            (Parse_Object_Declaration (State, False));
       end loop;
       Require (State, "begin");
       Ends.Append (FT.To_UString ("end"));
+      State.Return_Value_Allowed := Result.Subp_Data.Spec.Has_Return_Type;
       Result.Subp_Data.Statements := Parse_Statement_Sequence (State, Ends);
+      State.Return_Value_Allowed := Saved_Return_Value_Flag;
       Require (State, "end");
       if Current (State).Kind in FL.Identifier | FL.Keyword then
          Advance (State);
@@ -1938,7 +2051,9 @@ package body Safe_Frontend.Check_Parse is
          declare
             Lower : constant String := Current_Lower (State);
          begin
-            if Lower in "type" | "subtype" | "function" | "procedure" then
+            if Lower = "var" then
+               Reject_Statement_Local_Var_Outside_Statements (State);
+            elsif Lower in "type" | "subtype" | "function" | "procedure" then
                Reject_Unsupported
                  (State,
                   "task declarative parts only support object declarations in the current PR08.1 concurrency subset");
@@ -1995,6 +2110,8 @@ package body Safe_Frontend.Check_Parse is
          return Parse_Subtype_Declaration (State, Is_Public);
       elsif Lower = "function" or else Lower = "procedure" then
          return Parse_Subprogram_Body (State, Is_Public);
+      elsif Lower = "var" then
+         Reject_Statement_Local_Var_Outside_Statements (State);
       elsif Lower = "task" then
          return Parse_Task_Declaration (State, Is_Public);
       elsif Lower = "channel" then

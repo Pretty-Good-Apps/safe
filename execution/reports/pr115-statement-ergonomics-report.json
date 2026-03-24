@@ -1,0 +1,718 @@
+{
+  "corpus_contract": {
+    "negative_fixtures": [
+      "tests/negative/neg_pr115_same_line_missing_semicolon.safe",
+      "tests/negative/neg_pr115_var_package_item.safe",
+      "tests/negative/neg_pr115_var_declare_item.safe",
+      "tests/negative/neg_pr115_missing_declaration_semicolon.safe",
+      "tests/negative/neg_pr115_missing_case_arm_semicolon.safe"
+    ],
+    "positive_fixtures": [
+      "tests/positive/pr115_var_basic.safe",
+      "tests/positive/pr115_compound_terminators.safe",
+      "tests/positive/pr115_case_terminator.safe",
+      "tests/positive/pr115_legacy_local_decl.safe",
+      "tests/positive/pr115_declare_terminator.safe",
+      "tests/positive/pr115_multiline_return.safe"
+    ],
+    "rosetta_samples": [
+      "samples/rosetta/arithmetic/factorial.safe",
+      "samples/rosetta/sorting/binary_search.safe",
+      "samples/rosetta/concurrency/producer_consumer.safe"
+    ]
+  },
+  "deterministic": true,
+  "negative_boundaries": [
+    {
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/negative/neg_pr115_same_line_missing_semicolon.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1
+      },
+      "first_diagnostic": {
+        "message": "expected `;`",
+        "path": "tests/negative/neg_pr115_same_line_missing_semicolon.safe",
+        "reason": "source_frontend_error"
+      },
+      "source": "tests/negative/neg_pr115_same_line_missing_semicolon.safe"
+    },
+    {
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/negative/neg_pr115_var_package_item.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1
+      },
+      "first_diagnostic": {
+        "message": "statement-local `var` declarations are only allowed in executable statement sequences",
+        "path": "tests/negative/neg_pr115_var_package_item.safe",
+        "reason": "source_frontend_error"
+      },
+      "source": "tests/negative/neg_pr115_var_package_item.safe"
+    },
+    {
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/negative/neg_pr115_var_declare_item.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1
+      },
+      "first_diagnostic": {
+        "message": "statement-local `var` declarations are only allowed in executable statement sequences",
+        "path": "tests/negative/neg_pr115_var_declare_item.safe",
+        "reason": "source_frontend_error"
+      },
+      "source": "tests/negative/neg_pr115_var_declare_item.safe"
+    },
+    {
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/negative/neg_pr115_missing_declaration_semicolon.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1
+      },
+      "first_diagnostic": {
+        "message": "expected `;`",
+        "path": "tests/negative/neg_pr115_missing_declaration_semicolon.safe",
+        "reason": "source_frontend_error"
+      },
+      "source": "tests/negative/neg_pr115_missing_declaration_semicolon.safe"
+    },
+    {
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "--diag-json",
+          "tests/negative/neg_pr115_missing_case_arm_semicolon.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1
+      },
+      "first_diagnostic": {
+        "message": "expected `;`",
+        "path": "tests/negative/neg_pr115_missing_case_arm_semicolon.safe",
+        "reason": "source_frontend_error"
+      },
+      "source": "tests/negative/neg_pr115_missing_case_arm_semicolon.safe"
+    }
+  ],
+  "positive_fixtures": [
+    {
+      "ada_snippets": [
+        "Local : Counter := Input;",
+        "Local := Input;",
+        "return Local;"
+      ],
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/positive/pr115_var_basic.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/pr115_var_basic/ada/build.gpr",
+          "pr115_var_basic.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/positive/pr115_var_basic.safe",
+          "--out-dir",
+          "$TMPDIR/pr115_var_basic/out",
+          "--interface-dir",
+          "$TMPDIR/pr115_var_basic/iface",
+          "--ada-out-dir",
+          "$TMPDIR/pr115_var_basic/ada"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "mir_snippets": [
+        "\"name\":\"Bump\""
+      ],
+      "safei_snippets": [
+        "function Bump"
+      ],
+      "source": "tests/positive/pr115_var_basic.safe",
+      "source_fragments": [
+        "var Local : Counter = Input",
+        "Local = Input return Local"
+      ],
+      "typed_snippets": [
+        "\"name\":\"Bump\""
+      ],
+      "validate_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "validate-mir",
+          "$TMPDIR/pr115_var_basic/out/pr115_var_basic.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      }
+    },
+    {
+      "ada_snippets": [
+        "elsif (Current < 5) then",
+        "for I in 1 .. 2 loop",
+        "Current := 5;",
+        "end loop;"
+      ],
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/positive/pr115_compound_terminators.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/pr115_compound_terminators/ada/build.gpr",
+          "pr115_compound_terminators.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/positive/pr115_compound_terminators.safe",
+          "--out-dir",
+          "$TMPDIR/pr115_compound_terminators/out",
+          "--interface-dir",
+          "$TMPDIR/pr115_compound_terminators/iface",
+          "--ada-out-dir",
+          "$TMPDIR/pr115_compound_terminators/ada"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "mir_snippets": [
+        "\"name\":\"Adjust\""
+      ],
+      "safei_snippets": [
+        "function Adjust"
+      ],
+      "source": "tests/positive/pr115_compound_terminators.safe",
+      "source_fragments": [
+        "else if Current < 5 then",
+        "end if for I in 1 to 2 loop",
+        "end loop return Current"
+      ],
+      "typed_snippets": [
+        "\"name\":\"Adjust\""
+      ],
+      "validate_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "validate-mir",
+          "$TMPDIR/pr115_compound_terminators/out/pr115_compound_terminators.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      }
+    },
+    {
+      "ada_snippets": [
+        "case Input is",
+        "when 0 =>",
+        "end case;"
+      ],
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/positive/pr115_case_terminator.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/pr115_case_terminator/ada/build.gpr",
+          "pr115_case_terminator.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/positive/pr115_case_terminator.safe",
+          "--out-dir",
+          "$TMPDIR/pr115_case_terminator/out",
+          "--interface-dir",
+          "$TMPDIR/pr115_case_terminator/iface",
+          "--ada-out-dir",
+          "$TMPDIR/pr115_case_terminator/ada"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "mir_snippets": [
+        "\"name\":\"Normalize\""
+      ],
+      "safei_snippets": [
+        "function Normalize"
+      ],
+      "source": "tests/positive/pr115_case_terminator.safe",
+      "source_fragments": [
+        "end case return Result"
+      ],
+      "typed_snippets": [
+        "\"name\":\"Normalize\""
+      ],
+      "validate_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "validate-mir",
+          "$TMPDIR/pr115_case_terminator/out/pr115_case_terminator.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      }
+    },
+    {
+      "ada_snippets": [
+        "Current : Counter := 0;",
+        "Current := 1;"
+      ],
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/positive/pr115_legacy_local_decl.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/pr115_legacy_local_decl/ada/build.gpr",
+          "pr115_legacy_local_decl.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/positive/pr115_legacy_local_decl.safe",
+          "--out-dir",
+          "$TMPDIR/pr115_legacy_local_decl/out",
+          "--interface-dir",
+          "$TMPDIR/pr115_legacy_local_decl/iface",
+          "--ada-out-dir",
+          "$TMPDIR/pr115_legacy_local_decl/ada"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "mir_snippets": [
+        "\"name\":\"Build\""
+      ],
+      "safei_snippets": [
+        "function Build"
+      ],
+      "source": "tests/positive/pr115_legacy_local_decl.safe",
+      "source_fragments": [
+        "Current : Counter = 0 Current = 1"
+      ],
+      "typed_snippets": [
+        "\"name\":\"Build\""
+      ],
+      "validate_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "validate-mir",
+          "$TMPDIR/pr115_legacy_local_decl/out/pr115_legacy_local_decl.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      }
+    },
+    {
+      "ada_snippets": [
+        "declare",
+        "Temp : Counter := 1;",
+        "end;"
+      ],
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/positive/pr115_declare_terminator.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/pr115_declare_terminator/ada/build.gpr",
+          "pr115_declare_terminator.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/positive/pr115_declare_terminator.safe",
+          "--out-dir",
+          "$TMPDIR/pr115_declare_terminator/out",
+          "--interface-dir",
+          "$TMPDIR/pr115_declare_terminator/iface",
+          "--ada-out-dir",
+          "$TMPDIR/pr115_declare_terminator/ada"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "mir_snippets": [
+        "\"name\":\"Compute\""
+      ],
+      "safei_snippets": [
+        "function Compute"
+      ],
+      "source": "tests/positive/pr115_declare_terminator.safe",
+      "source_fragments": [
+        "begin null end return 1"
+      ],
+      "typed_snippets": [
+        "\"name\":\"Compute\""
+      ],
+      "validate_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "validate-mir",
+          "$TMPDIR/pr115_declare_terminator/out/pr115_declare_terminator.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      }
+    },
+    {
+      "ada_snippets": [
+        "return Input;"
+      ],
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/positive/pr115_multiline_return.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/pr115_multiline_return/ada/build.gpr",
+          "pr115_multiline_return.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/positive/pr115_multiline_return.safe",
+          "--out-dir",
+          "$TMPDIR/pr115_multiline_return/out",
+          "--interface-dir",
+          "$TMPDIR/pr115_multiline_return/iface",
+          "--ada-out-dir",
+          "$TMPDIR/pr115_multiline_return/ada"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "mir_snippets": [
+        "\"name\":\"Identity\""
+      ],
+      "safei_snippets": [
+        "function Identity"
+      ],
+      "source": "tests/positive/pr115_multiline_return.safe",
+      "source_fragments": [
+        "return Input;"
+      ],
+      "typed_snippets": [
+        "\"name\":\"Identity\""
+      ],
+      "validate_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "validate-mir",
+          "$TMPDIR/pr115_multiline_return/out/pr115_multiline_return.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      }
+    }
+  ],
+  "repeat_sha256": "d35a87cfc17fe11f5ff644a1ed92f27ae3eaa6fe93c4c20e2632964ee43f4cdf",
+  "report_sha256": "d35a87cfc17fe11f5ff644a1ed92f27ae3eaa6fe93c4c20e2632964ee43f4cdf",
+  "rosetta_readability_samples": [
+    {
+      "ada_snippets": [],
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "samples/rosetta/arithmetic/factorial.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/factorial/ada/build.gpr",
+          "factorial.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "samples/rosetta/arithmetic/factorial.safe",
+          "--out-dir",
+          "$TMPDIR/factorial/out",
+          "--interface-dir",
+          "$TMPDIR/factorial/iface",
+          "--ada-out-dir",
+          "$TMPDIR/factorial/ada"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "mir_snippets": [],
+      "safei_snippets": [],
+      "source": "samples/rosetta/arithmetic/factorial.safe",
+      "source_fragments": [
+        "var Product : Value = 1",
+        "Product = Product * Value (I)",
+        "return Product"
+      ],
+      "typed_snippets": [],
+      "validate_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "validate-mir",
+          "$TMPDIR/factorial/out/factorial.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      }
+    },
+    {
+      "ada_snippets": [],
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "samples/rosetta/sorting/binary_search.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/binary_search/ada/build.gpr",
+          "binary_search.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "samples/rosetta/sorting/binary_search.safe",
+          "--out-dir",
+          "$TMPDIR/binary_search/out",
+          "--interface-dir",
+          "$TMPDIR/binary_search/iface",
+          "--ada-out-dir",
+          "$TMPDIR/binary_search/ada"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "mir_snippets": [],
+      "safei_snippets": [],
+      "source": "samples/rosetta/sorting/binary_search.safe",
+      "source_fragments": [
+        "var Lo : Index = Index.First",
+        "var Hi : Index = Index.Last",
+        "var Mid : Index",
+        "else if Arr (Mid) < Key then"
+      ],
+      "typed_snippets": [],
+      "validate_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "validate-mir",
+          "$TMPDIR/binary_search/out/binary_search.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      }
+    },
+    {
+      "ada_snippets": [],
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "samples/rosetta/concurrency/producer_consumer.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/producer_consumer/ada/build.gpr",
+          "producer_consumer.adb",
+          "-cargs",
+          "-gnatec=$TMPDIR/producer_consumer/ada/gnat.adc"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "samples/rosetta/concurrency/producer_consumer.safe",
+          "--out-dir",
+          "$TMPDIR/producer_consumer/out",
+          "--interface-dir",
+          "$TMPDIR/producer_consumer/iface",
+          "--ada-out-dir",
+          "$TMPDIR/producer_consumer/ada"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "mir_snippets": [],
+      "safei_snippets": [],
+      "source": "samples/rosetta/concurrency/producer_consumer.safe",
+      "source_fragments": [
+        "send Data_Ch, 41",
+        "var Input : Message",
+        "receive Data_Ch, Input"
+      ],
+      "typed_snippets": [],
+      "validate_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "validate-mir",
+          "$TMPDIR/producer_consumer/out/producer_consumer.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      }
+    }
+  ],
+  "status": "ok",
+  "syntax_policy": {
+    "deferred_to_pr118b": [
+      "task channel direction constraints",
+      "scoped-binding receive"
+    ],
+    "legacy_statement_local_declarations_retained": true,
+    "lexer_token_stream_changed": false,
+    "optional_semicolons_parser_side": true,
+    "var_is_additive": true
+  },
+  "task": "PR11.5"
+}
