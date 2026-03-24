@@ -6,22 +6,22 @@ package Collatz_Bounded is
    type Iteration is range 1 to 64;
 
    function Steps (Seed : Seed_Value) returns Step_Count is
-      Current : Working_Value = Working_Value (Seed);
-      Total   : Step_Count = 0;
    begin
+      var Current : Working_Value = Working_Value (Seed)
+      var Total   : Step_Count = 0
       for Step in Iteration loop
          if Current == 1 then
-            return Total;
-         end if;
+            return Total
+         end if
          if (Current rem 2) == 0 then
-            Current = Current / 2;
+            Current = Current / 2
          else
-            Current = (Current * 3) + 1;
-         end if;
-         Total = Total + 1;
-      end loop;
+            Current = (Current * 3) + 1
+         end if
+         Total = Total + 1
+      end loop
 
-      return Total;
+      return Total
    end Steps;
 
 end Collatz_Bounded;

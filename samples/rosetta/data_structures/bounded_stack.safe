@@ -12,61 +12,61 @@ package Bounded_Stack is
 
    function Reset (S : out Stack) is
    begin
-      S.Size = 0;
+      S.Size = 0
       for I in Slot loop
-         S.Data (I) = 0;
-      end loop;
+         S.Data (I) = 0
+      end loop
    end Reset;
 
    function Push (S : in out Stack; Value : Item) is
-      Next_Size : Depth = S.Size;
    begin
+      var Next_Size : Depth = S.Size
       if S.Size < Depth.Last then
-         Next_Size = S.Size + 1;
-         S.Size = Next_Size;
-         S.Data (Slot (Next_Size)) = Value;
-      end if;
+         Next_Size = S.Size + 1
+         S.Size = Next_Size
+         S.Data (Slot (Next_Size)) = Value
+      end if
    end Push;
 
    function Pop (S : in out Stack; Value : out Item) is
    begin
       case S.Size is
          when 1 then
-            Value = S.Data (1);
-            S.Size = 0;
+            Value = S.Data (1)
+            S.Size = 0
          end when;
          when 2 then
-            Value = S.Data (2);
-            S.Size = 1;
+            Value = S.Data (2)
+            S.Size = 1
          end when;
          when 3 then
-            Value = S.Data (3);
-            S.Size = 2;
+            Value = S.Data (3)
+            S.Size = 2
          end when;
          when 4 then
-            Value = S.Data (4);
-            S.Size = 3;
+            Value = S.Data (4)
+            S.Size = 3
          end when;
          when 5 then
-            Value = S.Data (5);
-            S.Size = 4;
+            Value = S.Data (5)
+            S.Size = 4
          end when;
          when 6 then
-            Value = S.Data (6);
-            S.Size = 5;
+            Value = S.Data (6)
+            S.Size = 5
          end when;
          when 7 then
-            Value = S.Data (7);
-            S.Size = 6;
+            Value = S.Data (7)
+            S.Size = 6
          end when;
          when 8 then
-            Value = S.Data (8);
-            S.Size = 7;
+            Value = S.Data (8)
+            S.Size = 7
          end when;
          when others then
-            Value = 0;
+            Value = 0
          end when;
-      end case;
+      end case
    end Pop;
 
 end Bounded_Stack;

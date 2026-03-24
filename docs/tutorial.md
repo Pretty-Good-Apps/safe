@@ -51,18 +51,18 @@ In Safe, a package is a single `.safe` file containing declarations and bodies. 
 -- demo.safe
 package Demo is
 
-   public type Index is range 0 .. 15;
+   public type Index is range 0 to 15;
    public type Buf is array (Index) of Integer;
 
    Hidden : Integer = 0;  -- not public, not visible to clients
 
-   public function Sum (B : Buf) return Integer is
-      Total : Integer = 0;
+   public function Sum (B : Buf) returns Integer is
    begin
-      for I in Index.First .. Index.Last loop
-         Total = Total + B(I);
-      end loop;
-      return Total;
+      var Total : Integer = 0
+      for I in Index.First to Index.Last loop
+         Total = Total + B(I)
+      end loop
+      return Total
    end Sum;
 
 end Demo;
@@ -80,7 +80,7 @@ Safe uses `private record` (not Ada's package `private` part) to express an opaq
 
 ```ada
 package Buffers is
-   public type Buffer_Size is range 1 .. 4096;
+   public type Buffer_Size is range 1 to 4096;
    public subtype Buffer_Index is Buffer_Size;
 
    public type Buffer is private record
@@ -170,12 +170,12 @@ type Node is record
 end record;
 type Node_Ptr is access Node;
 
-procedure Demo_Move is
-   A : Node_Ptr = new ((V = 1) as Node);
-   B : Node_Ptr = null;
+function Demo_Move is
 begin
-   B = A;        -- move A into B; A becomes null
-   B.all.V = 2;  -- safe dereference through the new owner
+   var A : Node_Ptr = new ((V = 1) as Node)
+   var B : Node_Ptr = null
+   B = A        -- move A into B; A becomes null
+   B.all.V = 2  -- safe dereference through the new owner
 end Demo_Move;
 ```
 
@@ -198,7 +198,7 @@ Example sketch:
 
 ```ada
 package Pipeline is
-   public type Measurement is range 0 .. 65535;
+   public type Measurement is range 0 to 65535;
 
    channel Raw : Measurement capacity 16;
    channel Out : Measurement capacity 8;
@@ -206,19 +206,19 @@ package Pipeline is
    task Producer with Priority = 10 is
    begin
       loop
-         M : Measurement = Read_Sensor;
-         send Raw, M;
-         delay 0.01;
-      end loop;
+         var M : Measurement = Read_Sensor
+         send Raw, M
+         delay 0.01
+      end loop
    end Producer;
 
    task Consumer with Priority = 5 is
    begin
       loop
-         M : Measurement;
-         receive Raw, M;
-         send Out, Process(M);
-      end loop;
+         var M : Measurement
+         receive Raw, M
+         send Out, Process(M)
+      end loop
    end Consumer;
 end Pipeline;
 ```
@@ -228,15 +228,15 @@ Example sketch (`select`):
 ```ada
 task Control with Priority = 10 is
 begin
-	   loop
-	      select
-	         when Cmd : Command from Commands then
-	            Handle(Cmd);
-	      or delay 1.0 then
-	            Tick;
-	      end select;
-	   end loop;
-	end Control;
+   loop
+      select
+         when Cmd : Command from Commands then
+            Handle(Cmd)
+      or delay 1.0 then
+            Tick
+      end select
+   end loop
+end Control;
 ```
 
 Virtue: concurrency is structured around explicit communication points, which is easier to analyze and makes "what can race" more tractable.

@@ -4,15 +4,15 @@ package Opcode_Dispatch is
    begin
       case Opcode is
          when 0 then
-            return "nop";
+            return "nop"
          end when;
          when 1 then
-            return "load";
+            return "load"
          end when;
          when others then
-            return "unknown";
+            return "unknown"
          end when;
-      end case;
+      end case
    end Render;
 
 end Opcode_Dispatch;

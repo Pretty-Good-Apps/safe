@@ -59,7 +59,7 @@ The script below writes this package:
 ```ada
 package Typed_Channel_Demo is
 
-   type Message is range 0 .. 1000;
+   type Message is range 0 to 1000;
 
    channel Data_Ch : Message capacity 1;
    Result : Message = 0;
@@ -67,18 +67,18 @@ package Typed_Channel_Demo is
    task Producer is
    begin
       loop
-         send Data_Ch, 41;
-         delay 0.05;
-      end loop;
+         send Data_Ch, 41
+         delay 0.05
+      end loop
    end Producer;
 
    task Consumer is
-      Input : Message;
    begin
       loop
-         receive Data_Ch, Input;
-         Result = Input + 1;
-      end loop;
+         var Input : Message
+         receive Data_Ch, Input
+         Result = Input + 1
+      end loop
    end Consumer;
 
 end Typed_Channel_Demo;
@@ -115,7 +115,7 @@ mkdir -p "$OUT_DIR" "$IFACE_DIR" "$ADA_DIR"
 cat > "$SOURCE" <<'SAFE'
 package Typed_Channel_Demo is
 
-   type Message is range 0 .. 1000;
+   type Message is range 0 to 1000;
 
    channel Data_Ch : Message capacity 1;
 
@@ -124,18 +124,18 @@ package Typed_Channel_Demo is
    task Producer is
    begin
       loop
-         send Data_Ch, 41;
-         delay 0.05;
-      end loop;
+         send Data_Ch, 41
+         delay 0.05
+      end loop
    end Producer;
 
    task Consumer is
-      Input : Message;
    begin
       loop
-         receive Data_Ch, Input;
-         Result = Input + 1;
-      end loop;
+         var Input : Message
+         receive Data_Ch, Input
+         Result = Input + 1
+      end loop
    end Consumer;
 
 end Typed_Channel_Demo;

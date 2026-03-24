@@ -4,21 +4,21 @@ package Fibonacci is
    type Value is range 0 to 10_000;
 
    function Nth (N : Count) returns Value is
-      Previous : Value = 0;
-      Current  : Value = 1;
-      Next     : Value = 0;
    begin
+      var Previous : Value = 0
+      var Current  : Value = 1
+      var Next     : Value = 0
       if N == 1 then
-         return 0;
-      end if;
+         return 0
+      end if
 
       for Step in 2 to N loop
-         Next = Previous + Current;
-         Previous = Current;
-         Current = Next;
-      end loop;
+         Next = Previous + Current
+         Previous = Current
+         Current = Next
+      end loop
 
-      return Current;
+      return Current
    end Nth;
 
 end Fibonacci;

@@ -3,9 +3,9 @@ package Parse_Result is
    function Parse_Count (Input : in Integer) returns (result, Integer) is
    begin
       if Input >= 0 then
-         return (ok (), Input);
-      end if;
-      return (fail ("negative"), 0);
+         return (ok (), Input)
+      end if
+      return (fail ("negative"), 0)
    end Parse_Count;
 
 end Parse_Result;

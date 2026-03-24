@@ -6,17 +6,17 @@ package Bubble_Sort is
    type Values is array (Index) of Element;
 
    function Sort (Data : in out Values) is
-      Temp : Element;
    begin
+      var Temp : Element
       for Pass in Pass_Index loop
          for J in Pass_Index loop
             if Data (Index (J)) > Data (Index (J + 1)) then
-               Temp = Data (Index (J));
-               Data (Index (J)) = Data (Index (J + 1));
-               Data (Index (J + 1)) = Temp;
-            end if;
-         end loop;
-      end loop;
+               Temp = Data (Index (J))
+               Data (Index (J)) = Data (Index (J + 1))
+               Data (Index (J + 1)) = Temp
+            end if
+         end loop
+      end loop
    end Sort;
 
 end Bubble_Sort;

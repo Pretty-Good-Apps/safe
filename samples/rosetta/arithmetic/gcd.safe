@@ -5,20 +5,20 @@ package Gcd is
    type Iteration is range 1 to 32;
 
    function Compute (Left : Input_Value; Right : Input_Value) returns Working_Value is
-      A : Working_Value = Working_Value (Left);
-      B : Working_Value = Working_Value (Right);
-      T : Working_Value = 0;
    begin
+      var A : Working_Value = Working_Value (Left)
+      var B : Working_Value = Working_Value (Right)
+      var T : Working_Value = 0
       for Step in Iteration loop
          if B == 0 then
-            return A;
-         end if;
-         T = A rem B;
-         A = B;
-         B = T;
-      end loop;
+            return A
+         end if
+         T = A rem B
+         A = B
+         B = T
+      end loop
 
-      return A;
+      return A
    end Compute;
 
 end Gcd;
