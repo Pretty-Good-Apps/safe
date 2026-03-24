@@ -394,6 +394,20 @@ def task_is_at_or_beyond_pr117(value: object) -> bool:
     major, minor = parsed
     return major > 11 or (major == 11 and minor is not None and minor >= 7)
 
+
+def task_is_at_or_beyond_pr1161(value: object) -> bool:
+    if value is None:
+        return True
+    if not isinstance(value, str):
+        return False
+    if re.fullmatch(r"PR11\.6\.[1-9]\d*[A-Za-z0-9]*", value):
+        return True
+    parsed = parse_task_id(value)
+    if parsed is None:
+        return False
+    major, minor = parsed
+    return major > 11 or (major == 11 and minor is not None and minor >= 7)
+
 def split_table_row(line: str) -> list[str] | None:
     stripped = line.strip()
     if not stripped.startswith("|") or not stripped.endswith("|"):
@@ -839,8 +853,8 @@ def build_report(*, baseline_truth: dict[str, Any], generated_root: Path | None)
         "PR11.6 evidence must list the committed meaningful-whitespace report",
     )
     require(
-        task_is_at_or_beyond_pr117(tracker.get("next_task_id")),
-        "next_task_id must remain at or beyond PR11.7 after PR11.6",
+        task_is_at_or_beyond_pr1161(tracker.get("next_task_id")),
+        "next_task_id must remain at or beyond PR11.6.1 after PR11.6",
     )
     for task_id in PROMOTED_TASKS:
         require(task_id in task_map, f"tracker must define promoted task {task_id}")
@@ -897,8 +911,8 @@ def build_report(*, baseline_truth: dict[str, Any], generated_root: Path | None)
     next_task_match = re.search(r"- \*\*Next task:\*\* `([^`]+)`", dashboard_text)
     require(next_task_match is not None, "execution/dashboard.md must render the next-task line")
     require(
-        task_is_at_or_beyond_pr117(next_task_match.group(1) if next_task_match is not None else None),
-        "execution/dashboard.md must show a next task at or beyond PR11.7 (or none)",
+        task_is_at_or_beyond_pr1161(next_task_match.group(1) if next_task_match is not None else None),
+        "execution/dashboard.md must show a next task at or beyond PR11.6.1 (or none)",
     )
     require(
         re.search(r"\| PR10\.4 \| done \| PR10\.1 \| \d+ \|", dashboard_text)
