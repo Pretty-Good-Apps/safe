@@ -12,7 +12,8 @@
       "tests/positive/pr115_compound_terminators.safe",
       "tests/positive/pr115_case_terminator.safe",
       "tests/positive/pr115_legacy_local_decl.safe",
-      "tests/positive/pr115_declare_terminator.safe"
+      "tests/positive/pr115_declare_terminator.safe",
+      "tests/positive/pr115_multiline_return.safe"
     ],
     "rosetta_samples": [
       "samples/rosetta/arithmetic/factorial.safe",
@@ -451,10 +452,75 @@
         "cwd": "$REPO_ROOT",
         "returncode": 0
       }
+    },
+    {
+      "ada_snippets": [
+        "return Input;"
+      ],
+      "check": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/positive/pr115_multiline_return.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "compile": {
+        "command": [
+          "alr",
+          "exec",
+          "--",
+          "gprbuild",
+          "-c",
+          "-P",
+          "$TMPDIR/pr115_multiline_return/ada/build.gpr",
+          "pr115_multiline_return.adb"
+        ],
+        "cwd": "$REPO_ROOT/compiler_impl",
+        "returncode": 0
+      },
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/positive/pr115_multiline_return.safe",
+          "--out-dir",
+          "$TMPDIR/pr115_multiline_return/out",
+          "--interface-dir",
+          "$TMPDIR/pr115_multiline_return/iface",
+          "--ada-out-dir",
+          "$TMPDIR/pr115_multiline_return/ada"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      },
+      "mir_snippets": [
+        "\"name\":\"Identity\""
+      ],
+      "safei_snippets": [
+        "function Identity"
+      ],
+      "source": "tests/positive/pr115_multiline_return.safe",
+      "source_fragments": [
+        "return Input;"
+      ],
+      "typed_snippets": [
+        "\"name\":\"Identity\""
+      ],
+      "validate_mir": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "validate-mir",
+          "$TMPDIR/pr115_multiline_return/out/pr115_multiline_return.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0
+      }
     }
   ],
-  "repeat_sha256": "2a9a3531931988a10631b3ae5b38292127780f3208a02ff662b0ce945b3feb41",
-  "report_sha256": "2a9a3531931988a10631b3ae5b38292127780f3208a02ff662b0ce945b3feb41",
+  "repeat_sha256": "d35a87cfc17fe11f5ff644a1ed92f27ae3eaa6fe93c4c20e2632964ee43f4cdf",
+  "report_sha256": "d35a87cfc17fe11f5ff644a1ed92f27ae3eaa6fe93c4c20e2632964ee43f4cdf",
   "rosetta_readability_samples": [
     {
       "ada_snippets": [],

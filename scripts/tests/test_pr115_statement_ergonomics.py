@@ -33,6 +33,7 @@ class Pr115StatementErgonomicsTests(unittest.TestCase):
                 "pr115_case_terminator.safe",
                 "pr115_legacy_local_decl.safe",
                 "pr115_declare_terminator.safe",
+                "pr115_multiline_return.safe",
             },
         )
         self.assertEqual(

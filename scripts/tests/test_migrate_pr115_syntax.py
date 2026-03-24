@@ -66,6 +66,42 @@ class MigratePr115SyntaxTests(unittest.TestCase):
         rewritten = migrate_pr115_syntax.rewrite_safe_source(original)
         self.assertIn("      var Value : Count = 0; -- migrate me\n", rewritten)
 
+    def test_rewrite_safe_source_leaves_declare_declarative_items_unchanged(self) -> None:
+        original = (
+            "package Demo is\n"
+            "   type Count is range 0 to 10;\n"
+            "   function Build returns Count is\n"
+            "   begin\n"
+            "      declare\n"
+            "         Temp : Count = 0;\n"
+            "      begin\n"
+            "         Temp = 1;\n"
+            "      end;\n"
+            "      return 1;\n"
+            "   end Build;\n"
+            "end Demo;\n"
+        )
+        rewritten = migrate_pr115_syntax.rewrite_safe_source(original)
+        self.assertIn("         Temp : Count = 0;\n", rewritten)
+        self.assertNotIn("         var Temp : Count = 0;\n", rewritten)
+
+    def test_rewrite_safe_source_resets_after_named_end(self) -> None:
+        original = (
+            "package Demo is\n"
+            "   type Count is range 0 to 10;\n"
+            "   function Build returns Count is\n"
+            "   begin\n"
+            "      Value : Count = 0;\n"
+            "      return Value;\n"
+            "   end Build;\n"
+            "   After_Build : Count = 1;\n"
+            "end Demo;\n"
+        )
+        rewritten = migrate_pr115_syntax.rewrite_safe_source(original)
+        self.assertIn("      var Value : Count = 0;\n", rewritten)
+        self.assertIn("   After_Build : Count = 1;\n", rewritten)
+        self.assertNotIn("   var After_Build : Count = 1;\n", rewritten)
+
 
 if __name__ == "__main__":
     unittest.main()

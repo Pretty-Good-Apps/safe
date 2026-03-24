@@ -17,9 +17,10 @@ package body Safe_Frontend.Check_Parse is
    Raised_Diag     : CM.MD.Diagnostic;
 
    type Parser_State is record
-      Input  : FS.Source_File;
-      Tokens : FL.Token_Vectors.Vector;
-      Index  : Natural := 1;
+      Input                : FS.Source_File;
+      Tokens               : FL.Token_Vectors.Vector;
+      Index                : Natural := 1;
+      Return_Value_Allowed : Boolean := False;
    end record;
 
    function Eof_Token (State : Parser_State) return FL.Token is
@@ -1034,7 +1035,8 @@ package body Safe_Frontend.Check_Parse is
    begin
       Result.Kind := CM.Stmt_Return;
       if Current (State).Lexeme /= FT.To_UString (";")
-        and then (Current (State).Kind = FL.End_Of_File
+        and then (State.Return_Value_Allowed
+                  or else Current (State).Kind = FL.End_Of_File
                   or else not Starts_On_Later_Line (Start.Span, Current (State).Span))
       then
          Result.Value := Parse_Expression (State);
@@ -1980,10 +1982,11 @@ package body Safe_Frontend.Check_Parse is
      (State     : in out Parser_State;
       Is_Public : Boolean) return CM.Package_Item
    is
-      Result : CM.Package_Item;
-      Ends   : FT.UString_Vectors.Vector;
-      Start  : constant FT.Source_Span := Current (State).Span;
-      Semi   : FL.Token;
+      Result                   : CM.Package_Item;
+      Ends                     : FT.UString_Vectors.Vector;
+      Start                    : constant FT.Source_Span := Current (State).Span;
+      Semi                     : FL.Token;
+      Saved_Return_Value_Flag  : constant Boolean := State.Return_Value_Allowed;
    begin
       Result.Kind := CM.Item_Subprogram;
       Result.Subp_Data.Is_Public := Is_Public;
@@ -1998,7 +2001,9 @@ package body Safe_Frontend.Check_Parse is
       end loop;
       Require (State, "begin");
       Ends.Append (FT.To_UString ("end"));
+      State.Return_Value_Allowed := Result.Subp_Data.Spec.Has_Return_Type;
       Result.Subp_Data.Statements := Parse_Statement_Sequence (State, Ends);
+      State.Return_Value_Allowed := Saved_Return_Value_Flag;
       Require (State, "end");
       if Current (State).Kind in FL.Identifier | FL.Keyword then
          Advance (State);

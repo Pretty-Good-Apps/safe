@@ -87,6 +87,19 @@ PR115_POSITIVE_CASES: tuple[dict[str, Any], ...] = (
             "end;",
         ),
     },
+    {
+        "source": REPO_ROOT / "tests" / "positive" / "pr115_multiline_return.safe",
+        "coverage_note": "Value-returning functions still admit multiline `return` expressions; optional terminators do not turn them into bare returns.",
+        "source_fragments": (
+            "return Input;",
+        ),
+        "typed_snippets": ('"name":"Identity"',),
+        "mir_snippets": ('"name":"Identity"',),
+        "safei_snippets": ("function Identity",),
+        "ada_snippets": (
+            "return Input;",
+        ),
+    },
 )
 
 PR115_NEGATIVE_CASES: tuple[dict[str, Any], ...] = (
