@@ -85,6 +85,18 @@ class Pr117ReferenceSurfaceExperimentsTests(unittest.TestCase):
             len(run_pr117_reference_surface_experiments.negative_cases()),
         )
 
+    def test_negative_case_catalog_keeps_explicit_all_diagnostic(self) -> None:
+        explicit_all = next(
+            case
+            for case in run_pr117_reference_surface_experiments.negative_cases()
+            if Path(case["source"]).name == "neg_pr117_explicit_all.safe"
+        )
+        self.assertEqual(explicit_all["reason"], "source_frontend_error")
+        self.assertEqual(
+            explicit_all["message"],
+            "removed source construct `explicit dereference `.all`` is not allowed",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

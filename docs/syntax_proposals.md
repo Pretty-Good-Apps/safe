@@ -2884,9 +2884,9 @@ declarations without `sends`/`receives` remain valid and unrestricted.
 
 # Capitalisation as Reference Signal
 
-Status after PR11.7: deferred. The experiment proved technically feasible only
-behind a dedicated case-significant resolver mode, and Safe did not admit that
-new default naming rule before 1.0.
+Canonical PR11.7 outcome: deferred. This parked hard-cutover branch promotes
+the proposal into a full implementation candidate, so the examples below
+describe the branch surface rather than the mainline admitted syntax.
 
 ## Motivation
 
@@ -2960,10 +2960,10 @@ is the copy signal.
 
 ## Implicit Dereference
 
-Status after PR11.7: deferred as a stronger surface recommendation. Safe has
-partial implicit-dereference support today, but PR11.7 found emitted-Ada
-divergence from explicit `.all` spellings in the fixed corpus, so the
-milestone did not bless it as the parity-clean future reference surface.
+Canonical PR11.7 outcome: deferred as a stronger surface recommendation. This
+parked hard-cutover branch nonetheless removes explicit `.all` from Safe source
+and uses implicit dereference as the branch surface being evaluated for future
+promotion.
 
 With capitalisation marking every reference, the `.all` explicit dereference
 is redundant and dropped:

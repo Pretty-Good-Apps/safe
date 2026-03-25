@@ -1482,28 +1482,32 @@ package body Safe_Frontend.Mir_Analyze is
                return Resolve_Type (UString_Value (Expr.Type_Name), Var_Types, Type_Env);
             end if;
             return Resolve_Type ("long_float", Type_Env);
-        when GM.Expr_Select =>
-            if FT.Lowercase (UString_Value (Expr.Selector)) = "all" then
-               return Access_Target_Type (Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions), Type_Env);
-            elsif FT.Lowercase (UString_Value (Expr.Selector)) = "access" then
-               Prefix_Type := Access_Target_Type (Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions), Type_Env);
-               Result.Name := FT.To_UString ("access constant " & UString_Value (Prefix_Type.Name));
-               Result.Kind := FT.To_UString ("access");
-               Result.Has_Target := True;
-               Result.Target := Prefix_Type.Name;
-               Result.Not_Null := True;
-               Result.Anonymous := True;
-               Result.Is_Constant := True;
-               Result.Has_Access_Role := True;
-               Result.Access_Role := FT.To_UString ("Observe");
-               return Result;
-            elsif FT.Lowercase (UString_Value (Expr.Selector)) = "first"
-              or else FT.Lowercase (UString_Value (Expr.Selector)) = "last"
-            then
-               return Resolve_Type ("integer", Type_Env);
-            end if;
-            Prefix_Type := Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions);
-            return Field_Type (Prefix_Type, UString_Value (Expr.Selector), Type_Env);
+         when GM.Expr_Select =>
+            declare
+               Selector_Lower : constant String := Lower (UString_Value (Expr.Selector));
+            begin
+               if Selector_Lower = "all" then
+                  return Access_Target_Type (Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions), Type_Env);
+               elsif Selector_Lower = "access" then
+                  Prefix_Type := Access_Target_Type (Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions), Type_Env);
+                  Result.Name := FT.To_UString ("access constant " & UString_Value (Prefix_Type.Name));
+                  Result.Kind := FT.To_UString ("access");
+                  Result.Has_Target := True;
+                  Result.Target := Prefix_Type.Name;
+                  Result.Not_Null := True;
+                  Result.Anonymous := True;
+                  Result.Is_Constant := True;
+                  Result.Has_Access_Role := True;
+                  Result.Access_Role := FT.To_UString ("Observe");
+                  return Result;
+               elsif Selector_Lower = "first"
+                 or else Selector_Lower = "last"
+               then
+                  return Resolve_Type ("integer", Type_Env);
+               end if;
+               Prefix_Type := Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions);
+               return Field_Type (Prefix_Type, UString_Value (Expr.Selector), Type_Env);
+            end;
          when GM.Expr_Resolved_Index =>
             Prefix_Type := Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions);
             if Prefix_Type.Has_Component_Type then
@@ -4432,17 +4436,21 @@ package body Safe_Frontend.Mir_Analyze is
                  and then Local_Meta.Element (Name).Is_Constant;
             end;
          when GM.Expr_Select =>
-            if UString_Value (Expr.Selector) = "all" then
-               return False;
-            elsif Lower (UString_Value (Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions).Kind)) = "access" then
-               return False;
-            end if;
-            return Is_Constant_Target
-              (Expr.Prefix,
-               Local_Meta,
-               Var_Types,
-               Type_Env,
-               Functions);
+            declare
+               Selector_Lower : constant String := Lower (UString_Value (Expr.Selector));
+            begin
+               if Selector_Lower = "all" then
+                  return False;
+               elsif Lower (UString_Value (Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions).Kind)) = "access" then
+                  return False;
+               end if;
+               return Is_Constant_Target
+                 (Expr.Prefix,
+                  Local_Meta,
+                  Var_Types,
+                  Type_Env,
+                  Functions);
+            end;
          when GM.Expr_Resolved_Index =>
             return Is_Constant_Target
               (Expr.Prefix,
