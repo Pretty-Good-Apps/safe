@@ -1,0 +1,1562 @@
+{
+  "corpus_mode": {
+    "negatives": [
+      {
+        "actual_reason": "narrowing_check_failure",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 30,
+                "end_line": 19,
+                "start_col": 14,
+                "start_line": 19
+              },
+              "message": "index expression not provably within array bounds",
+              "notes": [
+                "array 'arr' has index range idx (1 .. 10).",
+                "index expression 'idx (a + b)' has type integer, with range\n[integer'First .. integer'Last].",
+                "static analysis cannot establish that the index is within\n[1 .. 10] on all execution paths.",
+                "rule: D27 Rule 2 (Provable Index Safety)",
+                "per spec/02-restrictions.md section 2.8.2 paragraph 131:\n\"The index expression in an indexed_component shall be provably\nwithin the array object's index bounds at compile time.\"",
+                "per spec/02-restrictions.md section 2.8.2 paragraph 132:\n\"If neither condition holds, the program is nonconforming and\nthe implementation shall reject it with a diagnostic identifying\nthe indexed_component and the unresolvable bound relationship.\""
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule1_index_fail.safe",
+              "reason": "narrowing_check_failure",
+              "span": {
+                "end_col": 30,
+                "end_line": 19,
+                "start_col": 14,
+                "start_line": 19
+              },
+              "suggestions": [
+                "add a bounds check before indexing:\nif a + b >= 1 and then a + b <= 10 then\n   return arr (idx (a + b));\nend if;"
+              ]
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "narrowing_check_failure",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule1_index_fail.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"narrowing_check_failure\",\"message\":\"index expression not provably within array bounds\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule1_index_fail.safe\",\"span\":{\"start_line\":19,\"start_col\":14,\"end_line\":19,\"end_col\":30},\"highlight_span\":{\"start_line\":19,\"start_col\":14,\"end_line\":19,\"end_col\":30},\"notes\":[\"array 'arr' has index range idx (1 .. 10).\",\"index expression 'idx (a + b)' has type integer, with range\\n[integer'First .. integer'Last].\",\"static analysis cannot establish that the index is within\\n[1 .. 10] on all execution paths.\",\"rule: D27 Rule 2 (Provable Index Safety)\",\"per spec/02-restrictions.md section 2.8.2 paragraph 131:\\n\\\"The index expression in an indexed_component shall be provably\\nwithin the array object's index bounds at compile time.\\\"\",\"per spec/02-restrictions.md section 2.8.2 paragraph 132:\\n\\\"If neither condition holds, the program is nonconforming and\\nthe implementation shall reject it with a diagnostic identifying\\nthe indexed_component and the unresolvable bound relationship.\\\"\"],\"suggestions\":[\"add a bounds check before indexing:\\nif a + b >= 1 and then a + b <= 10 then\\n   return arr (idx (a + b));\\nend if;\"]}]}\n"
+        },
+        "source": "tests/negative/neg_rule1_index_fail.safe"
+      },
+      {
+        "actual_reason": "narrowing_check_failure",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 25,
+                "end_line": 19,
+                "start_col": 16,
+                "start_line": 19
+              },
+              "message": "explicit conversion is not provably within target range",
+              "notes": [
+                "target type 'narrow' has range [-100 .. 100]",
+                "expression range is [-1_000_000 .. 1_000_000]"
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule1_narrow_fail.safe",
+              "reason": "narrowing_check_failure",
+              "span": {
+                "end_col": 25,
+                "end_line": 19,
+                "start_col": 16,
+                "start_line": 19
+              },
+              "suggestions": []
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "narrowing_check_failure",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule1_narrow_fail.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"narrowing_check_failure\",\"message\":\"explicit conversion is not provably within target range\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule1_narrow_fail.safe\",\"span\":{\"start_line\":19,\"start_col\":16,\"end_line\":19,\"end_col\":25},\"highlight_span\":{\"start_line\":19,\"start_col\":16,\"end_line\":19,\"end_col\":25},\"notes\":[\"target type 'narrow' has range [-100 .. 100]\",\"expression range is [-1_000_000 .. 1_000_000]\"],\"suggestions\":[]}]}\n"
+        },
+        "source": "tests/negative/neg_rule1_narrow_fail.safe"
+      },
+      {
+        "actual_reason": "intermediate_overflow",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 18,
+                "end_line": 19,
+                "start_col": 14,
+                "start_line": 19
+              },
+              "message": "intermediate overflow in integer expression",
+              "notes": [
+                "static range analysis determines that the subexpression (a * b)\nhas range [0 .. 99_999_999_999_999_980_000_000_000_000_001]\nwhich exceeds the 64-bit signed range\n[-9_223_372_036_854_775_808 .. 9_223_372_036_854_775_807].",
+                "a has range [0 .. 9_999_999_999_999_999]",
+                "b has range [0 .. 9_999_999_999_999_999]",
+                "rule: D27 Rule 1 (Wide Intermediate Arithmetic)",
+                "per spec/02-restrictions.md section 2.8.1 paragraph 129:\n\"If a conforming implementation cannot establish, by sound static\nrange analysis, that every intermediate subexpression of an integer\narithmetic expression stays within the 64-bit signed range, the\nexpression shall be rejected with a diagnostic.\""
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule1_overflow.safe",
+              "reason": "intermediate_overflow",
+              "span": {
+                "end_col": 18,
+                "end_line": 19,
+                "start_col": 14,
+                "start_line": 19
+              },
+              "suggestions": []
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "intermediate_overflow",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule1_overflow.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"intermediate_overflow\",\"message\":\"intermediate overflow in integer expression\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule1_overflow.safe\",\"span\":{\"start_line\":19,\"start_col\":14,\"end_line\":19,\"end_col\":18},\"highlight_span\":{\"start_line\":19,\"start_col\":14,\"end_line\":19,\"end_col\":18},\"notes\":[\"static range analysis determines that the subexpression (a * b)\\nhas range [0 .. 99_999_999_999_999_980_000_000_000_000_001]\\nwhich exceeds the 64-bit signed range\\n[-9_223_372_036_854_775_808 .. 9_223_372_036_854_775_807].\",\"a has range [0 .. 9_999_999_999_999_999]\",\"b has range [0 .. 9_999_999_999_999_999]\",\"rule: D27 Rule 1 (Wide Intermediate Arithmetic)\",\"per spec/02-restrictions.md section 2.8.1 paragraph 129:\\n\\\"If a conforming implementation cannot establish, by sound static\\nrange analysis, that every intermediate subexpression of an integer\\narithmetic expression stays within the 64-bit signed range, the\\nexpression shall be rejected with a diagnostic.\\\"\"],\"suggestions\":[]}]}\n"
+        },
+        "source": "tests/negative/neg_rule1_overflow.safe"
+      },
+      {
+        "actual_reason": "narrowing_check_failure",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 33,
+                "end_line": 22,
+                "start_col": 20,
+                "start_line": 22
+              },
+              "message": "explicit conversion is not provably within target range",
+              "notes": [
+                "target type 'percentage' has range [0 .. 100]",
+                "expression range is [-10_000 .. 10_000]"
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule1_param_fail.safe",
+              "reason": "narrowing_check_failure",
+              "span": {
+                "end_col": 33,
+                "end_line": 22,
+                "start_col": 20,
+                "start_line": 22
+              },
+              "suggestions": []
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "narrowing_check_failure",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule1_param_fail.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"narrowing_check_failure\",\"message\":\"explicit conversion is not provably within target range\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule1_param_fail.safe\",\"span\":{\"start_line\":22,\"start_col\":20,\"end_line\":22,\"end_col\":33},\"highlight_span\":{\"start_line\":22,\"start_col\":20,\"end_line\":22,\"end_col\":33},\"notes\":[\"target type 'percentage' has range [0 .. 100]\",\"expression range is [-10_000 .. 10_000]\"],\"suggestions\":[]}]}\n"
+        },
+        "source": "tests/negative/neg_rule1_param_fail.safe"
+      },
+      {
+        "actual_reason": "narrowing_check_failure",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 18,
+                "end_line": 18,
+                "start_col": 14,
+                "start_line": 18
+              },
+              "message": "return expression is not provably within function result range",
+              "notes": [
+                "return type 'small' has range [0 .. 100]",
+                "expression range is [0 .. 200]"
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule1_return_fail.safe",
+              "reason": "narrowing_check_failure",
+              "span": {
+                "end_col": 18,
+                "end_line": 18,
+                "start_col": 14,
+                "start_line": 18
+              },
+              "suggestions": []
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "narrowing_check_failure",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule1_return_fail.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"narrowing_check_failure\",\"message\":\"return expression is not provably within function result range\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule1_return_fail.safe\",\"span\":{\"start_line\":18,\"start_col\":14,\"end_line\":18,\"end_col\":18},\"highlight_span\":{\"start_line\":18,\"start_col\":14,\"end_line\":18,\"end_col\":18},\"notes\":[\"return type 'small' has range [0 .. 100]\",\"expression range is [0 .. 200]\"],\"suggestions\":[]}]}\n"
+        },
+        "source": "tests/negative/neg_rule1_return_fail.safe"
+      },
+      {
+        "actual_reason": "index_out_of_bounds",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 43,
+                "end_line": 24,
+                "start_col": 14,
+                "start_line": 24
+              },
+              "message": "index expression not provably within array bounds",
+              "notes": [
+                "array 't' has index range idx (1 .. 50).",
+                "index expression 'idx (call)' has type integer, with range\n[integer'First .. integer'Last].",
+                "static analysis cannot establish that the index is within\n[1 .. 50] on all execution paths.",
+                "rule: D27 Rule 2 (Provable Index Safety)",
+                "per spec/02-restrictions.md section 2.8.2 paragraph 131:\n\"The index expression in an indexed_component shall be provably\nwithin the array object's index bounds at compile time.\"",
+                "per spec/02-restrictions.md section 2.8.2 paragraph 132:\n\"If neither condition holds, the program is nonconforming and\nthe implementation shall reject it with a diagnostic identifying\nthe indexed_component and the unresolvable bound relationship.\""
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule2_dynamic.safe",
+              "reason": "index_out_of_bounds",
+              "span": {
+                "end_col": 43,
+                "end_line": 24,
+                "start_col": 14,
+                "start_line": 24
+              },
+              "suggestions": [
+                "add a bounds check before indexing:\nif call >= 1 and then call <= 50 then\n   return t (idx (call));\nend if;"
+              ]
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "index_out_of_bounds",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule2_dynamic.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"index_out_of_bounds\",\"message\":\"index expression not provably within array bounds\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule2_dynamic.safe\",\"span\":{\"start_line\":24,\"start_col\":14,\"end_line\":24,\"end_col\":43},\"highlight_span\":{\"start_line\":24,\"start_col\":14,\"end_line\":24,\"end_col\":43},\"notes\":[\"array 't' has index range idx (1 .. 50).\",\"index expression 'idx (call)' has type integer, with range\\n[integer'First .. integer'Last].\",\"static analysis cannot establish that the index is within\\n[1 .. 50] on all execution paths.\",\"rule: D27 Rule 2 (Provable Index Safety)\",\"per spec/02-restrictions.md section 2.8.2 paragraph 131:\\n\\\"The index expression in an indexed_component shall be provably\\nwithin the array object's index bounds at compile time.\\\"\",\"per spec/02-restrictions.md section 2.8.2 paragraph 132:\\n\\\"If neither condition holds, the program is nonconforming and\\nthe implementation shall reject it with a diagnostic identifying\\nthe indexed_component and the unresolvable bound relationship.\\\"\"],\"suggestions\":[\"add a bounds check before indexing:\\nif call >= 1 and then call <= 50 then\\n   return t (idx (call));\\nend if;\"]}]}\n"
+        },
+        "source": "tests/negative/neg_rule2_dynamic.safe"
+      },
+      {
+        "actual_reason": "index_out_of_bounds",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 20,
+                "end_line": 19,
+                "start_col": 14,
+                "start_line": 19
+              },
+              "message": "index expression not provably within array bounds",
+              "notes": [
+                "array 'arr' has index range index (1 .. 100).",
+                "index expression '1' has type integer, with range\n[integer'First .. integer'Last].",
+                "static analysis cannot establish that the index is within\n[1 .. 100] on all execution paths.",
+                "rule: D27 Rule 2 (Provable Index Safety)",
+                "per spec/02-restrictions.md section 2.8.2 paragraph 131:\n\"The index expression in an indexed_component shall be provably\nwithin the array object's index bounds at compile time.\"",
+                "per spec/02-restrictions.md section 2.8.2 paragraph 132:\n\"If neither condition holds, the program is nonconforming and\nthe implementation shall reject it with a diagnostic identifying\nthe indexed_component and the unresolvable bound relationship.\""
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule2_empty.safe",
+              "reason": "index_out_of_bounds",
+              "span": {
+                "end_col": 20,
+                "end_line": 19,
+                "start_col": 14,
+                "start_line": 19
+              },
+              "suggestions": [
+                "add a bounds check before indexing:\nif 1 >= 1 and then 1 <= 100 then\n   return arr (1);\nend if;"
+              ]
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "index_out_of_bounds",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule2_empty.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"index_out_of_bounds\",\"message\":\"index expression not provably within array bounds\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule2_empty.safe\",\"span\":{\"start_line\":19,\"start_col\":14,\"end_line\":19,\"end_col\":20},\"highlight_span\":{\"start_line\":19,\"start_col\":14,\"end_line\":19,\"end_col\":20},\"notes\":[\"array 'arr' has index range index (1 .. 100).\",\"index expression '1' has type integer, with range\\n[integer'First .. integer'Last].\",\"static analysis cannot establish that the index is within\\n[1 .. 100] on all execution paths.\",\"rule: D27 Rule 2 (Provable Index Safety)\",\"per spec/02-restrictions.md section 2.8.2 paragraph 131:\\n\\\"The index expression in an indexed_component shall be provably\\nwithin the array object's index bounds at compile time.\\\"\",\"per spec/02-restrictions.md section 2.8.2 paragraph 132:\\n\\\"If neither condition holds, the program is nonconforming and\\nthe implementation shall reject it with a diagnostic identifying\\nthe indexed_component and the unresolvable bound relationship.\\\"\"],\"suggestions\":[\"add a bounds check before indexing:\\nif 1 >= 1 and then 1 <= 100 then\\n   return arr (1);\\nend if;\"]}]}\n"
+        },
+        "source": "tests/negative/neg_rule2_empty.safe"
+      },
+      {
+        "actual_reason": "index_out_of_bounds",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 54,
+                "end_line": 20,
+                "start_col": 14,
+                "start_line": 20
+              },
+              "message": "index expression not provably within array bounds",
+              "notes": [
+                "array 'arr' has index range nat_Index (0 .. 15).",
+                "index expression 'nat_Index (integer (base) - offset)' has type integer, with range\n[integer'First .. integer'Last].",
+                "static analysis cannot establish that the index is within\n[0 .. 15] on all execution paths.",
+                "rule: D27 Rule 2 (Provable Index Safety)",
+                "per spec/02-restrictions.md section 2.8.2 paragraph 131:\n\"The index expression in an indexed_component shall be provably\nwithin the array object's index bounds at compile time.\"",
+                "per spec/02-restrictions.md section 2.8.2 paragraph 132:\n\"If neither condition holds, the program is nonconforming and\nthe implementation shall reject it with a diagnostic identifying\nthe indexed_component and the unresolvable bound relationship.\""
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule2_negative.safe",
+              "reason": "index_out_of_bounds",
+              "span": {
+                "end_col": 54,
+                "end_line": 20,
+                "start_col": 14,
+                "start_line": 20
+              },
+              "suggestions": [
+                "add a bounds check before indexing:\nif integer (base) - offset >= 0 and then integer (base) - offset <= 15 then\n   return arr (nat_Index (integer (base) - offset));\nend if;"
+              ]
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "index_out_of_bounds",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule2_negative.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"index_out_of_bounds\",\"message\":\"index expression not provably within array bounds\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule2_negative.safe\",\"span\":{\"start_line\":20,\"start_col\":14,\"end_line\":20,\"end_col\":54},\"highlight_span\":{\"start_line\":20,\"start_col\":14,\"end_line\":20,\"end_col\":54},\"notes\":[\"array 'arr' has index range nat_Index (0 .. 15).\",\"index expression 'nat_Index (integer (base) - offset)' has type integer, with range\\n[integer'First .. integer'Last].\",\"static analysis cannot establish that the index is within\\n[0 .. 15] on all execution paths.\",\"rule: D27 Rule 2 (Provable Index Safety)\",\"per spec/02-restrictions.md section 2.8.2 paragraph 131:\\n\\\"The index expression in an indexed_component shall be provably\\nwithin the array object's index bounds at compile time.\\\"\",\"per spec/02-restrictions.md section 2.8.2 paragraph 132:\\n\\\"If neither condition holds, the program is nonconforming and\\nthe implementation shall reject it with a diagnostic identifying\\nthe indexed_component and the unresolvable bound relationship.\\\"\"],\"suggestions\":[\"add a bounds check before indexing:\\nif integer (base) - offset >= 0 and then integer (base) - offset <= 15 then\\n   return arr (nat_Index (integer (base) - offset));\\nend if;\"]}]}\n"
+        },
+        "source": "tests/negative/neg_rule2_negative.safe"
+      },
+      {
+        "actual_reason": "index_out_of_bounds",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 38,
+                "end_line": 18,
+                "start_col": 26,
+                "start_line": 18
+              },
+              "message": "index expression not provably within array bounds",
+              "notes": [
+                "array 'arr' has index range idx (1 .. 10).",
+                "index expression 'idx (I)' has type integer, with range\n[integer'First .. integer'Last].",
+                "static analysis cannot establish that the index is within\n[1 .. 10] on all execution paths.",
+                "rule: D27 Rule 2 (Provable Index Safety)",
+                "per spec/02-restrictions.md section 2.8.2 paragraph 131:\n\"The index expression in an indexed_component shall be provably\nwithin the array object's index bounds at compile time.\"",
+                "per spec/02-restrictions.md section 2.8.2 paragraph 132:\n\"If neither condition holds, the program is nonconforming and\nthe implementation shall reject it with a diagnostic identifying\nthe indexed_component and the unresolvable bound relationship.\""
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule2_off_by_one.safe",
+              "reason": "index_out_of_bounds",
+              "span": {
+                "end_col": 38,
+                "end_line": 18,
+                "start_col": 26,
+                "start_line": 18
+              },
+              "suggestions": [
+                "add a bounds check before indexing:\nif I >= 1 and then I <= 10 then\n   return arr (idx (I));\nend if;"
+              ]
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "index_out_of_bounds",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule2_off_by_one.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"index_out_of_bounds\",\"message\":\"index expression not provably within array bounds\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule2_off_by_one.safe\",\"span\":{\"start_line\":18,\"start_col\":26,\"end_line\":18,\"end_col\":38},\"highlight_span\":{\"start_line\":18,\"start_col\":26,\"end_line\":18,\"end_col\":38},\"notes\":[\"array 'arr' has index range idx (1 .. 10).\",\"index expression 'idx (I)' has type integer, with range\\n[integer'First .. integer'Last].\",\"static analysis cannot establish that the index is within\\n[1 .. 10] on all execution paths.\",\"rule: D27 Rule 2 (Provable Index Safety)\",\"per spec/02-restrictions.md section 2.8.2 paragraph 131:\\n\\\"The index expression in an indexed_component shall be provably\\nwithin the array object's index bounds at compile time.\\\"\",\"per spec/02-restrictions.md section 2.8.2 paragraph 132:\\n\\\"If neither condition holds, the program is nonconforming and\\nthe implementation shall reject it with a diagnostic identifying\\nthe indexed_component and the unresolvable bound relationship.\\\"\"],\"suggestions\":[\"add a bounds check before indexing:\\nif I >= 1 and then I <= 10 then\\n   return arr (idx (I));\\nend if;\"]}]}\n"
+        },
+        "source": "tests/negative/neg_rule2_off_by_one.safe"
+      },
+      {
+        "actual_reason": "index_out_of_bounds",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 29,
+                "end_line": 15,
+                "start_col": 14,
+                "start_line": 15
+              },
+              "message": "index expression not provably within array bounds",
+              "notes": [
+                "array 'arr' has index range slot (0 .. 7).",
+                "index expression 'slot (idx)' has type integer, with range\n[integer'First .. integer'Last].",
+                "static analysis cannot establish that the index is within\n[0 .. 7] on all execution paths.",
+                "rule: D27 Rule 2 (Provable Index Safety)",
+                "per spec/02-restrictions.md section 2.8.2 paragraph 131:\n\"The index expression in an indexed_component shall be provably\nwithin the array object's index bounds at compile time.\"",
+                "per spec/02-restrictions.md section 2.8.2 paragraph 132:\n\"If neither condition holds, the program is nonconforming and\nthe implementation shall reject it with a diagnostic identifying\nthe indexed_component and the unresolvable bound relationship.\""
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule2_oob.safe",
+              "reason": "index_out_of_bounds",
+              "span": {
+                "end_col": 29,
+                "end_line": 15,
+                "start_col": 14,
+                "start_line": 15
+              },
+              "suggestions": [
+                "add a bounds check before indexing:\nif idx >= 0 and then idx <= 7 then\n   return arr (slot (idx));\nend if;"
+              ]
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "index_out_of_bounds",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule2_oob.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"index_out_of_bounds\",\"message\":\"index expression not provably within array bounds\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule2_oob.safe\",\"span\":{\"start_line\":15,\"start_col\":14,\"end_line\":15,\"end_col\":29},\"highlight_span\":{\"start_line\":15,\"start_col\":14,\"end_line\":15,\"end_col\":29},\"notes\":[\"array 'arr' has index range slot (0 .. 7).\",\"index expression 'slot (idx)' has type integer, with range\\n[integer'First .. integer'Last].\",\"static analysis cannot establish that the index is within\\n[0 .. 7] on all execution paths.\",\"rule: D27 Rule 2 (Provable Index Safety)\",\"per spec/02-restrictions.md section 2.8.2 paragraph 131:\\n\\\"The index expression in an indexed_component shall be provably\\nwithin the array object's index bounds at compile time.\\\"\",\"per spec/02-restrictions.md section 2.8.2 paragraph 132:\\n\\\"If neither condition holds, the program is nonconforming and\\nthe implementation shall reject it with a diagnostic identifying\\nthe indexed_component and the unresolvable bound relationship.\\\"\"],\"suggestions\":[\"add a bounds check before indexing:\\nif idx >= 0 and then idx <= 7 then\\n   return arr (slot (idx));\\nend if;\"]}]}\n"
+        },
+        "source": "tests/negative/neg_rule2_oob.safe"
+      },
+      {
+        "actual_reason": "division_by_zero",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 32,
+                "end_line": 17,
+                "start_col": 28,
+                "start_line": 17
+              },
+              "message": "divisor not provably nonzero",
+              "notes": [
+                "right operand 'denom' has type integer (range -9_223_372_036_854_775_808 .. 9_223_372_036_854_775_807),\nwhich includes zero.",
+                "no preceding conditional or subtype constraint establishes\ndenom /= 0 on all paths reaching this division.",
+                "rule: D27 Rule 3 (Division by Provably Nonzero Divisor)",
+                "per spec/02-restrictions.md section 2.8.3 paragraph 133:\n\"The right operand of the operators /, mod, and rem shall be\nprovably nonzero at compile time.\"",
+                "per spec/02-restrictions.md section 2.8.3 paragraph 134:\n\"If none of the conditions in paragraph 133 holds, the program\nis nonconforming and a conforming implementation shall reject\nthe expression with a diagnostic.\""
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule3_expression.safe",
+              "reason": "division_by_zero",
+              "span": {
+                "end_col": 26,
+                "end_line": 17,
+                "start_col": 26,
+                "start_line": 17
+              },
+              "suggestions": [
+                "add a guard before the division:\nif denom /= 0 then\n   return integer (n) / denom;\nelse\n   return 0;  -- or handle the zero case\nend if;",
+                "or use a positive subtype that excludes zero:\ntype Positive_Value is range 1 .. 100;"
+              ]
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "division_by_zero",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule3_expression.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"division_by_zero\",\"message\":\"divisor not provably nonzero\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule3_expression.safe\",\"span\":{\"start_line\":17,\"start_col\":26,\"end_line\":17,\"end_col\":26},\"highlight_span\":{\"start_line\":17,\"start_col\":28,\"end_line\":17,\"end_col\":32},\"notes\":[\"right operand 'denom' has type integer (range -9_223_372_036_854_775_808 .. 9_223_372_036_854_775_807),\\nwhich includes zero.\",\"no preceding conditional or subtype constraint establishes\\ndenom /= 0 on all paths reaching this division.\",\"rule: D27 Rule 3 (Division by Provably Nonzero Divisor)\",\"per spec/02-restrictions.md section 2.8.3 paragraph 133:\\n\\\"The right operand of the operators /, mod, and rem shall be\\nprovably nonzero at compile time.\\\"\",\"per spec/02-restrictions.md section 2.8.3 paragraph 134:\\n\\\"If none of the conditions in paragraph 133 holds, the program\\nis nonconforming and a conforming implementation shall reject\\nthe expression with a diagnostic.\\\"\"],\"suggestions\":[\"add a guard before the division:\\nif denom /= 0 then\\n   return integer (n) / denom;\\nelse\\n   return 0;  -- or handle the zero case\\nend if;\",\"or use a positive subtype that excludes zero:\\ntype Positive_Value is range 1 .. 100;\"]}]}\n"
+        },
+        "source": "tests/negative/neg_rule3_expression.safe"
+      },
+      {
+        "actual_reason": "division_by_zero",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 54,
+                "end_line": 15,
+                "start_col": 28,
+                "start_line": 15
+              },
+              "message": "divisor not provably nonzero",
+              "notes": [
+                "right operand 'integer (b) - integer (c)' has type integer (range -9_223_372_036_854_775_808 .. 9_223_372_036_854_775_807),\nwhich includes zero.",
+                "no preceding conditional or subtype constraint establishes\ninteger (b) - integer (c) /= 0 on all paths reaching this division.",
+                "rule: D27 Rule 3 (Division by Provably Nonzero Divisor)",
+                "per spec/02-restrictions.md section 2.8.3 paragraph 133:\n\"The right operand of the operators /, mod, and rem shall be\nprovably nonzero at compile time.\"",
+                "per spec/02-restrictions.md section 2.8.3 paragraph 134:\n\"If none of the conditions in paragraph 133 holds, the program\nis nonconforming and a conforming implementation shall reject\nthe expression with a diagnostic.\""
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule3_variable.safe",
+              "reason": "division_by_zero",
+              "span": {
+                "end_col": 26,
+                "end_line": 15,
+                "start_col": 26,
+                "start_line": 15
+              },
+              "suggestions": [
+                "add a guard before the division:\nif integer (b) - integer (c) /= 0 then\n   return integer (a) / integer (b) - integer (c);\nelse\n   return 0;  -- or handle the zero case\nend if;",
+                "or use a positive subtype that excludes zero:\ntype Positive_Value is range 1 .. 100;"
+              ]
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "division_by_zero",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule3_variable.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"division_by_zero\",\"message\":\"divisor not provably nonzero\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule3_variable.safe\",\"span\":{\"start_line\":15,\"start_col\":26,\"end_line\":15,\"end_col\":26},\"highlight_span\":{\"start_line\":15,\"start_col\":28,\"end_line\":15,\"end_col\":54},\"notes\":[\"right operand 'integer (b) - integer (c)' has type integer (range -9_223_372_036_854_775_808 .. 9_223_372_036_854_775_807),\\nwhich includes zero.\",\"no preceding conditional or subtype constraint establishes\\ninteger (b) - integer (c) /= 0 on all paths reaching this division.\",\"rule: D27 Rule 3 (Division by Provably Nonzero Divisor)\",\"per spec/02-restrictions.md section 2.8.3 paragraph 133:\\n\\\"The right operand of the operators /, mod, and rem shall be\\nprovably nonzero at compile time.\\\"\",\"per spec/02-restrictions.md section 2.8.3 paragraph 134:\\n\\\"If none of the conditions in paragraph 133 holds, the program\\nis nonconforming and a conforming implementation shall reject\\nthe expression with a diagnostic.\\\"\"],\"suggestions\":[\"add a guard before the division:\\nif integer (b) - integer (c) /= 0 then\\n   return integer (a) / integer (b) - integer (c);\\nelse\\n   return 0;  -- or handle the zero case\\nend if;\",\"or use a positive subtype that excludes zero:\\ntype Positive_Value is range 1 .. 100;\"]}]}\n"
+        },
+        "source": "tests/negative/neg_rule3_variable.safe"
+      },
+      {
+        "actual_reason": "division_by_zero",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 18,
+                "end_line": 14,
+                "start_col": 18,
+                "start_line": 14
+              },
+              "message": "divisor not provably nonzero",
+              "notes": [
+                "right operand 'b' has type value (range -100 .. 100),\nwhich includes zero.",
+                "no preceding conditional or subtype constraint establishes\nb /= 0 on all paths reaching this division.",
+                "rule: D27 Rule 3 (Division by Provably Nonzero Divisor)",
+                "per spec/02-restrictions.md section 2.8.3 paragraph 133:\n\"The right operand of the operators /, mod, and rem shall be\nprovably nonzero at compile time.\"",
+                "per spec/02-restrictions.md section 2.8.3 paragraph 134:\n\"If none of the conditions in paragraph 133 holds, the program\nis nonconforming and a conforming implementation shall reject\nthe expression with a diagnostic.\""
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule3_zero_div.safe",
+              "reason": "division_by_zero",
+              "span": {
+                "end_col": 16,
+                "end_line": 14,
+                "start_col": 16,
+                "start_line": 14
+              },
+              "suggestions": [
+                "add a guard before the division:\nif b /= 0 then\n   return a / b;\nelse\n   return 0;  -- or handle the zero case\nend if;",
+                "or use a positive subtype that excludes zero:\ntype Positive_Value is range 1 .. 100;"
+              ]
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "division_by_zero",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule3_zero_div.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"division_by_zero\",\"message\":\"divisor not provably nonzero\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule3_zero_div.safe\",\"span\":{\"start_line\":14,\"start_col\":16,\"end_line\":14,\"end_col\":16},\"highlight_span\":{\"start_line\":14,\"start_col\":18,\"end_line\":14,\"end_col\":18},\"notes\":[\"right operand 'b' has type value (range -100 .. 100),\\nwhich includes zero.\",\"no preceding conditional or subtype constraint establishes\\nb /= 0 on all paths reaching this division.\",\"rule: D27 Rule 3 (Division by Provably Nonzero Divisor)\",\"per spec/02-restrictions.md section 2.8.3 paragraph 133:\\n\\\"The right operand of the operators /, mod, and rem shall be\\nprovably nonzero at compile time.\\\"\",\"per spec/02-restrictions.md section 2.8.3 paragraph 134:\\n\\\"If none of the conditions in paragraph 133 holds, the program\\nis nonconforming and a conforming implementation shall reject\\nthe expression with a diagnostic.\\\"\"],\"suggestions\":[\"add a guard before the division:\\nif b /= 0 then\\n   return a / b;\\nelse\\n   return 0;  -- or handle the zero case\\nend if;\",\"or use a positive subtype that excludes zero:\\ntype Positive_Value is range 1 .. 100;\"]}]}\n"
+        },
+        "source": "tests/negative/neg_rule3_zero_div.safe"
+      },
+      {
+        "actual_reason": "division_by_zero",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 20,
+                "end_line": 15,
+                "start_col": 20,
+                "start_line": 15
+              },
+              "message": "divisor not provably nonzero",
+              "notes": [
+                "right operand 'n' has type counter (range 0 .. 255),\nwhich includes zero.",
+                "no preceding conditional or subtype constraint establishes\nn /= 0 on all paths reaching this division.",
+                "rule: D27 Rule 3 (Division by Provably Nonzero Divisor)",
+                "per spec/02-restrictions.md section 2.8.3 paragraph 133:\n\"The right operand of the operators /, mod, and rem shall be\nprovably nonzero at compile time.\"",
+                "per spec/02-restrictions.md section 2.8.3 paragraph 134:\n\"If none of the conditions in paragraph 133 holds, the program\nis nonconforming and a conforming implementation shall reject\nthe expression with a diagnostic.\""
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule3_zero_mod.safe",
+              "reason": "division_by_zero",
+              "span": {
+                "end_col": 18,
+                "end_line": 15,
+                "start_col": 16,
+                "start_line": 15
+              },
+              "suggestions": [
+                "add a guard before the division:\nif n /= 0 then\n   return c mod n;\nelse\n   return 0;  -- or handle the zero case\nend if;",
+                "or use a positive subtype that excludes zero:\ntype Positive_Value is range 1 .. 100;"
+              ]
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "division_by_zero",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule3_zero_mod.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"division_by_zero\",\"message\":\"divisor not provably nonzero\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule3_zero_mod.safe\",\"span\":{\"start_line\":15,\"start_col\":16,\"end_line\":15,\"end_col\":18},\"highlight_span\":{\"start_line\":15,\"start_col\":20,\"end_line\":15,\"end_col\":20},\"notes\":[\"right operand 'n' has type counter (range 0 .. 255),\\nwhich includes zero.\",\"no preceding conditional or subtype constraint establishes\\nn /= 0 on all paths reaching this division.\",\"rule: D27 Rule 3 (Division by Provably Nonzero Divisor)\",\"per spec/02-restrictions.md section 2.8.3 paragraph 133:\\n\\\"The right operand of the operators /, mod, and rem shall be\\nprovably nonzero at compile time.\\\"\",\"per spec/02-restrictions.md section 2.8.3 paragraph 134:\\n\\\"If none of the conditions in paragraph 133 holds, the program\\nis nonconforming and a conforming implementation shall reject\\nthe expression with a diagnostic.\\\"\"],\"suggestions\":[\"add a guard before the division:\\nif n /= 0 then\\n   return c mod n;\\nelse\\n   return 0;  -- or handle the zero case\\nend if;\",\"or use a positive subtype that excludes zero:\\ntype Positive_Value is range 1 .. 100;\"]}]}\n"
+        },
+        "source": "tests/negative/neg_rule3_zero_mod.safe"
+      },
+      {
+        "actual_reason": "division_by_zero",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 20,
+                "end_line": 15,
+                "start_col": 20,
+                "start_line": 15
+              },
+              "message": "divisor not provably nonzero",
+              "notes": [
+                "right operand 'b' has type signed (range -50 .. 50),\nwhich includes zero.",
+                "no preceding conditional or subtype constraint establishes\nb /= 0 on all paths reaching this division.",
+                "rule: D27 Rule 3 (Division by Provably Nonzero Divisor)",
+                "per spec/02-restrictions.md section 2.8.3 paragraph 133:\n\"The right operand of the operators /, mod, and rem shall be\nprovably nonzero at compile time.\"",
+                "per spec/02-restrictions.md section 2.8.3 paragraph 134:\n\"If none of the conditions in paragraph 133 holds, the program\nis nonconforming and a conforming implementation shall reject\nthe expression with a diagnostic.\""
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule3_zero_rem.safe",
+              "reason": "division_by_zero",
+              "span": {
+                "end_col": 18,
+                "end_line": 15,
+                "start_col": 16,
+                "start_line": 15
+              },
+              "suggestions": [
+                "add a guard before the division:\nif b /= 0 then\n   return a rem b;\nelse\n   return 0;  -- or handle the zero case\nend if;",
+                "or use a positive subtype that excludes zero:\ntype Positive_Value is range 1 .. 100;"
+              ]
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "division_by_zero",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule3_zero_rem.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"division_by_zero\",\"message\":\"divisor not provably nonzero\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule3_zero_rem.safe\",\"span\":{\"start_line\":15,\"start_col\":16,\"end_line\":15,\"end_col\":18},\"highlight_span\":{\"start_line\":15,\"start_col\":20,\"end_line\":15,\"end_col\":20},\"notes\":[\"right operand 'b' has type signed (range -50 .. 50),\\nwhich includes zero.\",\"no preceding conditional or subtype constraint establishes\\nb /= 0 on all paths reaching this division.\",\"rule: D27 Rule 3 (Division by Provably Nonzero Divisor)\",\"per spec/02-restrictions.md section 2.8.3 paragraph 133:\\n\\\"The right operand of the operators /, mod, and rem shall be\\nprovably nonzero at compile time.\\\"\",\"per spec/02-restrictions.md section 2.8.3 paragraph 134:\\n\\\"If none of the conditions in paragraph 133 holds, the program\\nis nonconforming and a conforming implementation shall reject\\nthe expression with a diagnostic.\\\"\"],\"suggestions\":[\"add a guard before the division:\\nif b /= 0 then\\n   return a rem b;\\nelse\\n   return 0;  -- or handle the zero case\\nend if;\",\"or use a positive subtype that excludes zero:\\ntype Positive_Value is range 1 .. 100;\"]}]}\n"
+        },
+        "source": "tests/negative/neg_rule3_zero_rem.safe"
+      },
+      {
+        "actual_reason": "lifetime_violation",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 25,
+                "end_line": 14,
+                "start_col": 14,
+                "start_line": 14
+              },
+              "message": "returned observe value cannot outlive lender 'local'",
+              "notes": [
+                "borrowed and observed values must remain within the lender lifetime.",
+                "rule: Safe \u00a72.3.3 / \u00a72.3.4a (lifetime containment)"
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule4_freed.safe",
+              "reason": "lifetime_violation",
+              "span": {
+                "end_col": 25,
+                "end_line": 14,
+                "start_col": 14,
+                "start_line": 14
+              },
+              "suggestions": []
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "lifetime_violation",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule4_freed.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"lifetime_violation\",\"message\":\"returned observe value cannot outlive lender 'local'\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule4_freed.safe\",\"span\":{\"start_line\":14,\"start_col\":14,\"end_line\":14,\"end_col\":25},\"highlight_span\":{\"start_line\":14,\"start_col\":14,\"end_line\":14,\"end_col\":25},\"notes\":[\"borrowed and observed values must remain within the lender lifetime.\",\"rule: Safe \u00a72.3.3 / \u00a72.3.4a (lifetime containment)\"],\"suggestions\":[]}]}\n"
+        },
+        "source": "tests/negative/neg_rule4_freed.safe"
+      },
+      {
+        "actual_reason": "null_dereference",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 14,
+                "end_line": 22,
+                "start_col": 14,
+                "start_line": 22
+              },
+              "message": "dereference of possibly null access value",
+              "notes": [
+                "P is of type value_Ptr (access value), which does not exclude null.",
+                "no null check precedes this dereference on all paths reaching\nthis program point.",
+                "rule: D27 Rule 4 (Not-Null Dereference)",
+                "per spec/02-restrictions.md section 2.8.4 paragraph 136:\n\"Dereference of an access value shall require the access subtype\nto be not null. A conforming implementation shall reject any\ndereference where the access subtype at the point of dereference\ndoes not exclude null.\""
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule4_maybe_null.safe",
+              "reason": "null_dereference",
+              "span": {
+                "end_col": 14,
+                "end_line": 22,
+                "start_col": 14,
+                "start_line": 22
+              },
+              "suggestions": [
+                "use a \"not null access\" subtype, or add an explicit null check:\nif P /= null then\n   return P.all;\nend if;"
+              ]
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "null_dereference",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule4_maybe_null.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"null_dereference\",\"message\":\"dereference of possibly null access value\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule4_maybe_null.safe\",\"span\":{\"start_line\":22,\"start_col\":14,\"end_line\":22,\"end_col\":14},\"highlight_span\":{\"start_line\":22,\"start_col\":14,\"end_line\":22,\"end_col\":14},\"notes\":[\"P is of type value_Ptr (access value), which does not exclude null.\",\"no null check precedes this dereference on all paths reaching\\nthis program point.\",\"rule: D27 Rule 4 (Not-Null Dereference)\",\"per spec/02-restrictions.md section 2.8.4 paragraph 136:\\n\\\"Dereference of an access value shall require the access subtype\\nto be not null. A conforming implementation shall reject any\\ndereference where the access subtype at the point of dereference\\ndoes not exclude null.\\\"\"],\"suggestions\":[\"use a \\\"not null access\\\" subtype, or add an explicit null check:\\nif P /= null then\\n   return P.all;\\nend if;\"]}]}\n"
+        },
+        "source": "tests/negative/neg_rule4_maybe_null.safe"
+      },
+      {
+        "actual_reason": "use_after_move",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 16,
+                "end_line": 24,
+                "start_col": 11,
+                "start_line": 24
+              },
+              "message": "dereference of moved access value",
+              "notes": [
+                "the access value was moved before this dereference.",
+                "rule: D27 Rule 4 (Not-Null Dereference)"
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule4_moved.safe",
+              "reason": "use_after_move",
+              "span": {
+                "end_col": 16,
+                "end_line": 24,
+                "start_col": 11,
+                "start_line": 24
+              },
+              "suggestions": []
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "use_after_move",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule4_moved.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"use_after_move\",\"message\":\"dereference of moved access value\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule4_moved.safe\",\"span\":{\"start_line\":24,\"start_col\":11,\"end_line\":24,\"end_col\":16},\"highlight_span\":{\"start_line\":24,\"start_col\":11,\"end_line\":24,\"end_col\":16},\"notes\":[\"the access value was moved before this dereference.\",\"rule: D27 Rule 4 (Not-Null Dereference)\"],\"suggestions\":[]}]}\n"
+        },
+        "source": "tests/negative/neg_rule4_moved.safe"
+      },
+      {
+        "actual_reason": "null_dereference",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 14,
+                "end_line": 14,
+                "start_col": 14,
+                "start_line": 14
+              },
+              "message": "dereference of possibly null access value",
+              "notes": [
+                "P is of type value_Ptr (access value), which does not exclude null.",
+                "no null check precedes this dereference on all paths reaching\nthis program point.",
+                "rule: D27 Rule 4 (Not-Null Dereference)",
+                "per spec/02-restrictions.md section 2.8.4 paragraph 136:\n\"Dereference of an access value shall require the access subtype\nto be not null. A conforming implementation shall reject any\ndereference where the access subtype at the point of dereference\ndoes not exclude null.\""
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule4_null_deref.safe",
+              "reason": "null_dereference",
+              "span": {
+                "end_col": 14,
+                "end_line": 14,
+                "start_col": 14,
+                "start_line": 14
+              },
+              "suggestions": [
+                "use a \"not null access\" subtype, or add an explicit null check:\nif P /= null then\n   return P.all;\nend if;"
+              ]
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "null_dereference",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule4_null_deref.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"null_dereference\",\"message\":\"dereference of possibly null access value\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule4_null_deref.safe\",\"span\":{\"start_line\":14,\"start_col\":14,\"end_line\":14,\"end_col\":14},\"highlight_span\":{\"start_line\":14,\"start_col\":14,\"end_line\":14,\"end_col\":14},\"notes\":[\"P is of type value_Ptr (access value), which does not exclude null.\",\"no null check precedes this dereference on all paths reaching\\nthis program point.\",\"rule: D27 Rule 4 (Not-Null Dereference)\",\"per spec/02-restrictions.md section 2.8.4 paragraph 136:\\n\\\"Dereference of an access value shall require the access subtype\\nto be not null. A conforming implementation shall reject any\\ndereference where the access subtype at the point of dereference\\ndoes not exclude null.\\\"\"],\"suggestions\":[\"use a \\\"not null access\\\" subtype, or add an explicit null check:\\nif P /= null then\\n   return P.all;\\nend if;\"]}]}\n"
+        },
+        "source": "tests/negative/neg_rule4_null_deref.safe"
+      },
+      {
+        "actual_reason": "null_dereference",
+        "diagnostics": {
+          "diagnostics": [
+            {
+              "highlight_span": {
+                "end_col": 14,
+                "end_line": 21,
+                "start_col": 14,
+                "start_line": 21
+              },
+              "message": "dereference of possibly null access value",
+              "notes": [
+                "P is of type rec_Ptr (access rec), which does not exclude null.",
+                "no null check precedes this dereference on all paths reaching\nthis program point.",
+                "rule: D27 Rule 4 (Not-Null Dereference)",
+                "per spec/02-restrictions.md section 2.8.4 paragraph 136:\n\"Dereference of an access value shall require the access subtype\nto be not null. A conforming implementation shall reject any\ndereference where the access subtype at the point of dereference\ndoes not exclude null.\""
+              ],
+              "path": "$REPO_ROOT/tests/negative/neg_rule4_uninitialized.safe",
+              "reason": "null_dereference",
+              "span": {
+                "end_col": 14,
+                "end_line": 21,
+                "start_col": 14,
+                "start_line": 21
+              },
+              "suggestions": [
+                "use a \"not null access\" subtype, or add an explicit null check:\nif P /= null then\n   return P.all;\nend if;"
+              ]
+            }
+          ],
+          "format": "diagnostics-v0"
+        },
+        "expected_reason": "null_dereference",
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/negative/neg_rule4_uninitialized.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[{\"reason\":\"null_dereference\",\"message\":\"dereference of possibly null access value\",\"path\":\"$REPO_ROOT/tests/negative/neg_rule4_uninitialized.safe\",\"span\":{\"start_line\":21,\"start_col\":14,\"end_line\":21,\"end_col\":14},\"highlight_span\":{\"start_line\":21,\"start_col\":14,\"end_line\":21,\"end_col\":14},\"notes\":[\"P is of type rec_Ptr (access rec), which does not exclude null.\",\"no null check precedes this dereference on all paths reaching\\nthis program point.\",\"rule: D27 Rule 4 (Not-Null Dereference)\",\"per spec/02-restrictions.md section 2.8.4 paragraph 136:\\n\\\"Dereference of an access value shall require the access subtype\\nto be not null. A conforming implementation shall reject any\\ndereference where the access subtype at the point of dereference\\ndoes not exclude null.\\\"\"],\"suggestions\":[\"use a \\\"not null access\\\" subtype, or add an explicit null check:\\nif P /= null then\\n   return P.all;\\nend if;\"]}]}\n"
+        },
+        "source": "tests/negative/neg_rule4_uninitialized.safe"
+      }
+    ],
+    "positives": [
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule1_accumulate.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule1_accumulate.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule1_averaging.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule1_averaging.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule1_conversion.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule1_conversion.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule1_parameter.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule1_parameter.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule1_return.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule1_return.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule2_binary_search.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule2_binary_search.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule2_iteration.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule2_iteration.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule2_lookup.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule2_lookup.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule2_matrix.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule2_matrix.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule2_slice.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule2_slice.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule3_average.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule3_average.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule3_divide.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule3_divide.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule3_modulo.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule3_modulo.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule3_percent.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule3_percent.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule3_remainder.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule3_remainder.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule4_conditional.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule4_conditional.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule4_deref.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule4_deref.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule4_factory.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule4_factory.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule4_linked_list.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule4_linked_list.safe"
+      },
+      {
+        "diagnostics": {
+          "diagnostics": [],
+          "format": "diagnostics-v0"
+        },
+        "result": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "--diag-json",
+            "tests/positive/rule4_optional.safe"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "{\"format\":\"diagnostics-v0\",\"diagnostics\":[]}\n"
+        },
+        "source": "tests/positive/rule4_optional.safe"
+      }
+    ]
+  },
+  "determinism": {
+    "tests/positive/rule2_binary_search.safe": {
+      "iface/rule2_binary_search.safei.json": "2fe083d77d4a95ff27e4bb4f91362c46d912f14fe0cb9e710729fdba305daeac",
+      "out/rule2_binary_search.ast.json": "bd1434a5e836dd3c5665a9b56fc51034c9b945a6dff0caa74ed84bfd02637a31",
+      "out/rule2_binary_search.mir.json": "c14520e6ef9fe4e5435c41abea3daabb3bed4e433242025f21f4860aac3e9c4e",
+      "out/rule2_binary_search.typed.json": "6334cf80eda77fa677079415e4ddb0bd7aae04099dd36c90a99400fa65d3def7"
+    },
+    "tests/positive/rule4_conditional.safe": {
+      "iface/rule4_conditional.safei.json": "1efe2357d0e0f2e79af6ac29ed6379ab199a6afc1992a3bd80d87a362f9ca52e",
+      "out/rule4_conditional.ast.json": "5da55e1ca13896daf4d52b201ce2d3ec8f2e30a7bd5a83803dfae9032f12e070",
+      "out/rule4_conditional.mir.json": "cc9173140100e7c3e82af6e18049409e4434c53d540b917c1aace5a63bafd865",
+      "out/rule4_conditional.typed.json": "665e2c9aea92e8e94c37f5437d3e230dbf479a9c92c1a20ae86f735cafee3ff8"
+    }
+  },
+  "deterministic": true,
+  "golden_mode": [
+    {
+      "golden": "tests/diagnostics_golden/diag_overflow.txt",
+      "result": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_rule1_overflow.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_rule1_overflow.safe:19:14: error: intermediate overflow in integer expression\n  |\n  | 19 |       return a * b;  -- ERROR: intermediate may exceed 64-bit range\n  |    |              ^~~~~\n  |\n  note: static range analysis determines that the subexpression (a * b)\n        has range [0 .. 99_999_999_999_999_980_000_000_000_000_001]\n        which exceeds the 64-bit signed range\n        [-9_223_372_036_854_775_808 .. 9_223_372_036_854_775_807].\n  note: a has range [0 .. 9_999_999_999_999_999]\n  note: b has range [0 .. 9_999_999_999_999_999]\n  note: rule: D27 Rule 1 (Wide Intermediate Arithmetic)\n  note: per spec/02-restrictions.md section 2.8.1 paragraph 129:\n        \"If a conforming implementation cannot establish, by sound static\n        range analysis, that every intermediate subexpression of an integer\n        arithmetic expression stays within the 64-bit signed range, the\n        expression shall be rejected with a diagnostic.\"\n",
+        "stdout": ""
+      },
+      "source": "tests/negative/neg_rule1_overflow.safe"
+    },
+    {
+      "golden": "tests/diagnostics_golden/diag_index_oob.txt",
+      "result": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_rule2_oob.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_rule2_oob.safe:15:14: error: index expression not provably within array bounds\n  |\n  | 15 |       return arr (slot (idx));  -- ERROR: Idx may not be in 0..7\n  |    |              ^~~~~~~~~~~~~~~~\n  |\n  note: array 'arr' has index range slot (0 .. 7).\n  note: index expression 'slot (idx)' has type integer, with range\n        [integer'First .. integer'Last].\n  note: static analysis cannot establish that the index is within\n        [0 .. 7] on all execution paths.\n  note: rule: D27 Rule 2 (Provable Index Safety)\n  note: per spec/02-restrictions.md section 2.8.2 paragraph 131:\n        \"The index expression in an indexed_component shall be provably\n        within the array object's index bounds at compile time.\"\n  note: per spec/02-restrictions.md section 2.8.2 paragraph 132:\n        \"If neither condition holds, the program is nonconforming and\n        the implementation shall reject it with a diagnostic identifying\n        the indexed_component and the unresolvable bound relationship.\"\n  suggestion: add a bounds check before indexing:\n        if idx >= 0 and then idx <= 7 then\n           return arr (slot (idx));\n        end if;\n",
+        "stdout": ""
+      },
+      "source": "tests/negative/neg_rule2_oob.safe"
+    },
+    {
+      "golden": "tests/diagnostics_golden/diag_zero_div.txt",
+      "result": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_rule3_zero_div.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_rule3_zero_div.safe:14:16: error: divisor not provably nonzero\n  |\n  | 14 |       return a / b;  -- ERROR: B may be zero\n  |    |                  ^\n  |\n  note: right operand 'b' has type value (range -100 .. 100),\n        which includes zero.\n  note: no preceding conditional or subtype constraint establishes\n        b /= 0 on all paths reaching this division.\n  note: rule: D27 Rule 3 (Division by Provably Nonzero Divisor)\n  note: per spec/02-restrictions.md section 2.8.3 paragraph 133:\n        \"The right operand of the operators /, mod, and rem shall be\n        provably nonzero at compile time.\"\n  note: per spec/02-restrictions.md section 2.8.3 paragraph 134:\n        \"If none of the conditions in paragraph 133 holds, the program\n        is nonconforming and a conforming implementation shall reject\n        the expression with a diagnostic.\"\n  suggestion: add a guard before the division:\n        if b /= 0 then\n           return a / b;\n        else\n           return 0;  -- or handle the zero case\n        end if;\n  suggestion: or use a positive subtype that excludes zero:\n        type Positive_Value is range 1 .. 100;\n",
+        "stdout": ""
+      },
+      "source": "tests/negative/neg_rule3_zero_div.safe"
+    },
+    {
+      "golden": "tests/diagnostics_golden/diag_null_deref.txt",
+      "result": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_rule4_null_deref.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_rule4_null_deref.safe:14:14: error: dereference of possibly null access value\n  |\n  | 14 |       return P;  -- ERROR: P may be null\n  |    |              ^\n  |\n  note: P is of type value_Ptr (access value), which does not exclude null.\n  note: no null check precedes this dereference on all paths reaching\n        this program point.\n  note: rule: D27 Rule 4 (Not-Null Dereference)\n  note: per spec/02-restrictions.md section 2.8.4 paragraph 136:\n        \"Dereference of an access value shall require the access subtype\n        to be not null. A conforming implementation shall reject any\n        dereference where the access subtype at the point of dereference\n        does not exclude null.\"\n  suggestion: use a \"not null access\" subtype, or add an explicit null check:\n        if P /= null then\n           return P.all;\n        end if;\n",
+        "stdout": ""
+      },
+      "source": "tests/negative/neg_rule4_null_deref.safe"
+    },
+    {
+      "golden": "tests/diagnostics_golden/diag_rule5_nan.txt",
+      "result": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "check",
+          "tests/negative/neg_rule5_nan.safe"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 1,
+        "stderr": "neg_rule5_nan.safe:20:14: error: floating expression may be NaN at narrowing\n  |\n  | 20 |       return temp (x / y);  -- ERROR: 0.0/0.0 = NaN, cannot narrow\n  |    |              ^~~~~~~~~~~~\n  |\n",
+        "stdout": ""
+      },
+      "source": "tests/negative/neg_rule5_nan.safe"
+    }
+  ],
+  "mir_validation": [
+    {
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/positive/rule2_binary_search.safe",
+          "--out-dir",
+          "$TMPDIR/rule2_binary_search-mir/out",
+          "--interface-dir",
+          "$TMPDIR/rule2_binary_search-mir/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "source": "tests/positive/rule2_binary_search.safe",
+      "validate": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "validate-mir",
+          "$TMPDIR/rule2_binary_search-mir/out/rule2_binary_search.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "validate-mir: OK ($TMPDIR/rule2_binary_search-mir/out/rule2_binary_search.mir.json)\n"
+      }
+    },
+    {
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/positive/rule3_divide.safe",
+          "--out-dir",
+          "$TMPDIR/rule3_divide-mir/out",
+          "--interface-dir",
+          "$TMPDIR/rule3_divide-mir/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "source": "tests/positive/rule3_divide.safe",
+      "validate": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "validate-mir",
+          "$TMPDIR/rule3_divide-mir/out/rule3_divide.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "validate-mir: OK ($TMPDIR/rule3_divide-mir/out/rule3_divide.mir.json)\n"
+      }
+    },
+    {
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/positive/rule4_conditional.safe",
+          "--out-dir",
+          "$TMPDIR/rule4_conditional-mir/out",
+          "--interface-dir",
+          "$TMPDIR/rule4_conditional-mir/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "source": "tests/positive/rule4_conditional.safe",
+      "validate": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "validate-mir",
+          "$TMPDIR/rule4_conditional-mir/out/rule4_conditional.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "validate-mir: OK ($TMPDIR/rule4_conditional-mir/out/rule4_conditional.mir.json)\n"
+      }
+    },
+    {
+      "emit": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "emit",
+          "tests/positive/rule4_linked_list.safe",
+          "--out-dir",
+          "$TMPDIR/rule4_linked_list-mir/out",
+          "--interface-dir",
+          "$TMPDIR/rule4_linked_list-mir/iface"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "source": "tests/positive/rule4_linked_list.safe",
+      "validate": {
+        "command": [
+          "compiler_impl/bin/safec",
+          "validate-mir",
+          "$TMPDIR/rule4_linked_list-mir/out/rule4_linked_list.mir.json"
+        ],
+        "cwd": "$REPO_ROOT",
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "validate-mir: OK ($TMPDIR/rule4_linked_list-mir/out/rule4_linked_list.mir.json)\n"
+      }
+    }
+  ],
+  "mode": "all",
+  "repeat_sha256": "b1a15e333de202cef5b8e88073cdca099c701eab7f57467e1dc7fc046a8d7a5f",
+  "report_sha256": "b1a15e333de202cef5b8e88073cdca099c701eab7f57467e1dc7fc046a8d7a5f"
+}

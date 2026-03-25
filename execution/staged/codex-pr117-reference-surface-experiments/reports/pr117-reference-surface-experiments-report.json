@@ -1,0 +1,579 @@
+{
+  "decisions": {
+    "implicit_dereference": {
+      "decision": "admit",
+      "rationale": [
+        "Direct selector syntax is now the only admitted Safe source dereference spelling, while explicit source `.all` is rejected with a deterministic diagnostic.",
+        "The migrated fixed corpus compiles, emits Ada, validates MIR, and still lowers to emitted Ada that uses explicit `.all` only as an Ada backend detail where required.",
+        "PR11.7 therefore records Implicit Dereference as admitted default source behavior and removes explicit `.all` from the Safe source surface."
+      ]
+    },
+    "reference_signal": {
+      "decision": "admit",
+      "rationale": [
+        "Case-significant user-name resolution is now the default compiler behavior for user-defined names, with case-fold collisions rejected in the same visible scope.",
+        "The fixed ownership/reference corpus, migrated samples, and boundary fixtures all validate the shipped naming law across access-typed and value-typed bindings plus lowercase package/function/type names.",
+        "PR11.7 therefore records Capitalisation as Reference Signal as admitted default surface behavior rather than an experiment-only path."
+      ]
+    }
+  },
+  "deterministic": true,
+  "migration_examples": [
+    {
+      "forbidden_fragments": [],
+      "mode": "reference-signal",
+      "name": "reference_signal_binding_and_field_case",
+      "required_fragments": [
+        "package demo",
+        "value : integer;",
+        "Next  : payload_ptr;",
+        "Source : payload_ptr = new ((value = 42, Next = null) as payload);",
+        "Target : payload_ptr = null;"
+      ]
+    },
+    {
+      "forbidden_fragments": [
+        ".all"
+      ],
+      "mode": "combined",
+      "name": "combined_reference_signal_and_implicit_deref",
+      "required_fragments": [
+        "package demo",
+        "value : integer;",
+        "Next  : node_ptr;",
+        "Head : node_ptr",
+        "total = total + Head.value;",
+        "if Head.Next != null",
+        "total = total + Head.Next.value;"
+      ]
+    }
+  ],
+  "negative_boundaries": {
+    "cases": [
+      {
+        "cutover_surface": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "tests/negative/neg_pr117_lowercase_access_binding.safe",
+            "--diag-json"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1
+        },
+        "first_diagnostic": {
+          "message": "reference-signal naming requires local binding `owner` to start with a uppercase letter",
+          "path": "tests/negative/neg_pr117_lowercase_access_binding.safe",
+          "reason": "source_frontend_error"
+        },
+        "source": "tests/negative/neg_pr117_lowercase_access_binding.safe"
+      },
+      {
+        "cutover_surface": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "tests/negative/neg_pr117_uppercase_value_binding.safe",
+            "--diag-json"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1
+        },
+        "first_diagnostic": {
+          "message": "reference-signal naming requires local binding `Total` to start with a lowercase letter",
+          "path": "tests/negative/neg_pr117_uppercase_value_binding.safe",
+          "reason": "source_frontend_error"
+        },
+        "source": "tests/negative/neg_pr117_uppercase_value_binding.safe"
+      },
+      {
+        "cutover_surface": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "tests/negative/neg_pr117_lowercase_access_field.safe",
+            "--diag-json"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1
+        },
+        "first_diagnostic": {
+          "message": "reference-signal naming requires record field `next` to start with a uppercase letter",
+          "path": "tests/negative/neg_pr117_lowercase_access_field.safe",
+          "reason": "source_frontend_error"
+        },
+        "source": "tests/negative/neg_pr117_lowercase_access_field.safe"
+      },
+      {
+        "cutover_surface": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "tests/negative/neg_pr117_casefold_collision.safe",
+            "--diag-json"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1
+        },
+        "first_diagnostic": {
+          "message": "reference-signal naming rejects local binding `source` because it collides by case-folding with `Source` in the same visible scope",
+          "path": "tests/negative/neg_pr117_casefold_collision.safe",
+          "reason": "source_frontend_error"
+        },
+        "source": "tests/negative/neg_pr117_casefold_collision.safe"
+      },
+      {
+        "cutover_surface": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "tests/negative/neg_pr117_explicit_all.safe",
+            "--diag-json"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1
+        },
+        "first_diagnostic": {
+          "message": "removed source construct `explicit dereference `.all`` is not allowed",
+          "path": "tests/negative/neg_pr117_explicit_all.safe",
+          "reason": "source_frontend_error"
+        },
+        "source": "tests/negative/neg_pr117_explicit_all.safe"
+      },
+      {
+        "cutover_surface": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "tests/negative/neg_pr117_uppercase_builtin_type.safe",
+            "--diag-json"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1
+        },
+        "first_diagnostic": {
+          "message": "predefined type `Integer` must be written as `integer`",
+          "path": "tests/negative/neg_pr117_uppercase_builtin_type.safe",
+          "reason": "source_frontend_error"
+        },
+        "source": "tests/negative/neg_pr117_uppercase_builtin_type.safe"
+      },
+      {
+        "cutover_surface": {
+          "command": [
+            "compiler_impl/bin/safec",
+            "check",
+            "tests/negative/neg_pr117_uppercase_attribute.safe",
+            "--diag-json"
+          ],
+          "cwd": "$REPO_ROOT",
+          "returncode": 1
+        },
+        "first_diagnostic": {
+          "message": "attribute selector `Access` must be written as `access`",
+          "path": "tests/negative/neg_pr117_uppercase_attribute.safe",
+          "reason": "source_frontend_error"
+        },
+        "source": "tests/negative/neg_pr117_uppercase_attribute.safe"
+      }
+    ],
+    "sources": [
+      "tests/negative/neg_pr117_lowercase_access_binding.safe",
+      "tests/negative/neg_pr117_uppercase_value_binding.safe",
+      "tests/negative/neg_pr117_lowercase_access_field.safe",
+      "tests/negative/neg_pr117_casefold_collision.safe",
+      "tests/negative/neg_pr117_explicit_all.safe",
+      "tests/negative/neg_pr117_uppercase_builtin_type.safe",
+      "tests/negative/neg_pr117_uppercase_attribute.safe"
+    ]
+  },
+  "readability_examples": [
+    {
+      "cutover_surface": "package ownership_Transfer\n\n   type payload is record\n      value : integer;\n\n   type payload_ptr is access payload;\n\n   function transfer\n      Source : payload_ptr = new ((value = 42) as payload);\n      Target : payload_ptr = null;\n\n      Target = Source;\n      Target.value = 100;\n",
+      "description": "Owned reference transfer and post-move mutation at the use site.",
+      "implicit_deref": "package Ownership_Transfer\n\n   type payload is record\n      value : integer;\n\n   type payload_ptr is access payload;\n\n   function transfer\n      source : payload_ptr = new ((value = 42) as payload);\n      target : payload_ptr = null;\n\n      target = source;\n      target.value = 100;\n",
+      "legacy_baseline": "package Ownership_Transfer\n\n   type payload is record\n      value : integer;\n\n   type payload_ptr is access payload;\n\n   function transfer\n      source : payload_ptr = new ((value = 42) as payload);\n      target : payload_ptr = null;\n\n      target = source;\n      target.value = 100;\n",
+      "name": "ownership_transfer"
+    },
+    {
+      "cutover_surface": "package linked_Traversal\n\n   type node;\n   type node_ptr is access node;\n\n   type node is record\n      value : integer;\n      Next  : node_ptr;\n\n   function sum_values (Head : node_ptr) returns integer\n      total : integer = 0;\n\n      if Head != null\n         total = total + Head.value;\n         if Head.Next != null\n            total = total + Head.Next.value;\n      return total;\n",
+      "description": "Null-guarded linked traversal with an access-typed field chain.",
+      "implicit_deref": "package Linked_Traversal\n\n   type node;\n   type node_ptr is access node;\n\n   type node is record\n      value : integer;\n      next  : node_ptr;\n\n   function sum_values (head : node_ptr) returns integer\n      total : integer = 0;\n\n      if head != null\n         total = total + head.value;\n         if head.next != null\n            total = total + head.next.value;\n      return total;\n",
+      "legacy_baseline": "package Linked_Traversal\n\n   type node;\n   type node_ptr is access node;\n\n   type node is record\n      value : integer;\n      next  : node_ptr;\n\n   function sum_values (head : node_ptr) returns integer\n      total : integer = 0;\n\n      if head != null\n         total = total + head.value;\n         if head.next != null\n            total = total + head.next.value;\n      return total;\n",
+      "name": "linked_traversal"
+    },
+    {
+      "cutover_surface": "package local_Observer\n\n   type config is record\n      rate : natural;\n\n   type config_ptr is access config;\n\n   function read\n      Owner    : config_ptr = new ((rate = 100) as config);\n      Observer : access constant config = Owner.access;\n      rate     : natural;\n\n      rate = Observer.rate;\n",
+      "description": "Local observer bound through `.access` and then read via implicit dereference.",
+      "implicit_deref": "package Local_Observer\n\n   type config is record\n      rate : natural;\n\n   type config_ptr is access config;\n\n   function read\n      owner    : config_ptr = new ((rate = 100) as config);\n      observer : access constant config = owner.access;\n      rate     : natural;\n\n      rate = observer.rate;\n",
+      "legacy_baseline": "package Local_Observer\n\n   type config is record\n      rate : natural;\n\n   type config_ptr is access config;\n\n   function read\n      owner    : config_ptr = new ((rate = 100) as config);\n      observer : access constant config = owner.access;\n      rate     : natural;\n\n      rate = observer.rate;\n",
+      "name": "local_observer"
+    }
+  ],
+  "repeat_sha256": "ef5243740379fa6cc740bdc13c4186dbc784003df753cabe80d39d5251728008",
+  "report_sha256": "ef5243740379fa6cc740bdc13c4186dbc784003df753cabe80d39d5251728008",
+  "scope": {
+    "default_surface_changed": true,
+    "excluded": [
+      "capitalisation as export signal",
+      "move keyword"
+    ],
+    "explicit_source_dereference_admitted": false,
+    "included": [
+      "capitalisation as reference signal",
+      "implicit dereference"
+    ],
+    "predefined_names_require_canonical_lowercase": true,
+    "provisional_branch_ready": true
+  },
+  "status": "ok",
+  "task": "PR11.7",
+  "technical_corpus": {
+    "cases": [
+      {
+        "cutover_surface": {
+          "ada_sha256": "978f4e461322328485e6175d5224da34fc307e37270189139cb3612447fbdb03",
+          "check": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "check",
+              "tests/positive/ownership_move.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0
+          },
+          "compile": {
+            "command": [
+              "alr",
+              "exec",
+              "--",
+              "gprbuild",
+              "-c",
+              "-P",
+              "$TMPDIR/ownership_move/ada/build.gpr",
+              "ownership_move.adb"
+            ],
+            "cwd": "$REPO_ROOT/compiler_impl",
+            "returncode": 0
+          },
+          "emit": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "emit",
+              "tests/positive/ownership_move.safe",
+              "--out-dir",
+              "$TMPDIR/ownership_move/out",
+              "--interface-dir",
+              "$TMPDIR/ownership_move/iface",
+              "--ada-out-dir",
+              "$TMPDIR/ownership_move/ada"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0
+          },
+          "mir_sha256": "58236d9cd6bb3269f5e3abd3f717e133275eece0a2ad467fe952667227704ca2",
+          "typed_sha256": "30f4cc6491d489fbebcff85ef030857f5b964d8af79fa8b6c97bc8ab7ec34dc0",
+          "validate_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "validate-mir",
+              "$TMPDIR/ownership_move/out/ownership_move.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0
+          }
+        },
+        "migration_stable": true,
+        "source": "tests/positive/ownership_move.safe"
+      },
+      {
+        "cutover_surface": {
+          "ada_sha256": "a60c15113ed1a3c93841eb63b9e46ac63e738bef99002dad8386dc6af54120a3",
+          "check": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "check",
+              "tests/positive/ownership_borrow.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0
+          },
+          "compile": {
+            "command": [
+              "alr",
+              "exec",
+              "--",
+              "gprbuild",
+              "-c",
+              "-P",
+              "$TMPDIR/ownership_borrow/ada/build.gpr",
+              "ownership_borrow.adb"
+            ],
+            "cwd": "$REPO_ROOT/compiler_impl",
+            "returncode": 0
+          },
+          "emit": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "emit",
+              "tests/positive/ownership_borrow.safe",
+              "--out-dir",
+              "$TMPDIR/ownership_borrow/out",
+              "--interface-dir",
+              "$TMPDIR/ownership_borrow/iface",
+              "--ada-out-dir",
+              "$TMPDIR/ownership_borrow/ada"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0
+          },
+          "mir_sha256": "2227acc7570576fc733ae5a9245da9f51c9b98e98c33e50dd924b690aa410ae8",
+          "typed_sha256": "3132516e729a70b6c395cb4cb7b2f3c38cd6c9db56a604151daf96dcb547d8e1",
+          "validate_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "validate-mir",
+              "$TMPDIR/ownership_borrow/out/ownership_borrow.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0
+          }
+        },
+        "migration_stable": true,
+        "source": "tests/positive/ownership_borrow.safe"
+      },
+      {
+        "cutover_surface": {
+          "ada_sha256": "b880c2df484341efbf29df2293d88fd3382646bc8acd600e627e12961e937bdf",
+          "check": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "check",
+              "tests/positive/ownership_observe_access.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0
+          },
+          "compile": {
+            "command": [
+              "alr",
+              "exec",
+              "--",
+              "gprbuild",
+              "-c",
+              "-P",
+              "$TMPDIR/ownership_observe_access/ada/build.gpr",
+              "ownership_observe_access.adb"
+            ],
+            "cwd": "$REPO_ROOT/compiler_impl",
+            "returncode": 0
+          },
+          "emit": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "emit",
+              "tests/positive/ownership_observe_access.safe",
+              "--out-dir",
+              "$TMPDIR/ownership_observe_access/out",
+              "--interface-dir",
+              "$TMPDIR/ownership_observe_access/iface",
+              "--ada-out-dir",
+              "$TMPDIR/ownership_observe_access/ada"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0
+          },
+          "mir_sha256": "401e7c62fa7171be996aeeaf6de8ae7c08d78aa89b5177c090c2dbd2306c3922",
+          "typed_sha256": "ef4597ab1bc545feeb1e3f1f7b36b6066961870f31122e19ffc1d42108129a29",
+          "validate_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "validate-mir",
+              "$TMPDIR/ownership_observe_access/out/ownership_observe_access.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0
+          }
+        },
+        "migration_stable": true,
+        "source": "tests/positive/ownership_observe_access.safe"
+      },
+      {
+        "cutover_surface": {
+          "ada_sha256": "10b78b7f4373de04c2f97a9bbc4b108fc9629beebde8d732f6b2e4ac6ea6e871",
+          "check": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "check",
+              "tests/positive/ownership_return.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0
+          },
+          "compile": {
+            "command": [
+              "alr",
+              "exec",
+              "--",
+              "gprbuild",
+              "-c",
+              "-P",
+              "$TMPDIR/ownership_return/ada/build.gpr",
+              "ownership_return.adb"
+            ],
+            "cwd": "$REPO_ROOT/compiler_impl",
+            "returncode": 0
+          },
+          "emit": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "emit",
+              "tests/positive/ownership_return.safe",
+              "--out-dir",
+              "$TMPDIR/ownership_return/out",
+              "--interface-dir",
+              "$TMPDIR/ownership_return/iface",
+              "--ada-out-dir",
+              "$TMPDIR/ownership_return/ada"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0
+          },
+          "mir_sha256": "2a47fdc6988b0ca43ba7768cf4092c70905e0e4b6f559443e8214fd80cad408f",
+          "typed_sha256": "031b87d9260f10c626c0970ac1eb487c496b3d7584dec9a25517cb0f0b90bf8f",
+          "validate_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "validate-mir",
+              "$TMPDIR/ownership_return/out/ownership_return.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0
+          }
+        },
+        "migration_stable": true,
+        "source": "tests/positive/ownership_return.safe"
+      },
+      {
+        "cutover_surface": {
+          "ada_sha256": "62091c9388eccbd989ea75a8d7c5cb21fb7068bf5bd703a010135f55e5ace631",
+          "check": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "check",
+              "tests/positive/rule4_deref.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0
+          },
+          "compile": {
+            "command": [
+              "alr",
+              "exec",
+              "--",
+              "gprbuild",
+              "-c",
+              "-P",
+              "$TMPDIR/rule4_deref/ada/build.gpr",
+              "safe_deref.adb"
+            ],
+            "cwd": "$REPO_ROOT/compiler_impl",
+            "returncode": 0
+          },
+          "emit": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "emit",
+              "tests/positive/rule4_deref.safe",
+              "--out-dir",
+              "$TMPDIR/rule4_deref/out",
+              "--interface-dir",
+              "$TMPDIR/rule4_deref/iface",
+              "--ada-out-dir",
+              "$TMPDIR/rule4_deref/ada"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0
+          },
+          "mir_sha256": "0ada446882a3bc7897e9ef5eadeae5f419e005a9678b634d8a41e7c685e725e5",
+          "typed_sha256": "546f2308c48abba4930d4b753caae2bd648c915f53f36d4a4dc24a1e6cfb71f2",
+          "validate_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "validate-mir",
+              "$TMPDIR/rule4_deref/out/rule4_deref.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0
+          }
+        },
+        "migration_stable": true,
+        "source": "tests/positive/rule4_deref.safe"
+      },
+      {
+        "cutover_surface": {
+          "ada_sha256": "d42cd4061d627f6f051834b538fa7ac3c1429ba7b757d127473f3cbf1d31b983",
+          "check": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "check",
+              "tests/positive/rule4_linked_list.safe"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0
+          },
+          "compile": {
+            "command": [
+              "alr",
+              "exec",
+              "--",
+              "gprbuild",
+              "-c",
+              "-P",
+              "$TMPDIR/rule4_linked_list/ada/build.gpr",
+              "safe_linked_list.adb"
+            ],
+            "cwd": "$REPO_ROOT/compiler_impl",
+            "returncode": 0
+          },
+          "emit": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "emit",
+              "tests/positive/rule4_linked_list.safe",
+              "--out-dir",
+              "$TMPDIR/rule4_linked_list/out",
+              "--interface-dir",
+              "$TMPDIR/rule4_linked_list/iface",
+              "--ada-out-dir",
+              "$TMPDIR/rule4_linked_list/ada"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0
+          },
+          "mir_sha256": "921fefc16b9009618fe4fbcd243acd7aa5bf4544bf4729ab72ede04f7e4d4b0f",
+          "typed_sha256": "831b349eb50262c3944af9d37a500f7065f40cd7811aa7bbff581b8365271583",
+          "validate_mir": {
+            "command": [
+              "compiler_impl/bin/safec",
+              "validate-mir",
+              "$TMPDIR/rule4_linked_list/out/rule4_linked_list.mir.json"
+            ],
+            "cwd": "$REPO_ROOT",
+            "returncode": 0
+          }
+        },
+        "migration_stable": true,
+        "source": "tests/positive/rule4_linked_list.safe"
+      }
+    ],
+    "sources": [
+      "tests/positive/ownership_move.safe",
+      "tests/positive/ownership_borrow.safe",
+      "tests/positive/ownership_observe_access.safe",
+      "tests/positive/ownership_return.safe",
+      "tests/positive/rule4_deref.safe",
+      "tests/positive/rule4_linked_list.safe"
+    ]
+  }
+}
