@@ -4,14 +4,13 @@ package lookup_Pair
 
       case opcode
          when 1
-            return (True, 10)
+            return (true, 10)
 
          when 2
-            return (True, 20)
+            return (true, 20)
 
          when others
-            return (False, 0)
-
+            return (false, 0)
 
 
 
