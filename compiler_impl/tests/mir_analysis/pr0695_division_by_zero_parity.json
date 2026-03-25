@@ -1,10 +1,10 @@
 {
   "format": "mir-v2",
   "source_path": "tests/negative/neg_rule3_expression.safe",
-  "package_name": "Expression_Div_Test",
+  "package_name": "expression_div_test",
   "types": [
     {
-      "name": "Value",
+      "name": "value",
       "kind": "integer",
       "low": -100,
       "high": 100
@@ -12,7 +12,7 @@
   ],
   "graphs": [
     {
-      "name": "Compute",
+      "name": "compute",
       "kind": "function",
       "entry_bb": "bb0",
       "span": {
@@ -22,7 +22,7 @@
         "end_col": 15
       },
       "return_type": {
-        "name": "Integer",
+        "name": "integer",
         "kind": "integer"
       },
       "locals": [
@@ -30,7 +30,7 @@
           "id": "v0",
           "kind": "param",
           "mode": "in",
-          "name": "N",
+          "name": "n",
           "ownership_role": "",
           "scope_id": "scope0",
           "span": {
@@ -40,7 +40,7 @@
             "end_col": 30
           },
           "type": {
-            "name": "Value",
+            "name": "value",
             "kind": "integer",
             "low": -100,
             "high": 100
@@ -50,7 +50,7 @@
           "id": "v1",
           "kind": "local",
           "mode": "in",
-          "name": "Denom",
+          "name": "denom",
           "ownership_role": "",
           "scope_id": "scope0",
           "span": {
@@ -60,7 +60,7 @@
             "end_col": 21
           },
           "type": {
-            "name": "Integer",
+            "name": "integer",
             "kind": "integer"
           }
         }
@@ -101,7 +101,7 @@
                 "end_col": 15
               },
               "locals": [
-                "Denom"
+                "denom"
               ],
               "scope_id": "scope0"
             },
@@ -122,10 +122,10 @@
                   "end_line": 16,
                   "end_col": 11
                 },
-                "type": "Integer",
-                "name": "Denom"
+                "type": "integer",
+                "name": "denom"
               },
-              "type": "Integer",
+              "type": "integer",
               "value": {
                 "tag": "int",
                 "span": {
@@ -134,7 +134,7 @@
                   "end_line": 16,
                   "end_col": 15
                 },
-                "type": "Integer",
+                "type": "integer",
                 "text": "0",
                 "value": 0
               },
@@ -158,7 +158,7 @@
                 "end_line": 17,
                 "end_col": 26
               },
-              "type": "Integer",
+              "type": "integer",
               "op": "/",
               "left": {
                 "tag": "conversion",
@@ -168,10 +168,10 @@
                   "end_line": 17,
                   "end_col": 24
                 },
-                "type": "Integer",
+                "type": "integer",
                 "target": {
                   "tag": "ident",
-                  "name": "Integer",
+                  "name": "integer",
                   "span": {
                     "start_line": 17,
                     "start_col": 14,
@@ -187,8 +187,8 @@
                     "end_line": 17,
                     "end_col": 23
                   },
-                  "type": "Value",
-                  "name": "N"
+                  "type": "value",
+                  "name": "n"
                 }
               },
               "right": {
@@ -199,8 +199,8 @@
                   "end_line": 17,
                   "end_col": 32
                 },
-                "type": "Integer",
-                "name": "Denom"
+                "type": "integer",
+                "name": "denom"
               }
             }
           }

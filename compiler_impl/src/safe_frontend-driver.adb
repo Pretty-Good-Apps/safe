@@ -330,7 +330,9 @@ package body Safe_Frontend.Driver is
 
          declare
             Resolved : constant CS.CM.Resolve_Result :=
-              CS.Resolve (Parsed.Unit, Search_Dirs);
+              CS.Resolve
+                (Parsed.Unit,
+                 Search_Dirs);
          begin
             if not Resolved.Success then
                return
@@ -438,7 +440,10 @@ package body Safe_Frontend.Driver is
       Search_Dirs : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector)
       return Integer
    is
-      Result : Source_Result := Run_Source_Pipeline (Path, Search_Dirs);
+      Result : Source_Result :=
+        Run_Source_Pipeline
+          (Path,
+           Search_Dirs);
    begin
       if not Result.Lexed.Success then
          FD.Print (Result.Lexed.Diagnostics);
@@ -474,7 +479,10 @@ package body Safe_Frontend.Driver is
       Pipeline    : Source_Result;
       Diagnostics : MD.Diagnostic_Vectors.Vector;
    begin
-      Pipeline := Run_Source_Pipeline (Path, Search_Dirs);
+      Pipeline :=
+        Run_Source_Pipeline
+          (Path,
+           Search_Dirs);
       if not Pipeline.Lexed.Success then
          if Pipeline.Lexed.Internal_Failure then
             Ada.Text_IO.Put_Line
@@ -545,7 +553,10 @@ package body Safe_Frontend.Driver is
       Search_Dirs   : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector)
       return Integer
    is
-      Pipeline : Source_Result := Run_Source_Pipeline (Path, Search_Dirs);
+      Pipeline : Source_Result :=
+        Run_Source_Pipeline
+          (Path,
+           Search_Dirs);
    begin
       if not Pipeline.Lexed.Success then
          FD.Print (Pipeline.Lexed.Diagnostics);

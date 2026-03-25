@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 
 from _lib.harness_common import ensure_deterministic_env, ensure_sdkroot, find_command, run
+from _lib.gate_manifest import branch_roots
 from run_gate_pipeline import EVIDENCE_POLICY, current_branch, verify_pipeline
 
 
@@ -60,7 +61,16 @@ def main() -> int:
         return 0
 
     print(f"[pre-push] branch: {branch}")
-    verify_pipeline(authority="local", python=python, git=git, alr=alr, env=env)
+    verify_pipeline_kwargs = {
+        "authority": "local",
+        "python": python,
+        "git": git,
+        "alr": alr,
+        "env": env,
+    }
+    if branch_roots(branch):
+        verify_pipeline_kwargs["branch"] = branch
+    verify_pipeline(**verify_pipeline_kwargs)
     if not args.skip_diff:
         run([git, "diff", "--exit-code"], cwd=REPO_ROOT, env=env)
     print("[pre-push] local gate chain passed")

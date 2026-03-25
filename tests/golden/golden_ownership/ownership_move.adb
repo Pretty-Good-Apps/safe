@@ -1,17 +1,17 @@
 with Ada.Unchecked_Deallocation;
 
-package body Ownership_Move with SPARK_Mode => On is
+package body ownership_move with SPARK_Mode => On is
 
-   procedure Transfer is
-      Source : Payload_Ptr := new Payload'(Value => 42);
-      Target : Payload_Ptr := null;
-      procedure Free_Payload_Ptr is new Ada.Unchecked_Deallocation (Payload, Payload_Ptr);
+   procedure transfer is
+      Source : payload_ptr := new payload'(value => 42);
+      Target : payload_ptr := null;
+      procedure Free_payload_ptr is new Ada.Unchecked_Deallocation (payload, payload_ptr);
    begin
       Target := Source;
       Source := null;
-      Target.all.Value := 100;
-      Free_Payload_Ptr (Target);
-      Free_Payload_Ptr (Source);
-   end Transfer;
+      Target.all.value := 100;
+      Free_payload_ptr (Target);
+      Free_payload_ptr (Source);
+   end transfer;
 
-end Ownership_Move;
+end ownership_move;

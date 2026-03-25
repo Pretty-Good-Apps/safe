@@ -1,31 +1,31 @@
 {
   "format": "mir-v2",
   "source_path": "tests/negative/neg_rule1_index_fail.safe",
-  "package_name": "Index_Narrow_Fail",
+  "package_name": "index_narrow_fail",
   "types": [
     {
-      "name": "Idx",
+      "name": "idx",
       "kind": "integer",
       "low": 1,
       "high": 10
     },
     {
-      "name": "Values",
+      "name": "values",
       "kind": "array",
       "index_types": [
-        "Idx"
+        "idx"
       ],
-      "component_type": "Integer",
+      "component_type": "integer",
       "unconstrained": false
     }
   ],
   "graphs": [
     {
-      "name": "Index_From_Computation",
+      "name": "index_from_computation",
       "kind": "function",
       "entry_bb": "bb0",
       "return_type": {
-        "name": "Integer",
+        "name": "integer",
         "kind": "integer"
       },
       "locals": [
@@ -33,7 +33,7 @@
           "id": "v0",
           "kind": "param",
           "mode": "in",
-          "name": "Arr",
+          "name": "arr",
           "scope_id": "scope0",
           "span": {
             "start_line": 16,
@@ -42,12 +42,12 @@
             "end_col": 39
           },
           "type": {
-            "name": "Values",
+            "name": "values",
             "kind": "array",
             "index_types": [
-              "Idx"
+              "idx"
             ],
-            "component_type": "Integer",
+            "component_type": "integer",
             "unconstrained": false
           }
         },
@@ -55,7 +55,7 @@
           "id": "v1",
           "kind": "param",
           "mode": "in",
-          "name": "A",
+          "name": "a",
           "scope_id": "scope0",
           "span": {
             "start_line": 17,
@@ -64,7 +64,7 @@
             "end_col": 37
           },
           "type": {
-            "name": "Integer",
+            "name": "integer",
             "kind": "integer"
           }
         },
@@ -72,7 +72,7 @@
           "id": "v2",
           "kind": "param",
           "mode": "in",
-          "name": "B",
+          "name": "b",
           "scope_id": "scope0",
           "span": {
             "start_line": 17,
@@ -81,7 +81,7 @@
             "end_col": 40
           },
           "type": {
-            "name": "Integer",
+            "name": "integer",
             "kind": "integer"
           }
         }
@@ -130,11 +130,11 @@
                 "end_line": 19,
                 "end_col": 30
               },
-              "type": "Integer",
+              "type": "integer",
               "prefix": {
                 "tag": "ident",
-                "name": "Arr",
-                "type": "Values",
+                "name": "arr",
+                "type": "values",
                 "span": {
                   "start_line": 19,
                   "start_col": 14,
@@ -151,10 +151,10 @@
                     "end_line": 19,
                     "end_col": 29
                   },
-                  "type": "Idx",
+                  "type": "idx",
                   "target": {
                     "tag": "ident",
-                    "name": "Idx",
+                    "name": "idx",
                     "span": {
                       "start_line": 19,
                       "start_col": 18,
@@ -170,12 +170,12 @@
                       "end_line": 19,
                       "end_col": 26
                     },
-                    "type": "Integer",
+                    "type": "integer",
                     "op": "+",
                     "left": {
                       "tag": "ident",
-                      "name": "A",
-                      "type": "Integer",
+                      "name": "a",
+                      "type": "integer",
                       "span": {
                         "start_line": 19,
                         "start_col": 22,
@@ -185,8 +185,8 @@
                     },
                     "right": {
                       "tag": "ident",
-                      "name": "B",
-                      "type": "Integer",
+                      "name": "b",
+                      "type": "integer",
                       "span": {
                         "start_line": 19,
                         "start_col": 26,
