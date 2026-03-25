@@ -824,12 +824,14 @@ package body Safe_Frontend.Mir_Analyze is
       Result : GM.Type_Descriptor;
       Prefix : constant String := "access ";
       Const_Prefix : constant String := "access constant ";
+      Lower_Name : constant String := Lower (Name);
    begin
       Result.Name := FT.To_UString (Name);
       Result.Kind := FT.To_UString ("access");
       Result.Anonymous := True;
-      if Name'Length >= Const_Prefix'Length
-        and then Name (Name'First .. Name'First + Const_Prefix'Length - 1) = Const_Prefix
+      if Lower_Name'Length >= Const_Prefix'Length
+        and then Lower_Name
+          (Lower_Name'First .. Lower_Name'First + Const_Prefix'Length - 1) = Const_Prefix
       then
          Result.Has_Target := True;
          Result.Target :=
@@ -838,8 +840,9 @@ package body Safe_Frontend.Mir_Analyze is
          Result.Has_Access_Role := True;
          Result.Access_Role := FT.To_UString ("Observe");
          return Result;
-      elsif Name'Length >= Prefix'Length
-        and then Name (Name'First .. Name'First + Prefix'Length - 1) = Prefix
+      elsif Lower_Name'Length >= Prefix'Length
+        and then Lower_Name
+          (Lower_Name'First .. Lower_Name'First + Prefix'Length - 1) = Prefix
       then
          Result.Has_Target := True;
          Result.Target :=
@@ -855,19 +858,22 @@ package body Safe_Frontend.Mir_Analyze is
       Type_Env : Type_Maps.Map) return GM.Type_Descriptor
    is
       Result : GM.Type_Descriptor;
+      Lower_Name : constant String := Lower (Name);
    begin
       if Name = "" then
          return Type_Env.Element ("integer");
-      elsif Type_Env.Contains (Name) then
-         return Type_Env.Element (Name);
-      elsif Name = "integer"
-        or else Name = "natural"
-        or else Name = "boolean"
-        or else Name = "float"
-        or else Name = "long_float"
+      elsif Type_Env.Contains (Lower_Name) then
+         return Type_Env.Element (Lower_Name);
+      elsif Lower_Name = "integer"
+        or else Lower_Name = "natural"
+        or else Lower_Name = "boolean"
+        or else Lower_Name = "float"
+        or else Lower_Name = "long_float"
       then
-         return Type_Env.Element (Name);
-      elsif Name'Length >= 7 and then Name (Name'First .. Name'First + 6) = "access " then
+         return Type_Env.Element (Lower_Name);
+      elsif Lower_Name'Length >= 7
+        and then Lower_Name (Lower_Name'First .. Lower_Name'First + 6) = "access "
+      then
          return Parse_Anonymous_Access (Name);
       end if;
 
