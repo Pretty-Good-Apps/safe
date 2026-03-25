@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Preview mechanical rewrites for the PR11.7 reference-surface experiments."""
+"""Mechanical rewrites for the PR11.7 reference-surface cutover."""
 
 from __future__ import annotations
 
@@ -14,6 +14,27 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_ROOTS = (
     REPO_ROOT / "tests",
     REPO_ROOT / "samples",
+)
+BUILTIN_TYPE_NAMES = (
+    "integer",
+    "natural",
+    "boolean",
+    "character",
+    "string",
+    "result",
+    "float",
+    "long_float",
+    "duration",
+)
+BUILTIN_FUNCTION_NAMES = (
+    "ok",
+    "fail",
+)
+ATTRIBUTE_NAMES = (
+    "access",
+    "first",
+    "last",
+    "length",
 )
 TYPE_ACCESS_RE = re.compile(r"^\s*type\s+([A-Za-z_]\w*)\s+is\s+(?:not\s+null\s+)?access\b", re.IGNORECASE)
 TYPE_DECL_RE = re.compile(r"^\s*type\s+([A-Za-z_]\w*)\b", re.IGNORECASE)
@@ -60,9 +81,8 @@ def is_access_type(type_text: str, access_types: set[str]) -> bool:
     return base_match is not None and base_match.group(1) in access_types
 
 
-def collect_access_types_and_protected_names(text: str) -> tuple[set[str], set[str]]:
+def collect_access_types(text: str) -> set[str]:
     access_types: set[str] = set()
-    protected_names: set[str] = set()
     for line in text.splitlines():
         code = visible_code(line).strip()
         if not code:
@@ -70,32 +90,33 @@ def collect_access_types_and_protected_names(text: str) -> tuple[set[str], set[s
         access_match = TYPE_ACCESS_RE.match(code)
         if access_match:
             access_types.add(access_match.group(1))
-        for pattern in (PACKAGE_RE, FUNCTION_RE, TYPE_DECL_RE):
-            match = pattern.match(code)
-            if match:
-                protected_names.add(match.group(1))
-                break
-    return access_types, protected_names
+    return access_types
+
+
+def lower_builtin_spelling(segment: str) -> str:
+    updated = segment
+    for name in BUILTIN_TYPE_NAMES + BUILTIN_FUNCTION_NAMES:
+        updated = re.sub(rf"\b{re.escape(name)}\b", name, updated, flags=re.IGNORECASE)
+    for name in ATTRIBUTE_NAMES:
+        updated = re.sub(rf"\.{re.escape(name)}\b", "." + name, updated, flags=re.IGNORECASE)
+    return updated
 
 
 def collect_rename_map(text: str) -> dict[str, str]:
-    access_types, protected_names = collect_access_types_and_protected_names(text)
+    access_types = collect_access_types(text)
     rename_map: dict[str, str] = {}
     inside_record = False
     record_indent = 0
     inside_signature = False
     paren_depth = 0
 
-    def record_rename(raw_name: str, *, is_reference: bool) -> None:
-        if raw_name in protected_names:
-            raise ReferenceSurfaceMigrationError(
-                f"refusing to rename protected identifier {raw_name!r}"
-            )
-        new_name = preferred_name(raw_name, is_reference=is_reference)
-        if new_name in protected_names and new_name != raw_name:
-            raise ReferenceSurfaceMigrationError(
-                f"renaming {raw_name!r} would collide with protected identifier {new_name!r}"
-            )
+    def record_rename(raw_name: str, *, is_reference: bool | None) -> None:
+        if raw_name.lower() in BUILTIN_TYPE_NAMES or raw_name.lower() in BUILTIN_FUNCTION_NAMES:
+            return
+        if is_reference is None:
+            new_name = preferred_name(raw_name, is_reference=False)
+        else:
+            new_name = preferred_name(raw_name, is_reference=is_reference)
         if raw_name in rename_map and rename_map[raw_name] != new_name:
             raise ReferenceSurfaceMigrationError(
                 f"inconsistent rewrite target for {raw_name!r}"
@@ -115,8 +136,19 @@ def collect_rename_map(text: str) -> dict[str, str]:
             inside_record = True
             record_indent = line_indent
 
+        package_match = PACKAGE_RE.match(code)
+        if package_match:
+            record_rename(package_match.group(1), is_reference=None)
+            continue
+
+        type_match = TYPE_DECL_RE.match(code)
+        if type_match:
+            record_rename(type_match.group(1), is_reference=None)
+            continue
+
         function_match = FUNCTION_RE.match(code)
         if function_match:
+            record_rename(function_match.group(1), is_reference=None)
             inside_signature = True
             paren_depth = code.count("(") - code.count(")")
             if "(" in code:
@@ -143,8 +175,6 @@ def collect_rename_map(text: str) -> dict[str, str]:
                 inside_signature = False
             continue
 
-        if TYPE_DECL_RE.match(code) or PACKAGE_RE.match(code):
-            continue
         if lowered.startswith(
             (
                 "if ",
@@ -187,7 +217,7 @@ def collect_rename_map(text: str) -> dict[str, str]:
 
 
 def rewrite_code_segment(segment: str, rename_map: dict[str, str], *, strip_all: bool) -> str:
-    updated = segment
+    updated = lower_builtin_spelling(segment)
     if rename_map:
         pattern = re.compile(
             r"\b(" + "|".join(sorted((re.escape(name) for name in rename_map), key=len, reverse=True)) + r")\b"
@@ -195,7 +225,7 @@ def rewrite_code_segment(segment: str, rename_map: dict[str, str], *, strip_all:
         updated = pattern.sub(lambda match: rename_map[match.group(1)], updated)
     if strip_all:
         while True:
-            rewritten = re.sub(r"\b([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\.all\.", r"\1.", updated)
+            rewritten = re.sub(r"\b([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\.all\b", r"\1", updated)
             if rewritten == updated:
                 break
             updated = rewritten
@@ -235,7 +265,7 @@ def parse_args() -> argparse.Namespace:
         "--mode",
         choices=("reference-signal", "implicit-deref", "combined"),
         required=True,
-        help="rewrite mode to preview",
+        help="rewrite mode to apply",
     )
     parser.add_argument("--check", action="store_true", help="report files that would change without rewriting")
     return parser.parse_args()

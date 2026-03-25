@@ -12,7 +12,7 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 from _lib.attestation_compression import RECEIPT_PATH, RETIRED_ARCHIVE_REPORT_PATHS, RETIRED_NODE_IDS
-from _lib.gate_manifest import NODES, resolve_branch, validate_manifest
+from _lib.gate_manifest import BranchMode, NODES, branch_mode, resolve_branch, validate_manifest
 
 
 class GateManifestTests(unittest.TestCase):
@@ -237,6 +237,16 @@ class GateManifestTests(unittest.TestCase):
                 "pr06911_glue_script_safety",
                 "pr06913_documentation_architecture_clarity",
             ],
+        )
+
+    def test_branch_mode_pr117_is_provisional(self) -> None:
+        self.assertEqual(
+            branch_mode("codex/pr117-reference-surface-experiments"),
+            BranchMode.PROVISIONAL,
+        )
+        self.assertEqual(
+            branch_mode("codex/pr1162-legacy-ada-syntax-removal"),
+            BranchMode.ENFORCED,
         )
 
     def test_manifest_retires_historical_pr101_children(self) -> None:

@@ -248,6 +248,101 @@ class RunGatePipelineTests(unittest.TestCase):
                 )
         self.assertEqual(execute_pipeline.call_args.kwargs["nodes"], branch_nodes)
 
+    def test_provisional_reports_root_uses_branch_slug(self) -> None:
+        self.assertEqual(
+            run_gate_pipeline.branch_slug("codex/pr117-reference-surface-experiments"),
+            "codex-pr117-reference-surface-experiments",
+        )
+        self.assertEqual(
+            run_gate_pipeline.provisional_reports_root("codex/pr117-reference-surface-experiments"),
+            run_gate_pipeline.REPO_ROOT / "execution" / "staged" / "codex-pr117-reference-surface-experiments" / "reports",
+        )
+
+    def test_verify_provisional_branch_uses_staged_baseline(self) -> None:
+        branch_nodes = (
+            Node(id="validate_execution_state_preflight", kind=NodeKind.GATE, script=Path("/tmp/preflight.py")),
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            staged_root = Path(temp_dir)
+            with mock.patch.object(run_gate_pipeline, "resolve_branch", return_value=list(branch_nodes)), mock.patch.object(
+                run_gate_pipeline,
+                "branch_mode",
+                return_value=run_gate_pipeline.BranchMode.PROVISIONAL,
+            ), mock.patch.object(
+                run_gate_pipeline,
+                "provisional_reports_root",
+                return_value=staged_root,
+            ), mock.patch.object(
+                run_gate_pipeline,
+                "tracked_diff_snapshot",
+                return_value="",
+            ), mock.patch.object(run_gate_pipeline, "execute_pipeline", return_value={}) as execute_pipeline:
+                with redirect_stdout(io.StringIO()):
+                    self.assertEqual(
+                        run_gate_pipeline.verify_pipeline(
+                            authority="local",
+                            python="python3",
+                            git="git",
+                            alr="alr",
+                            env={},
+                            branch="codex/pr117-reference-surface-experiments",
+                        ),
+                        0,
+                    )
+        self.assertEqual(execute_pipeline.call_args.kwargs["compare_reports_root"], staged_root)
+        self.assertFalse(execute_pipeline.call_args.kwargs["compare_to_committed"])
+
+    def test_promote_pipeline_copies_staged_reports_and_runs_final_verify(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir) / "repo"
+            staged_root = repo_root / "execution" / "staged" / "codex-pr117-reference-surface-experiments" / "reports"
+            staged_root.mkdir(parents=True, exist_ok=True)
+            canonical_report = repo_root / "execution" / "reports" / "sample.json"
+            canonical_report.parent.mkdir(parents=True, exist_ok=True)
+            node = Node(
+                id="sample_gate",
+                kind=NodeKind.GATE,
+                report_path=canonical_report,
+            )
+            staged_report = staged_root / canonical_report.name
+            self._write_report(staged_report, self._report_payload("staged"))
+
+            with mock.patch.object(run_gate_pipeline, "REPO_ROOT", repo_root), mock.patch.object(
+                run_gate_pipeline,
+                "branch_mode",
+                return_value=run_gate_pipeline.BranchMode.PROVISIONAL,
+            ), mock.patch.object(
+                run_gate_pipeline,
+                "resolve_branch",
+                return_value=[node],
+            ), mock.patch.object(
+                run_gate_pipeline,
+                "provisional_reports_root",
+                return_value=staged_root,
+            ), mock.patch.object(
+                run_gate_pipeline,
+                "tracked_diff_snapshot",
+                return_value="",
+            ), mock.patch.object(
+                run_gate_pipeline,
+                "verify_pipeline",
+                return_value=0,
+            ) as verify_pipeline:
+                self.assertEqual(
+                    run_gate_pipeline.promote_pipeline(
+                        authority="ci",
+                        python="python3",
+                        git="git",
+                        alr="alr",
+                        env={},
+                        branch="codex/pr117-reference-surface-experiments",
+                    ),
+                    0,
+                )
+                self.assertEqual(json.loads(canonical_report.read_text(encoding="utf-8"))["status"], "staged")
+                verify_pipeline.assert_called_once()
+                self.assertIsNone(verify_pipeline.call_args.kwargs["branch"])
+
     def test_verify_local_reuses_ci_authoritative_report_without_running_gate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             expected_path = Path(temp_dir) / "expected.json"

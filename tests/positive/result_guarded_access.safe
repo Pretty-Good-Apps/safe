@@ -6,38 +6,38 @@
 -- Clause: SAFE@468cf72:spec/02-restrictions.md#2.8.6.p139f
 -- Expected: ACCEPT
 
-package Result_Guarded_Access
+package result_Guarded_Access
 
-   type Error_Code is range 0 to 255;
+   type error_Code is range 0 to 255;
 
-   type Parse_Result (OK : Boolean = False) is record
-      case OK
+   type parse_Result (ok : boolean = False) is record
+      case ok
          when True
-            Value : Integer;
+            value : integer;
          when False
-            Error : Error_Code;
+            error : error_Code;
 
 
 
-   function Try_Parse (Input : Integer) returns Parse_Result
+   function try_Parse (input : integer) returns parse_Result
 
-      if Input >= 0
-         return (OK = True, Value = Input);
+      if input >= 0
+         return (ok = True, value = input);
       else
-         return (OK = False, Error = 1);
+         return (ok = False, error = 1);
 
 
 
    --  Get_Or_Default: guarded access to variant fields.
    --  The branch on R.OK establishes the discriminant in each arm.
-   function Get_Or_Default (Input : Integer;
-                            Default : Integer) returns Integer
-      R : Parse_Result = Try_Parse (Input);
+   function get_Or_Default (input : integer;
+                            default : integer) returns integer
+      r : parse_Result = try_Parse (input);
 
-      if R.OK
-         return R.Value;   -- legal: R.OK = True established
+      if r.ok
+         return r.value;   -- legal: R.OK = True established
       else
-         return Default;
+         return default;
 
 
 

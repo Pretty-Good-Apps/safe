@@ -13,7 +13,7 @@ PR116_POSITIVE_CASES: tuple[dict[str, Any], ...] = (
         "source": REPO_ROOT / "tests" / "positive" / "pr116_bare_return.safe",
         "coverage_note": "No-return subprograms may begin their indented suite with a bare `return;` without being mistaken for a multiline return-type continuation.",
         "source_fragments": (
-            "function Exit_Early",
+            "function exit_Early",
             "return;",
         ),
         "forbidden_source_fragments": (
@@ -24,9 +24,9 @@ PR116_POSITIVE_CASES: tuple[dict[str, Any], ...] = (
         "source": REPO_ROOT / "tests" / "positive" / "pr115_compound_terminators.safe",
         "coverage_note": "Executable control-flow blocks use indentation rather than `then` / `end if` / `end loop` while preserving the lowered control-flow shape.",
         "source_fragments": (
-            "function Adjust (Input : Count) returns Count",
-            "if Current > 5",
-            "else if Current < 5",
+            "function adjust (input : count) returns count",
+            "if current > 5",
+            "else if current < 5",
             "for I in 1 to 2",
         ),
         "forbidden_source_fragments": (
@@ -35,10 +35,10 @@ PR116_POSITIVE_CASES: tuple[dict[str, Any], ...] = (
             "end loop",
             "begin",
         ),
-        "typed_snippets": ('"name":"Adjust"',),
-        "safei_snippets": ("function Adjust",),
+        "typed_snippets": ('"name":"adjust"',),
+        "safei_snippets": ("function adjust",),
         "ada_snippets": (
-            "elsif (Current < 5) then",
+            "elsif (current < 5) then",
             "for I in 1 .. 2 loop",
         ),
     },
@@ -46,24 +46,24 @@ PR116_POSITIVE_CASES: tuple[dict[str, Any], ...] = (
         "source": REPO_ROOT / "tests" / "positive" / "rule2_binary_search.safe",
         "coverage_note": "Whitespace `while` blocks stay compatible with the existing PR10.2 and PR10.3 proof/evaluation surface.",
         "source_fragments": (
-            "while Lo <= Hi",
-            "else if Arr (Mid) < Key",
+            "while lo <= hi",
+            "else if arr (mid) < key",
         ),
         "forbidden_source_fragments": (
             "then",
             "end loop",
         ),
-        "typed_snippets": ('"name":"Search"',),
-        "safei_snippets": ("function Search",),
+        "typed_snippets": ('"name":"search"',),
+        "safei_snippets": ("function search",),
         "ada_snippets": (
-            "while (Lo <= Hi) loop",
+            "while (lo <= hi) loop",
         ),
     },
     {
         "source": REPO_ROOT / "tests" / "positive" / "pr112_character_case.safe",
         "coverage_note": "Whitespace `case` statements use indented `when` suites with no `is`, `then`, or closing delimiters.",
         "source_fragments": (
-            "case Grade",
+            "case grade",
             "when 'A'",
             "when others",
         ),
@@ -72,10 +72,10 @@ PR116_POSITIVE_CASES: tuple[dict[str, Any], ...] = (
             "end case",
             "end when",
         ),
-        "typed_snippets": ('"name":"Grade_Message"',),
-        "safei_snippets": ("function Grade_Message",),
+        "typed_snippets": ('"name":"grade_Message"',),
+        "safei_snippets": ("function grade_Message",),
         "ada_snippets": (
-            "case Grade is",
+            "case grade is",
             "when others =>",
         ),
     },
@@ -83,7 +83,7 @@ PR116_POSITIVE_CASES: tuple[dict[str, Any], ...] = (
         "source": REPO_ROOT / "tests" / "positive" / "pr113_variant_guard.safe",
         "coverage_note": "Record field lists and variant arms are indentation-structured with no `end record` / `end case` closers.",
         "source_fragments": (
-            "type Packet (Kind : Character = 'A') is",
+            "type packet (Kind : character = 'A') is",
             "record",
             "case Kind",
             "when others",
@@ -92,10 +92,10 @@ PR116_POSITIVE_CASES: tuple[dict[str, Any], ...] = (
             "end record",
             "end case",
         ),
-        "typed_snippets": ('"name":"Read_Alpha"',),
-        "safei_snippets": ("function Read_Alpha",),
+        "typed_snippets": ('"name":"read_Alpha"',),
+        "safei_snippets": ("function read_Alpha",),
         "ada_snippets": (
-            "type Packet",
+            "type packet",
             "case Kind is",
         ),
     },
@@ -105,7 +105,7 @@ PR116_POSITIVE_CASES: tuple[dict[str, Any], ...] = (
         "source_fragments": (
             "task Poller with Priority = 10",
             "select",
-            "when Item : Message from Msg_Ch",
+            "when Item : message from Msg_Ch",
             "or",
             "delay 0.05",
         ),
@@ -148,16 +148,16 @@ PR116_ROSETTA_READABILITY_CASES: tuple[dict[str, Any], ...] = (
     {
         "source": REPO_ROOT / "samples" / "rosetta" / "arithmetic" / "collatz_bounded.safe",
         "source_fragments": (
-            "var Current : Working_Value = Working_Value (Seed)",
-            "for Step in Iteration",
-            "if Current == 1",
+            "var current : working_Value = working_Value (seed)",
+            "for Step in iteration",
+            "if current == 1",
         ),
     },
     {
         "source": REPO_ROOT / "samples" / "rosetta" / "data_structures" / "bounded_stack.safe",
         "source_fragments": (
-            "type Stack is record",
-            "case S.Size",
+            "type stack is record",
+            "case s.size",
             "when others",
         ),
     },
@@ -166,7 +166,7 @@ PR116_ROSETTA_READABILITY_CASES: tuple[dict[str, Any], ...] = (
         "source_fragments": (
             "task Producer with Priority = 10",
             "loop",
-            "receive Data_Ch, Input",
+            "receive Data_Ch, input",
         ),
     },
 )

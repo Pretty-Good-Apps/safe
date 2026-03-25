@@ -1,0 +1,15 @@
+-- Test: neg_pr117_uppercase_attribute
+-- Description: Attribute selectors must use canonical lowercase spelling.
+-- Expected: REJECT source_frontend_error
+
+package neg_PR117_Uppercase_Attribute
+
+   type payload is record
+      value : integer;
+
+   type payload_Ptr is access payload;
+
+   function demo (Owner : payload_Ptr) returns integer
+      var Observer : access constant payload = Owner.Access;
+
+      return Observer.value;

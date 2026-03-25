@@ -1,16 +1,16 @@
 pragma SPARK_Mode (On);
 
-package Ownership_Move
+package ownership_Move
    with SPARK_Mode => On,
         Initializes => null
 is
    pragma Elaborate_Body;
 
-   type Payload is record
-   Value : Integer;
+   type payload is record
+   value : integer;
 end record;
 
-   type Payload_Ptr is access Payload;
-   procedure Transfer with Global => null;
+   type payload_Ptr is access payload;
+   procedure transfer with Global => null;
 
-end Ownership_Move;
+end ownership_Move;

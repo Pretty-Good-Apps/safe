@@ -7,38 +7,38 @@
 -- Clause: SAFE@468cf72:spec/02-restrictions.md#2.8.6.p139f
 -- Expected: REJECT discriminant_check_not_established
 
-package Neg_Result_Mutated
+package neg_Result_Mutated
 
-   type Error_Code is range 0 to 255;
+   type error_Code is range 0 to 255;
 
-   type Parse_Result (OK : Boolean = False) is record
-      case OK
+   type parse_Result (ok : boolean = False) is record
+      case ok
          when True
-            Value : Integer;
+            value : integer;
          when False
-            Error : Error_Code;
+            error : error_Code;
 
 
 
-   function Try_Parse (Input : Integer) returns Parse_Result
+   function try_Parse (input : integer) returns parse_Result
 
-      if Input >= 0
-         return (OK = True, Value = Input);
+      if input >= 0
+         return (ok = True, value = input);
       else
-         return (OK = False, Error = 1);
+         return (ok = False, error = 1);
 
 
 
    --  NONCONFORMING: R.OK = True is established by the guard, but
    --  the assignment R = Try_Parse(Other) invalidates the fact.
    --  Accessing R.Value after mutation is rejected.
-   function Unsafe_After_Mutation (First : Integer;
-                                   Second : Integer) returns Integer
-      R : Parse_Result = Try_Parse (First);
+   function unsafe_After_Mutation (first : integer;
+                                   second : integer) returns integer
+      r : parse_Result = try_Parse (first);
 
-      if R.OK
-         R = Try_Parse (Second);  -- invalidates R.OK = True
-         return R.Value;          -- REJECTED: R.OK no longer established
+      if r.ok
+         r = try_Parse (second);  -- invalidates R.OK = True
+         return r.value;          -- REJECTED: R.OK no longer established
       else
          return 0;
 

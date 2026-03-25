@@ -9,22 +9,22 @@
 -- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.2.p20:8aa1a21e
 -- Expected: ACCEPT
 
-package Ping_Pong
+package ping_Pong
 
-   type Message is range 0 to 1000;
+   type message is range 0 to 1000;
 
    --  Two channels, each with capacity 1 (bounded FIFO).
-   channel Ping_Ch : Message capacity 1;
-   channel Pong_Ch : Message capacity 1;
+   channel Ping_Ch : message capacity 1;
+   channel Pong_Ch : message capacity 1;
 
    --  Ping_Task: background task used to keep task emission in the proof corpus.
    task Ping_Task with Priority = 10
-      Reply : Message;
+      reply : message;
 
       loop
          send Ping_Ch, 7;
-         receive Pong_Ch, Reply;
-         if Reply > 0
+         receive Pong_Ch, reply;
+         if reply > 0
             delay 0.001;
          else
             delay 0.001;
@@ -35,11 +35,11 @@ package Ping_Pong
 
    --  Pong_Task: background task used to keep multiple task bodies in the proof corpus.
    task Pong_Task with Priority = 10
-      Received : Message;
+      received : message;
 
       loop
-         receive Ping_Ch, Received;
-         send Pong_Ch, Received;
+         receive Ping_Ch, received;
+         send Pong_Ch, received;
          delay 0.001;
 
 

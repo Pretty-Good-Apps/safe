@@ -1,0 +1,10 @@
+-- Test: neg_pr117_uppercase_builtin_type
+-- Description: Predefined type names must use canonical lowercase spelling.
+-- Expected: REJECT source_frontend_error
+
+package neg_PR117_Uppercase_Builtin_Type
+
+   function demo returns Integer
+      value : integer = 1;
+
+      return value;

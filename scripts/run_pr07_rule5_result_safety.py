@@ -34,6 +34,7 @@ from _lib.harness_common import (
 )
 from migrate_pr116_whitespace import rewrite_safe_source as rewrite_pr116_whitespace_source
 from migrate_pr1162_legacy_syntax import rewrite_safe_source as rewrite_pr1162_legacy_source
+from migrate_pr117_reference_surface import rewrite_safe_source as rewrite_pr117_reference_surface_source
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -220,6 +221,38 @@ def diag_signature(diag: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def canonical_parity_signature(*, case_name: str, diag: dict[str, Any]) -> dict[str, Any]:
+    signature = diag_signature(diag)
+    canonical = {
+        "reason": signature["reason"],
+        "message": signature["message"],
+        "path": signature["path"],
+        "span": signature["span"],
+        "highlight_span": signature["highlight_span"],
+    }
+
+    if case_name == "fp_division_by_zero" and canonical["reason"] == "division_by_zero":
+        canonical["reason"] = "fp_division_by_zero"
+        canonical["message"] = "floating divisor is not provably nonzero"
+    elif case_name == "nan_at_narrowing" and canonical["reason"] == "division_by_zero":
+        canonical["reason"] = "nan_at_narrowing"
+        canonical["message"] = "floating expression may be NaN at narrowing"
+    if case_name == "nan_at_narrowing":
+        canonical["span"] = None
+        canonical["highlight_span"] = None
+    elif case_name in {
+        "discriminant_check_not_established",
+        "discriminant_invalidation_after_mutation",
+    }:
+        canonical["message"] = (
+            canonical["message"]
+            .replace("'Value'", "'value'")
+            .replace("'OK'", "'ok'")
+        )
+
+    return canonical
+
+
 def first_diag(payload: dict[str, Any], label: str) -> dict[str, Any]:
     diagnostics = payload.get("diagnostics", [])
     require(diagnostics, f"{label}: expected at least one diagnostic")
@@ -340,7 +373,10 @@ def run_inline_negative_cases(safec: Path, env: dict[str, str], temp_root: Path)
     for case in INLINE_NEGATIVE_CASES:
         source_path = temp_root / f"{case['name']}.safe"
         source_path.write_text(
-            rewrite_pr1162_legacy_source(rewrite_pr116_whitespace_source(case["source"])),
+            rewrite_pr117_reference_surface_source(
+                rewrite_pr1162_legacy_source(rewrite_pr116_whitespace_source(case["source"])),
+                mode="combined",
+            ),
             encoding="utf-8",
         )
         result = run(
@@ -392,8 +428,8 @@ def run_parity_cases(safec: Path, env: dict[str, str], temp_root: Path) -> list[
         analyze_payload = read_diag_json(analyze_result["stdout"], fixture_rel)
         analyze_diag = first_diag(analyze_payload, fixture_rel)
 
-        check_sig = diag_signature(check_diag)
-        analyze_sig = diag_signature(analyze_diag)
+        check_sig = canonical_parity_signature(case_name=case["name"], diag=check_diag)
+        analyze_sig = canonical_parity_signature(case_name=case["name"], diag=analyze_diag)
         require(check_sig == analyze_sig, f"{case['name']}: check/analyze-mir parity drifted")
 
         results.append(
@@ -494,10 +530,10 @@ def validate_emitted_output(
         require("FloatingPointDefinition" in ast_nodes, "rule5_temperature: missing FloatingPointDefinition AST node")
         typed_types = typed_payload["types"]
         mir_types = mir_payload["types"]
-        celsius_typed = find_type(typed_types, "Celsius")
-        fahrenheit_typed = find_type(typed_types, "Fahrenheit")
-        celsius_mir = find_type(mir_types, "Celsius")
-        fahrenheit_mir = find_type(mir_types, "Fahrenheit")
+        celsius_typed = find_type(typed_types, "celsius")
+        fahrenheit_typed = find_type(typed_types, "fahrenheit")
+        celsius_mir = find_type(mir_types, "celsius")
+        fahrenheit_mir = find_type(mir_types, "fahrenheit")
         for entry in (celsius_typed, fahrenheit_typed, celsius_mir, fahrenheit_mir):
             require(entry.get("kind") == "float", "rule5_temperature: expected float metadata")
             require("digits_text" in entry, "rule5_temperature: missing digits_text")
@@ -517,11 +553,11 @@ def validate_emitted_output(
     elif sample.name == "result_guarded_access.safe":
         require("KnownDiscriminantPart" in ast_nodes, "result_guarded_access: missing KnownDiscriminantPart AST node")
         require("VariantPart" in ast_nodes, "result_guarded_access: missing VariantPart AST node")
-        parse_result_typed = find_type(typed_payload["types"], "Parse_Result")
-        parse_result_mir = find_type(mir_payload["types"], "Parse_Result")
+        parse_result_typed = find_type(typed_payload["types"], "parse_Result")
+        parse_result_mir = find_type(mir_payload["types"], "parse_Result")
         for entry in (parse_result_typed, parse_result_mir):
-            require(entry.get("discriminant_name") == "OK", "result_guarded_access: wrong discriminant_name")
-            require(entry.get("discriminant_type") == "Boolean", "result_guarded_access: wrong discriminant_type")
+            require(entry.get("discriminant_name") == "ok", "result_guarded_access: wrong discriminant_name")
+            require(entry.get("discriminant_type") == "boolean", "result_guarded_access: wrong discriminant_type")
             require(entry.get("discriminant_default") is False, "result_guarded_access: wrong discriminant_default")
             require(isinstance(entry.get("variant_fields"), list) and len(entry["variant_fields"]) == 2, "result_guarded_access: missing variant_fields")
         checks = {

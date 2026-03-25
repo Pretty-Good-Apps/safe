@@ -2,26 +2,26 @@
 -- Description: Multiple scalar discriminants, defaults, and positional/named constraints on objects and profiles.
 -- Expected: ACCEPT
 
-package PR113_Discriminant_Constraints
+package pR113_Discriminant_Constraints
 
-   Default_Kind : constant Character = 'A';
-   Default_Count : constant Integer = 2;
+   default_Kind : constant character = 'A';
+   default_Count : constant integer = 2;
 
-   type Packet (Active : Boolean = True, Kind : Character = 'A', Count : Integer = 0) is
+   type packet (Active : boolean = True, Kind : character = 'A', Count : integer = 0) is
       record
-         Value : Integer;
+         value : integer;
 
 
-   Defaulted : Packet = (Active = True, Kind = 'A', Count = 0, Value = 1);
-   Positional : Packet (True, 'A', 1) = (Value = 2);
-   Named : Packet (Active = True, Kind = Default_Kind, Count = Default_Count) = (Value = 3);
+   defaulted : packet = (Active = True, Kind = 'A', Count = 0, value = 1);
+   positional : packet (True, 'A', 1) = (value = 2);
+   named : packet (Active = True, Kind = default_Kind, Count = default_Count) = (value = 3);
 
-   function Take (Item : in Packet (Active = True, Kind = Default_Kind, Count = Default_Count))
-      returns Packet (Active = True, Kind = Default_Kind, Count = Default_Count)
-      Limit : constant Integer = Default_Count;
-      Local : Packet (Active = True, Kind = Default_Kind, Count = Limit) = Item;
+   function take (item : in packet (Active = True, Kind = default_Kind, Count = default_Count))
+      returns packet (Active = True, Kind = default_Kind, Count = default_Count)
+      limit : constant integer = default_Count;
+      local : packet (Active = True, Kind = default_Kind, Count = limit) = item;
 
-      return Local;
+      return local;
 
 
 

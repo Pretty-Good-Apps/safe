@@ -2,15 +2,14 @@
 -- Description: Imported package-qualified object subcomponents remain read-only in PR08.3.
 -- Expected: REJECT unsupported_source_construct
 
-with Provider_Record_Object;
+with provider_Record_Object;
 
-package Imported_Object_Subcomponent_Assignment_Test
+package imported_Object_Subcomponent_Assignment_Test
 
    task Writer
 
       loop
-         Provider_Record_Object.State.Value = 4;
-
+         provider_Record_Object.state.value = 4;
 
 
 

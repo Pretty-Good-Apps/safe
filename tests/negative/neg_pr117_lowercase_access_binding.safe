@@ -1,15 +1,15 @@
 -- Test: neg_pr117_lowercase_access_binding
--- Description: Reference-signal experiment requires access bindings to start uppercase.
+-- Description: Reference-signal naming requires access bindings to start uppercase.
 -- Expected: REJECT source_frontend_error
 
-package Neg_PR117_Lowercase_Access_Binding
+package neg_PR117_Lowercase_Access_Binding
 
-   type Payload is record
-      value : Integer;
+   type payload is record
+      value : integer;
 
-   type Payload_Ptr is access Payload;
+   type payload_Ptr is access payload;
 
-   function Demo returns Integer
-      owner : Payload_Ptr = new ((value = 1) as Payload);
+   function demo returns integer
+      owner : payload_Ptr = new ((value = 1) as payload);
 
-      return owner.Value;
+      return owner.value;

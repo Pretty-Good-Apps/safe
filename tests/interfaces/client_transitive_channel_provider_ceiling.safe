@@ -1,12 +1,11 @@
-with Provider_Transitive_Channel;
+with provider_Transitive_Channel;
 
-package Client_Transitive_Channel_Provider_Ceiling
+package client_Transitive_Channel_Provider_Ceiling
 
    task Caller with Priority = 8
 
       loop
-         Provider_Transitive_Channel.Push;
-
+         provider_Transitive_Channel.push;
 
 
 

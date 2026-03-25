@@ -1,9 +1,9 @@
-package Producer_Consumer
+package producer_Consumer
 
-   type Message is range 0 to 1000;
+   type message is range 0 to 1000;
 
-   channel Data_Ch : Message capacity 1;
-   Result : Message = 0;
+   channel Data_Ch : message capacity 1;
+   result : message = 0;
 
    task Producer with Priority = 10
 
@@ -16,9 +16,9 @@ package Producer_Consumer
    task Consumer with Priority = 10
 
       loop
-         var Input : Message
-         receive Data_Ch, Input
-         Result = Input + 1
+         var input : message
+         receive Data_Ch, input
+         result = input + 1
 
 
 

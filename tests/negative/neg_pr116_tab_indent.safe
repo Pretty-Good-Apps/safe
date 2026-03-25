@@ -1,4 +1,4 @@
-package Neg_PR116_Tab_Indent
+package neg_PR116_Tab_Indent
 
-	function Broken returns Integer
+	function broken returns integer
 	   return 1

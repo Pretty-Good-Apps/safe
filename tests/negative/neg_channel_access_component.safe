@@ -3,16 +3,16 @@
 --   Anonymous access subcomponents are rejected just like named access fields.
 -- Expected: REJECT source_frontend_error
 
-package Neg_Channel_Access_Component
+package neg_Channel_Access_Component
 
-   type Payload is record
-      Value : Integer;
-
-
-   type Envelope is record
-      Item : access Payload;
+   type payload is record
+      value : integer;
 
 
-   channel Data_Ch : Envelope capacity 1;
+   type envelope is record
+      Item : access payload;
+
+
+   channel Data_Ch : envelope capacity 1;
 
 

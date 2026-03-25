@@ -33,6 +33,9 @@ class Pr117ReferenceSurfaceExperimentsTests(unittest.TestCase):
                 "neg_pr117_uppercase_value_binding.safe",
                 "neg_pr117_lowercase_access_field.safe",
                 "neg_pr117_casefold_collision.safe",
+                "neg_pr117_explicit_all.safe",
+                "neg_pr117_uppercase_builtin_type.safe",
+                "neg_pr117_uppercase_attribute.safe",
             },
         )
 
@@ -47,9 +50,8 @@ class Pr117ReferenceSurfaceExperimentsTests(unittest.TestCase):
             side_effect=[
                 {
                     "source": case["source"].name,
-                    "implicit_deref_variant": {
-                        "emitted_ada_parity": {"identical": False},
-                    },
+                    "migration_stable": True,
+                    "cutover_surface": {"compile": {"returncode": 0}},
                 }
                 for case in run_pr117_reference_surface_experiments.technical_cases()
             ],
@@ -70,9 +72,10 @@ class Pr117ReferenceSurfaceExperimentsTests(unittest.TestCase):
 
         self.assertEqual(report["task"], "PR11.7")
         self.assertEqual(report["status"], "ok")
-        self.assertEqual(report["scope"]["experiment_flag"], "--experiment pr117-reference-signal")
-        self.assertEqual(report["decisions"]["reference_signal"]["decision"], "defer")
-        self.assertEqual(report["decisions"]["implicit_dereference"]["decision"], "defer")
+        self.assertTrue(report["scope"]["default_surface_changed"])
+        self.assertFalse(report["scope"]["explicit_source_dereference_admitted"])
+        self.assertEqual(report["decisions"]["reference_signal"]["decision"], "admit")
+        self.assertEqual(report["decisions"]["implicit_dereference"]["decision"], "admit")
         self.assertEqual(
             len(report["technical_corpus"]["cases"]),
             len(run_pr117_reference_surface_experiments.technical_cases()),

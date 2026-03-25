@@ -2,12 +2,11 @@
 -- Description: Local boolean constant used in a record discriminant default.
 -- Expected: ACCEPT
 
-package Constant_Discriminant_Default
+package constant_Discriminant_Default
 
-   Default_Active : constant Boolean = True;
+   default_Active : constant boolean = True;
 
-   type Result (Active : Boolean = Default_Active) is record
-      Value : Integer;
-
+   type default_Result (active : boolean = default_Active) is record
+      value : integer;
 
 

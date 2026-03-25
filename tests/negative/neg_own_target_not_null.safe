@@ -3,17 +3,17 @@
 -- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.2.p97a:8d0214d5
 -- Expected: REJECT move_target_not_null
 
-package Move_Target_Not_Null_Test
+package move_Target_Not_Null_Test
 
-   type Payload is record
-      Value : Integer;
+   type payload is record
+      value : integer;
 
 
-   type Payload_Ptr is access Payload;
+   type payload_Ptr is access payload;
 
-   function Bad_Move
-      Source : Payload_Ptr = new ((Value = 1) as Payload);
-      Target : Payload_Ptr = new ((Value = 2) as Payload);
+   function bad_Move
+      Source : payload_Ptr = new ((value = 1) as payload);
+      Target : payload_Ptr = new ((value = 2) as payload);
 
       Target = Source;  -- ERROR: target is not provably null
 

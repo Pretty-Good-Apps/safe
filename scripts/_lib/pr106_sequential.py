@@ -58,7 +58,7 @@ PR106_SEQUENTIAL_PROOF_CORPUS: list[dict[str, Any]] = [
             "Default_Active",
         ],
         "spec_fragments": [
-            "type Result (Active : Boolean := True) is record",
+            "type Default_Result (active : Boolean := True) is record",
             "Default_Active : constant Boolean := True;",
         ],
     },

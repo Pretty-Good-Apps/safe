@@ -2,21 +2,21 @@
 -- Description: Access-typed channel elements are rejected before try_receive ownership checks run.
 -- Expected: REJECT source_frontend_error
 
-package Neg_Try_Receive_Target_Not_Null
+package neg_Try_Receive_Target_Not_Null
 
-   type Payload is record
-      Value : Integer;
+   type payload is record
+      value : integer;
 
 
-   type Payload_Ptr is access Payload;
+   type payload_Ptr is access payload;
 
-   channel Data_Ch : Payload_Ptr capacity 1;
+   channel Data_Ch : payload_Ptr capacity 1;
 
-   function Run
-      Target  : Payload_Ptr = new ((Value = 2) as Payload);
-      Success : Boolean = False;
+   function run
+      Target  : payload_Ptr = new ((value = 2) as payload);
+      success : boolean = False;
 
-      try_receive Data_Ch, Target, Success;
+      try_receive Data_Ch, Target, success;
 
 
 

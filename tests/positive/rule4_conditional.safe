@@ -5,28 +5,28 @@
 -- Clause: SAFE@468cf72:spec/02-restrictions.md#2.8.4.p136:fa5e94b7
 -- Expected: ACCEPT
 
-package Safe_Conditional
+package safe_Conditional
 
-   type Config_Value is range 0 to 1000;
-   type Config_Ptr is access Config_Value;
+   type config_Value is range 0 to 1000;
+   type config_Ptr is access config_Value;
 
    --  Max_Of_Two: returns the maximum of two optional values.
    --  Each pointer is null-checked before dereference.
-   function Max_Of_Two (A, B : Config_Ptr) returns Config_Value
+   function max_Of_Two (A, B : config_Ptr) returns config_Value
 
       if A != null and then B != null
          --  Both A and B are provably not null.
-         if A.all >= B.all
-            return A.all;
+         if A >= B
+            return A;
          else
-            return B.all;
+            return B;
 
       else if A != null
          --  A is provably not null.
-         return A.all;
+         return A;
       else if B != null
          --  B is provably not null.
-         return B.all;
+         return B;
       else
          return 0;
 

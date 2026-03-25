@@ -1,6 +1,5 @@
-package Provider_Constant_Int
+package provider_Constant_Int
 
-   public type Count is range 0 to 10;
-   public Max_Count : constant Count = 4;
-
+   public type count is range 0 to 10;
+   public max_Count : constant count = 4;
 

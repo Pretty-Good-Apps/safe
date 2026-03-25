@@ -5,13 +5,12 @@
 --   The current boolean-discriminant subset is emitted and compile-validated.
 -- Expected: ACCEPT
 
-package PR09_Emitter_Discriminant
-   type Result (OK : Boolean = False) is record
-      case OK
+package pR09_Emitter_Discriminant
+   type emitter_Result (ok : boolean = False) is record
+      case ok
          when True
-            Value : Integer;
+            value : integer;
          when False
-            Error_Code : Integer;
-
+            error_Code : integer;
 
 

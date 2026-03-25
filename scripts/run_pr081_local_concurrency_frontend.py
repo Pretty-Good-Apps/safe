@@ -26,6 +26,7 @@ from _lib.harness_common import (
 )
 from migrate_pr116_whitespace import rewrite_safe_source as rewrite_pr116_whitespace_source
 from migrate_pr1162_legacy_syntax import rewrite_safe_source as rewrite_pr1162_legacy_source
+from migrate_pr117_reference_surface import rewrite_safe_source as rewrite_pr117_reference_surface_source
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -545,7 +546,10 @@ def validate_analysis_regression_case(
 ) -> dict[str, Any]:
     source = temp_root / sample["name"]
     source.write_text(
-        rewrite_pr1162_legacy_source(rewrite_pr116_whitespace_source(sample["text"])),
+        rewrite_pr117_reference_surface_source(
+            rewrite_pr1162_legacy_source(rewrite_pr116_whitespace_source(sample["text"])),
+            mode="combined",
+        ),
         encoding="utf-8",
     )
 

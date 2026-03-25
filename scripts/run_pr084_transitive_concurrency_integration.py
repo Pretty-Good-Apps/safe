@@ -506,26 +506,26 @@ def generate_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[st
 
         require(
             positive_results[EXISTING_CLIENT_CHANNEL.name]["bronze"]["summaries"]["Sender"]["channels"]
-            == ["Provider_Channel.Data_Ch"],
+            == ["provider_Channel.Data_Ch"],
             "direct imported channel ops must preserve the full qualified channel name",
         )
         require(
             positive_results[CLIENT_CHANNEL_PROVIDER.name]["bronze"]["ceilings"][
-                "Provider_Transitive_Channel.Data_Ch"
+                "provider_Transitive_Channel.Data_Ch"
             ]
             == 12,
             "provider required ceiling must dominate local task priorities when higher",
         )
         require(
             positive_results[CLIENT_CHANNEL_CLIENT.name]["bronze"]["ceilings"][
-                "Provider_Transitive_Channel.Data_Ch"
+                "provider_Transitive_Channel.Data_Ch"
             ]
             == 20,
             "client task priorities must dominate provider required ceiling when higher",
         )
         require(
             positive_results[CLIENT_GLOBAL_OK.name]["bronze"]["ownership"][
-                "Provider_Transitive_Global.Shared"
+                "provider_Transitive_Global.shared"
             ]
             == ["Worker"],
             "single-task imported global ownership should stay clean and deterministic",
@@ -607,14 +607,14 @@ def generate_report(*, safec: Path, python: str, env: dict[str, str]) -> dict[st
         tmp_client.write_text(
             "\n".join(
                 [
-                    "with Provider_Imported_Call_Ownership;",
+                    "with provider_Imported_Call_Ownership;",
                     "",
-                    "package Tmp_Imported_Inout",
+                    "package tmp_Imported_Inout",
                     "",
-                    "   function Run",
-                    "      Owner : Provider_Imported_Call_Ownership.Payload_Ptr = new ((Value = 5) as Provider_Imported_Call_Ownership.Payload);",
+                    "   function run",
+                    "      Owner : provider_Imported_Call_Ownership.payload_Ptr = new ((value = 5) as provider_Imported_Call_Ownership.payload);",
                     "",
-                    "      Provider_Imported_Call_Ownership.Consume (Owner);",
+                    "      provider_Imported_Call_Ownership.consume (Owner);",
                     "",
                 ]
             ),

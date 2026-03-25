@@ -34,7 +34,7 @@ class MigratePr117ReferenceSurfaceTests(unittest.TestCase):
         self.assertIn("Head.Next.value", rewritten)
         self.assertNotIn(".all", rewritten)
 
-    def test_implicit_deref_mode_preserves_terminal_all(self) -> None:
+    def test_implicit_deref_mode_rewrites_terminal_all(self) -> None:
         source = (
             "function Read (P : data_ptr) returns data\n"
             "   if P != null\n"
@@ -44,7 +44,25 @@ class MigratePr117ReferenceSurfaceTests(unittest.TestCase):
             source,
             mode="implicit-deref",
         )
-        self.assertIn("return P.all;", rewritten)
+        self.assertIn("return P;", rewritten)
+        self.assertNotIn(".all", rewritten)
+
+    def test_reference_signal_mode_renames_package_type_and_function(self) -> None:
+        source = (
+            "package Demo\n"
+            "\n"
+            "   type Payload is record\n"
+            "      count : Integer;\n"
+            "\n"
+            "   function Build returns Payload\n"
+            "      amount : Integer = 1;\n"
+            "      return (count = amount) as Payload;\n"
+        )
+        rewritten = migrate_pr117_reference_surface.rewrite_safe_source(source, mode="reference-signal")
+        self.assertIn("package demo", rewritten)
+        self.assertIn("type payload is record", rewritten)
+        self.assertIn("function build returns payload", rewritten)
+        self.assertIn("count : integer;", rewritten)
 
     def test_conflicting_rewrites_are_rejected(self) -> None:
         source = (

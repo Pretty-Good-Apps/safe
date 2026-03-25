@@ -1,10 +1,10 @@
 {
   "format": "mir-v2",
   "source_path": "tests/negative/neg_rule1_overflow.safe",
-  "package_name": "Overflow_Test",
+  "package_name": "overflow_Test",
   "types": [
     {
-      "name": "Big",
+      "name": "big",
       "kind": "integer",
       "low": 0,
       "high": 9999999999999999
@@ -12,11 +12,11 @@
   ],
   "graphs": [
     {
-      "name": "Multiply",
+      "name": "multiply",
       "kind": "function",
       "entry_bb": "bb0",
       "return_type": {
-        "name": "Big",
+        "name": "big",
         "kind": "integer",
         "low": 0,
         "high": 9999999999999999
@@ -26,7 +26,7 @@
           "id": "v0",
           "kind": "param",
           "mode": "in",
-          "name": "A",
+          "name": "a",
           "scope_id": "scope0",
           "span": {
             "start_line": 15,
@@ -35,7 +35,7 @@
             "end_col": 23
           },
           "type": {
-            "name": "Big",
+            "name": "big",
             "kind": "integer",
             "low": 0,
             "high": 9999999999999999
@@ -45,7 +45,7 @@
           "id": "v1",
           "kind": "param",
           "mode": "in",
-          "name": "B",
+          "name": "b",
           "scope_id": "scope0",
           "span": {
             "start_line": 15,
@@ -54,7 +54,7 @@
             "end_col": 26
           },
           "type": {
-            "name": "Big",
+            "name": "big",
             "kind": "integer",
             "low": 0,
             "high": 9999999999999999
@@ -104,12 +104,12 @@
                 "end_line": 19,
                 "end_col": 18
               },
-              "type": "Big",
+              "type": "big",
               "op": "*",
               "left": {
                 "tag": "ident",
-                "name": "A",
-                "type": "Big",
+                "name": "a",
+                "type": "big",
                 "span": {
                   "start_line": 19,
                   "start_col": 14,
@@ -119,8 +119,8 @@
               },
               "right": {
                 "tag": "ident",
-                "name": "B",
-                "type": "Big",
+                "name": "b",
+                "type": "big",
                 "span": {
                   "start_line": 19,
                   "start_col": 18,

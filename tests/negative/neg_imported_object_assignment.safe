@@ -2,15 +2,14 @@
 -- Description: Imported package-qualified objects remain read-only in PR08.3.
 -- Expected: REJECT unsupported_source_construct
 
-with Provider_Object;
+with provider_Object;
 
-package Imported_Object_Assignment_Test
+package imported_Object_Assignment_Test
 
    task Writer
 
       loop
-         Provider_Object.Seed = 4;
-
+         provider_Object.seed = 4;
 
 
 

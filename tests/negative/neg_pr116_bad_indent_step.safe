@@ -1,4 +1,4 @@
-package Neg_PR116_Bad_Indent_Step
+package neg_PR116_Bad_Indent_Step
 
-  function Broken returns Integer
+  function broken returns integer
      return 1

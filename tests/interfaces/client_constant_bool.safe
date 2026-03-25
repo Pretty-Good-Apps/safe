@@ -1,9 +1,7 @@
-with Provider_Constant_Bool;
+with provider_Constant_Bool;
 
-package Client_Constant_Bool
+package client_Constant_Bool
 
-   type Result (Active : Boolean = Provider_Constant_Bool.Default_Active) is record
-      Value : Integer;
-
-
+   type client_Result (active : boolean = provider_Constant_Bool.default_Active) is record
+      value : integer;
 

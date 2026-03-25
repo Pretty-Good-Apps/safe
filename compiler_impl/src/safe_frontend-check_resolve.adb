@@ -73,8 +73,6 @@ package body Safe_Frontend.Check_Resolve is
    Resolve_Failure : exception;
    Raised_Diag     : CM.MD.Diagnostic;
    Documented_Default_Task_Priority : constant Long_Long_Integer := 31;
-   Current_Reference_Signal_Experiment : Boolean := False;
-
    function UString_Value (Value : FT.UString) return String is
    begin
       return FT.To_String (Value);
@@ -82,43 +80,35 @@ package body Safe_Frontend.Check_Resolve is
 
    function Canonical_Name (Value : String) return String is
    begin
-      if Current_Reference_Signal_Experiment then
-         return Value;
-      end if;
-      return FT.Lowercase (Value);
+      return Value;
    end Canonical_Name;
 
    function Builtin_Type_Key (Value : String) return String is
-      Lower : constant String := FT.Lowercase (Value);
    begin
-      if Lower in
+      if Value in
         "integer" | "natural" | "boolean" | "character" | "string" | "result" | "float"
           | "long_float" | "duration"
       then
-         return Lower;
+         return Value;
       end if;
       return "";
    end Builtin_Type_Key;
 
    function Builtin_Function_Key (Value : String) return String is
-      Lower : constant String := FT.Lowercase (Value);
    begin
-      if Lower in "ok" | "fail" then
-         return Lower;
+      if Value in "ok" | "fail" then
+         return Value;
       end if;
       return "";
    end Builtin_Function_Key;
 
    procedure Put_Builtin_Type
      (Map  : in out Type_Maps.Map;
-      Name : String;
+     Name : String;
       Info : GM.Type_Descriptor) is
       Lower : constant String := FT.Lowercase (Name);
    begin
       Map.Include (Lower, Info);
-      if Name /= Lower then
-         Map.Include (Name, Info);
-      end if;
    end Put_Builtin_Type;
 
    procedure Put_Type
@@ -159,9 +149,7 @@ package body Safe_Frontend.Check_Resolve is
       Builtin_Key : constant String := Builtin_Type_Key (Name);
    begin
       return Map.Contains (Key)
-        or else (Current_Reference_Signal_Experiment
-                 and then Builtin_Key /= ""
-                 and then Map.Contains (Builtin_Key));
+        or else (Builtin_Key /= "" and then Map.Contains (Builtin_Key));
    end Has_Type;
 
    function Get_Type
@@ -191,9 +179,7 @@ package body Safe_Frontend.Check_Resolve is
       Builtin_Key : constant String := Builtin_Function_Key (Name);
    begin
       return Map.Contains (Key)
-        or else (Current_Reference_Signal_Experiment
-                 and then Builtin_Key /= ""
-                 and then Map.Contains (Builtin_Key));
+        or else (Builtin_Key /= "" and then Map.Contains (Builtin_Key));
    end Has_Function;
 
    function Get_Function
@@ -265,15 +251,15 @@ package body Safe_Frontend.Check_Resolve is
 
    procedure Add_Builtins (Type_Env : in out Type_Maps.Map) is
    begin
-      Put_Builtin_Type (Type_Env, "Integer", BT.Integer_Type);
-      Put_Builtin_Type (Type_Env, "Natural", BT.Natural_Type);
-      Put_Builtin_Type (Type_Env, "Boolean", BT.Boolean_Type);
-      Put_Builtin_Type (Type_Env, "Character", BT.Character_Type);
-      Put_Builtin_Type (Type_Env, "String", BT.String_Type);
+      Put_Builtin_Type (Type_Env, "integer", BT.Integer_Type);
+      Put_Builtin_Type (Type_Env, "natural", BT.Natural_Type);
+      Put_Builtin_Type (Type_Env, "boolean", BT.Boolean_Type);
+      Put_Builtin_Type (Type_Env, "character", BT.Character_Type);
+      Put_Builtin_Type (Type_Env, "string", BT.String_Type);
       Put_Builtin_Type (Type_Env, "result", BT.Result_Type);
-      Put_Builtin_Type (Type_Env, "Float", BT.Float_Type);
-      Put_Builtin_Type (Type_Env, "Long_Float", BT.Long_Float_Type);
-      Put_Builtin_Type (Type_Env, "Duration", BT.Duration_Type);
+      Put_Builtin_Type (Type_Env, "float", BT.Float_Type);
+      Put_Builtin_Type (Type_Env, "long_float", BT.Long_Float_Type);
+      Put_Builtin_Type (Type_Env, "duration", BT.Duration_Type);
    end Add_Builtins;
 
    procedure Add_Builtin_Functions (Functions : in out Function_Maps.Map) is
@@ -384,6 +370,93 @@ package body Safe_Frontend.Check_Resolve is
         and then Ada.Characters.Handling.Is_Lower (Name (Name'First));
    end Starts_With_Lowercase;
 
+   procedure Require_Lowercase_Name
+     (Name    : String;
+      Path    : String;
+      Span    : FT.Source_Span;
+      Context : String) is
+   begin
+      if Starts_With_Lowercase (Name) then
+         return;
+      end if;
+
+      Raise_Diag
+        (CM.Source_Frontend_Error
+           (Path    => Path,
+            Span    => Span,
+            Message =>
+              Context
+              & " `"
+              & Name
+              & "` must start with a lowercase letter"));
+   end Require_Lowercase_Name;
+
+   procedure Require_Canonical_Builtin_Type_Name
+     (Name : String;
+      Path : String;
+      Span : FT.Source_Span) is
+      Lower : constant String := FT.Lowercase (Name);
+   begin
+      if Name = Lower or else Builtin_Type_Key (Lower) = "" then
+         return;
+      end if;
+
+      Raise_Diag
+        (CM.Source_Frontend_Error
+           (Path    => Path,
+            Span    => Span,
+            Message =>
+              "predefined type `"
+              & Name
+              & "` must be written as `"
+              & Lower
+              & "`"));
+   end Require_Canonical_Builtin_Type_Name;
+
+   procedure Require_Canonical_Builtin_Function_Name
+     (Name : String;
+      Path : String;
+      Span : FT.Source_Span) is
+      Lower : constant String := FT.Lowercase (Name);
+   begin
+      if Name = Lower or else Builtin_Function_Key (Lower) = "" then
+         return;
+      end if;
+
+      Raise_Diag
+        (CM.Source_Frontend_Error
+           (Path    => Path,
+            Span    => Span,
+            Message =>
+              "predefined function `"
+              & Name
+              & "` must be written as `"
+              & Lower
+              & "`"));
+   end Require_Canonical_Builtin_Function_Name;
+
+   procedure Require_Canonical_Attribute_Name
+     (Selector : String;
+      Path     : String;
+      Span     : FT.Source_Span) is
+      Lower : constant String := FT.Lowercase (Selector);
+   begin
+      if Selector = Lower or else Lower not in "access" | "first" | "last" | "length" then
+         return;
+      end if;
+
+      Raise_Diag
+        (CM.Source_Frontend_Error
+           (Path    => Path,
+            Span    => Span,
+            Message =>
+              "attribute selector `"
+              & Selector
+              & "` must be written as `"
+              & Lower
+              & "`"));
+   end Require_Canonical_Attribute_Name;
+
    procedure Require_Reference_Signal_Name
      (Name      : String;
       Type_Info : GM.Type_Descriptor;
@@ -397,7 +470,7 @@ package body Safe_Frontend.Check_Resolve is
          then Starts_With_Uppercase (Name)
          else Starts_With_Lowercase (Name));
    begin
-      if not Current_Reference_Signal_Experiment or else Good_Case then
+      if Good_Case then
          return;
       end if;
 
@@ -406,7 +479,7 @@ package body Safe_Frontend.Check_Resolve is
            (Path    => Path,
             Span    => Span,
             Message =>
-              "reference-signal experiment requires "
+              "reference-signal naming requires "
               & Context
               & " `"
               & Name
@@ -423,10 +496,6 @@ package body Safe_Frontend.Check_Resolve is
       Context : String) is
       Lower_Name : constant String := FT.Lowercase (Name);
    begin
-      if not Current_Reference_Signal_Experiment then
-         return;
-      end if;
-
       for Existing of Seen loop
          if FT.Lowercase (UString_Value (Existing)) = Lower_Name
            and then UString_Value (Existing) /= Name
@@ -435,8 +504,8 @@ package body Safe_Frontend.Check_Resolve is
               (CM.Source_Frontend_Error
                  (Path    => Path,
                   Span    => Span,
-                  Message =>
-                    "reference-signal experiment rejects "
+                 Message =>
+                    "reference-signal naming rejects "
                     & Context
                     & " `"
                     & Name
@@ -535,7 +604,7 @@ package body Safe_Frontend.Check_Resolve is
      (Info     : GM.Type_Descriptor;
       Type_Env : Type_Maps.Map) return Boolean is
    begin
-      return UString_Value (Base_Type (Info, Type_Env).Name) = "Boolean";
+      return UString_Value (Base_Type (Info, Type_Env).Name) = "boolean";
    end Is_Boolean_Type;
 
    function Is_Tuple_Type
@@ -549,14 +618,14 @@ package body Safe_Frontend.Check_Resolve is
      (Info     : GM.Type_Descriptor;
       Type_Env : Type_Maps.Map) return Boolean is
    begin
-      return UString_Value (Base_Type (Info, Type_Env).Name) = "Character";
+      return UString_Value (Base_Type (Info, Type_Env).Name) = "character";
    end Is_Character_Type;
 
    function Is_String_Type
      (Info     : GM.Type_Descriptor;
       Type_Env : Type_Maps.Map) return Boolean is
    begin
-      return UString_Value (Base_Type (Info, Type_Env).Name) = "String";
+      return UString_Value (Base_Type (Info, Type_Env).Name) = "string";
    end Is_String_Type;
 
    function Is_Tuple_Element_Type_Allowed
@@ -578,7 +647,7 @@ package body Safe_Frontend.Check_Resolve is
       Base : constant GM.Type_Descriptor := Base_Type (Info, Type_Env);
       Kind : constant String := FT.Lowercase (UString_Value (Base.Kind));
    begin
-      return UString_Value (Base.Name) = "Duration"
+      return UString_Value (Base.Name) = "duration"
         or else Kind in "integer" | "float" | "subtype";
    end Is_Duration_Compatible;
 
@@ -738,9 +807,10 @@ package body Safe_Frontend.Check_Resolve is
    end Contains_Dot;
 
    function Is_Builtin_Name (Name : String) return Boolean is
+      Lower : constant String := FT.Lowercase (Name);
    begin
-      return Name in
-        "Integer" | "Natural" | "Boolean" | "Character" | "String" | "Float" | "Long_Float" | "Duration" | "result";
+      return Lower in
+        "integer" | "natural" | "boolean" | "character" | "string" | "float" | "long_float" | "duration" | "result";
    end Is_Builtin_Name;
 
    function Qualify_Name
@@ -1138,6 +1208,7 @@ package body Safe_Frontend.Check_Resolve is
    begin
       case Spec.Kind is
          when CM.Type_Spec_Name | CM.Type_Spec_Subtype_Indication =>
+            Require_Canonical_Builtin_Type_Name (UString_Value (Spec.Name), Path, Spec.Span);
             if not Spec.Constraints.Is_Empty then
                Base := Resolve_Type (UString_Value (Spec.Name), Type_Env, Path, Spec.Span);
                if Base.Discriminants.Is_Empty then
@@ -1292,7 +1363,8 @@ package body Safe_Frontend.Check_Resolve is
                end;
             end loop;
             return Make_Tuple_Type (Element_Types);
-         when CM.Type_Spec_Access_Def =>
+        when CM.Type_Spec_Access_Def =>
+            Require_Canonical_Builtin_Type_Name (Flatten_Name (Spec.Target_Name), Path, Spec.Span);
             Target := Resolve_Type (Flatten_Name (Spec.Target_Name), Type_Env, Path, Spec.Span);
             Result.Name := FT.To_UString ("access " & UString_Value (Target.Name));
             Result.Kind := FT.To_UString ("access");
@@ -1422,52 +1494,56 @@ package body Safe_Frontend.Check_Resolve is
                   end if;
                end;
             end if;
-         when CM.Expr_Select =>
-            Name := FT.To_UString (Flatten_Name (Expr));
-            if Has_Type (Var_Types, UString_Value (Name)) then
-               return Get_Type (Var_Types, UString_Value (Name));
-            elsif Has_Type (Type_Env, UString_Value (Name)) then
-               return Get_Type (Type_Env, UString_Value (Name));
-            elsif Has_Function (Functions, UString_Value (Name)) then
-               declare
-                  Info : constant Function_Info := Get_Function (Functions, UString_Value (Name));
-               begin
-                  if Info.Has_Return_Type then
-                     return Info.Return_Type;
-                  end if;
-               end;
-            end if;
+        when CM.Expr_Select =>
+            declare
+               Selector_Lower : constant String := FT.Lowercase (UString_Value (Expr.Selector));
+            begin
+               Name := FT.To_UString (Flatten_Name (Expr));
+               if Has_Type (Var_Types, UString_Value (Name)) then
+                  return Get_Type (Var_Types, UString_Value (Name));
+               elsif Has_Type (Type_Env, UString_Value (Name)) then
+                  return Get_Type (Type_Env, UString_Value (Name));
+               elsif Has_Function (Functions, UString_Value (Name)) then
+                  declare
+                     Info : constant Function_Info := Get_Function (Functions, UString_Value (Name));
+                  begin
+                     if Info.Has_Return_Type then
+                        return Info.Return_Type;
+                     end if;
+                  end;
+               end if;
 
-            if UString_Value (Expr.Selector) = "all" then
-               return Access_Target_Type
-                 (Expr_Type (Expr.Prefix, Var_Types, Functions, Type_Env),
-                  Type_Env);
-            elsif UString_Value (Expr.Selector) = "Access" then
-               Result.Name :=
-                 FT.To_UString
-                   ("access constant "
-                    & UString_Value
-                        (Access_Target_Type
-                           (Expr_Type (Expr.Prefix, Var_Types, Functions, Type_Env),
-                            Type_Env).Name));
-               Result.Kind := FT.To_UString ("access");
-               Result.Has_Target := True;
-               Result.Target :=
-                 Access_Target_Type
-                   (Expr_Type (Expr.Prefix, Var_Types, Functions, Type_Env),
-                    Type_Env).Name;
-               Result.Not_Null := True;
-               Result.Anonymous := True;
-               Result.Is_Constant := True;
-               Result.Has_Access_Role := True;
-               Result.Access_Role := FT.To_UString ("Observe");
-               return Result;
-            elsif UString_Value (Expr.Selector) in "First" | "Last" | "Length" then
-               return Default_Integer;
-            end if;
+               if Selector_Lower = "all" then
+                  return Access_Target_Type
+                    (Expr_Type (Expr.Prefix, Var_Types, Functions, Type_Env),
+                     Type_Env);
+               elsif Selector_Lower = "access" then
+                  Result.Name :=
+                    FT.To_UString
+                      ("access constant "
+                       & UString_Value
+                           (Access_Target_Type
+                              (Expr_Type (Expr.Prefix, Var_Types, Functions, Type_Env),
+                               Type_Env).Name));
+                  Result.Kind := FT.To_UString ("access");
+                  Result.Has_Target := True;
+                  Result.Target :=
+                    Access_Target_Type
+                      (Expr_Type (Expr.Prefix, Var_Types, Functions, Type_Env),
+                       Type_Env).Name;
+                  Result.Not_Null := True;
+                  Result.Anonymous := True;
+                  Result.Is_Constant := True;
+                  Result.Has_Access_Role := True;
+                  Result.Access_Role := FT.To_UString ("Observe");
+                  return Result;
+               elsif Selector_Lower in "first" | "last" | "length" then
+                  return Default_Integer;
+               end if;
 
-            Prefix_Type := Expr_Type (Expr.Prefix, Var_Types, Functions, Type_Env);
-            return Field_Type (Prefix_Type, UString_Value (Expr.Selector), Type_Env);
+               Prefix_Type := Expr_Type (Expr.Prefix, Var_Types, Functions, Type_Env);
+               return Field_Type (Prefix_Type, UString_Value (Expr.Selector), Type_Env);
+            end;
          when CM.Expr_Resolved_Index =>
             Prefix_Type := Expr_Type (Expr.Prefix, Var_Types, Functions, Type_Env);
             if Prefix_Type.Has_Component_Type then
@@ -1490,8 +1566,8 @@ package body Safe_Frontend.Check_Resolve is
                      return Info.Return_Type;
                   end if;
                end;
-            elsif UString_Value (Name) = "Long_Float.Copy_Sign" then
-               return Resolve_Type ("Long_Float", Type_Env, "", FT.Null_Span);
+            elsif FT.Lowercase (UString_Value (Name)) = "long_float.copy_sign" then
+               return Resolve_Type ("long_float", Type_Env, "", FT.Null_Span);
             elsif Has_Type (Var_Types, UString_Value (Name)) then
                return Get_Type (Var_Types, UString_Value (Name));
             elsif UString_Value (Expr.Type_Name)'Length > 0
@@ -1595,7 +1671,7 @@ package body Safe_Frontend.Check_Resolve is
             Result.Kind := CM.Expr_Conversion;
             Result.Target := Expr.Callee;
             Result.Inner := Expr.Args (Expr.Args.First_Index);
-         elsif UString_Value (Callee_Name) in "Integer" | "Natural" | "Float" | "Long_Float"
+         elsif UString_Value (Callee_Name) in "integer" | "natural" | "float" | "long_float"
            and then Natural (Expr.Args.Length) = 1
          then
             Result.Kind := CM.Expr_Conversion;
@@ -1620,6 +1696,190 @@ package body Safe_Frontend.Check_Resolve is
       end if;
       return Result;
    end Resolve_Apply;
+
+   function Is_Access_Type (Info : GM.Type_Descriptor) return Boolean is
+   begin
+      return FT.Lowercase (UString_Value (Info.Kind)) = "access";
+   end Is_Access_Type;
+
+   function Make_Implicit_Deref
+     (Expr      : CM.Expr_Access;
+      Var_Types : Type_Maps.Map;
+      Functions : Function_Maps.Map;
+      Type_Env  : Type_Maps.Map) return CM.Expr_Access
+   is
+      Result      : CM.Expr_Access;
+      Target_Type : constant GM.Type_Descriptor :=
+        Access_Target_Type (Expr_Type (Expr, Var_Types, Functions, Type_Env), Type_Env);
+   begin
+      if Expr = null then
+         return null;
+      elsif Expr.Kind = CM.Expr_Select
+        and then FT.Lowercase (UString_Value (Expr.Selector)) = "all"
+      then
+         return Expr;
+      end if;
+
+      Result :=
+        new CM.Expr_Node'
+          (Kind      => CM.Expr_Select,
+           Span      => Expr.Span,
+           Type_Name => Target_Type.Name,
+           Prefix    => Expr,
+           Selector  => FT.To_UString ("all"),
+           others    => <>);
+      return Set_Type (Result, Target_Type);
+   end Make_Implicit_Deref;
+
+   function Apply_Implicit_Deref_For_Expected_Type
+     (Expr          : CM.Expr_Access;
+      Expected_Type : GM.Type_Descriptor;
+      Var_Types     : Type_Maps.Map;
+      Functions     : Function_Maps.Map;
+      Type_Env      : Type_Maps.Map) return CM.Expr_Access
+   is
+      Actual_Type : constant GM.Type_Descriptor :=
+        Expr_Type (Expr, Var_Types, Functions, Type_Env);
+   begin
+      if Expr = null
+        or else Is_Access_Type (Expected_Type)
+        or else not Is_Access_Type (Actual_Type)
+      then
+         return Expr;
+      elsif Compatible_Type
+        (Access_Target_Type (Actual_Type, Type_Env),
+         Expected_Type,
+         Type_Env)
+      then
+         return Make_Implicit_Deref (Expr, Var_Types, Functions, Type_Env);
+      end if;
+      return Expr;
+   end Apply_Implicit_Deref_For_Expected_Type;
+
+   function Apply_Implicit_Deref_Target_For_Expected_Type
+     (Expr          : CM.Expr_Access;
+      Expected_Type : GM.Type_Descriptor;
+      Var_Types     : Type_Maps.Map;
+      Functions     : Function_Maps.Map;
+      Type_Env      : Type_Maps.Map) return CM.Expr_Access
+   is
+      Actual_Type : constant GM.Type_Descriptor :=
+        Expr_Type (Expr, Var_Types, Functions, Type_Env);
+   begin
+      if Expr = null
+        or else not Is_Access_Type (Actual_Type)
+        or else Is_Access_Type (Expected_Type)
+      then
+         return Expr;
+      elsif Compatible_Type
+        (Access_Target_Type (Actual_Type, Type_Env),
+         Expected_Type,
+         Type_Env)
+      then
+         return Make_Implicit_Deref (Expr, Var_Types, Functions, Type_Env);
+      end if;
+      return Expr;
+   end Apply_Implicit_Deref_Target_For_Expected_Type;
+
+   procedure Apply_Implicit_Deref_For_Call
+     (Expr      : CM.Expr_Access;
+      Var_Types : Type_Maps.Map;
+      Functions : Function_Maps.Map;
+      Type_Env  : Type_Maps.Map)
+   is
+      Callee_Name : constant String := Flatten_Name (Expr.Callee);
+   begin
+      if Expr = null
+        or else Expr.Kind /= CM.Expr_Call
+        or else not Has_Function (Functions, Callee_Name)
+      then
+         return;
+      end if;
+
+      declare
+         Info : constant Function_Info := Get_Function (Functions, Callee_Name);
+      begin
+         if Expr.Args.Is_Empty
+           or else Natural (Expr.Args.Length) /= Natural (Info.Params.Length)
+         then
+            return;
+         end if;
+
+         for Index in Expr.Args.First_Index .. Expr.Args.Last_Index loop
+            declare
+               Formal : constant CM.Symbol :=
+                 Info.Params (Info.Params.First_Index + (Index - Expr.Args.First_Index));
+               Mode_Name : constant String := FT.Lowercase (UString_Value (Formal.Mode));
+            begin
+               if Mode_Name in "out" | "in out" then
+                  Expr.Args.Replace_Element
+                    (Index,
+                     Apply_Implicit_Deref_Target_For_Expected_Type
+                       (Expr.Args (Index),
+                        Formal.Type_Info,
+                        Var_Types,
+                        Functions,
+                        Type_Env));
+               else
+                  Expr.Args.Replace_Element
+                    (Index,
+                     Apply_Implicit_Deref_For_Expected_Type
+                       (Expr.Args (Index),
+                        Formal.Type_Info,
+                        Var_Types,
+                        Functions,
+                        Type_Env));
+               end if;
+            end;
+         end loop;
+      end;
+   end Apply_Implicit_Deref_For_Call;
+
+   procedure Apply_Implicit_Deref_For_Binary
+     (Expr      : CM.Expr_Access;
+      Var_Types : Type_Maps.Map;
+      Functions : Function_Maps.Map;
+      Type_Env  : Type_Maps.Map)
+   is
+      Operator   : constant String := UString_Value (Expr.Operator);
+      Left_Type  : constant GM.Type_Descriptor :=
+        Expr_Type (Expr.Left, Var_Types, Functions, Type_Env);
+      Right_Type : constant GM.Type_Descriptor :=
+        Expr_Type (Expr.Right, Var_Types, Functions, Type_Env);
+   begin
+      if Expr = null or else Expr.Kind /= CM.Expr_Binary then
+         return;
+      elsif Expr.Left = null or else Expr.Right = null then
+         return;
+      elsif Operator in "==" | "!="
+        and then (Expr.Left.Kind = CM.Expr_Null or else Expr.Right.Kind = CM.Expr_Null)
+      then
+         return;
+      elsif Is_Access_Type (Left_Type)
+        and then Is_Access_Type (Right_Type)
+        and then Compatible_Type
+          (Access_Target_Type (Left_Type, Type_Env),
+           Access_Target_Type (Right_Type, Type_Env),
+           Type_Env)
+      then
+         Expr.Left := Make_Implicit_Deref (Expr.Left, Var_Types, Functions, Type_Env);
+         Expr.Right := Make_Implicit_Deref (Expr.Right, Var_Types, Functions, Type_Env);
+      elsif Is_Access_Type (Left_Type)
+        and then Compatible_Type
+          (Access_Target_Type (Left_Type, Type_Env),
+           Right_Type,
+           Type_Env)
+      then
+         Expr.Left := Make_Implicit_Deref (Expr.Left, Var_Types, Functions, Type_Env);
+      elsif Is_Access_Type (Right_Type)
+        and then Compatible_Type
+          (Left_Type,
+           Access_Target_Type (Right_Type, Type_Env),
+           Type_Env)
+      then
+         Expr.Right := Make_Implicit_Deref (Expr.Right, Var_Types, Functions, Type_Env);
+      end if;
+   end Apply_Implicit_Deref_For_Binary;
 
    function Normalize_Expr
      (Expr      : CM.Expr_Access;
@@ -1654,6 +1914,7 @@ package body Safe_Frontend.Check_Resolve is
                   for Item of Resolved.Args loop
                      Result.Args.Append (Normalize_Expr (Item, Var_Types, Functions, Type_Env));
                   end loop;
+                  Apply_Implicit_Deref_For_Call (Result, Var_Types, Functions, Type_Env);
                else
                   Result := new CM.Expr_Node'(Resolved.all);
                   Result.Inner := Normalize_Expr (Resolved.Inner, Var_Types, Functions, Type_Env);
@@ -1666,6 +1927,7 @@ package body Safe_Frontend.Check_Resolve is
             Result := new CM.Expr_Node'(Expr.all);
             Result.Left := Normalize_Expr (Expr.Left, Var_Types, Functions, Type_Env);
             Result.Right := Normalize_Expr (Expr.Right, Var_Types, Functions, Type_Env);
+            Apply_Implicit_Deref_For_Binary (Result, Var_Types, Functions, Type_Env);
          when CM.Expr_Unary =>
             Result := new CM.Expr_Node'(Expr.all);
             Result.Inner := Normalize_Expr (Expr.Inner, Var_Types, Functions, Type_Env);
@@ -1719,7 +1981,8 @@ package body Safe_Frontend.Check_Resolve is
          when CM.Expr_Select =>
             Validate_Pr112_Expr_Boundaries (Expr.Prefix, Var_Types, Functions, Type_Env, Path);
             Prefix_Type := Expr_Type (Expr.Prefix, Var_Types, Functions, Type_Env);
-            if UString_Value (Expr.Selector) in "First" | "Last" | "Length" | "Access"
+            Require_Canonical_Attribute_Name (UString_Value (Expr.Selector), Path, Expr.Span);
+            if FT.Lowercase (UString_Value (Expr.Selector)) in "first" | "last" | "length" | "access"
               and then Is_String_Type (Prefix_Type, Type_Env)
             then
                Raise_Diag
@@ -1840,7 +2103,7 @@ package body Safe_Frontend.Check_Resolve is
          end loop;
          return True;
       elsif Expr.Kind = CM.Expr_Select then
-         return UString_Value (Expr.Selector) not in "First" | "Last" | "Length" | "Access";
+         return FT.Lowercase (UString_Value (Expr.Selector)) not in "first" | "last" | "length" | "access";
       end if;
       return False;
    end Is_Assignable_Target;
@@ -2016,6 +2279,13 @@ package body Safe_Frontend.Check_Resolve is
          Result.Initializer :=
            Normalize_Expr_Checked
              (Decl.Initializer, Var_Types, Functions, Type_Env, Path);
+         Result.Initializer :=
+           Apply_Implicit_Deref_For_Expected_Type
+             (Result.Initializer,
+              Result.Type_Info,
+              Var_Types,
+              Functions,
+              Type_Env);
          if Is_String_Type (Result.Type_Info, Type_Env)
            and then not Compatible_Type
              (Expr_Type (Result.Initializer, Var_Types, Functions, Type_Env),
@@ -2056,7 +2326,10 @@ package body Safe_Frontend.Check_Resolve is
 
    function Is_Local_Constant_Target
      (Expr            : CM.Expr_Access;
-      Local_Constants : Type_Maps.Map) return Boolean
+      Local_Constants : Type_Maps.Map;
+      Var_Types       : Type_Maps.Map;
+      Functions       : Function_Maps.Map;
+      Type_Env        : Type_Maps.Map) return Boolean
    is
    begin
       if Expr = null then
@@ -2071,14 +2344,34 @@ package body Safe_Frontend.Check_Resolve is
                return Name /= "" and then Has_Type (Local_Constants, Name);
             end;
          when CM.Expr_Select =>
-            if UString_Value (Expr.Selector) = "all" then
+            if FT.Lowercase (UString_Value (Expr.Selector)) = "all" then
+               return False;
+            elsif Is_Reference_Typed
+              (Expr_Type (Expr.Prefix, Var_Types, Functions, Type_Env),
+               Type_Env)
+            then
                return False;
             end if;
-            return Is_Local_Constant_Target (Expr.Prefix, Local_Constants);
+            return Is_Local_Constant_Target
+              (Expr.Prefix,
+               Local_Constants,
+               Var_Types,
+               Functions,
+               Type_Env);
          when CM.Expr_Resolved_Index =>
-            return Is_Local_Constant_Target (Expr.Prefix, Local_Constants);
+            return Is_Local_Constant_Target
+              (Expr.Prefix,
+               Local_Constants,
+               Var_Types,
+               Functions,
+               Type_Env);
          when CM.Expr_Conversion =>
-            return Is_Local_Constant_Target (Expr.Inner, Local_Constants);
+            return Is_Local_Constant_Target
+              (Expr.Inner,
+               Local_Constants,
+               Var_Types,
+               Functions,
+               Type_Env);
          when others =>
             return False;
       end case;
@@ -2088,6 +2381,9 @@ package body Safe_Frontend.Check_Resolve is
      (Expr             : CM.Expr_Access;
       Imported_Objects : Type_Maps.Map;
       Local_Constants  : Type_Maps.Map;
+      Var_Types        : Type_Maps.Map;
+      Functions        : Function_Maps.Map;
+      Type_Env         : Type_Maps.Map;
       Path             : String;
       Message          : String) is
       Name : constant String := Root_Name (Expr);
@@ -2098,6 +2394,9 @@ package body Safe_Frontend.Check_Resolve is
               (Item,
                Imported_Objects,
                Local_Constants,
+               Var_Types,
+               Functions,
+               Type_Env,
                Path,
                Message);
          end loop;
@@ -2107,7 +2406,13 @@ package body Safe_Frontend.Check_Resolve is
               (Path    => Path,
                Span    => (if Expr = null then FT.Null_Span else Expr.Span),
                Message => Message));
-      elsif Is_Local_Constant_Target (Expr, Local_Constants) then
+      elsif Is_Local_Constant_Target
+        (Expr,
+         Local_Constants,
+         Var_Types,
+         Functions,
+         Type_Env)
+      then
          Raise_Diag
            (CM.Write_To_Constant
               (Path    => Path,
@@ -2128,7 +2433,9 @@ package body Safe_Frontend.Check_Resolve is
       Imported_Objects : Type_Maps.Map;
       Local_Constants : Type_Maps.Map;
       Local_Static_Constants : Static_Value_Maps.Map;
-      Path        : String) return CM.Statement_Access;
+      Path        : String;
+      Current_Return_Type : GM.Type_Descriptor := Default_Integer;
+      Has_Return_Type : Boolean := False) return CM.Statement_Access;
 
    function Normalize_Statement_List
      (Statements  : CM.Statement_Access_Vectors.Vector;
@@ -2139,7 +2446,9 @@ package body Safe_Frontend.Check_Resolve is
       Imported_Objects : Type_Maps.Map;
       Local_Constants : Type_Maps.Map;
       Local_Static_Constants : Static_Value_Maps.Map;
-      Path        : String) return CM.Statement_Access_Vectors.Vector
+      Path        : String;
+      Current_Return_Type : GM.Type_Descriptor := Default_Integer;
+      Has_Return_Type : Boolean := False) return CM.Statement_Access_Vectors.Vector
    is
       Result      : CM.Statement_Access_Vectors.Vector;
       Local_Types : Type_Maps.Map := Var_Types;
@@ -2158,7 +2467,9 @@ package body Safe_Frontend.Check_Resolve is
                  Imported_Objects,
                  Current_Constants,
                  Current_Static_Constants,
-                 Path);
+                 Path,
+                 Current_Return_Type,
+                 Has_Return_Type);
          begin
             Result.Append (Normalized);
             if Normalized.Kind = CM.Stmt_Object_Decl then
@@ -2210,7 +2521,9 @@ package body Safe_Frontend.Check_Resolve is
       Imported_Objects : Type_Maps.Map;
       Local_Constants : Type_Maps.Map;
       Local_Static_Constants : Static_Value_Maps.Map;
-      Path        : String) return CM.Statement_Access
+      Path        : String;
+      Current_Return_Type : GM.Type_Descriptor := Default_Integer;
+      Has_Return_Type : Boolean := False) return CM.Statement_Access
    is
       Result         : constant CM.Statement_Access := new CM.Statement'(Stmt.all);
       Local_Types    : Type_Maps.Map := Var_Types;
@@ -2288,13 +2601,48 @@ package body Safe_Frontend.Check_Resolve is
               (Result.Target,
                Imported_Objects,
                Local_Constants,
+               Var_Types,
+               Functions,
+               Type_Env,
                Path,
                "assignment to imported package-qualified objects is outside the current PR08.3 interface subset");
             Result.Value := Normalize_Expr_Checked (Stmt.Value, Var_Types, Functions, Type_Env, Path);
+            declare
+               Actual_Target_Type : constant GM.Type_Descriptor :=
+                 Expr_Type (Result.Target, Var_Types, Functions, Type_Env);
+               Actual_Value_Type  : constant GM.Type_Descriptor :=
+                 Expr_Type (Result.Value, Var_Types, Functions, Type_Env);
+            begin
+               if not Compatible_Type (Actual_Target_Type, Actual_Value_Type, Type_Env) then
+                  Result.Target :=
+                    Apply_Implicit_Deref_Target_For_Expected_Type
+                      (Result.Target,
+                       Actual_Value_Type,
+                       Var_Types,
+                       Functions,
+                       Type_Env);
+                  Result.Value :=
+                    Apply_Implicit_Deref_For_Expected_Type
+                      (Result.Value,
+                       Expr_Type (Result.Target, Var_Types, Functions, Type_Env),
+                       Var_Types,
+                       Functions,
+                       Type_Env);
+               end if;
+            end;
 
          when CM.Stmt_Return =>
             if Stmt.Value /= null then
                Result.Value := Normalize_Expr_Checked (Stmt.Value, Var_Types, Functions, Type_Env, Path);
+               if Has_Return_Type then
+                  Result.Value :=
+                    Apply_Implicit_Deref_For_Expected_Type
+                      (Result.Value,
+                       Current_Return_Type,
+                       Var_Types,
+                       Functions,
+                       Type_Env);
+               end if;
             end if;
 
          when CM.Stmt_If =>
@@ -2306,11 +2654,13 @@ package body Safe_Frontend.Check_Resolve is
                  Var_Types,
                  Functions,
                  Type_Env,
-                 Channel_Env,
-                 Imported_Objects,
-                 Local_Constants,
-                 Local_Static_Constants,
-                 Path);
+                Channel_Env,
+                Imported_Objects,
+                Local_Constants,
+                Local_Static_Constants,
+                Path,
+                Current_Return_Type,
+                Has_Return_Type);
             Result.Elsifs.Clear;
             for Part of Stmt.Elsifs loop
                declare
@@ -2328,7 +2678,9 @@ package body Safe_Frontend.Check_Resolve is
                        Imported_Objects,
                        Local_Constants,
                        Local_Static_Constants,
-                       Path);
+                       Path,
+                       Current_Return_Type,
+                       Has_Return_Type);
                   Result.Elsifs.Append (New_Part);
                end;
             end loop;
@@ -2343,7 +2695,9 @@ package body Safe_Frontend.Check_Resolve is
                     Imported_Objects,
                     Local_Constants,
                     Local_Static_Constants,
-                    Path);
+                    Path,
+                    Current_Return_Type,
+                    Has_Return_Type);
             end if;
 
          when CM.Stmt_While =>
@@ -2359,7 +2713,9 @@ package body Safe_Frontend.Check_Resolve is
                  Imported_Objects,
                  Local_Constants,
                  Local_Static_Constants,
-                 Path);
+                 Path,
+                 Current_Return_Type,
+                 Has_Return_Type);
 
          when CM.Stmt_Loop =>
             Result.Body_Stmts :=
@@ -2372,7 +2728,9 @@ package body Safe_Frontend.Check_Resolve is
                  Imported_Objects,
                  Local_Constants,
                  Local_Static_Constants,
-                 Path);
+                 Path,
+                 Current_Return_Type,
+                 Has_Return_Type);
 
          when CM.Stmt_Exit =>
             if Stmt.Condition /= null then
@@ -2389,7 +2747,7 @@ package body Safe_Frontend.Check_Resolve is
                Result.Loop_Range.High_Expr :=
                  Normalize_Expr_Checked
                    (Stmt.Loop_Range.High_Expr, Var_Types, Functions, Type_Env, Path);
-               Loop_Type.Name := FT.To_UString ("Integer");
+               Loop_Type.Name := FT.To_UString ("integer");
                Loop_Type.Kind := FT.To_UString ("integer");
             else
                Result.Loop_Range.Name_Expr :=
@@ -2411,7 +2769,9 @@ package body Safe_Frontend.Check_Resolve is
                  Imported_Objects,
                  Current_Constants,
                  Current_Static_Constants,
-                 Path);
+                 Path,
+                 Current_Return_Type,
+                 Has_Return_Type);
 
          when CM.Stmt_Call =>
             Result.Call :=
@@ -2425,6 +2785,13 @@ package body Safe_Frontend.Check_Resolve is
               Normalize_Expr_Checked (Stmt.Channel_Name, Var_Types, Functions, Type_Env, Path);
             Result.Value := Normalize_Expr_Checked (Stmt.Value, Var_Types, Functions, Type_Env, Path);
             Channel_Type := Channel_Element_Type (Result.Channel_Name, Channel_Env, Path);
+            Result.Value :=
+              Apply_Implicit_Deref_For_Expected_Type
+                (Result.Value,
+                 Channel_Type,
+                 Var_Types,
+                 Functions,
+                 Type_Env);
             if not Compatible_Type
               (Expr_Type (Result.Value, Var_Types, Functions, Type_Env),
                Channel_Type,
@@ -2450,6 +2817,9 @@ package body Safe_Frontend.Check_Resolve is
                  (Result.Success_Var,
                   Imported_Objects,
                   Local_Constants,
+                  Var_Types,
+                  Functions,
+                  Type_Env,
                   Path,
                   "assignment to imported package-qualified objects is outside the current PR08.3 interface subset");
                Success_Type := Expr_Type (Result.Success_Var, Var_Types, Functions, Type_Env);
@@ -2477,9 +2847,19 @@ package body Safe_Frontend.Check_Resolve is
               (Result.Target,
                Imported_Objects,
                Local_Constants,
+               Var_Types,
+               Functions,
+               Type_Env,
                Path,
                "assignment to imported package-qualified objects is outside the current PR08.3 interface subset");
             Channel_Type := Channel_Element_Type (Result.Channel_Name, Channel_Env, Path);
+            Result.Target :=
+              Apply_Implicit_Deref_Target_For_Expected_Type
+                (Result.Target,
+                 Channel_Type,
+                 Var_Types,
+                 Functions,
+                 Type_Env);
             Target_Type := Expr_Type (Result.Target, Var_Types, Functions, Type_Env);
             if not Compatible_Type (Target_Type, Channel_Type, Type_Env) then
                Raise_Diag
@@ -2502,6 +2882,9 @@ package body Safe_Frontend.Check_Resolve is
                  (Result.Success_Var,
                   Imported_Objects,
                   Local_Constants,
+                  Var_Types,
+                  Functions,
+                  Type_Env,
                   Path,
                   "assignment to imported package-qualified objects is outside the current PR08.3 interface subset");
                Success_Type := Expr_Type (Result.Success_Var, Var_Types, Functions, Type_Env);
@@ -2576,7 +2959,9 @@ package body Safe_Frontend.Check_Resolve is
                           Imported_Objects,
                           Local_Constants,
                           Local_Static_Constants,
-                          Path);
+                          Path,
+                          Current_Return_Type,
+                          Has_Return_Type);
                      Result.Case_Arms.Append (New_Arm);
                   end;
                end loop;
@@ -2645,7 +3030,9 @@ package body Safe_Frontend.Check_Resolve is
                                    Imported_Objects,
                                    Local_Constants,
                                    Arm_Static_Constants,
-                                   Path);
+                                   Path,
+                                   Current_Return_Type,
+                                   Has_Return_Type);
                            end;
                         when CM.Select_Arm_Delay =>
                            Delay_Arms := Delay_Arms + 1;
@@ -2680,7 +3067,9 @@ package body Safe_Frontend.Check_Resolve is
                                 Imported_Objects,
                                 Local_Constants,
                                 Local_Static_Constants,
-                                Path);
+                                Path,
+                                Current_Return_Type,
+                                Has_Return_Type);
                         when others =>
                            null;
                      end case;
@@ -2719,6 +3108,17 @@ package body Safe_Frontend.Check_Resolve is
       Result : GM.Type_Descriptor;
       Item   : GM.Type_Field;
    begin
+      Require_Lowercase_Name (UString_Value (Decl.Name), Path, Decl.Span, "type name");
+      if Is_Builtin_Name (UString_Value (Decl.Name)) then
+         Raise_Diag
+           (CM.Source_Frontend_Error
+              (Path    => Path,
+               Span    => Decl.Span,
+               Message =>
+                 "type name `"
+                 & UString_Value (Decl.Name)
+                 & "` conflicts with a builtin type name"));
+      end if;
       Result.Name := Decl.Name;
       case Decl.Kind is
          when CM.Type_Decl_Incomplete =>
@@ -2994,6 +3394,7 @@ package body Safe_Frontend.Check_Resolve is
       Result : Function_Info;
       Symbol : CM.Symbol;
    begin
+      Require_Lowercase_Name (UString_Value (Decl.Spec.Name), Path, Decl.Span, "function name");
       Result.Name := Decl.Spec.Name;
       Result.Kind := Decl.Spec.Kind;
       Result.Span := Decl.Span;
@@ -3148,11 +3549,9 @@ package body Safe_Frontend.Check_Resolve is
 
    function Resolve
      (Unit        : CM.Parsed_Unit;
-      Search_Dirs : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector;
-      Reference_Signal_Experiment : Boolean := False)
+      Search_Dirs : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector)
       return CM.Resolve_Result
    is
-      Previous_Reference_Signal_Experiment : constant Boolean := Current_Reference_Signal_Experiment;
       Type_Env         : Type_Maps.Map;
       Functions        : Function_Maps.Map;
       Package_Vars     : Type_Maps.Map;
@@ -3267,11 +3666,15 @@ package body Safe_Frontend.Check_Resolve is
          end loop;
       end Add_Imported_Interface;
    begin
-      Current_Reference_Signal_Experiment := Reference_Signal_Experiment;
       Add_Builtins (Type_Env);
       Add_Builtin_Functions (Functions);
       Result.Path := Unit.Path;
       Result.Package_Name := Unit.Package_Name;
+      Require_Lowercase_Name
+        (UString_Value (Result.Package_Name),
+         UString_Value (Unit.Path),
+         Unit.Span,
+         "package name");
 
       if not Unit.Withs.Is_Empty then
          declare
@@ -3326,6 +3729,11 @@ package body Safe_Frontend.Check_Resolve is
                        UString_Value (Unit.Path));
                   Info : GM.Type_Descriptor;
                begin
+                  Require_Lowercase_Name
+                    (UString_Value (Item.Sub_Data.Name),
+                     UString_Value (Unit.Path),
+                     Item.Sub_Data.Span,
+                     "type name");
                   Info.Name := Item.Sub_Data.Name;
                   Info.Kind := FT.To_UString ("subtype");
                   if Base.Has_Low then
@@ -3588,7 +3996,9 @@ package body Safe_Frontend.Check_Resolve is
                     Imported_Objects,
                     Visible_Constants,
                     Visible_Static_Constants,
-                    UString_Value (Unit.Path));
+                    UString_Value (Unit.Path),
+                    Subprogram.Return_Type,
+                    Subprogram.Has_Return_Type);
 
                Result.Subprograms.Append (Subprogram);
             end;
@@ -3724,14 +4134,11 @@ package body Safe_Frontend.Check_Resolve is
          end if;
       end loop;
 
-      Current_Reference_Signal_Experiment := Previous_Reference_Signal_Experiment;
       return (Success => True, Unit => Result);
    exception
       when Resolve_Failure =>
-         Current_Reference_Signal_Experiment := Previous_Reference_Signal_Experiment;
          return (Success => False, Diagnostic => Raised_Diag);
       when others =>
-         Current_Reference_Signal_Experiment := Previous_Reference_Signal_Experiment;
          raise;
    end Resolve;
 end Safe_Frontend.Check_Resolve;

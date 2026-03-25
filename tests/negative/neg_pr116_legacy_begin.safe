@@ -1,6 +1,6 @@
-package Neg_PR116_Legacy_Begin
+package neg_PR116_Legacy_Begin
 
-   function Broken returns Integer
+   function broken returns integer
 
       begin
          return 1;

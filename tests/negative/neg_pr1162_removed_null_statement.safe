@@ -1,5 +1,5 @@
-package Neg_PR1162_Removed_Null_Statement
+package neg_PR1162_Removed_Null_Statement
 
-   function Consume
+   function consume
 
       null;

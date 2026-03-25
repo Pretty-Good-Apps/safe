@@ -7,38 +7,38 @@
 -- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.4.p35:2ad6e64f
 -- Expected: ACCEPT
 
-package Select_Priority
+package select_Priority
 
-   type Command is range 0 to 10;
-   type Status is range 0 to 255;
+   type command is range 0 to 10;
+   type status is range 0 to 255;
 
-   channel High_Ch : Command capacity 2;
-   channel Low_Ch  : Status capacity 2;
+   channel High_Ch : command capacity 2;
+   channel Low_Ch  : status capacity 2;
 
    --  Feeder_High: sends commands on the high-priority channel.
    task Feeder_High
-      Cmd : Command = 1;
+      cmd : command = 1;
 
       loop
-         send High_Ch, Cmd;
-         if Cmd < 10
-            Cmd = Cmd + 1;
+         send High_Ch, cmd;
+         if cmd < 10
+            cmd = cmd + 1;
          else
-            Cmd = 1;
+            cmd = 1;
 
 
 
 
    --  Feeder_Low: sends status on the low-priority channel.
    task Feeder_Low
-      S : Status = 0;
+      s : status = 0;
 
       loop
-         send Low_Ch, S;
-         if S < 255
-            S = S + 1;
+         send Low_Ch, s;
+         if s < 255
+            s = s + 1;
          else
-            S = 0;
+            s = 0;
 
 
 
@@ -46,20 +46,20 @@ package Select_Priority
    --  Dispatcher: uses select to receive from multiple channels.
    --  High_Ch arm appears first, so it has priority when both are ready.
    task Dispatcher
-      Processed : Natural = 0;
+      processed : natural = 0;
 
       loop
          select
-            when Cmd : Command from High_Ch
+            when cmd : command from High_Ch
                --  High-priority command received.
-               Processed = Processed + 1;
+               processed = processed + 1;
          or
-            when S : Status from Low_Ch
+            when s : status from Low_Ch
                --  Low-priority status received.
-               Processed = Processed + 1;
+               processed = processed + 1;
 
-         if Processed > 1_000_000
-            Processed = 0;
+         if processed > 1_000_000
+            processed = 0;
 
 
 

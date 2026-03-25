@@ -1,8 +1,8 @@
-package Lookup_Result
+package lookup_Result
 
-   function Lookup_Name (Opcode : in Integer) returns (result, Integer)
+   function lookup_Name (opcode : in integer) returns (result, integer)
 
-      case Opcode
+      case opcode
          when 1
             return (ok (), 100)
 

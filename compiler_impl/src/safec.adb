@@ -15,11 +15,11 @@ procedure Safec is
       Ada.Text_IO.Put_Line ("  safec validate-mir <file.mir.json>");
       Ada.Text_IO.Put_Line ("  safec analyze-mir <file.mir.json>");
       Ada.Text_IO.Put_Line ("  safec analyze-mir --diag-json <file.mir.json>");
-      Ada.Text_IO.Put_Line ("  safec ast <file.safe> [--experiment pr117-reference-signal] [--interface-search-dir <dir>]...");
-      Ada.Text_IO.Put_Line ("  safec check <file.safe> [--experiment pr117-reference-signal] [--interface-search-dir <dir>]...");
-      Ada.Text_IO.Put_Line ("  safec check --diag-json <file.safe> [--experiment pr117-reference-signal] [--interface-search-dir <dir>]...");
+      Ada.Text_IO.Put_Line ("  safec ast <file.safe> [--interface-search-dir <dir>]...");
+      Ada.Text_IO.Put_Line ("  safec check <file.safe> [--interface-search-dir <dir>]...");
+      Ada.Text_IO.Put_Line ("  safec check --diag-json <file.safe> [--interface-search-dir <dir>]...");
       Ada.Text_IO.Put_Line
-        ("  safec emit <file.safe> --out-dir <dir> --interface-dir <dir> [--ada-out-dir <dir>] [--experiment pr117-reference-signal] [--interface-search-dir <dir>]...");
+        ("  safec emit <file.safe> --out-dir <dir> --interface-dir <dir> [--ada-out-dir <dir>] [--interface-search-dir <dir>]...");
       return Safe_Frontend.Exit_Usage;
    end Usage;
 
@@ -48,11 +48,10 @@ procedure Safec is
       Allow_Diag   : Boolean;
       Need_Emit    : Boolean;
       Path         : out FT.UString;
-     Diag_Json    : out Boolean;
+      Diag_Json    : out Boolean;
       Out_Dir      : out FT.UString;
       Interface_Dir : out FT.UString;
       Ada_Out_Dir  : out FT.UString;
-      Reference_Signal_Experiment : out Boolean;
       Search_Dirs  : out FT.UString_Vectors.Vector;
       Ok           : out Boolean)
    is
@@ -63,7 +62,6 @@ procedure Safec is
       Out_Dir := FT.To_UString ("");
       Interface_Dir := FT.To_UString ("");
       Ada_Out_Dir := FT.To_UString ("");
-      Reference_Signal_Experiment := False;
       Search_Dirs.Clear;
       Ok := True;
 
@@ -84,19 +82,6 @@ procedure Safec is
                   return;
                end if;
                Search_Dirs.Append (FT.To_UString (Argument (Positive (Index + 1))));
-               Index := Index + 2;
-            elsif Item = "--experiment" then
-               if Index = Ada.Command_Line.Argument_Count then
-                  Ok := False;
-                  return;
-               elsif Reference_Signal_Experiment then
-                  Ok := False;
-                  return;
-               elsif Argument (Positive (Index + 1)) /= "pr117-reference-signal" then
-                  Ok := False;
-                  return;
-               end if;
-               Reference_Signal_Experiment := True;
                Index := Index + 2;
             elsif Need_Emit and then Item = "--out-dir" then
                if Index = Ada.Command_Line.Argument_Count or else FT.To_String (Out_Dir)'Length > 0 then
@@ -178,7 +163,6 @@ begin
             Out_Dir      : FT.UString;
             Interface_Dir : FT.UString;
             Ada_Out_Dir  : FT.UString;
-            Reference_Signal_Experiment : Boolean;
             Search_Dirs  : FT.UString_Vectors.Vector;
             Ok           : Boolean;
          begin
@@ -191,7 +175,6 @@ begin
                Out_Dir       => Out_Dir,
                Interface_Dir => Interface_Dir,
                Ada_Out_Dir   => Ada_Out_Dir,
-               Reference_Signal_Experiment => Reference_Signal_Experiment,
                Search_Dirs   => Search_Dirs,
                Ok            => Ok);
             pragma Unreferenced (Diag_Json, Out_Dir, Interface_Dir, Ada_Out_Dir);
@@ -201,8 +184,7 @@ begin
                Exit_Code :=
                  Safe_Frontend.Driver.Run_Ast
                    (Path        => FT.To_String (Path),
-                    Search_Dirs => Search_Dirs,
-                    Reference_Signal_Experiment => Reference_Signal_Experiment);
+                    Search_Dirs => Search_Dirs);
             end if;
          end;
       elsif Command = "check" then
@@ -212,7 +194,6 @@ begin
             Out_Dir      : FT.UString;
             Interface_Dir : FT.UString;
             Ada_Out_Dir  : FT.UString;
-            Reference_Signal_Experiment : Boolean;
             Search_Dirs  : FT.UString_Vectors.Vector;
             Ok           : Boolean;
          begin
@@ -225,7 +206,6 @@ begin
                Out_Dir       => Out_Dir,
                Interface_Dir => Interface_Dir,
                Ada_Out_Dir   => Ada_Out_Dir,
-               Reference_Signal_Experiment => Reference_Signal_Experiment,
                Search_Dirs   => Search_Dirs,
                Ok            => Ok);
             pragma Unreferenced (Out_Dir, Interface_Dir, Ada_Out_Dir);
@@ -236,8 +216,7 @@ begin
                  Safe_Frontend.Driver.Run_Check
                    (Path        => FT.To_String (Path),
                     Diag_Json   => Diag_Json,
-                    Search_Dirs => Search_Dirs,
-                    Reference_Signal_Experiment => Reference_Signal_Experiment);
+                    Search_Dirs => Search_Dirs);
             end if;
          end;
       elsif Command = "emit" then
@@ -247,7 +226,6 @@ begin
             Out_Dir      : FT.UString;
             Interface_Dir : FT.UString;
             Ada_Out_Dir  : FT.UString;
-            Reference_Signal_Experiment : Boolean;
             Search_Dirs  : FT.UString_Vectors.Vector;
             Ok           : Boolean;
          begin
@@ -260,7 +238,6 @@ begin
                Out_Dir       => Out_Dir,
                Interface_Dir => Interface_Dir,
                Ada_Out_Dir   => Ada_Out_Dir,
-               Reference_Signal_Experiment => Reference_Signal_Experiment,
                Search_Dirs   => Search_Dirs,
                Ok            => Ok);
             pragma Unreferenced (Diag_Json);
@@ -269,12 +246,11 @@ begin
             else
                Exit_Code :=
                  Safe_Frontend.Driver.Run_Emit
-                  (Path          => FT.To_String (Path),
-                   Out_Dir       => FT.To_String (Out_Dir),
-                   Interface_Dir => FT.To_String (Interface_Dir),
-                   Ada_Out_Dir   => FT.To_String (Ada_Out_Dir),
-                    Search_Dirs   => Search_Dirs,
-                    Reference_Signal_Experiment => Reference_Signal_Experiment);
+                   (Path          => FT.To_String (Path),
+                    Out_Dir       => FT.To_String (Out_Dir),
+                    Interface_Dir => FT.To_String (Interface_Dir),
+                    Ada_Out_Dir   => FT.To_String (Ada_Out_Dir),
+                    Search_Dirs   => Search_Dirs);
             end if;
          end;
       else

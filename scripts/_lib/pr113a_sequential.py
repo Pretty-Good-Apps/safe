@@ -89,11 +89,11 @@ PR113A_SEQUENTIAL_PROOF_CORPUS: list[dict[str, Any]] = [
             "Named : Packet (Active = True, Kind = Default_Kind, Count = Default_Count) = (Value = 3);",
         ],
         "spec_fragments": [
-            "type Packet (Active : Boolean := True; Kind : Character := 'A'; Count : Integer := 0) is record",
-            "subtype Safe_constraint_Packet_Active_true_Kind_A_Count_1 is Packet (True, 'A', 1);",
-            "subtype Safe_constraint_Packet_Active_true_Kind_A_Count_2 is Packet (Active => True, Kind => 'A', Count => 2);",
-            "function Take(Item : Safe_constraint_Packet_Active_true_Kind_A_Count_2) return Safe_constraint_Packet_Active_true_Kind_A_Count_2 with Global => null,",
-            "Depends => (Take'Result => Item);",
+            "type packet (Active : boolean := True; Kind : character := 'A'; Count : integer := 0) is record",
+            "subtype Safe_constraint_packet_Active_true_Kind_A_Count_1 is packet (True, 'A', 1);",
+            "subtype Safe_constraint_packet_Active_true_Kind_A_Count_2 is packet (Active => True, Kind => 'A', Count => 2);",
+            "function take(item : Safe_constraint_packet_Active_true_Kind_A_Count_2) return Safe_constraint_packet_Active_true_Kind_A_Count_2 with Global => null,",
+            "Depends => (take'Result => item);",
         ],
     },
     {
@@ -101,18 +101,18 @@ PR113A_SEQUENTIAL_PROOF_CORPUS: list[dict[str, Any]] = [
         "family": "pr113",
         "coverage_note": "Tuple returns, destructuring, and positional field access stay visible in emitted tuple records and destructure lowering.",
         "source_fragments": [
-            "function Lookup (Flag : in Boolean) returns (Boolean, Integer) is",
-            "(Found, Value) : (Boolean, Integer) = Lookup (True);",
-            "return Direct.2;",
+            "function lookup (flag : in Boolean) returns (Boolean, Integer) is",
+            "(Found, Value) : (Boolean, Integer) = lookup (True);",
+            "return direct.2;",
         ],
         "spec_fragments": [
-            "type Safe_tuple_Boolean_Integer is record",
-            "function Lookup(Flag : Boolean) return Safe_tuple_Boolean_Integer with Global => null,",
+            "type Safe_tuple_boolean_integer is record",
+            "function lookup(flag : boolean) return Safe_tuple_boolean_integer with Global => null,",
         ],
         "body_fragments": [
-            "Safe_Destructure_1 : Safe_tuple_Boolean_Integer := Lookup (True);",
-            "Found : Boolean := Safe_Destructure_1.F1;",
-            "return Direct.F2;",
+            "Safe_Destructure_1 : Safe_tuple_boolean_integer := lookup (True);",
+            "Found : boolean := Safe_Destructure_1.F1;",
+            "return direct.F2;",
         ],
     },
     {
@@ -130,13 +130,13 @@ PR113A_SEQUENTIAL_PROOF_CORPUS: list[dict[str, Any]] = [
             "with Ada.Strings.Unbounded;",
             "type result is record",
             "Message : Ada.Strings.Unbounded.Unbounded_String := Ada.Strings.Unbounded.Null_Unbounded_String;",
-            "type Safe_tuple_result_Integer is record",
-            "function Reject(Msg : String) return result with Global => null,",
+            "type Safe_tuple_result_integer is record",
+            "function reject(msg : string) return result with Global => null,",
         ],
         "body_fragments": [
             "return (Ok => False, Message => Ada.Strings.Unbounded.To_Unbounded_String (Msg));",
             "F1 => (Ok => True, Message => Ada.Strings.Unbounded.Null_Unbounded_String)",
-            "return Safe_tuple_result_Integer'(F1 => Reject (\"negative\"), F2 => 0);",
+            "return Safe_tuple_result_integer'(F1 => reject (\"negative\"), F2 => 0);",
         ],
     },
     {
@@ -166,10 +166,10 @@ PR113A_SEQUENTIAL_PROOF_CORPUS: list[dict[str, Any]] = [
         "coverage_note": "Previously proved discriminant defaults remain explicit and continue to prove after the generalized PR11.3 discriminant work.",
         "source_fragments": [
             "Default_Active : constant Boolean = True;",
-            "type Result (Active : Boolean = Default_Active) is record",
+            "type default_Result (active : Boolean = Default_Active) is record",
         ],
         "spec_fragments": [
-            "type Result (Active : Boolean := True) is record",
+            "type Default_Result (active : Boolean := True) is record",
             "Default_Active : constant Boolean := True;",
         ],
     },

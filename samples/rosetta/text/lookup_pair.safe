@@ -1,8 +1,8 @@
-package Lookup_Pair
+package lookup_Pair
 
-   function Find_Code (Opcode : in Integer) returns (Boolean, Integer)
+   function find_Code (opcode : in integer) returns (boolean, integer)
 
-      case Opcode
+      case opcode
          when 1
             return (True, 10)
 

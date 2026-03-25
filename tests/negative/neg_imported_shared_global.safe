@@ -1,20 +1,19 @@
 -- Expected: REJECT task_variable_ownership
-with Provider_Transitive_Global;
+with provider_Transitive_Global;
 
-package Neg_Imported_Shared_Global
+package neg_Imported_Shared_Global
 
    task A
 
       loop
-         Provider_Transitive_Global.Touch;
+         provider_Transitive_Global.touch;
 
 
 
    task B
 
       loop
-         Provider_Transitive_Global.Touch;
-
+         provider_Transitive_Global.touch;
 
 
 

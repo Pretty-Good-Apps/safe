@@ -10,21 +10,18 @@ package Safe_Frontend.Driver is
       Diag_Json : Boolean := False) return Integer;
    function Run_Ast
      (Path          : String;
-      Search_Dirs   : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector;
-      Reference_Signal_Experiment : Boolean := False)
+      Search_Dirs   : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector)
       return Integer;
    function Run_Check
      (Path      : String;
       Diag_Json : Boolean := False;
-      Search_Dirs : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector;
-      Reference_Signal_Experiment : Boolean := False)
+      Search_Dirs : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector)
       return Integer;
    function Run_Emit
      (Path          : String;
       Out_Dir       : String;
       Interface_Dir : String;
       Ada_Out_Dir   : String := "";
-      Search_Dirs   : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector;
-      Reference_Signal_Experiment : Boolean := False)
+      Search_Dirs   : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector)
       return Integer;
 end Safe_Frontend.Driver;

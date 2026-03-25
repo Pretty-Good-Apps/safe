@@ -21,7 +21,7 @@ from _lib.attestation_compression import (
     merkle_root,
     verify_inclusion_proof,
 )
-from _lib.gate_manifest import NODES
+from _lib.gate_manifest import BranchMode, NODES, branch_mode
 from _lib.harness_common import (
     display_path,
     ensure_deterministic_env,
@@ -550,10 +550,15 @@ def check_generated_output_cleanliness(
     *,
     env: dict[str, str],
     expected_snapshot: str = "",
+    generated_output_paths: Sequence[Path] | None = None,
 ) -> None:
     git = find_command("git")
-    reports_root = Path(GENERATED_OUTPUTS_POLICY["reports_root"])
-    dashboard = Path(GENERATED_OUTPUTS_POLICY["dashboard"])
+    paths = list(generated_output_paths or ())
+    if not paths:
+        paths = [
+            Path(GENERATED_OUTPUTS_POLICY["reports_root"]),
+            Path(GENERATED_OUTPUTS_POLICY["dashboard"]),
+        ]
     result = run(
         [
             git,
@@ -561,8 +566,7 @@ def check_generated_output_cleanliness(
             "--porcelain",
             "--untracked-files=no",
             "--",
-            str(reports_root),
-            str(dashboard),
+            *[str(path) for path in paths],
         ],
         cwd=REPO_ROOT,
         env=env,
@@ -603,16 +607,27 @@ def run_preflight_phase(
     authority: str,
     env: dict[str, str],
     generated_output_baseline_file: Path | None = None,
+    branch: str | None = None,
 ) -> dict[str, Any]:
     expected_snapshot = read_generated_output_baseline(path=generated_output_baseline_file)
     check_tracker_schema(tracker)
-    tasks = tracker["tasks"]
-    check_status_rules(tracker, tasks)
-    check_dependencies(tasks)
-    meta_sha = check_frozen_sha(tracker)
-    check_documented_sha(meta_sha)
-    check_test_distribution(tracker)
-    check_generated_output_cleanliness(env=env, expected_snapshot=expected_snapshot)
+    provisional = branch is not None and branch_mode(branch) is BranchMode.PROVISIONAL
+    if not provisional:
+        tasks = tracker["tasks"]
+        check_status_rules(tracker, tasks)
+        check_dependencies(tasks)
+        meta_sha = check_frozen_sha(tracker)
+        check_documented_sha(meta_sha)
+        check_test_distribution(tracker)
+    generated_output_paths: list[Path] | None = None
+    if provisional:
+        branch_slug = re.sub(r"[^A-Za-z0-9._-]+", "-", branch.replace("/", "-"))
+        generated_output_paths = [Path("execution") / "staged" / branch_slug / "reports"]
+    check_generated_output_cleanliness(
+        env=env,
+        expected_snapshot=expected_snapshot,
+        generated_output_paths=generated_output_paths,
+    )
     return {
         "task": "execution-state",
         "phase": "preflight",
@@ -2288,6 +2303,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tracker", type=Path, default=TRACKER_PATH)
     parser.add_argument("--phase", choices=("full", "preflight", "final"), default="full")
+    parser.add_argument("--branch")
     parser.add_argument("--generated-root", type=Path)
     parser.add_argument("--generated-output-baseline-file", type=Path)
     parser.add_argument("--report", type=Path, default=EXECUTION_STATE_REPORT_PATH)
@@ -2304,6 +2320,7 @@ def main() -> int:
             authority=args.authority,
             env=env,
             generated_output_baseline_file=args.generated_output_baseline_file,
+            branch=args.branch,
         )
         print("execution state preflight: OK")
         return 0
@@ -2327,6 +2344,7 @@ def main() -> int:
         authority=args.authority,
         env=env,
         generated_output_baseline_file=args.generated_output_baseline_file,
+        branch=args.branch,
     )
     report = finalize_deterministic_report(
         lambda: run_final_phase(
