@@ -211,7 +211,7 @@ calls `GNAT.OS_Lib.OS_Exit (0)` so the process terminates cleanly instead of
 waiting forever on the library-level tasks.
 
 That exit pattern is just for the tutorial driver. The emitted Safe package
-itself still follows the current PR08/PR09 task model.
+itself still follows the current task/channel model.
 
 ## 7. What This Proves
 
@@ -221,16 +221,17 @@ end to end on this host:
 - Safe source parsing and semantic checking
 - MIR emission and validation
 - `safei-v1` interface emission
-- PR09 Ada/SPARK emission
+- Ada/SPARK emission
 - emitted `gnat.adc` generation for a real typed-channel package
 - host-local Ada compilation of the emitted package plus handwritten driver
 - execution of a native binary linked through the local Jorvik configuration
 
 ## Notes
 
-- This is a host-local smoke path, not a replacement for the repo gates.
-- The PR09 CI gates are intentionally compile-only; the explicit native link and
-  execution step here goes beyond what CI currently enforces.
+- This is a host-local smoke path, not a replacement for
+  `scripts/run_tests.py`, `scripts/run_samples.py`, or `scripts/run_proofs.py`.
+- CI validates the compiler, fixtures, samples, and proofs, but it does not run
+  this explicit native link-and-execute path.
 - This tutorial assumes a supported Linux host with the local Alire GNAT
   toolchain available on `PATH`.
 - If you want a minimal emission-only sample instead, use

@@ -6,10 +6,10 @@ It is written for readers who want to evaluate the project as it evolves, includ
 Safe is defined subtractively from Ada 2022 (ISO/IEC 8652:2023). If you already know Ada, read this as "the delta plus the new bits".
 If you do not know Ada, you can still follow along, but the full language reference is the Ada RM plus the Safe spec delta.
 
-This repo now includes an Ada-native `safec` frontend plus emitted-output proof
-gates. The spec and curated tests remain the authoritative reference for
-language intent and assurance boundaries. For a concrete walkthrough of the
-current toolchain, see
+This repo now includes an Ada-native `safec` frontend plus a minimal
+test/sample/proof workflow. The spec and curated tests remain the authoritative
+reference for language intent and assurance boundaries. For a concrete
+walkthrough of the current toolchain, see
 [`docs/safec_end_to_end_cli_tutorial.md`](safec_end_to_end_cli_tutorial.md).
 
 ## 0. Where To Start (If You Read Only 3 Things)
@@ -263,7 +263,7 @@ Also note: Safe draws a sharp line between recoverable and non-recoverable failu
 - The "Silver by construction" story means you will spend effort on numeric subtype design.
 - Some Ada habits are invalid in Safe (`'` attributes and qualified expressions, exceptions).
 - Tooling is incomplete today: the repo has a working compiler frontend and
-  proof pipeline, but the supported language and proof surface is still
+  proof workflow, but the supported language and proof surface is still
   narrower than the full spec ambition.
 
 ## 11. Where To Go Next

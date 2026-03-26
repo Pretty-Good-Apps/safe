@@ -1,11 +1,4 @@
-# Safe Language Annotated SPARK Companion -- CI Workflow
-# Source commit: 468cf72332724b04b7c193b4d2a3b02f1584125d
-#
-# This workflow builds the SPARK companion, runs GNATprove flow and proof
-# analysis, extracts assumptions, and diffs them against the tracked baseline.
-
-name: SPARK Companion CI
-
+name: CI
 on:
   push:
     branches: [main]
@@ -17,263 +10,32 @@ permissions:
   contents: read
 
 env:
-  FROZEN_SHA: "468cf72332724b04b7c193b4d2a3b02f1584125d"
-
-defaults:
-  run:
-    working-directory: companion/gen
+  PYTHONHASHSEED: "0"
+  LC_ALL: C.UTF-8
+  TZ: UTC
 
 jobs:
-  execution-guard:
-    name: Execution Guard
+  test:
+    name: Test
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 5
-
+    timeout-minutes: 30
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      # Python is installed only to run the PR06.7 gate script and the unchanged
-      # PR05/PR06 harnesses it invokes. `safec check` itself must not depend on
-      # Python at runtime.
-      - name: Set up Python
-        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: "3.12"
+      - uses: ./.github/actions/setup-alire
+      - run: python3 scripts/run_tests.py
+      - run: python3 scripts/run_samples.py
 
-      - name: Install Alire toolchain
-        uses: ./.github/actions/setup-alire
-
-      - name: Validate execution tracker and repo facts
-        working-directory: .
-        run: python3 scripts/validate_execution_state.py --authority ci
-
-  lint-safe-syntax:
-    name: Lint Safe Surface Syntax
-    runs-on: ubuntu-24.04-arm
-    timeout-minutes: 2
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - name: Lint .safe test files
-        working-directory: .
-        run: |
-          chmod +x scripts/lint_safe_syntax.sh
-          scripts/lint_safe_syntax.sh
-
-  spark-verify:
-    name: Build & Verify SPARK Companion
+  prove:
+    name: Prove
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 30
-
     steps:
-      # ------------------------------------------------------------------
-      # Checkout
-      # ------------------------------------------------------------------
-      - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      # ------------------------------------------------------------------
-      # Install GNAT and GNATprove via Alire
-      # ------------------------------------------------------------------
-      - name: Install Alire toolchain
-        uses: ./.github/actions/setup-alire
-
-      - name: Verify tools
-        run: |
-          alr exec -- gprbuild --version | head -1
-          alr exec -- gnatprove --version | head -1
-
-      - name: Record toolchain version for cache key
-        id: toolchain-version
-        run: echo "gnatprove=$(alr exec -- gnatprove --version 2>&1 | head -1 || echo unknown)" >> "$GITHUB_OUTPUT"
-
-      # ------------------------------------------------------------------
-      # Verify frozen commit SHA
-      # ------------------------------------------------------------------
-      - name: Verify frozen commit SHA
-        working-directory: .
-        run: |
-          REPO_SHA="$(cat meta/commit.txt | tr -d '[:space:]')"
-          echo "Frozen SHA from meta/commit.txt: ${REPO_SHA}"
-          echo "Expected SHA from workflow env:  ${FROZEN_SHA}"
-          if [[ "${REPO_SHA}" != "${FROZEN_SHA}" ]]; then
-            echo "ERROR: Frozen SHA mismatch. meta/commit.txt=${REPO_SHA} != env.FROZEN_SHA=${FROZEN_SHA}"
-            exit 1
-          fi
-
-      # ------------------------------------------------------------------
-      # Cache GNATprove results
-      # ------------------------------------------------------------------
-      - name: Cache GNATprove results
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
-          path: |
-            companion/gen/obj/gnatprove
-          key: gnatprove-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain-version.outputs.gnatprove }}-${{ hashFiles('companion/spark/*.ads', 'companion/spark/*.adb', 'companion/gen/companion.gpr') }}
-          restore-keys: |
-            gnatprove-${{ runner.os }}-${{ runner.arch }}-
-
-      # ------------------------------------------------------------------
-      # Ensure build directory exists
-      # ------------------------------------------------------------------
-      - name: Prepare build directory
-        run: mkdir -p obj
-
-      # ------------------------------------------------------------------
-      # Make scripts executable
-      # ------------------------------------------------------------------
-      - name: Make scripts executable
-        working-directory: .
-        run: chmod +x scripts/*.sh
-
-      # ------------------------------------------------------------------
-      # Step 1: Compile
-      # ------------------------------------------------------------------
-      - name: "Step 1: Compile (alr build)"
-        run: alr build
-
-      # ------------------------------------------------------------------
-      # Step 2: GNATprove flow analysis (Bronze gate)
-      # ------------------------------------------------------------------
-      - name: "Step 2: GNATprove flow analysis"
-        run: alr exec -- gnatprove -P companion.gpr --mode=flow --report=all --warnings=error
-
-      # ------------------------------------------------------------------
-      # Step 3: GNATprove proof analysis (Silver gate)
-      # ------------------------------------------------------------------
-      - name: "Step 3: GNATprove proof"
-        run: alr exec -- gnatprove -P companion.gpr --mode=prove --level=2 --prover=cvc5,z3,altergo --steps=0 --timeout=120 --report=all --warnings=error --checks-as-errors=on
-
-      # ------------------------------------------------------------------
-      # Step 4: Extract assumptions
-      # ------------------------------------------------------------------
-      - name: "Step 4: Extract assumptions"
-        working-directory: .
-        run: scripts/extract_assumptions.sh
-
-      # ------------------------------------------------------------------
-      # Step 5: Diff assumptions against baseline
-      # ------------------------------------------------------------------
-      - name: "Step 5: Diff assumptions"
-        working-directory: .
-        run: scripts/diff_assumptions.sh
-
-      # ------------------------------------------------------------------
-      # Upload artifacts on failure for debugging
-      # ------------------------------------------------------------------
-      - name: Upload GNATprove output on failure
-        if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: gnatprove-output
-          path: |
-            companion/gen/obj/gnatprove/
-            companion/assumptions_extracted.txt
-          retention-days: 14
-
-      # ------------------------------------------------------------------
-      # Upload assumptions extraction as artifact
-      # ------------------------------------------------------------------
-      - name: Upload assumptions extraction
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: assumptions-report
-          path: |
-            companion/assumptions_extracted.txt
-            companion/assumptions.yaml
-            companion/gen/prove_golden.txt
-            companion/gen/obj/gnatprove/gnatprove.out
-          retention-days: 30
-
-  # ====================================================================
-  # Verified Emission Templates
-  # ====================================================================
-  templates-verify:
-    name: Build & Verify Emission Templates
-    runs-on: ubuntu-24.04-arm
-    timeout-minutes: 30
-
-    defaults:
-      run:
-        working-directory: companion/templates
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - name: Install Alire toolchain
-        uses: ./.github/actions/setup-alire
-
-      - name: Record toolchain version for cache key
-        id: toolchain-version
-        run: echo "gnatprove=$(alr exec -- gnatprove --version 2>&1 | head -1 || echo unknown)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache GNATprove results
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: |
-            companion/templates/obj/gnatprove
-          key: gnatprove-templates-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain-version.outputs.gnatprove }}-${{ hashFiles('companion/spark/*.ads', 'companion/spark/*.adb', 'companion/templates/*.ads', 'companion/templates/*.adb', 'companion/templates/templates.gpr') }}
-          restore-keys: |
-            gnatprove-templates-${{ runner.os }}-${{ runner.arch }}-
-
-      - name: Prepare build directory
-        run: mkdir -p obj
-
-      - name: Make scripts executable
-        working-directory: .
-        run: chmod +x scripts/*.sh
-
-      - name: "Step 1: Compile (alr build)"
-        run: alr build
-
-      - name: "Step 2: GNATprove flow analysis"
-        run: alr exec -- gnatprove -P templates.gpr --mode=flow --report=all --warnings=error
-
-      - name: "Step 3: GNATprove proof"
-        run: alr exec -- gnatprove -P templates.gpr --mode=prove --level=2 --prover=cvc5,z3,altergo --steps=0 --timeout=120 --report=all --warnings=error --checks-as-errors=on
-
-      # ----------------------------------------------------------------
-      # Step 4-5: Assumption extraction and diff (matches spark-verify)
-      # ----------------------------------------------------------------
-      - name: "Step 4: Extract assumptions"
-        working-directory: .
-        env:
-          PROVE_OUT: companion/templates/obj/gnatprove
-        run: scripts/extract_assumptions.sh
-
-      - name: "Step 5: Diff assumptions"
-        working-directory: .
-        env:
-          PROVE_GOLDEN: companion/templates/prove_golden.txt
-          PROVE_OUT: companion/templates/obj/gnatprove/gnatprove.out
-        run: scripts/diff_assumptions.sh
-
-      # ----------------------------------------------------------------
-      # Artifacts
-      # ----------------------------------------------------------------
-      - name: Upload GNATprove output on failure
-        if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: templates-gnatprove-output
-          path: |
-            companion/templates/obj/gnatprove/
-            companion/assumptions_extracted.txt
-          retention-days: 14
-
-      - name: Upload templates proof report
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: templates-proof-report
-          path: |
-            companion/assumptions_extracted.txt
-            companion/assumptions.yaml
-            companion/templates/prove_golden.txt
-            companion/templates/obj/gnatprove/gnatprove.out
-          retention-days: 30
+          python-version: "3.12"
+      - uses: ./.github/actions/setup-alire
+      - run: python3 scripts/run_proofs.py

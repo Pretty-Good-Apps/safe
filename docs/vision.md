@@ -424,12 +424,15 @@ First real-program feedback loop.
 
 **PR11.2-PR11.7**: language surface expansion and syntax stabilization. Strings,
 case statements, discriminated records, syntax proposals, block syntax, reference
-surface experiments. Proof checkpoints after PR11.3 and PR11.8.
+surface experiments. First proof checkpoint after PR11.3.
 
-**PR11.8**: numeric model (three-tier integers, simplified type names).
+**PR11.8-PR11.8g**: numeric and value-type model reset. Unified integer type
+(superseding the earlier three-tier model), simplified predefined type names,
+modular arithmetic, value-type strings, copy-by-default value/reference
+semantics, a value-model proof checkpoint, and value-only channel elements.
 
 **PR11.9**: artifact contract stabilization. Machine interfaces freeze for
-ecosystem consumers.
+ecosystem consumers after the recovered PR11.8 proof and channel milestones.
 
 **PR11.10**: monomorphic standard library (bounded containers, string buffer).
 First Safelib code, Bronze/Silver.
