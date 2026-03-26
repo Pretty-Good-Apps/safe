@@ -18,6 +18,12 @@ check-time convergence-loop rejection policy. The remaining floating-point
 residuals here are the still-deferred fixed-point extension in `PS-002` and
 the broader spec-level semantics question in `PS-026`.
 
+PR11.8a revalidates the retained numeric-sensitive emitted proof corpus under
+the single-`integer` model without widening the fixed-point or floating-point
+claim. After that checkpoint, `PS-002` and `PS-026` remain deferred, and
+`PS-018` continues to refer to the broader concurrency expansion left for
+`PR11.8b`.
+
 ## Legend
 
 | Priority | Meaning |
@@ -31,7 +37,7 @@ the broader spec-level semantics question in `PS-026`.
 | ID | Item | Source | Area | Priority |
 |----|------|--------|------|----------|
 | `PS-001` | Static evaluation beyond the minimal PR08.3a constant-reference subset and the still-deferred named-number work, including binary arithmetic and declaration-time dot-attribute references such as `.First` and `.Last` | `PR08.3a`; `spec/03-single-file-packages.md` section `3.2.7`; `compiler_impl/src/safe_frontend-check_resolve.adb` | `resolver` | `blocking-if-needed` |
-| `PS-002` | Fixed-point Rule 5 support beyond the frozen current subset | `docs/frontend_architecture_baseline.md` | `analyzer` | `blocking-if-needed` |
+| `PS-002` | Fixed-point Rule 5 support beyond the frozen current subset; still explicitly deferred after `PR11.8a` | `docs/frontend_architecture_baseline.md` | `analyzer` | `blocking-if-needed` |
 
 ## Concurrency, Ownership, and Runtime Model
 
@@ -62,7 +68,7 @@ the broader spec-level semantics question in `PS-026`.
 |----|------|--------|------|----------|
 | `PS-016` | Selective interface search-dir scanning or scoped tolerance for unrelated malformed `.safei.json` files | `PR08.3` review fallout | `tooling` | `nice-to-have` |
 | `PS-017` | Ada-side Bronze regression harness independent of Python evidence re-derivation | `PR08.2` review fallout | `tooling` | `nice-to-have` |
-| `PS-018` | Emitted-output GNATprove coverage beyond the selected PR10 concurrency corpus | `docs/emitted_output_verification_matrix.md`; `execution/tracker.json` | `tooling` | `long-term` |
+| `PS-018` | Emitted-output GNATprove coverage beyond the selected PR10 concurrency corpus and the named sequential checkpoints; after `PR11.8a` the remaining debt is the broader concurrency expansion tracked for `PR11.8b` | `docs/emitted_output_verification_matrix.md`; `docs/PR11.x-series-proposed.md` | `tooling` | `long-term` |
 | `PS-019` | I/O seam wrapper obligations beyond direct emitted-package proof | `docs/emitted_output_verification_matrix.md` | `tooling` | `long-term` |
 | `PS-020` | Diagnostic catalogue and localisation `TBD-05` | `spec/00-front-matter.md` section `0.8` | `tooling` | `long-term` |
 | `PS-021` | Stabilise and document interchange-format policy for existing `safei-v1` and `mir-v2` artifacts, including compatibility and what is normative versus implementation-defined `TBD-08` | `spec/00-front-matter.md` section `0.8`; `compiler_impl/src/safe_frontend-interfaces.adb`; `compiler_impl/src/safe_frontend-mir_analyze.adb` | `tooling` | `long-term` |
@@ -75,7 +81,7 @@ the broader spec-level semantics question in `PS-026`.
 |----|------|--------|------|----------|
 | `PS-024` | Target platform constraints beyond “Ada compiler exists” `TBD-01` | `spec/00-front-matter.md` section `0.8` | `spec` | `blocking-if-needed` |
 | `PS-025` | Memory model constraints: stack, heap, and static allocation bounds `TBD-03` | `spec/00-front-matter.md` section `0.8` | `spec` | `blocking-if-needed` |
-| `PS-026` | Floating-point semantics beyond inheriting Ada's defaults `TBD-04` | `spec/00-front-matter.md` section `0.8` | `spec` | `blocking-if-needed` |
+| `PS-026` | Floating-point semantics beyond inheriting Ada's defaults `TBD-04`; still explicitly deferred after `PR11.8a` | `spec/00-front-matter.md` section `0.8` | `spec` | `blocking-if-needed` |
 | `PS-027` | Abort handler behaviour `TBD-07` | `spec/00-front-matter.md` section `0.8` | `spec` | `blocking-if-needed` |
 | `PS-028` | Numeric model: required ranges for predefined integer types `TBD-10` | `spec/00-front-matter.md` section `0.8` | `spec` | `blocking-if-needed` |
 | `PS-029` | Automatic deallocation semantics and ordering at scope exit beyond the covered nested early-return capture-ordering regression `TBD-11` | `spec/00-front-matter.md` section `0.8` | `spec` | `blocking-if-needed` |

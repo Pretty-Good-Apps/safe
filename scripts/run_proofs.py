@@ -40,36 +40,7 @@ COMPANION_PROJECTS = [
     ("companion/templates", "templates.gpr"),
 ]
 
-EMITTED_PROOF_FIXTURES = [
-    "tests/concurrency/select_with_delay.safe",
-    "tests/concurrency/select_with_delay_multiarm.safe",
-    "tests/positive/channel_pingpong.safe",
-    "tests/positive/channel_pipeline_compute.safe",
-    "tests/positive/constant_access_deref_write.safe",
-    "tests/positive/constant_channel_capacity.safe",
-    "tests/positive/constant_discriminant_default.safe",
-    "tests/positive/constant_range_bound.safe",
-    "tests/positive/constant_shadow_mutable.safe",
-    "tests/positive/constant_task_priority.safe",
-    "tests/positive/emitter_surface_proc.safe",
-    "tests/positive/emitter_surface_record.safe",
-    "tests/positive/ownership_borrow.safe",
-    "tests/positive/ownership_early_return.safe",
-    "tests/positive/ownership_inout.safe",
-    "tests/positive/ownership_move.safe",
-    "tests/positive/ownership_observe.safe",
-    "tests/positive/ownership_observe_access.safe",
-    "tests/positive/ownership_return.safe",
-    "tests/positive/pr112_case_scrutinee_once.safe",
-    "tests/positive/pr112_character_case.safe",
-    "tests/positive/pr112_discrete_case.safe",
-    "tests/positive/pr112_string_param.safe",
-    "tests/positive/pr113_discriminant_constraints.safe",
-    "tests/positive/pr113_structured_result.safe",
-    "tests/positive/pr113_tuple_destructure.safe",
-    "tests/positive/pr113_variant_guard.safe",
-    "tests/positive/result_equality_check.safe",
-    "tests/positive/result_guarded_access.safe",
+PR118A_CHECKPOINT_FIXTURES = [
     "tests/positive/rule1_accumulate.safe",
     "tests/positive/rule1_averaging.safe",
     "tests/positive/rule1_conversion.safe",
@@ -86,14 +57,55 @@ EMITTED_PROOF_FIXTURES = [
     "tests/positive/rule3_modulo.safe",
     "tests/positive/rule3_percent.safe",
     "tests/positive/rule3_remainder.safe",
+    "tests/positive/rule5_filter.safe",
+    "tests/positive/rule5_interpolate.safe",
+    "tests/positive/rule5_normalize.safe",
+    "tests/positive/rule5_statistics.safe",
+    "tests/positive/rule5_temperature.safe",
+    "tests/positive/rule5_vector_normalize.safe",
+    "tests/positive/constant_range_bound.safe",
+    "tests/positive/constant_channel_capacity.safe",
+    "tests/positive/constant_task_priority.safe",
+    "tests/positive/pr112_character_case.safe",
+    "tests/positive/pr112_discrete_case.safe",
+    "tests/positive/pr112_string_param.safe",
+    "tests/positive/pr112_case_scrutinee_once.safe",
+    "tests/positive/pr113_discriminant_constraints.safe",
+    "tests/positive/pr113_tuple_destructure.safe",
+    "tests/positive/pr113_structured_result.safe",
+    "tests/positive/pr113_variant_guard.safe",
+    "tests/positive/constant_discriminant_default.safe",
+    "tests/positive/result_equality_check.safe",
+    "tests/positive/result_guarded_access.safe",
+    "tests/positive/pr118_inline_integer_return.safe",
+    "tests/positive/pr118_type_range_equivalent.safe",
+]
+
+EMITTED_PROOF_REGRESSION_FIXTURES = [
+    "tests/concurrency/select_with_delay.safe",
+    "tests/concurrency/select_with_delay_multiarm.safe",
+    "tests/positive/channel_pingpong.safe",
+    "tests/positive/channel_pipeline_compute.safe",
+    "tests/positive/constant_access_deref_write.safe",
+    "tests/positive/constant_shadow_mutable.safe",
+    "tests/positive/emitter_surface_proc.safe",
+    "tests/positive/emitter_surface_record.safe",
+    "tests/positive/ownership_borrow.safe",
+    "tests/positive/ownership_early_return.safe",
+    "tests/positive/ownership_inout.safe",
+    "tests/positive/ownership_move.safe",
+    "tests/positive/ownership_observe.safe",
+    "tests/positive/ownership_observe_access.safe",
+    "tests/positive/ownership_return.safe",
     "tests/positive/rule4_conditional.safe",
     "tests/positive/rule4_deref.safe",
     "tests/positive/rule4_factory.safe",
     "tests/positive/rule4_linked_list.safe",
     "tests/positive/rule4_linked_list_sum.safe",
     "tests/positive/rule4_optional.safe",
-    "tests/positive/rule5_vector_normalize.safe",
 ]
+
+EMITTED_PROOF_FIXTURES = PR118A_CHECKPOINT_FIXTURES + EMITTED_PROOF_REGRESSION_FIXTURES
 
 
 def repo_rel(path: Path) -> str:
@@ -138,6 +150,36 @@ def build_compiler() -> tuple[Path, str, str]:
     if not SAFEC_PATH.exists():
         raise FileNotFoundError(f"missing safec binary at {SAFEC_PATH}")
     return SAFEC_PATH, alr, gnatprove
+
+
+def validate_manifest(
+    name: str,
+    entries: list[str],
+    *,
+    allow_missing: bool = False,
+) -> None:
+    seen: set[str] = set()
+    duplicates: list[str] = []
+    missing: list[str] = []
+
+    for entry in entries:
+        if entry in seen:
+            duplicates.append(entry)
+        else:
+            seen.add(entry)
+        if not allow_missing and not (REPO_ROOT / entry).exists():
+            missing.append(entry)
+
+    if duplicates:
+        raise RuntimeError(f"{name} has duplicate entries: {', '.join(duplicates)}")
+    if missing:
+        raise RuntimeError(f"{name} has missing entries: {', '.join(missing)}")
+
+
+def validate_manifests() -> None:
+    validate_manifest("PR11.8a checkpoint manifest", PR118A_CHECKPOINT_FIXTURES)
+    validate_manifest("emitted proof regression manifest", EMITTED_PROOF_REGRESSION_FIXTURES)
+    validate_manifest("emitted proof manifest", EMITTED_PROOF_FIXTURES)
 
 
 def emitted_body_file(ada_dir: Path) -> Path:
@@ -351,15 +393,34 @@ def print_summary(*, passed: int, failures: list[tuple[str, str]]) -> None:
             print(f" - {label}: {detail}")
 
 
+def print_section_summary(
+    title: str,
+    *,
+    passed: int,
+    failures: list[tuple[str, str]],
+) -> None:
+    print(f"{title}: {passed} proved, {len(failures)} failed")
+    if failures:
+        print("Failures:")
+        for label, detail in failures:
+            print(f" - {label}: {detail}")
+    print()
+
+
 def main() -> int:
     try:
+        validate_manifests()
         safec, alr, gnatprove = build_compiler()
     except (FileNotFoundError, RuntimeError) as exc:
         print(f"run_proofs: ERROR: {exc}", file=sys.stderr)
         return 1
 
-    passed = 0
-    failures: list[tuple[str, str]] = []
+    companion_passed = 0
+    companion_failures: list[tuple[str, str]] = []
+    checkpoint_passed = 0
+    checkpoint_failures: list[tuple[str, str]] = []
+    regression_passed = 0
+    regression_failures: list[tuple[str, str]] = []
 
     for project_rel, project_file in COMPANION_PROJECTS:
         project_dir = REPO_ROOT / project_rel
@@ -371,13 +432,13 @@ def main() -> int:
             gnatprove=gnatprove,
         )
         if ok:
-            passed += 1
+            companion_passed += 1
         else:
-            failures.append((project_rel, detail))
+            companion_failures.append((project_rel, detail))
 
     with tempfile.TemporaryDirectory(prefix="safe-proofs-") as temp_root_str:
         temp_root = Path(temp_root_str)
-        for fixture_rel in EMITTED_PROOF_FIXTURES:
+        for fixture_rel in PR118A_CHECKPOINT_FIXTURES:
             source = REPO_ROOT / fixture_rel
             ok, detail = run_emitted_fixture(
                 safec=safec,
@@ -387,12 +448,44 @@ def main() -> int:
                 gnatprove=gnatprove,
             )
             if ok:
-                passed += 1
+                checkpoint_passed += 1
             else:
-                failures.append((fixture_rel, detail))
+                checkpoint_failures.append((fixture_rel, detail))
 
-    print_summary(passed=passed, failures=failures)
-    return 0 if not failures else 1
+        for fixture_rel in EMITTED_PROOF_REGRESSION_FIXTURES:
+            source = REPO_ROOT / fixture_rel
+            ok, detail = run_emitted_fixture(
+                safec=safec,
+                source=source,
+                temp_root=temp_root,
+                alr=alr,
+                gnatprove=gnatprove,
+            )
+            if ok:
+                regression_passed += 1
+            else:
+                regression_failures.append((fixture_rel, detail))
+
+    total_passed = companion_passed + checkpoint_passed + regression_passed
+    total_failures = companion_failures + checkpoint_failures + regression_failures
+
+    print_section_summary(
+        "Companion baselines",
+        passed=companion_passed,
+        failures=companion_failures,
+    )
+    print_section_summary(
+        "PR11.8a checkpoint",
+        passed=checkpoint_passed,
+        failures=checkpoint_failures,
+    )
+    print_section_summary(
+        "Emitted proof regressions",
+        passed=regression_passed,
+        failures=regression_failures,
+    )
+    print_summary(passed=total_passed, failures=total_failures)
+    return 0 if not total_failures else 1
 
 
 if __name__ == "__main__":
