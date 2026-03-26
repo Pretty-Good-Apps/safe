@@ -40,7 +40,7 @@ COMPANION_PROJECTS = [
     ("companion/templates", "templates.gpr"),
 ]
 
-PR118A_CHECKPOINT_FIXTURES = [
+PR11_8A_CHECKPOINT_FIXTURES = [
     "tests/positive/rule1_accumulate.safe",
     "tests/positive/rule1_averaging.safe",
     "tests/positive/rule1_conversion.safe",
@@ -105,7 +105,7 @@ EMITTED_PROOF_REGRESSION_FIXTURES = [
     "tests/positive/rule4_optional.safe",
 ]
 
-EMITTED_PROOF_FIXTURES = PR118A_CHECKPOINT_FIXTURES + EMITTED_PROOF_REGRESSION_FIXTURES
+EMITTED_PROOF_FIXTURES = PR11_8A_CHECKPOINT_FIXTURES + EMITTED_PROOF_REGRESSION_FIXTURES
 
 
 def repo_rel(path: Path) -> str:
@@ -177,7 +177,7 @@ def validate_manifest(
 
 
 def validate_manifests() -> None:
-    validate_manifest("PR11.8a checkpoint manifest", PR118A_CHECKPOINT_FIXTURES)
+    validate_manifest("PR11.8a checkpoint manifest", PR11_8A_CHECKPOINT_FIXTURES)
     validate_manifest("emitted proof regression manifest", EMITTED_PROOF_REGRESSION_FIXTURES)
     validate_manifest("emitted proof manifest", EMITTED_PROOF_FIXTURES)
 
@@ -385,26 +385,21 @@ def run_emitted_fixture(
     return True, ""
 
 
-def print_summary(*, passed: int, failures: list[tuple[str, str]]) -> None:
-    print(f"{passed} proved, {len(failures)} failed")
-    if failures:
-        print("Failures:")
-        for label, detail in failures:
-            print(f" - {label}: {detail}")
-
-
-def print_section_summary(
-    title: str,
+def print_summary(
     *,
     passed: int,
     failures: list[tuple[str, str]],
+    title: str | None = None,
+    trailing_blank_line: bool = False,
 ) -> None:
-    print(f"{title}: {passed} proved, {len(failures)} failed")
+    prefix = f"{title}: " if title is not None else ""
+    print(f"{prefix}{passed} proved, {len(failures)} failed")
     if failures:
         print("Failures:")
         for label, detail in failures:
             print(f" - {label}: {detail}")
-    print()
+    if trailing_blank_line:
+        print()
 
 
 def main() -> int:
@@ -438,7 +433,7 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory(prefix="safe-proofs-") as temp_root_str:
         temp_root = Path(temp_root_str)
-        for fixture_rel in PR118A_CHECKPOINT_FIXTURES:
+        for fixture_rel in PR11_8A_CHECKPOINT_FIXTURES:
             source = REPO_ROOT / fixture_rel
             ok, detail = run_emitted_fixture(
                 safec=safec,
@@ -469,20 +464,23 @@ def main() -> int:
     total_passed = companion_passed + checkpoint_passed + regression_passed
     total_failures = companion_failures + checkpoint_failures + regression_failures
 
-    print_section_summary(
-        "Companion baselines",
+    print_summary(
         passed=companion_passed,
         failures=companion_failures,
+        title="Companion baselines",
+        trailing_blank_line=True,
     )
-    print_section_summary(
-        "PR11.8a checkpoint",
+    print_summary(
         passed=checkpoint_passed,
         failures=checkpoint_failures,
+        title="PR11.8a checkpoint",
+        trailing_blank_line=True,
     )
-    print_section_summary(
-        "Emitted proof regressions",
+    print_summary(
         passed=regression_passed,
         failures=regression_failures,
+        title="Emitted proof regressions",
+        trailing_blank_line=True,
     )
     print_summary(passed=total_passed, failures=total_failures)
     return 0 if not total_failures else 1
