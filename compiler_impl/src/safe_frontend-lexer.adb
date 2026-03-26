@@ -37,6 +37,11 @@ package body Safe_Frontend.Lexer is
       end case;
    end Kind_Name;
 
+   function Is_Ascii_Lowercase (Ch : Character) return Boolean is
+   begin
+      return Ch in 'a' .. 'z';
+   end Is_Ascii_Lowercase;
+
    function Is_Identifier_Start (Ch : Character) return Boolean is
    begin
       return Ada.Characters.Handling.Is_Letter (Ch);
@@ -74,15 +79,25 @@ package body Safe_Frontend.Lexer is
           | "returns";
    end Is_Keyword;
 
-   function Has_Uppercase_Ascii (Item : String) return Boolean is
+   function Is_Valid_Source_Spelling (Item : String) return Boolean is
    begin
-      for Ch of Item loop
-         if Ch in 'A' .. 'Z' then
-            return True;
-         end if;
+      if Item'Length = 0 or else not Is_Ascii_Lowercase (Item (Item'First)) then
+         return False;
+      end if;
+      for Index in Item'First + 1 .. Item'Last loop
+         declare
+            Ch : constant Character := Item (Index);
+         begin
+            if not (Is_Ascii_Lowercase (Ch)
+                    or else Ada.Characters.Handling.Is_Digit (Ch)
+                    or else Ch = '_')
+            then
+               return False;
+            end if;
+         end;
       end loop;
-      return False;
-   end Has_Uppercase_Ascii;
+      return True;
+   end Is_Valid_Source_Spelling;
 
    function Make_Span
      (Start_Line   : Positive;
@@ -219,6 +234,21 @@ package body Safe_Frontend.Lexer is
             Suggestion => "Rewrite `" & Lexeme & "` as `" & Lowered & "`.");
       end Report_Lowercase_Error;
 
+      procedure Report_Identifier_Spelling_Error
+        (Start_Line   : Positive;
+         Start_Column : Positive;
+         End_Line     : Positive;
+         End_Column   : Positive) is
+      begin
+         FD.Add_Error
+           (Collection => Diagnostics,
+            Path       => FT.To_String (Input.Path),
+            Span       => Make_Span (Start_Line, Start_Column, End_Line, End_Column),
+            Code       => "SC1004",
+            Message    => "Safe source spellings must use lowercase ASCII letters, digits, and underscores",
+            Suggestion => "Use lowercase ASCII letters (`a`..`z`), digits, and underscores only.");
+      end Report_Identifier_Spelling_Error;
+
       function Current_Indent return Natural is
       begin
          if Indents.Is_Empty then
@@ -231,8 +261,7 @@ package body Safe_Frontend.Lexer is
         (Target_Indent : Natural;
          Token_Line    : Positive;
          Token_Column  : Positive) is
-         Span_End : constant Positive :=
-           (if Token_Column < 1 then 1 else Token_Column);
+         Span_End : constant Positive := Token_Column;
       begin
          while not Indents.Is_Empty and then Current_Indent > Target_Indent loop
             Indents.Delete_Last;
@@ -338,9 +367,6 @@ package body Safe_Frontend.Lexer is
          if At_Line_Start then
             Handle_Line_Start;
             exit when Index > Text'Length;
-            if At_Line_Start then
-               null;
-            end if;
          elsif Peek = ' ' or else Peek = Ada.Characters.Latin_1.HT or else Peek = Ada.Characters.Latin_1.CR then
             Advance;
          elsif Peek = Ada.Characters.Latin_1.LF then
@@ -365,11 +391,17 @@ package body Safe_Frontend.Lexer is
                   Kind   : constant Token_Kind :=
                     (if Is_Keyword (Lowered) then Keyword else Identifier);
                begin
-                  if Has_Uppercase_Ascii (Lexeme) then
+                  if Lexeme /= Lowered and then Is_Valid_Source_Spelling (Lowered) then
                      Report_Lowercase_Error
                        (Lexeme,
                         Lowered,
                         Start_Line,
+                        Start_Column,
+                        Line,
+                        (if Column = 1 then 1 else Column - 1));
+                  elsif not Is_Valid_Source_Spelling (Lexeme) then
+                     Report_Identifier_Spelling_Error
+                       (Start_Line,
                         Start_Column,
                         Line,
                         (if Column = 1 then 1 else Column - 1));

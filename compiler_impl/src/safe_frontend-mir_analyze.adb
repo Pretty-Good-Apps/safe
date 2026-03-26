@@ -1760,7 +1760,7 @@ package body Safe_Frontend.Mir_Analyze is
       elsif Reason = "anonymous_access_reassign" then
          return "rule: Safe §2.3.3 / §2.3.4a (anonymous access is initialization-only)";
       elsif Reason = "observe_requires_access" then
-         return "rule: Safe §2.3.4 (local observe must use .Access)";
+         return "rule: Safe §2.3.4 (local observe must use .access)";
       end if;
       return "";
    end Ownership_Note;
@@ -4564,11 +4564,11 @@ package body Safe_Frontend.Mir_Analyze is
          Lender := FT.To_UString (Observe_Lender_Name (Value));
          if not Has_Text (Lender) then
             return
-              Ownership_Diagnostic
-                ("observe_requires_access",
-                 Span,
-                 "observer '" & Target_Name & "' must be initialized from X.Access",
-                 "local observe uses anonymous access constant and requires an explicit .Access attribute.");
+                 Ownership_Diagnostic
+                   ("observe_requires_access",
+                    Span,
+                    "observer '" & Target_Name & "' must be initialized from X.access",
+                    "local observe uses anonymous access constant and requires an explicit .access attribute.");
          end if;
       end if;
 
