@@ -1,3 +1,4 @@
+with Safe_Frontend.Check_Model;
 with Safe_Frontend.Mir_Diagnostics;
 with Safe_Frontend.Mir_Model;
 with Safe_Frontend.Types;
@@ -17,5 +18,7 @@ package Safe_Frontend.Mir_Analyze is
 
    function Analyze_File (Path : String) return Analyze_Result;
    function Analyze
-     (Document : Safe_Frontend.Mir_Model.Mir_Document) return Analyze_Result;
+     (Document : Safe_Frontend.Mir_Model.Mir_Document;
+      Tasks    : Safe_Frontend.Check_Model.Resolved_Task_Vectors.Vector :=
+        Safe_Frontend.Check_Model.Resolved_Task_Vectors.Empty_Vector) return Analyze_Result;
 end Safe_Frontend.Mir_Analyze;

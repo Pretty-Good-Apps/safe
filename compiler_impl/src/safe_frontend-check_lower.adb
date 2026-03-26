@@ -796,6 +796,104 @@ package body Safe_Frontend.Check_Lower is
            others    => <>);
    end Ident_Expr;
 
+   function Selector_Expr
+     (Prefix    : CM.Expr_Access;
+      Selector  : String;
+      Span      : FT.Source_Span;
+      Type_Name : String) return CM.Expr_Access is
+   begin
+      return
+        new CM.Expr_Node'
+          (Kind      => CM.Expr_Select,
+           Span      => Span,
+           Type_Name => FT.To_UString (Type_Name),
+           Prefix    => Prefix,
+           Selector  => FT.To_UString (Selector),
+           others    => <>);
+   end Selector_Expr;
+
+   function Default_Initializer_Expr
+     (Info     : GM.Type_Descriptor;
+      Type_Env : Type_Maps.Map;
+      Span     : FT.Source_Span) return CM.Expr_Access
+   is
+      Kind   : constant String := FT.Lowercase (UString_Value (Info.Kind));
+      Name   : constant String := FT.Lowercase (UString_Value (Info.Name));
+      Result : CM.Expr_Access;
+      Field  : CM.Aggregate_Field;
+   begin
+      if Kind = "subtype"
+        and then Has_Text (Info.Base)
+        and then not Info.Has_Low
+        and then not Info.Has_High
+        and then not Info.Has_Float_Low_Text
+        and then not Info.Has_Float_High_Text
+      then
+         return Default_Initializer_Expr (Resolve_Type (UString_Value (Info.Base), Type_Env), Type_Env, Span);
+      elsif Kind = "access" then
+         return Null_Expr (Span, UString_Value (Info.Name));
+      elsif Name = "string" then
+         return
+           new CM.Expr_Node'
+             (Kind      => CM.Expr_String,
+              Span      => Span,
+              Type_Name => FT.To_UString ("string"),
+              Text      => FT.To_UString (""),
+              others    => <>);
+      elsif Info.Is_Result_Builtin then
+         Result := new CM.Expr_Node;
+         Result.Kind := CM.Expr_Aggregate;
+         Result.Type_Name := FT.To_UString (UString_Value (Info.Name));
+         Result.Span := Span;
+
+         Field.Field_Name := FT.To_UString ("ok");
+         Field.Expr :=
+           new CM.Expr_Node'
+             (Kind       => CM.Expr_Bool,
+              Span       => Span,
+              Type_Name  => FT.To_UString ("boolean"),
+              Bool_Value => True,
+              others     => <>);
+         Field.Span := Span;
+         Result.Fields.Append (Field);
+
+         Field.Field_Name := FT.To_UString ("message");
+         Field.Expr := Default_Initializer_Expr (BT.String_Type, Type_Env, Span);
+         Field.Span := Span;
+         Result.Fields.Append (Field);
+         return Result;
+      elsif Kind = "record" then
+         Result := new CM.Expr_Node;
+         Result.Kind := CM.Expr_Aggregate;
+         Result.Type_Name := Info.Name;
+         Result.Span := Span;
+         for Item of Info.Fields loop
+            Field.Field_Name := Item.Name;
+            Field.Expr := Default_Initializer_Expr (Resolve_Type (UString_Value (Item.Type_Name), Type_Env), Type_Env, Span);
+            Field.Span := Span;
+            Result.Fields.Append (Field);
+         end loop;
+         return Result;
+      elsif Kind = "tuple" then
+         Result := new CM.Expr_Node;
+         Result.Kind := CM.Expr_Tuple;
+         Result.Type_Name := Info.Name;
+         Result.Span := Span;
+         for Item of Info.Tuple_Element_Types loop
+            Result.Elements.Append
+              (Default_Initializer_Expr (Resolve_Type (UString_Value (Item), Type_Env), Type_Env, Span));
+         end loop;
+         return Result;
+      end if;
+
+      return
+        Selector_Expr
+          (Prefix    => Ident_Expr (UString_Value (Info.Name), Span, UString_Value (Info.Name)),
+           Selector  => "first",
+           Span      => Span,
+           Type_Name => UString_Value (Info.Name));
+   end Default_Initializer_Expr;
+
    function Binary_Expr
      (Op    : String;
       Left  : CM.Expr_Access;
@@ -1142,6 +1240,29 @@ package body Safe_Frontend.Check_Lower is
                        Stmt.Decl.Initializer,
                        Visible_Types,
                        Type_Env);
+                  Assign_Op.Declaration_Init := True;
+                  Add_Op (Work, UString_Value (Current_Id), Assign_Op);
+               end loop;
+            elsif Stmt.Decl.Has_Implicit_Default_Init then
+               for Name of Stmt.Decl.Names loop
+                  Assign_Op := (others => <>);
+                  Assign_Op.Kind := GM.Op_Assign;
+                  Assign_Op.Span := Stmt.Decl.Span;
+                  Assign_Op.Target :=
+                    Lower_Target
+                      (Ident_Expr
+                         (UString_Value (Name),
+                          Stmt.Decl.Span,
+                          UString_Value (Stmt.Decl.Type_Info.Name)),
+                       Visible_Types,
+                       Type_Env);
+                  Assign_Op.Value :=
+                    Lower_Expr
+                      (Default_Initializer_Expr (Stmt.Decl.Type_Info, Type_Env, Stmt.Decl.Span),
+                       Visible_Types,
+                       Type_Env);
+                  Assign_Op.Type_Name := Stmt.Decl.Type_Info.Name;
+                  Assign_Op.Ownership_Effect := GM.Ownership_None;
                   Assign_Op.Declaration_Init := True;
                   Add_Op (Work, UString_Value (Current_Id), Assign_Op);
                end loop;

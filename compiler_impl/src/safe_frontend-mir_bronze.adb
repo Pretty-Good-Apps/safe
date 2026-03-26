@@ -71,12 +71,18 @@ package body Safe_Frontend.Mir_Bronze is
       Direct_Reads   : String_Sets.Set;
       Direct_Writes  : String_Sets.Set;
       Direct_Channels : String_Sets.Set;
+      Direct_Sends  : String_Sets.Set;
+      Direct_Receives : String_Sets.Set;
+      Direct_Legacy_Channels : String_Sets.Set;
       Direct_Calls   : String_Sets.Set;
       Direct_Inputs  : String_Sets.Set;
       Direct_Outputs : String_Sets.Set;
       Reads          : String_Sets.Set;
       Writes         : String_Sets.Set;
       Channels       : String_Sets.Set;
+      Sends          : String_Sets.Set;
+      Receives       : String_Sets.Set;
+      Legacy_Channels : String_Sets.Set;
       Calls          : String_Sets.Set;
       Inputs         : String_Sets.Set;
       Outputs        : String_Sets.Set;
@@ -141,6 +147,7 @@ package body Safe_Frontend.Mir_Bronze is
    procedure Sort_Ownership (Items : in out Ownership_Vectors.Vector);
    procedure Sort_Ceilings (Items : in out Ceiling_Vectors.Vector);
    function To_Vector (Items : String_Sets.Set) return FT.UString_Vectors.Vector;
+   function To_Set (Items : FT.UString_Vectors.Vector) return String_Sets.Set;
    function Local_Metadata (Graph : GM.Graph_Entry) return Local_Maps.Map;
    procedure Note_Read
      (Name      : String;
@@ -193,6 +200,15 @@ package body Safe_Frontend.Mir_Bronze is
    function Dependency_Vector
      (Outputs : String_Sets.Set;
       Inputs  : String_Sets.Set) return Depends_Vectors.Vector;
+   function Find_Task_Index
+     (Tasks : CM.Resolved_Task_Vectors.Vector;
+      Name  : String) return Natural;
+   function Use_Span_For
+     (Summary      : Direct_Summary;
+      Channel_Name : String) return FT.Source_Span;
+   function Contract_Note
+     (Direction : String;
+      Allowed   : String_Sets.Set) return String;
 
    procedure Raise_Internal (Message : String) is
    begin
@@ -432,6 +448,17 @@ package body Safe_Frontend.Mir_Bronze is
       Sort_Strings (Result);
       return Result;
    end To_Vector;
+
+   function To_Set (Items : FT.UString_Vectors.Vector) return String_Sets.Set is
+      Result : String_Sets.Set;
+   begin
+      if not Items.Is_Empty then
+         for Item of Items loop
+            Result.Include (UString_Value (Item));
+         end loop;
+      end if;
+      return Result;
+   end To_Set;
 
    function Local_Metadata (Graph : GM.Graph_Entry) return Local_Maps.Map is
       Result : Local_Maps.Map;
@@ -822,9 +849,24 @@ package body Safe_Frontend.Mir_Bronze is
       for Item of Value.Channel_Summary.Channels loop
          Result.Direct_Channels.Include (UString_Value (Item));
       end loop;
+      for Item of Value.Channel_Summary.Sends loop
+         Result.Direct_Sends.Include (UString_Value (Item));
+      end loop;
+      for Item of Value.Channel_Summary.Receives loop
+         Result.Direct_Receives.Include (UString_Value (Item));
+      end loop;
+      if Result.Direct_Channels /= String_Sets.Empty_Set
+        and then Result.Direct_Sends = String_Sets.Empty_Set
+        and then Result.Direct_Receives = String_Sets.Empty_Set
+      then
+         Result.Direct_Legacy_Channels := Result.Direct_Channels;
+      end if;
       Result.Reads := Result.Direct_Reads;
       Result.Writes := Result.Direct_Writes;
       Result.Channels := Result.Direct_Channels;
+      Result.Sends := Result.Direct_Sends;
+      Result.Receives := Result.Direct_Receives;
+      Result.Legacy_Channels := Result.Direct_Legacy_Channels;
       Result.Calls := Result.Direct_Calls;
       Result.Inputs := Result.Direct_Inputs;
       Result.Outputs := Result.Direct_Outputs;
@@ -969,6 +1011,45 @@ package body Safe_Frontend.Mir_Bronze is
       return Result;
    end Dependency_Vector;
 
+   function Find_Task_Index
+     (Tasks : CM.Resolved_Task_Vectors.Vector;
+      Name  : String) return Natural
+   is
+   begin
+      if not Tasks.Is_Empty then
+         for Index in Tasks.First_Index .. Tasks.Last_Index loop
+            if UString_Value (Tasks (Index).Name) = Name then
+               return Natural (Index);
+            end if;
+         end loop;
+      end if;
+      return 0;
+   end Find_Task_Index;
+
+   function Use_Span_For
+     (Summary      : Direct_Summary;
+      Channel_Name : String) return FT.Source_Span
+   is
+   begin
+      if Summary.Use_Spans.Contains (Channel_Name) then
+         return Summary.Use_Spans.Element (Channel_Name);
+      end if;
+      return Summary.Span;
+   end Use_Span_For;
+
+   function Contract_Note
+     (Direction : String;
+      Allowed   : String_Sets.Set) return String
+   is
+   begin
+      if Allowed = String_Sets.Empty_Set then
+         return "allowed `" & Direction & "` channels: <none>";
+      end if;
+      return
+        "allowed `" & Direction & "` channels: "
+        & Join_Strings (To_Vector (Allowed));
+   end Contract_Note;
+
    function Summary_For
      (Graph      : GM.Graph_Entry;
       Callable_Names : String_Sets.Set;
@@ -1051,12 +1132,14 @@ package body Safe_Frontend.Mir_Bronze is
                   Root := FT.To_UString (Flatten_Name (Op.Channel));
                   if UString_Value (Root) /= "" then
                      Result.Direct_Channels.Include (UString_Value (Root));
+                     Result.Direct_Sends.Include (UString_Value (Root));
                      Note_Use_Span (UString_Value (Root), Op.Span, Result.Use_Spans);
                   end if;
                when GM.Op_Channel_Receive =>
                   Root := FT.To_UString (Flatten_Name (Op.Channel));
                   if UString_Value (Root) /= "" then
                      Result.Direct_Channels.Include (UString_Value (Root));
+                     Result.Direct_Receives.Include (UString_Value (Root));
                      Note_Use_Span (UString_Value (Root), Op.Span, Result.Use_Spans);
                   end if;
                   Note_Write
@@ -1080,6 +1163,7 @@ package body Safe_Frontend.Mir_Bronze is
                   Root := FT.To_UString (Flatten_Name (Op.Channel));
                   if UString_Value (Root) /= "" then
                      Result.Direct_Channels.Include (UString_Value (Root));
+                     Result.Direct_Sends.Include (UString_Value (Root));
                      Note_Use_Span (UString_Value (Root), Op.Span, Result.Use_Spans);
                   end if;
                   Note_Write
@@ -1093,6 +1177,7 @@ package body Safe_Frontend.Mir_Bronze is
                   Root := FT.To_UString (Flatten_Name (Op.Channel));
                   if UString_Value (Root) /= "" then
                      Result.Direct_Channels.Include (UString_Value (Root));
+                     Result.Direct_Receives.Include (UString_Value (Root));
                      Note_Use_Span (UString_Value (Root), Op.Span, Result.Use_Spans);
                   end if;
                   Note_Write
@@ -1157,6 +1242,8 @@ package body Safe_Frontend.Mir_Bronze is
                      if Arm.Kind = GM.Select_Arm_Channel then
                         Result.Direct_Channels.Include
                           (UString_Value (Arm.Channel_Data.Channel_Name));
+                        Result.Direct_Receives.Include
+                          (UString_Value (Arm.Channel_Data.Channel_Name));
                         Note_Use_Span
                           (UString_Value (Arm.Channel_Data.Channel_Name),
                            Arm.Channel_Data.Span,
@@ -1183,6 +1270,8 @@ package body Safe_Frontend.Mir_Bronze is
       Result.Reads := Result.Direct_Reads;
       Result.Writes := Result.Direct_Writes;
       Result.Channels := Result.Direct_Channels;
+      Result.Sends := Result.Direct_Sends;
+      Result.Receives := Result.Direct_Receives;
       Result.Calls := Result.Direct_Calls;
       Result.Inputs := Result.Direct_Inputs;
       Result.Outputs := Result.Direct_Outputs;
@@ -1216,6 +1305,7 @@ package body Safe_Frontend.Mir_Bronze is
 
    function Summarize
      (Document    : GM.Mir_Document;
+      Tasks       : CM.Resolved_Task_Vectors.Vector := CM.Resolved_Task_Vectors.Empty_Vector;
       Path_String : String := "") return Bronze_Result
    is
       Result        : Bronze_Result;
@@ -1279,6 +1369,9 @@ package body Safe_Frontend.Mir_Bronze is
                               Updated.Reads.Union (Callee_Summary.Reads);
                               Updated.Writes.Union (Callee_Summary.Writes);
                               Updated.Channels.Union (Callee_Summary.Channels);
+                              Updated.Sends.Union (Callee_Summary.Sends);
+                              Updated.Receives.Union (Callee_Summary.Receives);
+                              Updated.Legacy_Channels.Union (Callee_Summary.Legacy_Channels);
                               Project_Call_Markers
                                 (Callee_Summary.Inputs,
                                  Signature,
@@ -1392,6 +1485,9 @@ package body Safe_Frontend.Mir_Bronze is
                if Updated.Reads /= Summary.Reads
                  or else Updated.Writes /= Summary.Writes
                  or else Updated.Channels /= Summary.Channels
+                 or else Updated.Sends /= Summary.Sends
+                 or else Updated.Receives /= Summary.Receives
+                 or else Updated.Legacy_Channels /= Summary.Legacy_Channels
                  or else Updated.Inputs /= Summary.Inputs
                  or else Updated.Outputs /= Summary.Outputs
                  or else Updated.Calls /= Summary.Calls
@@ -1417,6 +1513,8 @@ package body Safe_Frontend.Mir_Bronze is
             Item.Reads := To_Vector (Summary.Reads);
             Item.Writes := To_Vector (Summary.Writes);
             Item.Channels := To_Vector (Summary.Channels);
+            Item.Sends := To_Vector (Summary.Sends);
+            Item.Receives := To_Vector (Summary.Receives);
             Item.Calls := To_Vector (Summary.Calls);
             Item.Inputs := To_Vector (Summary.Inputs);
             Item.Outputs := To_Vector (Summary.Outputs);
@@ -1611,6 +1709,114 @@ package body Safe_Frontend.Mir_Bronze is
             end;
          end loop;
       end;
+
+      if not Tasks.Is_Empty then
+         Cursor := Summaries.First;
+         while Summary_Maps.Has_Element (Cursor) loop
+            declare
+               Summary    : constant Direct_Summary := Summary_Maps.Element (Cursor);
+               Task_Index : constant Natural :=
+                 (if Summary.Is_Task
+                  then Find_Task_Index (Tasks, UString_Value (Summary.Name))
+                  else 0);
+            begin
+               if Task_Index /= 0 then
+                  declare
+                     Task_Info        : constant CM.Resolved_Task := Tasks (Positive (Task_Index));
+                     Allowed_Sends    : constant String_Sets.Set := To_Set (Task_Info.Send_Contracts);
+                     Allowed_Receives : constant String_Sets.Set := To_Set (Task_Info.Receive_Contracts);
+                     Send_Cursor      : String_Sets.Cursor;
+                     Receive_Cursor   : String_Sets.Cursor;
+                     Legacy_Cursor    : String_Sets.Cursor;
+                  begin
+                     if Task_Info.Has_Send_Contract then
+                        Send_Cursor := Summary.Sends.First;
+                        while String_Sets.Has_Element (Send_Cursor) loop
+                           declare
+                              Channel_Name : constant String := String_Sets.Element (Send_Cursor);
+                              Use_Span     : constant FT.Source_Span := Use_Span_For (Summary, Channel_Name);
+                           begin
+                              if not Allowed_Sends.Contains (Channel_Name) then
+                                 Result.Diagnostics.Append
+                                   (Summary_Diagnostic
+                                      (Path_String,
+                                       "task_channel_direction",
+                                       "task '" & UString_Value (Summary.Name)
+                                       & "' reaches send on channel '"
+                                       & Channel_Name
+                                       & "' outside its `sends` contract",
+                                       Use_Span,
+                                       Contract_Note ("sends", Allowed_Sends),
+                                       Local_Use_Note (Use_Span)));
+                              end if;
+                              String_Sets.Next (Send_Cursor);
+                           end;
+                        end loop;
+                     end if;
+
+                     if Task_Info.Has_Receive_Contract then
+                        Receive_Cursor := Summary.Receives.First;
+                        while String_Sets.Has_Element (Receive_Cursor) loop
+                           declare
+                              Channel_Name : constant String := String_Sets.Element (Receive_Cursor);
+                              Use_Span     : constant FT.Source_Span := Use_Span_For (Summary, Channel_Name);
+                           begin
+                              if not Allowed_Receives.Contains (Channel_Name) then
+                                 Result.Diagnostics.Append
+                                   (Summary_Diagnostic
+                                      (Path_String,
+                                       "task_channel_direction",
+                                       "task '" & UString_Value (Summary.Name)
+                                       & "' reaches receive on channel '"
+                                       & Channel_Name
+                                       & "' outside its `receives` contract",
+                                       Use_Span,
+                                       Contract_Note ("receives", Allowed_Receives),
+                                       Local_Use_Note (Use_Span)));
+                              end if;
+                              String_Sets.Next (Receive_Cursor);
+                           end;
+                        end loop;
+                     end if;
+
+                     if Task_Info.Has_Send_Contract or else Task_Info.Has_Receive_Contract then
+                        Legacy_Cursor := Summary.Legacy_Channels.First;
+                        while String_Sets.Has_Element (Legacy_Cursor) loop
+                           declare
+                              Channel_Name : constant String := String_Sets.Element (Legacy_Cursor);
+                              Needs_Regen  : constant Boolean :=
+                                (Task_Info.Has_Send_Contract and then not Allowed_Sends.Contains (Channel_Name))
+                                or else
+                                (Task_Info.Has_Receive_Contract and then not Allowed_Receives.Contains (Channel_Name));
+                              Use_Span     : constant FT.Source_Span := Use_Span_For (Summary, Channel_Name);
+                           begin
+                              if Needs_Regen then
+                                 Result.Diagnostics.Append
+                                   (Summary_Diagnostic
+                                      (Path_String,
+                                       "task_channel_direction_legacy_interface",
+                                       "task '" & UString_Value (Summary.Name)
+                                       & "' reaches channel '"
+                                       & Channel_Name
+                                       & "' through a legacy flat interface summary; regenerate the provider interface for directional `sends`/`receives` summaries",
+                                       Use_Span,
+                                       (if Task_Info.Has_Send_Contract
+                                        then Contract_Note ("sends", Allowed_Sends)
+                                        else Contract_Note ("receives", Allowed_Receives)),
+                                       (if Task_Info.Has_Send_Contract and then Task_Info.Has_Receive_Contract
+                                        then Contract_Note ("receives", Allowed_Receives)
+                                        else Local_Use_Note (Use_Span))));
+                              end if;
+                              String_Sets.Next (Legacy_Cursor);
+                           end;
+                        end loop;
+                     end if;
+                  end;
+               end if;
+               Summary_Maps.Next (Cursor);
+            end;
+         end loop;
+      end if;
 
       Sort_Graph_Summaries (Result.Graphs);
       Sort_Ownership (Result.Ownership);

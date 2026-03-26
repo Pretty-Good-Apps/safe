@@ -388,6 +388,20 @@ package body Safe_Frontend.Mir_Validate is
                Where & ".channels[" & Image (Index - 1) & "]: invalid channel name");
          end loop;
       end if;
+      if not Value.Sends.Is_Empty then
+         for Index in Value.Sends.First_Index .. Value.Sends.Last_Index loop
+            Require
+              (Has_Text (Value.Sends (Index)),
+               Where & ".sends[" & Image (Index - 1) & "]: invalid channel name");
+         end loop;
+      end if;
+      if not Value.Receives.Is_Empty then
+         for Index in Value.Receives.First_Index .. Value.Receives.Last_Index loop
+            Require
+              (Has_Text (Value.Receives (Index)),
+               Where & ".receives[" & Image (Index - 1) & "]: invalid channel name");
+         end loop;
+      end if;
    end Validate_External_Channel_Summary;
 
    procedure Validate_External

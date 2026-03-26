@@ -181,8 +181,11 @@ See: `spec/02-restrictions.md` (Section 2.3).
 Safe replaces most of Ada's tasking surface features with:
 
 - static task declarations (typically at package level),
+- optional task `sends` / `receives` clauses for channel-direction legality,
 - typed bounded FIFO channels,
 - `send`, `receive`, and non-blocking `try_send` / `try_receive`,
+- scoped-binding `receive` / `try_receive` forms such as
+  `receive raw, msg : measurement`,
 - a `select` statement for multiplexing receives (with optional delay arms).
 
 Example sketch:
@@ -194,16 +197,15 @@ package pipeline
    channel raw : measurement capacity 16;
    channel out : measurement capacity 8;
 
-   task producer with priority = 10
+   task producer with priority = 10, sends raw
       loop
          var m : measurement = read_sensor
          send raw, m
          delay 0.01
 
-   task consumer with priority = 5
+   task consumer with priority = 5, receives raw, sends out
       loop
-         var m : measurement
-         receive raw, m
+         receive raw, m : measurement
          send out, process(m)
 ```
 

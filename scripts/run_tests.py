@@ -97,6 +97,33 @@ INTERFACE_CASES = [
         REPO_ROOT / "tests" / "interfaces" / "client_imported_borrow_observe.safe",
         0,
     ),
+    (
+        "directional-channel-receive-only",
+        REPO_ROOT / "tests" / "interfaces" / "provider_transitive_channel.safe",
+        REPO_ROOT / "tests" / "interfaces" / "client_transitive_channel_receive_only.safe",
+        0,
+    ),
+    (
+        "directional-channel-send-contract-violation",
+        REPO_ROOT / "tests" / "interfaces" / "provider_transitive_channel.safe",
+        REPO_ROOT / "tests" / "interfaces" / "client_transitive_channel_send_contract_violation.safe",
+        1,
+    ),
+]
+
+STATIC_INTERFACE_CASES = [
+    (
+        "legacy-channel-unconstrained",
+        REPO_ROOT / "tests" / "interfaces" / "provider_transitive_channel.safei.json",
+        REPO_ROOT / "tests" / "interfaces" / "client_legacy_transitive_channel_unconstrained.safe",
+        0,
+    ),
+    (
+        "legacy-channel-requires-regen",
+        REPO_ROOT / "tests" / "interfaces" / "provider_transitive_channel.safei.json",
+        REPO_ROOT / "tests" / "interfaces" / "client_transitive_channel_receive_only.safe",
+        1,
+    ),
 ]
 
 DIAGNOSTIC_GOLDEN_CASES = [
@@ -195,6 +222,10 @@ DIAGNOSTIC_GOLDEN_CASES = [
     (
         REPO_ROOT / "tests" / "negative" / "neg_pr118_removed_natural.safe",
         REPO_ROOT / "tests" / "diagnostics_golden" / "diag_pr118_removed_natural.txt",
+    ),
+    (
+        REPO_ROOT / "tests" / "negative" / "neg_pr118b1_send_contract.safe",
+        REPO_ROOT / "tests" / "diagnostics_golden" / "diag_pr118b1_send_contract.txt",
     ),
 ]
 
@@ -317,6 +348,38 @@ def run_interface_case(
     return True, ""
 
 
+def run_static_interface_case(
+    safec: Path,
+    *,
+    label: str,
+    safei: Path,
+    client: Path,
+    expected_returncode: int,
+    temp_root: Path,
+) -> tuple[bool, str]:
+    case_root = temp_root / label
+    iface_dir = case_root / "iface"
+    iface_dir.mkdir(parents=True, exist_ok=True)
+
+    safei_target = iface_dir / safei.name
+    shutil.copyfile(safei, safei_target)
+
+    completed = run_command(
+        [
+            str(safec),
+            "check",
+            repo_rel(client),
+            "--interface-search-dir",
+            str(iface_dir),
+        ],
+        cwd=REPO_ROOT,
+    )
+    if completed.returncode != expected_returncode:
+        expectation = str(expected_returncode)
+        return False, f"expected exit {expectation}, got {completed.returncode}: {first_message(completed)}"
+    return True, ""
+
+
 def run_diagnostic_golden(safec: Path, source: Path, golden: Path) -> tuple[bool, str]:
     completed = run_command([str(safec), "check", repo_rel(source)], cwd=REPO_ROOT)
     if completed.returncode != DIAGNOSTIC_EXIT_CODE:
@@ -384,6 +447,21 @@ def main() -> int:
                 temp_root=temp_root,
             )
             pair_label = f"{repo_rel(provider)} -> {repo_rel(client)}"
+            if ok:
+                passed += 1
+            else:
+                failures.append((pair_label, detail))
+
+        for label, safei, client, expected_returncode in STATIC_INTERFACE_CASES:
+            ok, detail = run_static_interface_case(
+                safec,
+                label=label,
+                safei=safei,
+                client=client,
+                expected_returncode=expected_returncode,
+                temp_root=temp_root,
+            )
+            pair_label = f"{repo_rel(safei)} -> {repo_rel(client)}"
             if ok:
                 passed += 1
             else:

@@ -177,6 +177,10 @@ def validate_mir_effect_summary(value: Any, path: str) -> dict[str, Any]:
 def validate_mir_channel_access_summary(value: Any, path: str) -> dict[str, Any]:
     entry = require_mapping(value, path)
     validate_string_list(entry.get("channels"), f"{path}.channels")
+    if "sends" in entry:
+        validate_string_list(entry.get("sends"), f"{path}.sends")
+    if "receives" in entry:
+        validate_string_list(entry.get("receives"), f"{path}.receives")
     return entry
 
 
@@ -489,6 +493,10 @@ def validate_safei_channel_access_summaries(items: Any, path: str) -> list[dict[
         require_string(entry.get("name"), f"{path}[{index}].name")
         require_string(entry.get("signature"), f"{path}[{index}].signature")
         validate_string_list(entry.get("channels"), f"{path}[{index}].channels")
+        if "sends" in entry:
+            validate_string_list(entry.get("sends"), f"{path}[{index}].sends")
+        if "receives" in entry:
+            validate_string_list(entry.get("receives"), f"{path}[{index}].receives")
         result.append(entry)
     return result
 

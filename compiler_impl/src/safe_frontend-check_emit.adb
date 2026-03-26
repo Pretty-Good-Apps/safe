@@ -1864,6 +1864,10 @@ package body Safe_Frontend.Check_Emit is
                     (Name => Item.Task_Data.Name,
                      Has_Explicit_Priority => Item.Task_Data.Has_Explicit_Priority,
                      Priority => 0,
+                     Has_Send_Contract => False,
+                     Send_Contracts => <>,
+                     Has_Receive_Contract => False,
+                     Receive_Contracts => <>,
                      Span => Item.Task_Data.Span,
                      Declarations => <>,
                      Statements => Item.Task_Data.Statements)))
@@ -2357,6 +2361,8 @@ package body Safe_Frontend.Check_Emit is
    is
       Items            : String_Vectors.Vector;
       Channels         : String_Vectors.Vector;
+      Sends            : String_Vectors.Vector;
+      Receives         : String_Vectors.Vector;
       Subprogram_Index : Natural := 0;
    begin
       for Item of Parsed.Items loop
@@ -2371,8 +2377,16 @@ package body Safe_Frontend.Check_Emit is
                   Summary : constant MB.Graph_Summary := Graph_Summary_For (Bronze, Subp.Name);
                begin
                   Channels.Clear;
+                  Sends.Clear;
+                  Receives.Clear;
                   for Name of Summary.Channels loop
                      Channels.Append (JS.Quote (Name));
+                  end loop;
+                  for Name of Summary.Sends loop
+                     Sends.Append (JS.Quote (Name));
+                  end loop;
+                  for Name of Summary.Receives loop
+                     Receives.Append (JS.Quote (Name));
                   end loop;
                   Items.Append
                     ("{""name"":"
@@ -2381,6 +2395,10 @@ package body Safe_Frontend.Check_Emit is
                      & JS.Quote (Signature_For (Subp))
                      & ",""channels"":"
                      & Json_List (Channels)
+                     & ",""sends"":"
+                     & Json_List (Sends)
+                     & ",""receives"":"
+                     & Json_List (Receives)
                      & "}");
                end;
             end if;

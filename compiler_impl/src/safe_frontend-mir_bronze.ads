@@ -1,9 +1,11 @@
 with Ada.Containers.Indefinite_Vectors;
+with Safe_Frontend.Check_Model;
 with Safe_Frontend.Mir_Diagnostics;
 with Safe_Frontend.Mir_Model;
 with Safe_Frontend.Types;
 
 package Safe_Frontend.Mir_Bronze is
+   package CM renames Safe_Frontend.Check_Model;
    package FT renames Safe_Frontend.Types;
    package GM renames Safe_Frontend.Mir_Model;
    package MD renames Safe_Frontend.Mir_Diagnostics;
@@ -23,6 +25,8 @@ package Safe_Frontend.Mir_Bronze is
       Reads    : FT.UString_Vectors.Vector;
       Writes   : FT.UString_Vectors.Vector;
       Channels : FT.UString_Vectors.Vector;
+      Sends    : FT.UString_Vectors.Vector;
+      Receives : FT.UString_Vectors.Vector;
       Calls    : FT.UString_Vectors.Vector;
       Inputs   : FT.UString_Vectors.Vector;
       Outputs  : FT.UString_Vectors.Vector;
@@ -64,5 +68,6 @@ package Safe_Frontend.Mir_Bronze is
 
    function Summarize
      (Document    : GM.Mir_Document;
+      Tasks       : CM.Resolved_Task_Vectors.Vector := CM.Resolved_Task_Vectors.Empty_Vector;
       Path_String : String := "") return Bronze_Result;
 end Safe_Frontend.Mir_Bronze;

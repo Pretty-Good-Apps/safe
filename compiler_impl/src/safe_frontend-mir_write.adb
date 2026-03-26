@@ -499,11 +499,23 @@ package body Safe_Frontend.Mir_Write is
      (Item : GM.External_Channel_Summary) return String
    is
       Channels : String_Vectors.Vector;
+      Sends    : String_Vectors.Vector;
+      Receives : String_Vectors.Vector;
    begin
       for Value of Item.Channels loop
          Channels.Append (JS.Quote (Value));
       end loop;
-      return "{""channels"":" & Json_List (Channels) & "}";
+      for Value of Item.Sends loop
+         Sends.Append (JS.Quote (Value));
+      end loop;
+      for Value of Item.Receives loop
+         Receives.Append (JS.Quote (Value));
+      end loop;
+      return
+        "{""channels"":" & Json_List (Channels)
+        & ",""sends"":" & Json_List (Sends)
+        & ",""receives"":" & Json_List (Receives)
+        & "}";
    end Channel_Summary_Json;
 
    function External_Json (Item : GM.External_Entry) return String is

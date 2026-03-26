@@ -7,6 +7,7 @@ with Ada.Strings.Fixed;
 with Ada.Strings.Hash;
 with Ada.Strings.Unbounded;
 with Safe_Frontend.Builtin_Types;
+with Safe_Frontend.Check_Model;
 with Safe_Frontend.Mir_Bronze;
 with Safe_Frontend.Mir_Json;
 with Safe_Frontend.Mir_Validate;
@@ -14,6 +15,7 @@ with Safe_Frontend.Mir_Validate;
 package body Safe_Frontend.Mir_Analyze is
    package MB renames Safe_Frontend.Mir_Bronze;
    package BT renames Safe_Frontend.Builtin_Types;
+   package CM renames Safe_Frontend.Check_Model;
    package GM renames Safe_Frontend.Mir_Model;
    package US renames Ada.Strings.Unbounded;
 
@@ -5895,7 +5897,8 @@ package body Safe_Frontend.Mir_Analyze is
    end Analyze_Graph;
 
    function Analyze
-     (Document : GM.Mir_Document) return Analyze_Result
+     (Document : GM.Mir_Document;
+      Tasks    : CM.Resolved_Task_Vectors.Vector := CM.Resolved_Task_Vectors.Empty_Vector) return Analyze_Result
    is
       Bronze      : MB.Bronze_Result;
       Type_Env    : Type_Maps.Map;
@@ -5910,7 +5913,7 @@ package body Safe_Frontend.Mir_Analyze is
          return Error (UString_Value (Document.Path) & ": analyze-mir requires mir-v2 input");
       end if;
 
-      Bronze := MB.Summarize (Document, Path_String);
+      Bronze := MB.Summarize (Document, Tasks, Path_String);
       if not Bronze.Diagnostics.Is_Empty then
          for Item of Bronze.Diagnostics loop
             Append_Diagnostic (Diagnostics, Item, Sequence);

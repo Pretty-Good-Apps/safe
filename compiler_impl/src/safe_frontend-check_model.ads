@@ -158,6 +158,7 @@ package Safe_Frontend.Check_Model is
       Type_Info       : GM.Type_Descriptor;
       Is_Constant     : Boolean := False;
       Has_Initializer : Boolean := False;
+      Has_Implicit_Default_Init : Boolean := False;
       Initializer     : Expr_Access := null;
       Span            : FT.Source_Span := FT.Null_Span;
       Is_Public       : Boolean := False;
@@ -390,6 +391,10 @@ package Safe_Frontend.Check_Model is
       Name                 : FT.UString := FT.To_UString ("");
       Has_Explicit_Priority : Boolean := False;
       Priority             : Expr_Access := null;
+      Has_Send_Contract    : Boolean := False;
+      Send_Contracts       : Expr_Access_Vectors.Vector;
+      Has_Receive_Contract : Boolean := False;
+      Receive_Contracts    : Expr_Access_Vectors.Vector;
       Declarations         : Object_Decl_Vectors.Vector;
       Statements           : Statement_Access_Vectors.Vector;
       End_Name             : FT.UString := FT.To_UString ("");
@@ -462,6 +467,7 @@ package Safe_Frontend.Check_Model is
       Type_Info       : GM.Type_Descriptor;
       Is_Constant     : Boolean := False;
       Has_Initializer : Boolean := False;
+      Has_Implicit_Default_Init : Boolean := False;
       Initializer     : Expr_Access := null;
       Static_Info     : Static_Value;
       Span            : FT.Source_Span := FT.Null_Span;
@@ -505,6 +511,10 @@ package Safe_Frontend.Check_Model is
       Name                  : FT.UString := FT.To_UString ("");
       Has_Explicit_Priority : Boolean := False;
       Priority              : Long_Long_Integer := 0;
+      Has_Send_Contract     : Boolean := False;
+      Send_Contracts        : FT.UString_Vectors.Vector;
+      Has_Receive_Contract  : Boolean := False;
+      Receive_Contracts     : FT.UString_Vectors.Vector;
       Span                  : FT.Source_Span := FT.Null_Span;
       Declarations          : Resolved_Object_Decl_Vectors.Vector;
       Statements            : Statement_Access_Vectors.Vector;

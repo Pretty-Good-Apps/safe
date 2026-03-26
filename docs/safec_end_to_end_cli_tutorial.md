@@ -64,15 +64,14 @@ package typed_channel_demo
    channel data_ch : message capacity 1;
    result : message = 0;
 
-   task producer
+   task producer with priority = 10, sends data_ch
       loop
          send data_ch, 41
          delay 0.05
 
-   task consumer
+   task consumer with priority = 10, receives data_ch
       loop
-         var input : message
-         receive data_ch, input
+         receive data_ch, input : message
          result = input + 1
 ```
 
@@ -113,15 +112,14 @@ package typed_channel_demo
 
    result : message = 0;
 
-   task producer
+   task producer with priority = 10, sends data_ch
       loop
          send data_ch, 41
          delay 0.05
 
-   task consumer
+   task consumer with priority = 10, receives data_ch
       loop
-         var input : message
-         receive data_ch, input
+         receive data_ch, input : message
          result = input + 1
 SAFE
 

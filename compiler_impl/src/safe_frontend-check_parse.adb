@@ -1170,6 +1170,38 @@ package body Safe_Frontend.Check_Parse is
    function Parse_Statement
      (State : in out Parser_State) return CM.Statement_Access;
 
+   function Direct_Name_Expr
+     (Name : FT.UString;
+      Span : FT.Source_Span) return CM.Expr_Access
+   is
+      Result : constant CM.Expr_Access := New_Expr;
+   begin
+      Result.Kind := CM.Expr_Ident;
+      Result.Name := Name;
+      Result.Span := Span;
+      return Result;
+   end Direct_Name_Expr;
+
+   procedure Append_Parsed_Statement
+     (Statements : in out CM.Statement_Access_Vectors.Vector;
+      Item       : CM.Statement_Access)
+   is
+      Decl_Stmt : CM.Statement_Access;
+   begin
+      if Item /= null
+        and then Item.Kind in CM.Stmt_Receive | CM.Stmt_Try_Receive
+        and then not Item.Decl.Names.Is_Empty
+      then
+         Decl_Stmt := new CM.Statement;
+         Decl_Stmt.Kind := CM.Stmt_Object_Decl;
+         Decl_Stmt.Decl := Item.Decl;
+         Decl_Stmt.Span := Item.Decl.Span;
+         Item.Decl := (others => <>);
+         Statements.Append (Decl_Stmt);
+      end if;
+      Statements.Append (Item);
+   end Append_Parsed_Statement;
+
    function Case_Choice_Is_Literal
      (Expr : CM.Expr_Access) return Boolean is
    begin
@@ -1205,7 +1237,7 @@ package body Safe_Frontend.Check_Parse is
             end if;
          end loop;
          exit when Match_End or else Current (State).Kind = FL.End_Of_File;
-         Result.Append (Parse_Statement (State));
+         Append_Parsed_Statement (Result, Parse_Statement (State));
          end;
       end loop;
       return Result;
@@ -1240,7 +1272,7 @@ package body Safe_Frontend.Check_Parse is
       end if;
       loop
          exit when Current (State).Kind in FL.Dedent | FL.End_Of_File;
-         Result.Append (Parse_Statement (State));
+         Append_Parsed_Statement (Result, Parse_Statement (State));
       end loop;
       Require_Dedent (State, Context);
       return Result;
@@ -1583,12 +1615,24 @@ package body Safe_Frontend.Check_Parse is
    is
       Start  : constant FL.Token := Expect (State, "receive");
       Result : constant CM.Statement_Access := new CM.Statement;
+      Name   : FL.Token;
       Semi   : FT.Source_Span;
    begin
       Result.Kind := CM.Stmt_Receive;
       Result.Channel_Name := Parse_Name_Expression (State);
       Require (State, ",");
-      Result.Target := Parse_Expression (State);
+      if Current (State).Kind in FL.Identifier | FL.Keyword
+        and then Next (State).Lexeme = FT.To_UString (":")
+      then
+         Name := Expect_Identifier (State);
+         Require (State, ":");
+         Result.Decl.Names.Append (Name.Lexeme);
+         Result.Decl.Decl_Type := Parse_Object_Type (State);
+         Result.Decl.Span := CM.Join (Name.Span, Result.Decl.Decl_Type.Span);
+         Result.Target := Direct_Name_Expr (Name.Lexeme, Name.Span);
+      else
+         Result.Target := Parse_Expression (State);
+      end if;
       Semi := Expect_Statement_Terminator (State);
       Result.Span := CM.Join (Start.Span, Semi);
       return Result;
@@ -1617,12 +1661,25 @@ package body Safe_Frontend.Check_Parse is
    is
       Start  : constant FL.Token := Expect (State, "try_receive");
       Result : constant CM.Statement_Access := new CM.Statement;
+      Name   : FL.Token;
       Semi   : FT.Source_Span;
    begin
       Result.Kind := CM.Stmt_Try_Receive;
       Result.Channel_Name := Parse_Name_Expression (State);
       Require (State, ",");
-      Result.Target := Parse_Expression (State);
+      if Current (State).Kind in FL.Identifier | FL.Keyword
+        and then Next (State).Lexeme = FT.To_UString (":")
+      then
+         Name := Expect_Identifier (State);
+         Require (State, ":");
+         Result.Decl.Names.Append (Name.Lexeme);
+         Result.Decl.Decl_Type := Parse_Object_Type (State);
+         Result.Decl.Has_Implicit_Default_Init := True;
+         Result.Decl.Span := CM.Join (Name.Span, Result.Decl.Decl_Type.Span);
+         Result.Target := Direct_Name_Expr (Name.Lexeme, Name.Span);
+      else
+         Result.Target := Parse_Expression (State);
+      end if;
       Require (State, ",");
       Result.Success_Var := Parse_Name_Expression (State);
       Semi := Expect_Statement_Terminator (State);
@@ -2256,7 +2313,7 @@ package body Safe_Frontend.Check_Parse is
                  (Parse_Body_Local_Object_Declaration (State));
             else
                Saw_Statements := True;
-               Result.Subp_Data.Statements.Append (Parse_Statement (State));
+                  Append_Parsed_Statement (Result.Subp_Data.Statements, Parse_Statement (State));
             end if;
          end loop;
       end if;
@@ -2286,6 +2343,36 @@ package body Safe_Frontend.Check_Parse is
       Start                  : constant FT.Source_Span := Current (State).Span;
       Saw_Statements         : Boolean := False;
       Suite_Already_Indented : Boolean := False;
+
+      procedure Parse_Task_Channel_Clause is
+         Clause_Kind : constant String := Current_Lower (State);
+      begin
+         if Clause_Kind = "sends" then
+            Advance (State);
+            Result.Task_Data.Has_Send_Contract := True;
+            Result.Task_Data.Send_Contracts.Append (Parse_Name_Expression (State));
+         elsif Clause_Kind = "receives" then
+            Advance (State);
+            Result.Task_Data.Has_Receive_Contract := True;
+            Result.Task_Data.Receive_Contracts.Append (Parse_Name_Expression (State));
+         else
+            Raise_Diag
+              (CM.Source_Frontend_Error
+                 (Path    => Path_String (State),
+                  Span    => Current (State).Span,
+                  Message => "expected `sends` or `receives` in task direction clauses"));
+         end if;
+
+         while Match (State, ",") loop
+            if Current_Lower (State) = "sends" or else Current_Lower (State) = "receives" then
+               exit;
+            elsif Clause_Kind = "sends" then
+               Result.Task_Data.Send_Contracts.Append (Parse_Name_Expression (State));
+            else
+               Result.Task_Data.Receive_Contracts.Append (Parse_Name_Expression (State));
+            end if;
+         end loop;
+      end Parse_Task_Channel_Clause;
    begin
       if Is_Public then
          Raise_Diag
@@ -2310,6 +2397,22 @@ package body Safe_Frontend.Check_Parse is
          Require (State, "=");
          Result.Task_Data.Has_Explicit_Priority := True;
          Result.Task_Data.Priority := Parse_Expression (State);
+         if Match (State, ",") then
+            Parse_Task_Channel_Clause;
+            while Current_Lower (State) = "sends" or else Current_Lower (State) = "receives" loop
+               Parse_Task_Channel_Clause;
+            end loop;
+         end if;
+      elsif Current_Lower (State) = "sends" or else Current_Lower (State) = "receives" then
+         Parse_Task_Channel_Clause;
+         while Current_Lower (State) = "sends" or else Current_Lower (State) = "receives" loop
+            Parse_Task_Channel_Clause;
+         end loop;
+      elsif Match (State, ",") then
+         Parse_Task_Channel_Clause;
+         while Current_Lower (State) = "sends" or else Current_Lower (State) = "receives" loop
+            Parse_Task_Channel_Clause;
+         end loop;
       end if;
       Result.Task_Data.End_Name := Result.Task_Data.Name;
       if Match_Indent (State) then
@@ -2349,7 +2452,7 @@ package body Safe_Frontend.Check_Parse is
                     (Parse_Body_Local_Object_Declaration (State));
                else
                   Saw_Statements := True;
-                  Result.Task_Data.Statements.Append (Parse_Statement (State));
+                  Append_Parsed_Statement (Result.Task_Data.Statements, Parse_Statement (State));
                end if;
             end;
          end loop;

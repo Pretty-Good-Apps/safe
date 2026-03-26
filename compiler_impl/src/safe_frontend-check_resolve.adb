@@ -1885,6 +1885,42 @@ package body Safe_Frontend.Check_Resolve is
       return Get_Type (Channel_Env, Name);
    end Channel_Element_Type;
 
+   procedure Append_Task_Channel_Contract
+     (Contracts   : in out FT.UString_Vectors.Vector;
+      Expr        : CM.Expr_Access;
+      Channel_Env : Type_Maps.Map;
+      Path        : String;
+      Direction   : String)
+   is
+      Name : constant String := Flatten_Name (Expr);
+   begin
+      if Name = "" then
+         Raise_Diag
+           (CM.Source_Frontend_Error
+              (Path    => Path,
+               Span    => (if Expr = null then FT.Null_Span else Expr.Span),
+               Message => "task `" & Direction & "` clauses must name channels"));
+      elsif not Has_Type (Channel_Env, Name) then
+         Raise_Diag
+           (CM.Source_Frontend_Error
+              (Path    => Path,
+               Span    => Expr.Span,
+               Message => "unknown channel `" & Name & "` in task `" & Direction & "` clause"));
+      end if;
+
+      for Existing of Contracts loop
+         if UString_Value (Existing) = Name then
+            Raise_Diag
+              (CM.Source_Frontend_Error
+                 (Path    => Path,
+                  Span    => Expr.Span,
+                  Message => "duplicate channel `" & Name & "` in task `" & Direction & "` clause"));
+         end if;
+      end loop;
+
+      Contracts.Append (FT.To_UString (Name));
+   end Append_Task_Channel_Contract;
+
    function Contains_Label_Like_Syntax (Name : String) return Boolean is
    begin
       for Ch of Name loop
@@ -1935,6 +1971,7 @@ package body Safe_Frontend.Check_Resolve is
       end if;
 
       Result.Type_Info := Resolve_Decl_Type (Decl, Type_Env, Const_Env, Path);
+      Result.Has_Implicit_Default_Init := Decl.Has_Implicit_Default_Init;
       if Is_String_Type (Result.Type_Info, Type_Env) then
          if not Decl.Is_Constant then
             Raise_Diag
@@ -3334,6 +3371,7 @@ package body Safe_Frontend.Check_Resolve is
                   Local_Decl.Type_Info := Normalized.Type_Info;
                   Local_Decl.Is_Constant := Normalized.Is_Constant;
                   Local_Decl.Has_Initializer := Normalized.Has_Initializer;
+                  Local_Decl.Has_Implicit_Default_Init := Normalized.Has_Implicit_Default_Init;
                   Local_Decl.Span := Normalized.Span;
                   Local_Decl.Initializer := Normalized.Initializer;
                   if Local_Decl.Has_Initializer and then Local_Decl.Initializer /= null then
@@ -3469,6 +3507,7 @@ package body Safe_Frontend.Check_Resolve is
                      Local_Decl.Type_Info := Normalized.Type_Info;
                      Local_Decl.Is_Constant := Normalized.Is_Constant;
                      Local_Decl.Has_Initializer := Normalized.Has_Initializer;
+                     Local_Decl.Has_Implicit_Default_Init := Normalized.Has_Implicit_Default_Init;
                      Local_Decl.Span := Normalized.Span;
                      Local_Decl.Initializer := Normalized.Initializer;
                      if Local_Decl.Is_Constant
@@ -3540,6 +3579,28 @@ package body Safe_Frontend.Check_Resolve is
                else
                   Task_Item.Priority := Default_Task_Priority;
                end if;
+               Task_Item.Has_Send_Contract := Item.Task_Data.Has_Send_Contract;
+               if Item.Task_Data.Has_Send_Contract then
+                  for Expr of Item.Task_Data.Send_Contracts loop
+                     Append_Task_Channel_Contract
+                       (Task_Item.Send_Contracts,
+                        Expr,
+                        Channel_Env,
+                        UString_Value (Unit.Path),
+                        "sends");
+                  end loop;
+               end if;
+               Task_Item.Has_Receive_Contract := Item.Task_Data.Has_Receive_Contract;
+               if Item.Task_Data.Has_Receive_Contract then
+                  for Expr of Item.Task_Data.Receive_Contracts loop
+                     Append_Task_Channel_Contract
+                       (Task_Item.Receive_Contracts,
+                        Expr,
+                        Channel_Env,
+                        UString_Value (Unit.Path),
+                        "receives");
+                  end loop;
+               end if;
                Task_Item.Span := Item.Task_Data.Span;
 
                for Object_Decl of Result.Objects loop
@@ -3569,6 +3630,7 @@ package body Safe_Frontend.Check_Resolve is
                      Local_Decl.Type_Info := Normalized.Type_Info;
                      Local_Decl.Is_Constant := Normalized.Is_Constant;
                      Local_Decl.Has_Initializer := Normalized.Has_Initializer;
+                     Local_Decl.Has_Implicit_Default_Init := Normalized.Has_Implicit_Default_Init;
                      Local_Decl.Span := Normalized.Span;
                      Local_Decl.Initializer := Normalized.Initializer;
                      if Local_Decl.Is_Constant

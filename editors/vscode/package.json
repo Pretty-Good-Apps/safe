@@ -1,8 +1,8 @@
 {
   "name": "safe-language-eval",
   "displayName": "Safe Language Eval",
-  "description": "Safe editor tooling for the shipped PR11.8 lowercase single-integer surface plus disposable diagnostics.",
-  "version": "0.0.4",
+  "description": "Safe editor tooling for the shipped PR11.8b.1 task-direction and scoped-receive surface plus disposable diagnostics.",
+  "version": "0.0.5",
   "publisher": "agentc1",
   "license": "UNLICENSED",
   "engines": {

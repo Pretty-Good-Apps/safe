@@ -849,9 +849,17 @@ package body Safe_Frontend.Mir_Json is
       use GNATCOLL.JSON;
       Result   : GM.External_Channel_Summary;
       Channels : constant JSON_Array := Json_Array_Or_Empty (Value, "channels");
+      Sends    : constant JSON_Array := Json_Array_Or_Empty (Value, "sends");
+      Receives : constant JSON_Array := Json_Array_Or_Empty (Value, "receives");
    begin
       for Index in 1 .. Length (Channels) loop
          Result.Channels.Append (FT.To_UString (Get (Get (Channels, Index))));
+      end loop;
+      for Index in 1 .. Length (Sends) loop
+         Result.Sends.Append (FT.To_UString (Get (Get (Sends, Index))));
+      end loop;
+      for Index in 1 .. Length (Receives) loop
+         Result.Receives.Append (FT.To_UString (Get (Get (Receives, Index))));
       end loop;
       return Result;
    end Parse_Channel_Summary;

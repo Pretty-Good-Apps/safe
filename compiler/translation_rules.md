@@ -57,12 +57,15 @@ The following table maps each Safe construct to its Ada/SPARK emission pattern. 
 | Integer arithmetic `A + B` | `Long_Long_Integer(A) + Long_Long_Integer(B)` | SAFE@468cf72:spec/02-restrictions.md#2.8.1.p126 | AST: `Expression`. Direct 64-bit integer arithmetic |
 | Narrowing: `return Expr` | `return T(Expr_64);` | SAFE@468cf72:spec/02-restrictions.md#2.8.1.p127 | AST: `SimpleReturnStatement`. Range check at narrowing point |
 | Narrowing: `X = Expr` | `X := T(Expr_64);` | SAFE@468cf72:spec/02-restrictions.md#2.8.1.p127 | AST: `AssignmentStatement`. Range check at narrowing point |
-| `task T ... end T;` | Ada task type + single instance | SAFE@468cf72:spec/04-tasks-and-channels.md#4.1.p1 | AST: `TaskDeclaration`. See Section 6 |
+| `task T ...` | Ada task type + single instance | SAFE@468cf72:spec/04-tasks-and-channels.md#4.1.p1 | AST: `TaskDeclaration`. See Section 6 |
+| `task T ..., sends C1, receives C2` | Same Ada task type + instance; direction clauses affect legality and interface summaries only | SAFE@468cf72:spec/04-tasks-and-channels.md#4.1.p7c | Source-only constraint; no direct Ada syntax |
 | `channel C : T capacity N;` | Protected object with bounded buffer | SAFE@468cf72:spec/04-tasks-and-channels.md#4.2.p12 | AST: `ChannelDeclaration`. See Section 4 |
 | `send C, Expr;` | `C.Send(Expr);` (entry call) | SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p27 | AST: `SendStatement`. Blocking entry call |
 | `receive C, Var;` | `C.Receive(Var);` (entry call) | SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p28 | AST: `ReceiveStatement`. Blocking entry call |
+| `receive C, Var : T;` | `declare Var : T; begin C.Receive(Var); ... end;` | SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p28 | Lowered before AST / MIR emission to declaration + receive |
 | `try_send C, Expr, Ok;` | `C.Try_Send(Expr, Ok);` (procedure call) | SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29 | AST: `TrySendStatement`. Non-blocking procedure |
 | `try_receive C, Var, Ok;` | `C.Try_Receive(Var, Ok);` (procedure call) | SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p30 | AST: `TryReceiveStatement`. Non-blocking procedure |
+| `try_receive C, Var : T, Ok;` | `declare Var : T := <default>; begin C.Try_Receive(Var, Ok); ... end;` | SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p30 | Lowered before AST / MIR emission to declaration + try_receive |
 | `select ... end select;` | Polling loop with `Try_Receive` calls | SAFE@468cf72:spec/04-tasks-and-channels.md#4.4.p39 | AST: `SelectStatement`. See Section 5 |
 | `delay Expr;` | `delay Duration(Expr);` | SAFE@468cf72:spec/02-restrictions.md#2.1.8.p60 | AST: `DelayStatement`. Direct pass-through if Duration typed |
 | `pragma Assert(Cond);` | `pragma Assert(Cond);` | SAFE@468cf72:spec/02-restrictions.md#2.1.10.p68 | AST: `Pragma`. Direct pass-through |
@@ -486,13 +489,21 @@ priority is specified in Safe source, the implementation's default priority is
 used (SAFE@468cf72:spec/04-tasks-and-channels.md#4.1.p9), which is
 `System.Default_Priority` in Ada.
 
-### 6.4 Non-Termination
+### 6.4 Task Direction Clauses
+
+Task `sends` / `receives` clauses are source-level legality checks and do not
+introduce any additional Ada syntax. The emitter therefore produces the same
+task type, task body, and instance declarations regardless of whether the Safe
+source declared channel-direction contracts. The contracts do affect the
+generated interface summaries described in Section 10.5.
+
+### 6.5 Non-Termination
 
 **Clause:** SAFE@468cf72:spec/04-tasks-and-channels.md#4.6.p53
 
 The non-termination legality rule is enforced at compile time. The emitted task body preserves the unconditional outer loop from the Safe source. No additional runtime enforcement is needed.
 
-### 6.5 Global Aspects on Task Bodies
+### 6.6 Global Aspects on Task Bodies
 
 The emitter generates `Global` aspects on task bodies referencing only owned variables and channel operations:
 
@@ -503,7 +514,7 @@ is
    ...
 ```
 
-### 6.6 Elaboration Policy
+### 6.7 Elaboration Policy
 
 **Clause:** SAFE@468cf72:spec/04-tasks-and-channels.md#4.7.p56, SAFE@468cf72:spec/07-annex-b-impl-advice.md#B.6.p15
 
@@ -814,6 +825,18 @@ pragma SPARK_Mode;
 ### 10.5 Channel-Access Summaries
 
 For cross-package ceiling priority computation, the dependency interface must include channel-access summaries (SAFE@468cf72:spec/03-single-file-packages.md#3.3.1.p33(i)). These are computed during the same single-pass analysis as Global/Depends.
+
+The retained `safei-v1` shape carries three channel-summary views per exported
+subprogram:
+
+- `channels`: the conservative transitive union of all reachable channel uses
+- `sends`: the conservative transitive subset used by `send` / `try_send`
+- `receives`: the conservative transitive subset used by `receive`,
+  `try_receive`, and `select` channel arms
+
+Legacy dependency interfaces may provide only `channels`. In that case the
+imported summary is treated as directionally ambiguous until the provider
+interface is regenerated.
 
 ### 10.6 Constant_After_Elaboration
 

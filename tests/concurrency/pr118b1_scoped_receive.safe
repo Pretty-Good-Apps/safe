@@ -1,0 +1,21 @@
+-- Test: pr118b1_scoped_receive
+-- Description: Scoped receive bindings declare the target variable for the remaining statement sequence.
+-- Expected: ACCEPT
+
+package pr118b1_scoped_receive
+
+   subtype message is integer (0 to 10);
+
+   channel data_ch : message capacity 1;
+   result : message = 0;
+
+   task producer with priority = 10, sends data_ch
+
+      loop
+         send data_ch, 4
+
+   task consumer with priority = 10, receives data_ch
+
+      loop
+         receive data_ch, item : message
+         result = item

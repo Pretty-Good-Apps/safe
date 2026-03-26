@@ -595,6 +595,8 @@ package body Safe_Frontend.Interfaces is
             Ignore_Signature : constant String := Require_String (Item, "signature", File_Path);
          begin
             Validate_Name_List (Require_Array (Item, "channels", File_Path), "channels", File_Path);
+            Validate_Name_List (Json_Array_Or_Empty (Item, "sends"), "sends", File_Path);
+            Validate_Name_List (Json_Array_Or_Empty (Item, "receives"), "receives", File_Path);
             null;
          end;
       end loop;
@@ -693,6 +695,8 @@ package body Safe_Frontend.Interfaces is
             Item          : constant JSON_Value := Get (Value, Index);
             Summary_Entry : Named_Channel_Summary;
             Channels : constant JSON_Array := Require_Array (Item, "channels", File_Path);
+            Sends    : constant JSON_Array := Json_Array_Or_Empty (Item, "sends");
+            Receives : constant JSON_Array := Json_Array_Or_Empty (Item, "receives");
          begin
             Summary_Entry.Name :=
               FT.To_UString
@@ -705,6 +709,20 @@ package body Safe_Frontend.Interfaces is
                     (Qualify_Name
                        (Package_Name,
                         Get (Get (Channels, Channel_Index)))));
+            end loop;
+            for Channel_Index in 1 .. Length (Sends) loop
+               Summary_Entry.Summary.Sends.Append
+                 (FT.To_UString
+                    (Qualify_Name
+                       (Package_Name,
+                        Get (Get (Sends, Channel_Index)))));
+            end loop;
+            for Channel_Index in 1 .. Length (Receives) loop
+               Summary_Entry.Summary.Receives.Append
+                 (FT.To_UString
+                    (Qualify_Name
+                       (Package_Name,
+                        Get (Get (Receives, Channel_Index)))));
             end loop;
             Result.Append (Summary_Entry);
          end;

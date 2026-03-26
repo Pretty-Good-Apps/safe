@@ -344,6 +344,8 @@ package Safe_Frontend.Mir_Model is
 
    type External_Channel_Summary is record
       Channels : FT.UString_Vectors.Vector;
+      Sends    : FT.UString_Vectors.Vector;
+      Receives : FT.UString_Vectors.Vector;
    end record;
 
    type External_Entry is record

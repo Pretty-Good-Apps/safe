@@ -1,0 +1,23 @@
+-- Test: pr118b1_partial_task_clauses
+-- Description: Partial task channel clauses constrain only the named direction.
+-- Expected: ACCEPT
+
+package pr118b1_partial_task_clauses
+
+   subtype message is integer (0 to 10);
+
+   channel input_ch : message capacity 1;
+   channel output_ch : message capacity 1;
+   observed : message = 0;
+
+   function push_output
+
+      send output_ch, 1
+
+   task relay with priority = 10, sends output_ch
+
+      loop
+         var incoming : message = 0
+         receive input_ch, incoming
+         observed = incoming
+         push_output

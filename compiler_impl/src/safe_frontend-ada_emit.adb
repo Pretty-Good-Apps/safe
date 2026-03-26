@@ -229,6 +229,7 @@ package body Safe_Frontend.Ada_Emit is
       Type_Info      : GM.Type_Descriptor;
       Is_Constant    : Boolean;
       Has_Initializer : Boolean;
+      Has_Implicit_Default_Init : Boolean;
       Initializer    : CM.Expr_Access;
       Local_Context  : Boolean := False) return String;
    function Lookup_Channel
@@ -2868,6 +2869,7 @@ package body Safe_Frontend.Ada_Emit is
       Type_Info      : GM.Type_Descriptor;
       Is_Constant    : Boolean;
       Has_Initializer : Boolean;
+      Has_Implicit_Default_Init : Boolean;
       Initializer    : CM.Expr_Access;
       Local_Context  : Boolean := False) return String
    is
@@ -2920,12 +2922,17 @@ package body Safe_Frontend.Ada_Emit is
                 & " : "
                 & (if Is_Constant then "constant " else "")
                 & Type_Name);
-         if Has_Initializer then
+         if Has_Initializer or else Has_Implicit_Default_Init then
             if Type_Name = "safe_runtime.wide_integer" then
                Result :=
                  Result
                  & SU.To_Unbounded_String
                      (" := " & Render_Wide_Expr (Unit, Document, Initializer, State));
+            elsif Has_Implicit_Default_Init and then Initializer = null then
+               Result :=
+                 Result
+                 & SU.To_Unbounded_String
+                     (" := " & Default_Value_Expr (Type_Info));
             elsif Is_Integer_Type (Unit, Document, Type_Info)
               and then Uses_Wide_Value (Unit, Document, State, Initializer)
             then
@@ -2965,6 +2972,7 @@ package body Safe_Frontend.Ada_Emit is
            Type_Info       => Decl.Type_Info,
            Is_Constant     => Decl.Is_Constant,
            Has_Initializer => Decl.Has_Initializer,
+           Has_Implicit_Default_Init => Decl.Has_Implicit_Default_Init,
            Initializer     => Decl.Initializer,
            Local_Context   => Local_Context);
    end Render_Object_Decl_Text;
@@ -2986,6 +2994,7 @@ package body Safe_Frontend.Ada_Emit is
            Type_Info       => Decl.Type_Info,
            Is_Constant     => Decl.Is_Constant,
            Has_Initializer => Decl.Has_Initializer,
+           Has_Implicit_Default_Init => Decl.Has_Implicit_Default_Init,
            Initializer     => Decl.Initializer,
            Local_Context   => Local_Context);
    end Render_Object_Decl_Text;

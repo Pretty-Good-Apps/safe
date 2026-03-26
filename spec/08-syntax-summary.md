@@ -662,7 +662,12 @@ conforming implementation shall reject them.
 task_declaration ::=
     'task' defining_identifier
         [ 'with' 'priority' '=' static_expression ]
+        [ [ ',' ] task_channel_clause { [ ',' ] task_channel_clause } ]
         indented_task_body
+
+task_channel_clause ::=
+    'sends' channel_name { ',' channel_name }
+  | 'receives' channel_name { ',' channel_name }
 
 indented_task_body ::=
     INDENT
@@ -678,13 +683,16 @@ send_statement ::=
     'send' channel_name ',' expression statement_terminator
 
 receive_statement ::=
-    'receive' channel_name ',' name statement_terminator
+    'receive' channel_name ',' receive_target statement_terminator
+
+receive_target ::=
+    name | defining_identifier ':' subtype_indication
 
 try_send_statement ::=
     'try_send' channel_name ',' expression ',' name statement_terminator
 
 try_receive_statement ::=
-    'try_receive' channel_name ',' name ',' name statement_terminator
+    'try_receive' channel_name ',' receive_target ',' name statement_terminator
 
 select_statement ::=
     'select'
@@ -812,7 +820,8 @@ when        while       with        xor
 
 ```
 public      channel     send        receive
-try_send    try_receive capacity    from
+try_send    try_receive sends       receives
+capacity    from
 ```
 
 ## 8.16 Grammar Summary
