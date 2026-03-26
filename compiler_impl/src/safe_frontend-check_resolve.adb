@@ -19,6 +19,7 @@ package body Safe_Frontend.Check_Resolve is
    use type CM.Static_Value_Kind;
    use type CM.Type_Decl_Kind;
    use type CM.Type_Spec_Kind;
+   use type CM.Wide_Integer;
    use type GM.Scalar_Value_Kind;
    use type FT.UString;
 
@@ -212,6 +213,10 @@ package body Safe_Frontend.Check_Resolve is
       Put_Type (Type_Env, "character", BT.Character_Type);
       Put_Type (Type_Env, "string", BT.String_Type);
       Put_Type (Type_Env, "result", BT.Result_Type);
+      Put_Type (Type_Env, "__binary_8", BT.Binary_Type (8));
+      Put_Type (Type_Env, "__binary_16", BT.Binary_Type (16));
+      Put_Type (Type_Env, "__binary_32", BT.Binary_Type (32));
+      Put_Type (Type_Env, "__binary_64", BT.Binary_Type (64));
       Put_Type (Type_Env, "float", BT.Float_Type);
       Put_Type (Type_Env, "long_float", BT.Long_Float_Type);
       Put_Type (Type_Env, "duration", BT.Duration_Type);
@@ -310,6 +315,14 @@ package body Safe_Frontend.Check_Resolve is
      (Info     : GM.Type_Descriptor;
      Type_Env : Type_Maps.Map) return Boolean;
 
+   function Is_Binary_Type
+     (Info     : GM.Type_Descriptor;
+      Type_Env : Type_Maps.Map) return Boolean;
+
+   function Binary_Bit_Width
+     (Info     : GM.Type_Descriptor;
+      Type_Env : Type_Maps.Map) return Positive;
+
    function Is_Tuple_Type
      (Info     : GM.Type_Descriptor;
       Type_Env : Type_Maps.Map) return Boolean;
@@ -385,6 +398,9 @@ package body Safe_Frontend.Check_Resolve is
                  and then Is_Tuple_Type (Right, Type_Env)
                  and then Equivalent_Type (Left, Right, Type_Env))
         or else (Is_Integerish (Left, Type_Env) and then Is_Integerish (Right, Type_Env))
+        or else (Is_Binary_Type (Left, Type_Env)
+                 and then Is_Binary_Type (Right, Type_Env)
+                 and then Binary_Bit_Width (Left, Type_Env) = Binary_Bit_Width (Right, Type_Env))
         or else (Left_Kind = "float" and then Right_Kind = "float");
    end Compatible_Type;
 
@@ -449,12 +465,32 @@ package body Safe_Frontend.Check_Resolve is
       return Kind in "integer" | "subtype";
    end Is_Integerish;
 
+   function Is_Binary_Type
+     (Info     : GM.Type_Descriptor;
+      Type_Env : Type_Maps.Map) return Boolean
+   is
+      Base : constant GM.Type_Descriptor := Base_Type (Info, Type_Env);
+   begin
+      return FT.Lowercase (UString_Value (Base.Kind)) = "binary"
+        and then Base.Has_Bit_Width;
+   end Is_Binary_Type;
+
+   function Binary_Bit_Width
+     (Info     : GM.Type_Descriptor;
+      Type_Env : Type_Maps.Map) return Positive
+   is
+      Base : constant GM.Type_Descriptor := Base_Type (Info, Type_Env);
+   begin
+      return Base.Bit_Width;
+   end Binary_Bit_Width;
+
    function Is_Discrete_Case_Type
      (Info     : GM.Type_Descriptor;
       Type_Env : Type_Maps.Map) return Boolean is
    begin
       return Is_Boolean_Type (Info, Type_Env)
         or else Is_Character_Type (Info, Type_Env)
+        or else Is_Binary_Type (Info, Type_Env)
         or else (Is_Integerish (Info, Type_Env) and then not Is_Boolean_Type (Info, Type_Env));
    end Is_Discrete_Case_Type;
 
@@ -467,6 +503,9 @@ package body Safe_Frontend.Check_Resolve is
          return Is_Boolean_Type (Choice, Type_Env);
       elsif Is_Character_Type (Scrutinee, Type_Env) then
          return Is_Character_Type (Choice, Type_Env);
+      elsif Is_Binary_Type (Scrutinee, Type_Env) then
+         return Is_Binary_Type (Choice, Type_Env)
+           and then Binary_Bit_Width (Scrutinee, Type_Env) = Binary_Bit_Width (Choice, Type_Env);
       end if;
 
       return Is_Integerish (Scrutinee, Type_Env)
@@ -844,9 +883,14 @@ package body Safe_Frontend.Check_Resolve is
       elsif Value.Kind = CM.Static_Value_Character then
          return Is_Character_Type (Base, Type_Env);
       elsif Value.Kind = CM.Static_Value_Integer then
+         if Is_Binary_Type (Disc_Type, Type_Env) then
+            return Value.Int_Value >= 0
+              and then (not Disc_Type.Has_Low or else Value.Int_Value >= CM.Wide_Integer (Disc_Type.Low))
+              and then (not Disc_Type.Has_High or else Value.Int_Value <= CM.Wide_Integer (Disc_Type.High));
+         end if;
          return Is_Integerish (Disc_Type, Type_Env)
-           and then (not Disc_Type.Has_Low or else Long_Long_Integer (Value.Int_Value) >= Disc_Type.Low)
-           and then (not Disc_Type.Has_High or else Long_Long_Integer (Value.Int_Value) <= Disc_Type.High)
+           and then (not Disc_Type.Has_Low or else Value.Int_Value >= CM.Wide_Integer (Disc_Type.Low))
+           and then (not Disc_Type.Has_High or else Value.Int_Value <= CM.Wide_Integer (Disc_Type.High))
            and then not Is_Boolean_Type (Base, Type_Env)
            and then not Is_Character_Type (Base, Type_Env);
       end if;
@@ -1207,6 +1251,33 @@ package body Safe_Frontend.Check_Resolve is
                return Result;
             end if;
             return Resolve_Type (UString_Value (Spec.Name), Type_Env, Path, Spec.Span);
+         when CM.Type_Spec_Binary =>
+            declare
+               Width : constant CM.Wide_Integer :=
+                 Literal_Value
+                   (Spec.Binary_Width_Expr,
+                    Const_Env,
+                    Path,
+                    "binary width must be one of 8, 16, 32, or 64");
+            begin
+               case Width is
+                  when 8 =>
+                     return BT.Binary_Type (8);
+                  when 16 =>
+                     return BT.Binary_Type (16);
+                  when 32 =>
+                     return BT.Binary_Type (32);
+                  when 64 =>
+                     return BT.Binary_Type (64);
+                  when others =>
+                     Raise_Diag
+                       (CM.Source_Frontend_Error
+                          (Path    => Path,
+                           Span    => Spec.Span,
+                           Message => "binary width must be one of 8, 16, 32, or 64"));
+                     return Default_Integer;
+               end case;
+            end;
          when CM.Type_Spec_Tuple =>
             if Natural (Spec.Tuple_Elements.Length) < 2 then
                Raise_Diag
@@ -1464,17 +1535,42 @@ package body Safe_Frontend.Check_Resolve is
             return Default_Boolean;
          when CM.Expr_Unary =>
             if UString_Value (Expr.Operator) = "not" then
+               declare
+                  Inner_Type : constant GM.Type_Descriptor :=
+                    Expr_Type (Expr.Inner, Var_Types, Functions, Type_Env);
+               begin
+                  if Is_Binary_Type (Inner_Type, Type_Env) then
+                     return Inner_Type;
+                  end if;
+               end;
                return Default_Boolean;
             end if;
             return Expr_Type (Expr.Inner, Var_Types, Functions, Type_Env);
          when CM.Expr_Binary =>
-            if UString_Value (Expr.Operator) in "==" | "!=" | "<" | "<=" | ">" | ">=" | "and then" then
+            if UString_Value (Expr.Operator) in "==" | "!=" | "<" | "<=" | ">" | ">=" | "and then" | "or else" then
                return Default_Boolean;
             end if;
             declare
                Left_Type  : constant GM.Type_Descriptor := Expr_Type (Expr.Left, Var_Types, Functions, Type_Env);
                Right_Type : constant GM.Type_Descriptor := Expr_Type (Expr.Right, Var_Types, Functions, Type_Env);
             begin
+               if UString_Value (Expr.Operator) in "and" | "or" | "xor" then
+                  if Is_Boolean_Type (Left_Type, Type_Env)
+                    and then Is_Boolean_Type (Right_Type, Type_Env)
+                  then
+                     return Default_Boolean;
+                  elsif Is_Binary_Type (Left_Type, Type_Env)
+                    and then Is_Binary_Type (Right_Type, Type_Env)
+                  then
+                     return Left_Type;
+                  end if;
+               elsif UString_Value (Expr.Operator) in "<<" | ">>" then
+                  return Left_Type;
+               elsif Is_Binary_Type (Left_Type, Type_Env)
+                 and then Is_Binary_Type (Right_Type, Type_Env)
+               then
+                  return Left_Type;
+               end if;
                if UString_Value (Left_Type.Kind) = "float" or else UString_Value (Right_Type.Kind) = "float" then
                   if UString_Value (Left_Type.Kind) = "float" then
                      return Left_Type;
@@ -1512,9 +1608,9 @@ package body Safe_Frontend.Check_Resolve is
          return Expr;
       end if;
 
-      if Expr.Callee /= null and then Expr.Callee.Kind = CM.Expr_Ident then
-         Callee_Name := Expr.Callee.Name;
-         if Has_Type (Var_Types, UString_Value (Callee_Name))
+         if Expr.Callee /= null and then Expr.Callee.Kind = CM.Expr_Ident then
+            Callee_Name := Expr.Callee.Name;
+            if Has_Type (Var_Types, UString_Value (Callee_Name))
            and then UString_Value
              (Get_Type (Var_Types, UString_Value (Callee_Name)).Kind) = "array"
          then
@@ -1525,22 +1621,29 @@ package body Safe_Frontend.Check_Resolve is
             Result.Kind := CM.Expr_Call;
             Result.Callee := Expr.Callee;
             Result.Args := Expr.Args;
-         elsif Has_Type (Var_Types, UString_Value (Callee_Name))
-           and then UString_Value
-             (Get_Type (Var_Types, UString_Value (Callee_Name)).Kind)
-                    in "integer" | "subtype" | "record" | "float"
-           and then Natural (Expr.Args.Length) = 1
-         then
-            Result.Kind := CM.Expr_Conversion;
-            Result.Target := Expr.Callee;
-            Result.Inner := Expr.Args (Expr.Args.First_Index);
-         elsif UString_Value (Callee_Name) in "integer" | "float" | "long_float"
-           and then Natural (Expr.Args.Length) = 1
-         then
-            Result.Kind := CM.Expr_Conversion;
-            Result.Target := Expr.Callee;
-            Result.Inner := Expr.Args (Expr.Args.First_Index);
-         else
+            elsif Has_Type (Var_Types, UString_Value (Callee_Name))
+               and then UString_Value
+                 (Get_Type (Var_Types, UString_Value (Callee_Name)).Kind)
+                    in "integer" | "subtype" | "record" | "float" | "binary"
+               and then Natural (Expr.Args.Length) = 1
+            then
+               Result.Kind := CM.Expr_Conversion;
+               Result.Target := Expr.Callee;
+               Result.Inner := Expr.Args (Expr.Args.First_Index);
+            elsif UString_Value (Callee_Name) in "integer" | "float" | "long_float"
+               and then Natural (Expr.Args.Length) = 1
+            then
+               Result.Kind := CM.Expr_Conversion;
+               Result.Target := Expr.Callee;
+               Result.Inner := Expr.Args (Expr.Args.First_Index);
+            elsif Has_Type (Type_Env, UString_Value (Callee_Name))
+              and then Is_Binary_Type (Get_Type (Type_Env, UString_Value (Callee_Name)), Type_Env)
+              and then Natural (Expr.Args.Length) = 1
+            then
+               Result.Kind := CM.Expr_Conversion;
+               Result.Target := Expr.Callee;
+               Result.Inner := Expr.Args (Expr.Args.First_Index);
+            else
             Result.Kind := CM.Expr_Call;
             Result.Callee := Expr.Callee;
             Result.Args := Expr.Args;
@@ -1736,6 +1839,91 @@ package body Safe_Frontend.Check_Resolve is
             Validate_Pr112_Expr_Boundaries (Expr.Right, Var_Types, Functions, Type_Env, Path);
             Left_Type := Expr_Type (Expr.Left, Var_Types, Functions, Type_Env);
             Right_Type := Expr_Type (Expr.Right, Var_Types, Functions, Type_Env);
+            declare
+               Op : constant String := UString_Value (Expr.Operator);
+            begin
+               if Op in "and then" | "or else" then
+                  if not Is_Boolean_Type (Left_Type, Type_Env)
+                    or else not Is_Boolean_Type (Right_Type, Type_Env)
+                  then
+                     Raise_Diag
+                       (CM.Source_Frontend_Error
+                          (Path    => Path,
+                           Span    => Expr.Span,
+                           Message => "`" & Op & "` requires boolean operands"));
+                  end if;
+               elsif Op in "and" | "or" | "xor" then
+                  if Is_Boolean_Type (Left_Type, Type_Env)
+                    and then Is_Boolean_Type (Right_Type, Type_Env)
+                  then
+                     null;
+                  elsif Is_Binary_Type (Left_Type, Type_Env)
+                    and then Is_Binary_Type (Right_Type, Type_Env)
+                    and then Binary_Bit_Width (Left_Type, Type_Env) = Binary_Bit_Width (Right_Type, Type_Env)
+                  then
+                     null;
+                  else
+                     Raise_Diag
+                       (CM.Source_Frontend_Error
+                          (Path    => Path,
+                           Span    => Expr.Span,
+                           Message => "`" & Op & "` requires boolean operands or same-width binary operands"));
+                  end if;
+               elsif Op in "<<" | ">>" then
+                  if not Is_Binary_Type (Left_Type, Type_Env) then
+                     Raise_Diag
+                       (CM.Source_Frontend_Error
+                          (Path    => Path,
+                           Span    => Expr.Left.Span,
+                           Message => "`" & Op & "` requires a binary left operand"));
+                  elsif not Is_Integerish (Right_Type, Type_Env)
+                    or else Is_Boolean_Type (Right_Type, Type_Env)
+                    or else Is_Character_Type (Right_Type, Type_Env)
+                    or else Is_Binary_Type (Right_Type, Type_Env)
+                  then
+                     Raise_Diag
+                       (CM.Source_Frontend_Error
+                          (Path    => Path,
+                           Span    => Expr.Right.Span,
+                           Message => "`" & Op & "` requires an integer shift count"));
+                  end if;
+               elsif Op in "+" | "-" | "*" | "/" | "mod" | "rem" then
+                  if Is_Binary_Type (Left_Type, Type_Env)
+                    or else Is_Binary_Type (Right_Type, Type_Env)
+                  then
+                     if not Is_Binary_Type (Left_Type, Type_Env)
+                       or else not Is_Binary_Type (Right_Type, Type_Env)
+                     then
+                        Raise_Diag
+                          (CM.Source_Frontend_Error
+                             (Path    => Path,
+                              Span    => Expr.Span,
+                              Message => "binary arithmetic does not mix implicitly with integer"));
+                     elsif Binary_Bit_Width (Left_Type, Type_Env) /= Binary_Bit_Width (Right_Type, Type_Env) then
+                        Raise_Diag
+                          (CM.Source_Frontend_Error
+                             (Path    => Path,
+                              Span    => Expr.Span,
+                              Message => "binary arithmetic requires same-width operands"));
+                     end if;
+                  end if;
+               elsif Op in "==" | "!=" | "<" | "<=" | ">" | ">=" then
+                  if Is_Binary_Type (Left_Type, Type_Env)
+                    or else Is_Binary_Type (Right_Type, Type_Env)
+                  then
+                     if not Is_Binary_Type (Left_Type, Type_Env)
+                       or else not Is_Binary_Type (Right_Type, Type_Env)
+                       or else Binary_Bit_Width (Left_Type, Type_Env) /= Binary_Bit_Width (Right_Type, Type_Env)
+                     then
+                        Raise_Diag
+                          (CM.Source_Frontend_Error
+                             (Path    => Path,
+                              Span    => Expr.Span,
+                              Message => "binary comparisons require same-width binary operands"));
+                     end if;
+                  end if;
+               end if;
+            end;
             if Is_String_Type (Left_Type, Type_Env) or else Is_String_Type (Right_Type, Type_Env) then
                Raise_Diag
                  (CM.Unsupported_Source_Construct
@@ -1761,6 +1949,314 @@ package body Safe_Frontend.Check_Resolve is
       Validate_Pr112_Expr_Boundaries (Result, Var_Types, Functions, Type_Env, Path);
       return Result;
    end Normalize_Expr_Checked;
+
+   function Binary_Modulus (Bit_Width : Positive) return CM.Wide_Integer is
+   begin
+      case Bit_Width is
+         when 8 =>
+            return 256;
+         when 16 =>
+            return 65_536;
+         when 32 =>
+            return 4_294_967_296;
+         when 64 =>
+            return 18_446_744_073_709_551_616;
+         when others =>
+            return 0;
+      end case;
+   end Binary_Modulus;
+
+   function Wrap_Binary_Static_Value
+     (Value     : CM.Wide_Integer;
+      Bit_Width : Positive) return CM.Wide_Integer
+   is
+      Modulus : constant CM.Wide_Integer := Binary_Modulus (Bit_Width);
+      Wrapped : CM.Wide_Integer;
+   begin
+      if Modulus = 0 then
+         return Value;
+      end if;
+
+      Wrapped := Value rem Modulus;
+      if Wrapped < 0 then
+         Wrapped := Wrapped + Modulus;
+      end if;
+      return Wrapped;
+   end Wrap_Binary_Static_Value;
+
+   function Try_Static_Integerish_Value
+     (Expr      : CM.Expr_Access;
+      Var_Types : Type_Maps.Map;
+      Functions : Function_Maps.Map;
+      Type_Env  : Type_Maps.Map;
+      Const_Env : Static_Value_Maps.Map;
+      Result    : out CM.Wide_Integer) return Boolean
+   is
+      Value      : CM.Static_Value;
+      Inner_Value : CM.Wide_Integer := 0;
+      Left_Value  : CM.Wide_Integer := 0;
+      Right_Value : CM.Wide_Integer := 0;
+      Expr_Info   : GM.Type_Descriptor;
+      Target_Info : GM.Type_Descriptor;
+      Width       : Positive;
+   begin
+      Result := 0;
+      if Expr = null then
+         return False;
+      end if;
+
+      if Try_Static_Value (Expr, Const_Env, Value)
+        and then Value.Kind = CM.Static_Value_Integer
+      then
+         Result := Value.Int_Value;
+         return True;
+      end if;
+
+      case Expr.Kind is
+         when CM.Expr_Unary =>
+            if not Try_Static_Integerish_Value
+              (Expr.Inner, Var_Types, Functions, Type_Env, Const_Env, Inner_Value)
+            then
+               return False;
+            end if;
+
+            if UString_Value (Expr.Operator) = "-" then
+               Result := -Inner_Value;
+               return True;
+            end if;
+            return False;
+
+         when CM.Expr_Binary =>
+            if not Try_Static_Integerish_Value
+              (Expr.Left, Var_Types, Functions, Type_Env, Const_Env, Left_Value)
+              or else not Try_Static_Integerish_Value
+                (Expr.Right, Var_Types, Functions, Type_Env, Const_Env, Right_Value)
+            then
+               return False;
+            end if;
+
+            Expr_Info := Expr_Type (Expr, Var_Types, Functions, Type_Env);
+            if Is_Binary_Type (Expr_Info, Type_Env) then
+               Width := Binary_Bit_Width (Expr_Info, Type_Env);
+               declare
+                  Left_Wrapped  : constant CM.Wide_Integer :=
+                    Wrap_Binary_Static_Value (Left_Value, Width);
+                  Right_Wrapped : constant CM.Wide_Integer :=
+                    Wrap_Binary_Static_Value (Right_Value, Width);
+               begin
+                  if UString_Value (Expr.Operator) = "+" then
+                     Result := Wrap_Binary_Static_Value (Left_Wrapped + Right_Wrapped, Width);
+                     return True;
+                  elsif UString_Value (Expr.Operator) = "-" then
+                     Result := Wrap_Binary_Static_Value (Left_Wrapped - Right_Wrapped, Width);
+                     return True;
+                  elsif UString_Value (Expr.Operator) = "*" then
+                     Result := Wrap_Binary_Static_Value (Left_Wrapped * Right_Wrapped, Width);
+                     return True;
+                  elsif UString_Value (Expr.Operator) = "/" then
+                     if Right_Wrapped = 0 then
+                        return False;
+                     end if;
+                     Result := Wrap_Binary_Static_Value (Left_Wrapped / Right_Wrapped, Width);
+                     return True;
+                  elsif UString_Value (Expr.Operator) = "mod" then
+                     if Right_Wrapped = 0 then
+                        return False;
+                     end if;
+                     Result := Wrap_Binary_Static_Value (Left_Wrapped mod Right_Wrapped, Width);
+                     return True;
+                  elsif UString_Value (Expr.Operator) = "rem" then
+                     if Right_Wrapped = 0 then
+                        return False;
+                     end if;
+                     Result := Wrap_Binary_Static_Value (Left_Wrapped rem Right_Wrapped, Width);
+                     return True;
+                  elsif UString_Value (Expr.Operator) = "<<" then
+                     if Right_Value < 0 or else Right_Value >= CM.Wide_Integer (Width) then
+                        return False;
+                     end if;
+                     Result := Wrap_Binary_Static_Value
+                       (Left_Wrapped * (CM.Wide_Integer (2) ** Natural (Right_Value)), Width);
+                     return True;
+                  elsif UString_Value (Expr.Operator) = ">>" then
+                     if Right_Value < 0 or else Right_Value >= CM.Wide_Integer (Width) then
+                        return False;
+                     end if;
+                     Result := Left_Wrapped / (CM.Wide_Integer (2) ** Natural (Right_Value));
+                     return True;
+                  else
+                     return False;
+                  end if;
+               end;
+            end if;
+
+            if UString_Value (Expr.Operator) = "+" then
+               Result := Left_Value + Right_Value;
+               return True;
+            elsif UString_Value (Expr.Operator) = "-" then
+               Result := Left_Value - Right_Value;
+               return True;
+            elsif UString_Value (Expr.Operator) = "*" then
+               Result := Left_Value * Right_Value;
+               return True;
+            elsif UString_Value (Expr.Operator) = "/" then
+               if Right_Value = 0 then
+                  return False;
+               end if;
+               Result := Left_Value / Right_Value;
+               return True;
+            elsif UString_Value (Expr.Operator) = "mod" then
+               if Right_Value = 0 then
+                  return False;
+               end if;
+               Result := Left_Value mod Right_Value;
+               return True;
+            elsif UString_Value (Expr.Operator) = "rem" then
+               if Right_Value = 0 then
+                  return False;
+               end if;
+               Result := Left_Value rem Right_Value;
+               return True;
+            else
+               return False;
+            end if;
+
+         when CM.Expr_Conversion | CM.Expr_Annotated =>
+            if not Try_Static_Integerish_Value
+              (Expr.Inner, Var_Types, Functions, Type_Env, Const_Env, Inner_Value)
+            then
+               return False;
+            end if;
+
+            if Expr.Target = null then
+               return False;
+            end if;
+
+            Target_Info :=
+              Resolve_Type (Flatten_Name (Expr.Target), Type_Env, "", FT.Null_Span);
+            if Is_Binary_Type (Target_Info, Type_Env) then
+               Result := Wrap_Binary_Static_Value
+                 (Inner_Value, Binary_Bit_Width (Target_Info, Type_Env));
+               return True;
+            elsif Is_Integerish (Target_Info, Type_Env)
+              and then not Is_Boolean_Type (Target_Info, Type_Env)
+              and then not Is_Character_Type (Target_Info, Type_Env)
+            then
+               Result := Inner_Value;
+               return True;
+            end if;
+            return False;
+
+         when others =>
+            return False;
+      end case;
+   end Try_Static_Integerish_Value;
+
+   procedure Validate_Static_Binary_Boundaries
+     (Expr      : CM.Expr_Access;
+      Var_Types : Type_Maps.Map;
+      Functions : Function_Maps.Map;
+      Type_Env  : Type_Maps.Map;
+      Const_Env : Static_Value_Maps.Map;
+      Path      : String)
+   is
+      Left_Type   : GM.Type_Descriptor;
+      Target_Type : GM.Type_Descriptor;
+      Static_Int  : CM.Wide_Integer := 0;
+      Static_Value : CM.Static_Value;
+   begin
+      if Expr = null then
+         return;
+      end if;
+
+      case Expr.Kind is
+         when CM.Expr_Binary =>
+            Validate_Static_Binary_Boundaries
+              (Expr.Left, Var_Types, Functions, Type_Env, Const_Env, Path);
+            Validate_Static_Binary_Boundaries
+              (Expr.Right, Var_Types, Functions, Type_Env, Const_Env, Path);
+
+            if FT.To_String (Expr.Operator) in "<<" | ">>" then
+               Left_Type := Expr_Type (Expr.Left, Var_Types, Functions, Type_Env);
+               if Is_Binary_Type (Left_Type, Type_Env)
+                 and then Try_Static_Integerish_Value
+                   (Expr.Right, Var_Types, Functions, Type_Env, Const_Env, Static_Int)
+                 and then (Static_Int < 0
+                           or else Static_Int >= CM.Wide_Integer (Binary_Bit_Width (Left_Type, Type_Env)))
+               then
+                  Raise_Diag
+                    (CM.Source_Frontend_Error
+                       (Path    => Path,
+                        Span    => Expr.Right.Span,
+                        Message => "shift count is not provably within operand width"));
+               end if;
+            end if;
+
+         when CM.Expr_Conversion | CM.Expr_Annotated =>
+            Validate_Static_Binary_Boundaries
+              (Expr.Inner, Var_Types, Functions, Type_Env, Const_Env, Path);
+
+            if Expr.Target /= null then
+               Target_Type :=
+                 Resolve_Type (Flatten_Name (Expr.Target), Type_Env, "", FT.Null_Span);
+               if Is_Integerish (Target_Type, Type_Env)
+                 and then not Is_Binary_Type (Target_Type, Type_Env)
+                 and then not Is_Boolean_Type (Target_Type, Type_Env)
+                 and then not Is_Character_Type (Target_Type, Type_Env)
+                 and then Is_Binary_Type
+                   (Expr_Type (Expr.Inner, Var_Types, Functions, Type_Env), Type_Env)
+                 and then Try_Static_Integerish_Value
+                   (Expr.Inner, Var_Types, Functions, Type_Env, Const_Env, Static_Int)
+               then
+                  Static_Value.Kind := CM.Static_Value_Integer;
+                  Static_Value.Int_Value := Static_Int;
+                  if not Scalar_Value_Compatible (Static_Value, Target_Type, Type_Env) then
+                     Raise_Diag
+                       (CM.Source_Frontend_Error
+                          (Path    => Path,
+                           Span    => Expr.Span,
+                           Message => "explicit conversion is not provably within target range"));
+                  end if;
+               end if;
+            end if;
+
+         when CM.Expr_Unary =>
+            Validate_Static_Binary_Boundaries
+              (Expr.Inner, Var_Types, Functions, Type_Env, Const_Env, Path);
+         when CM.Expr_Select =>
+            Validate_Static_Binary_Boundaries
+              (Expr.Prefix, Var_Types, Functions, Type_Env, Const_Env, Path);
+         when CM.Expr_Resolved_Index =>
+            Validate_Static_Binary_Boundaries
+              (Expr.Prefix, Var_Types, Functions, Type_Env, Const_Env, Path);
+            for Item of Expr.Args loop
+               Validate_Static_Binary_Boundaries
+                 (Item, Var_Types, Functions, Type_Env, Const_Env, Path);
+            end loop;
+         when CM.Expr_Call =>
+            Validate_Static_Binary_Boundaries
+              (Expr.Callee, Var_Types, Functions, Type_Env, Const_Env, Path);
+            for Item of Expr.Args loop
+               Validate_Static_Binary_Boundaries
+                 (Item, Var_Types, Functions, Type_Env, Const_Env, Path);
+            end loop;
+         when CM.Expr_Allocator =>
+            Validate_Static_Binary_Boundaries
+              (Expr.Value, Var_Types, Functions, Type_Env, Const_Env, Path);
+         when CM.Expr_Aggregate =>
+            for Item of Expr.Fields loop
+               Validate_Static_Binary_Boundaries
+                 (Item.Expr, Var_Types, Functions, Type_Env, Const_Env, Path);
+            end loop;
+         when CM.Expr_Tuple =>
+            for Item of Expr.Elements loop
+               Validate_Static_Binary_Boundaries
+                 (Item, Var_Types, Functions, Type_Env, Const_Env, Path);
+            end loop;
+         when others =>
+            null;
+      end case;
+   end Validate_Static_Binary_Boundaries;
 
    function Is_Assignable_Target (Expr : CM.Expr_Access) return Boolean is
    begin
@@ -1992,6 +2488,8 @@ package body Safe_Frontend.Check_Resolve is
          Result.Initializer :=
            Normalize_Expr_Checked
              (Decl.Initializer, Var_Types, Functions, Type_Env, Path);
+         Validate_Static_Binary_Boundaries
+           (Result.Initializer, Var_Types, Functions, Type_Env, Const_Env, Path);
          if Is_String_Type (Result.Type_Info, Type_Env)
            and then not Compatible_Type
              (Expr_Type (Result.Initializer, Var_Types, Functions, Type_Env),
@@ -2726,6 +3224,32 @@ package body Safe_Frontend.Check_Resolve is
                      Span    => Decl.Span,
                      Message => "type lower bound exceeds upper bound"));
             end if;
+         when CM.Type_Decl_Binary =>
+            declare
+               Width : constant CM.Wide_Integer :=
+                 Literal_Value
+                   (Decl.Binary_Width_Expr,
+                    Const_Env,
+                    Path,
+                    "binary width must be one of 8, 16, 32, or 64");
+            begin
+               if Width not in 8 | 16 | 32 | 64 then
+                  Raise_Diag
+                    (CM.Source_Frontend_Error
+                       (Path    => Path,
+                        Span    => Decl.Span,
+                        Message => "binary width must be one of 8, 16, 32, or 64"));
+               end if;
+               Result.Kind := FT.To_UString ("binary");
+               Result.Has_Bit_Width := True;
+               Result.Bit_Width := Positive (Width);
+               if Width in 8 | 16 | 32 then
+                  Result.Has_Low := True;
+                  Result.Low := 0;
+                  Result.Has_High := True;
+                  Result.High := (2 ** Positive (Width)) - 1;
+               end if;
+            end;
          when CM.Type_Decl_Float =>
             Result.Kind := FT.To_UString ("float");
             Result.Has_Digits_Text := True;
@@ -2749,6 +3273,7 @@ package body Safe_Frontend.Check_Resolve is
                      Is_Constrained : constant Boolean :=
                        Is_Boolean_Type (Index_Type, Type_Env)
                        or else Is_Character_Type (Index_Type, Type_Env)
+                       or else Is_Binary_Type (Index_Type, Type_Env)
                        or else
                          ((Index_Type.Has_Low and then Index_Type.Has_High)
                           and then not
@@ -3331,6 +3856,10 @@ package body Safe_Frontend.Check_Resolve is
                   then
                      Info.Has_High := True;
                      Info.High := Base.High;
+                  end if;
+                  if Base.Has_Bit_Width then
+                     Info.Has_Bit_Width := True;
+                     Info.Bit_Width := Base.Bit_Width;
                   end if;
                   Info.Discriminant_Constraints := Base.Discriminant_Constraints;
                   Info.Has_Base := True;

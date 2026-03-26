@@ -196,6 +196,15 @@ package body Safe_Frontend.Mir_Json is
          Result.Has_High := True;
          Result.High := Get (Get (Value, "high"));
       end if;
+      if Has_Field (Value, "bit_width") and then Get (Value, "bit_width").Kind = JSON_Int_Type then
+         declare
+            Width_Value : constant Long_Long_Integer :=
+              Long_Long_Integer'(Get (Get (Value, "bit_width")));
+         begin
+            Result.Has_Bit_Width := True;
+            Result.Bit_Width := Positive (Width_Value);
+         end;
+      end if;
       if Has_Field (Value, "base") and then Get (Value, "base").Kind = JSON_String_Type then
          Result.Has_Base := True;
          Result.Base := FT.To_UString (Get (Value, "base"));

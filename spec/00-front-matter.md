@@ -76,7 +76,7 @@
 
 14. **Dependency interface information.** The information about a package's public declarations, types, subprogram signatures, effect summaries, and channel-access summaries that a conforming implementation makes available for separate compilation. See Section 3, §3.3.
 
-15. **Wide intermediate arithmetic.** The evaluation model for integer arithmetic in Safe, where all intermediate results are computed in a mathematical integer type with no overflow. See Section 2, §2.8.1.
+15. **64-bit integer arithmetic.** The evaluation model for integer arithmetic in Safe, where all intermediate results must be statically provable within the single predefined signed 64-bit `integer` range. See Section 2, §2.8.1.
 
 16. **Conforming implementation.** A processor that satisfies all requirements of Section 6. See Section 6, §6.1.
 
@@ -197,7 +197,6 @@
 | TBD-09 | Deadlock freedom | Concurrency reviewer | Evaluate static communication topology analysis, channel-dependency ordering, or prohibition of blocking send as potential language-level guarantees | v0.3 |
 | TBD-10 | Numeric model: required ranges for predefined integer types | Numerics reviewer | Define minimum ranges for `Integer`, `Long_Integer` given the 64-bit signed bound in D27 Rule 1 | v0.2 |
 | TBD-11 | Automatic deallocation semantics | Ownership reviewer | Specify ordering at scope exit, interaction with early return/goto, multiple owned objects exiting scope simultaneously | v0.2 |
-| TBD-12 | Modular arithmetic wrapping semantics | Numerics reviewer | Evaluate whether non-wrapping should be default for modular types (with explicit opt-in for wrapping), extending Silver coverage. SPARK 21 `No_Wrap_Around` and SPARK 25 `No_Bitwise_Operations` provide design precedent. High priority. | v0.2 |
 | TBD-13 | Limited/private type views across packages | Language committee | Evaluate whether SPARK 26's `with type` mechanism fits Safe's single-file package model to relax the circular-dependency prohibition surgically | v0.3 |
 | TBD-14 | Partial initialisation facility | Ownership reviewer | Evaluate whether a Safe-level uninitialised facility can preserve Silver without proof annotations. SPARK 21–24's `Relaxed_Initialization` and `Initialized` aspects provide design precedent. May require proof mechanisms Safe currently lacks. | v0.4 |
 

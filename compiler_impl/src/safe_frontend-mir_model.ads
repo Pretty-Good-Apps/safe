@@ -141,6 +141,8 @@ package Safe_Frontend.Mir_Model is
       Low                : Long_Long_Integer := 0;
       Has_High           : Boolean := False;
       High               : Long_Long_Integer := 0;
+      Has_Bit_Width      : Boolean := False;
+      Bit_Width          : Positive := 8;
       Index_Types        : FT.UString_Vectors.Vector;
       Has_Component_Type : Boolean := False;
       Component_Type     : FT.UString := FT.To_UString ("");

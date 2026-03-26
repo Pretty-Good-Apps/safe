@@ -18,6 +18,10 @@ Safe inherits its safety posture from the SPARK tradition: the compiler and proo
 
 These guarantees are enforced by five D27 rules constraining arithmetic, indexing, division, dereference, and floating-point so that every runtime check is provably safe from static type and range information alone. See [`spec/05-assurance.md`](spec/05-assurance.md) for the D27 rules and [`spec/04-tasks-and-channels.md`](spec/04-tasks-and-channels.md) for the concurrency model.
 
+For fixed-width word-oriented work, the current surface also admits
+`binary (8|16|32|64)` with explicit `integer` conversion boundaries, bitwise
+operators, and `<<` / `>>` shifts.
+
 ---
 
 ## What Does This Repository Contain?
@@ -69,7 +73,7 @@ python3 scripts/run_tests.py
 # Run proofs (requires GNATprove)
 python3 scripts/run_proofs.py
 
-# Check samples
+# Check, build, and run samples
 python3 scripts/run_samples.py
 ```
 

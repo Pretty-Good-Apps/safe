@@ -88,7 +88,6 @@ concurrency obligations are source/runtime concerns such as `PS-007`,
 | `PS-027` | Abort handler behaviour `TBD-07` | `spec/00-front-matter.md` section `0.8` | `spec` | `blocking-if-needed` |
 | `PS-028` | Numeric model: required ranges for predefined integer types `TBD-10` | `spec/00-front-matter.md` section `0.8` | `spec` | `blocking-if-needed` |
 | `PS-029` | Automatic deallocation semantics and ordering at scope exit beyond the covered nested early-return capture-ordering regression `TBD-11` | `spec/00-front-matter.md` section `0.8` | `spec` | `blocking-if-needed` |
-| `PS-030` | Modular arithmetic wrapping semantics `TBD-12` | `spec/00-front-matter.md` section `0.8` | `spec` | `blocking-if-needed` |
 | `PS-031` | Jorvik/Ravenscar runtime scheduling, ceiling-locking, and polling-timing obligations beyond direct emitted-package proof | `docs/emitted_output_verification_matrix.md`; `spec/04-tasks-and-channels.md` | `spec` | `long-term` |
 | `PS-032` | Limited/private type views across packages `TBD-13` | `spec/00-front-matter.md` section `0.8` | `language-design` | `long-term` |
 | `PS-033` | Partial initialisation facility `TBD-14` | `spec/00-front-matter.md` section `0.8` | `language-design` | `long-term` |
@@ -97,10 +96,10 @@ concurrency obligations are source/runtime concerns such as `PS-007`,
 
 | Priority | Count |
 |----------|------:|
-| `blocking-if-needed` | 14 |
+| `blocking-if-needed` | 13 |
 | `nice-to-have` | 3 |
 | `long-term` | 16 |
-| **Total** | **33** |
+| **Total** | **32** |
 
 See [`docs/pr10_refinement_audit.md`](pr10_refinement_audit.md) for the full
 PR10.1 disposition record, including promoted `PR10.2+` work and items closed

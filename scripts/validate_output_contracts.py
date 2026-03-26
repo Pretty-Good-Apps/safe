@@ -52,7 +52,13 @@ def require_positive_int(value: Any, path: str) -> int:
 def validate_type_descriptor(value: Any, path: str) -> dict[str, Any]:
     descriptor = require_mapping(value, path)
     require_string(descriptor.get("name"), f"{path}.name")
-    require_string(descriptor.get("kind"), f"{path}.kind")
+    kind = require_string(descriptor.get("kind"), f"{path}.kind")
+    if "bit_width" in descriptor:
+        bit_width = descriptor.get("bit_width")
+        if type(bit_width) is not int or bit_width not in {8, 16, 32, 64}:
+            fail(f"{path}.bit_width must be one of 8, 16, 32, 64")
+    if kind == "binary" and "bit_width" not in descriptor:
+        fail(f"{path}.bit_width is required for binary types")
     return descriptor
 
 

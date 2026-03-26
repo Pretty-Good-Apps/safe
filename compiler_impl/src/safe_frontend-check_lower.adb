@@ -221,7 +221,13 @@ package body Safe_Frontend.Check_Lower is
       case Expr.Kind is
          when CM.Expr_Int =>
             Result.Text := Expr.Text;
-            Result.Int_Value := Long_Long_Integer (Expr.Int_Value);
+            if Expr.Int_Value in CM.Wide_Integer (Long_Long_Integer'First) .. CM.Wide_Integer (Long_Long_Integer'Last) then
+               Result.Int_Value := Long_Long_Integer (Expr.Int_Value);
+            elsif Expr.Int_Value < 0 then
+               Result.Int_Value := Long_Long_Integer'First;
+            else
+               Result.Int_Value := Long_Long_Integer'Last;
+            end if;
          when CM.Expr_Real =>
             Result.Text := Expr.Text;
          when CM.Expr_String | CM.Expr_Char =>

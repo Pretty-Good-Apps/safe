@@ -16,7 +16,7 @@
 
 5. **Retained feature set summary.** The following features of 8652:2023 are explicitly retained and form the core of the Safe language:
 
-   (a) All four numeric type families: signed integer, modular integer, floating point, fixed point.
+   (a) All four numeric type families: signed integer, fixed-width binary, floating point, fixed point.
 
    (b) Subtypes with static and dynamic constraints.
 

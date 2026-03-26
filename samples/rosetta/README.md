@@ -3,10 +3,13 @@
 This directory holds the Rosetta-style sample corpus that the stripped-down
 development workflow checks with `scripts/run_samples.py`.
 
-All samples use the current lowercase Safe surface and stay in the
-compile-only lane:
+All samples use the current lowercase Safe surface. The checked-in sample
+runner now exercises the corpus end to end:
 
 - `safec check`
+- `safec emit`
+- emitted Ada build through `gprbuild`
+- execution of the produced binary
 
 PR11.1, PR11.2, and PR11.3 do not treat this corpus as a proof-bearing
 milestone. Proof coverage re-enters later through `PR11.3a`, `PR11.8a`, and
@@ -38,7 +41,7 @@ Deferred:
 PR11.2 text/control-flow additions:
 
 - `text/grade_message.safe`
-- `text/opcode_dispatch.safe`
+- `text/opcode_dispatch.safe` (`binary (8)` opcode dispatch)
 
 PR11.3 structured-return additions:
 
@@ -54,5 +57,14 @@ Use:
 python3 scripts/run_samples.py
 ```
 
-That runner builds the compiler once and runs `safec check` on every
-`samples/rosetta/**/*.safe` file in stable order.
+That runner builds the compiler once and, for every
+`samples/rosetta/**/*.safe` file in stable order:
+
+- runs `safec check`
+- emits Ada and interface artifacts
+- builds a tiny Ada driver against the emitted package
+- runs the produced executable under a short timeout
+
+`concurrency/producer_consumer.safe` uses a custom driver that waits briefly
+for channel traffic, checks `producer_consumer.result = 42`, and then exits
+explicitly so the sweep does not hang on the package's library-level tasks.

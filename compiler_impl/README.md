@@ -11,6 +11,10 @@ The current Safe source surface is lowercase-only. Keywords, predefined names,
 aspect names, and user-defined identifiers are all written in lowercase, with
 underscores as the word separator for multiword spellings.
 
+The current numeric surface is split between signed `integer` and fixed-width
+`binary (8|16|32|64)`. Emitted Ada maps binary values to
+`Interfaces.Unsigned_*`.
+
 ## Build
 
 From the repository root:
@@ -87,7 +91,7 @@ Build once, then run the top-level workflow scripts from the repository root:
 # Run fixture tests
 python3 scripts/run_tests.py
 
-# Check the Rosetta samples
+# Check, build, and run the Rosetta samples
 python3 scripts/run_samples.py
 
 # Run proofs (requires GNATprove)
@@ -102,7 +106,12 @@ python3 scripts/run_proofs.py
 - `tests/interfaces/`
 - `tests/diagnostics_golden/`
 
-`run_samples.py` covers `samples/rosetta/**/*.safe`.
+`run_samples.py` covers `samples/rosetta/**/*.safe` with an end-to-end sweep:
+
+- `safec check`
+- `safec emit`
+- emitted Ada build through `gprbuild`
+- native execution of the produced binary
 
 `run_proofs.py` covers:
 

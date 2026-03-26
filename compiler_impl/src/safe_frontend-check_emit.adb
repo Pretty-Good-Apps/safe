@@ -44,6 +44,7 @@ package body Safe_Frontend.Check_Emit is
 
    function Expression_Node (Expr : CM.Expr_Access) return String;
    function Object_Type_Node (Spec : CM.Type_Spec) return String;
+   function Shift_Expression_Node (Expr : CM.Expr_Access) return String;
 
    function Type_Json (Info : GM.Type_Descriptor) return String;
 
@@ -56,6 +57,47 @@ package body Safe_Frontend.Check_Emit is
    begin
       return Ada.Strings.Fixed.Trim (CM.Wide_Integer'Image (Value), Ada.Strings.Both);
    end Trimmed;
+
+   function Binary_Width_From_Name (Name : String) return Natural is
+   begin
+      if Name = "__binary_8" then
+         return 8;
+      elsif Name = "__binary_16" then
+         return 16;
+      elsif Name = "__binary_32" then
+         return 32;
+      elsif Name = "__binary_64" then
+         return 64;
+      end if;
+      return 0;
+   end Binary_Width_From_Name;
+
+   function Binary_Type_Definition_Node
+     (Width_Expr : CM.Expr_Access;
+      Span       : FT.Source_Span) return String is
+   begin
+      return
+        "{""node_type"":""BinaryTypeDefinition"",""bit_width_expr"":"
+        & Expression_Node (Width_Expr)
+        & ",""span"":"
+        & JS.Span_Object (Span)
+        & "}";
+   end Binary_Type_Definition_Node;
+
+   function Binary_Type_Definition_Node
+     (Bit_Width : Positive;
+      Span      : FT.Source_Span) return String
+   is
+      Width_Expr : constant CM.Expr_Access := new CM.Expr_Node'
+        (Kind      => CM.Expr_Int,
+         Span      => Span,
+         Type_Name => FT.To_UString ("integer"),
+         Text      => FT.To_UString (Trimmed (CM.Wide_Integer (Bit_Width))),
+         Int_Value => CM.Wide_Integer (Bit_Width),
+         others    => <>);
+   begin
+      return Binary_Type_Definition_Node (Width_Expr, Span);
+   end Binary_Type_Definition_Node;
 
    function Json_List (Items : String_Vectors.Vector) return String is
       Result : US.Unbounded_String := US.Null_Unbounded_String;
@@ -187,6 +229,8 @@ package body Safe_Frontend.Check_Emit is
    end Name_From_String;
 
    function Name_Node (Expr : CM.Expr_Access) return String;
+   function Type_Target_Node (Expr : CM.Expr_Access) return String;
+   function Subtype_Mark_Node (Spec : CM.Type_Spec) return String;
 
    function Parameter_Associations
      (Args : CM.Expr_Access_Vectors.Vector;
@@ -280,7 +324,7 @@ package body Safe_Frontend.Check_Emit is
          when CM.Expr_Conversion =>
             return
               "{""node_type"":""TypeConversion"",""target_type"":"
-              & Name_Node (Expr.Target)
+              & Type_Target_Node (Expr.Target)
               & ",""expression"":"
               & Expression_Node (Expr.Inner)
               & ",""span"":"
@@ -290,6 +334,18 @@ package body Safe_Frontend.Check_Emit is
             return Name_From_String (CM.Flatten_Name (Expr), Expr.Span);
       end case;
    end Name_Node;
+
+   function Type_Target_Node (Expr : CM.Expr_Access) return String is
+      Bit_Width : constant Natural :=
+        (if Expr /= null and then Expr.Kind = CM.Expr_Ident
+         then Binary_Width_From_Name (FT.To_String (Expr.Name))
+         else 0);
+   begin
+      if Bit_Width /= 0 then
+         return Binary_Type_Definition_Node (Positive (Bit_Width), Expr.Span);
+      end if;
+      return Name_Node (Expr);
+   end Type_Target_Node;
 
    function Numeric_Literal_Node (Expr : CM.Expr_Access) return String is
       Text : constant String :=
@@ -341,8 +397,19 @@ package body Safe_Frontend.Check_Emit is
               & "}";
          end;
       end if;
-      return Name_From_String (FT.To_String (Spec.Name), Spec.Span);
+      return Subtype_Mark_Node (Spec);
    end Type_Spec_Name;
+
+   function Subtype_Mark_Node (Spec : CM.Type_Spec) return String is
+      Bit_Width : constant Natural := Binary_Width_From_Name (FT.To_String (Spec.Name));
+   begin
+      if Spec.Kind = CM.Type_Spec_Binary then
+         return Binary_Type_Definition_Node (Spec.Binary_Width_Expr, Spec.Span);
+      elsif Bit_Width /= 0 then
+         return Binary_Type_Definition_Node (Positive (Bit_Width), Spec.Span);
+      end if;
+      return Name_From_String (FT.To_String (Spec.Name), Spec.Span);
+   end Subtype_Mark_Node;
 
    function Constraint_Node
      (Spec : CM.Type_Spec) return String is
@@ -394,7 +461,7 @@ package body Safe_Frontend.Check_Emit is
         "{""node_type"":""SubtypeIndication"",""is_not_null"":"
         & JS.Bool_Literal (Spec.Not_Null)
         & ",""subtype_mark"":"
-        & Type_Spec_Name (Spec)
+        & Subtype_Mark_Node (Spec)
         & ",""constraint"":"
         & Constraint_Node (Spec)
         & ",""span"":"
@@ -543,6 +610,46 @@ package body Safe_Frontend.Check_Emit is
         & "}";
    end Build_Simple_Expression;
 
+   function Shift_Operator_Tag (Operator : String) return String is
+   begin
+      if Operator = "<<" then
+         return "ShiftLeft";
+      elsif Operator = ">>" then
+         return "ShiftRight";
+      end if;
+      return "";
+   end Shift_Operator_Tag;
+
+   function Shift_Expression_Node (Expr : CM.Expr_Access) return String is
+      Items : String_Vectors.Vector;
+      Ops   : String_Vectors.Vector;
+
+      procedure Collect (Item : CM.Expr_Access) is
+         Operator : constant String :=
+           (if Item /= null and then Item.Kind = CM.Expr_Binary
+            then Operator_String (Item.Operator)
+            else "");
+      begin
+         if Operator in "<<" | ">>" then
+            Collect (Item.Left);
+            Ops.Append (JS.Quote (Shift_Operator_Tag (Operator)));
+            Items.Append (Build_Simple_Expression (Item.Right));
+         else
+            Items.Append (Build_Simple_Expression (Item));
+         end if;
+      end Collect;
+   begin
+      Collect (Expr);
+      return
+        "{""node_type"":""ShiftExpression"",""simple_expressions"":"
+        & Json_List (Items)
+        & ",""operators"":"
+        & Json_List (Ops)
+        & ",""span"":"
+        & JS.Span_Object ((if Expr = null then FT.Null_Span else Expr.Span))
+        & "}";
+   end Shift_Expression_Node;
+
    function Relation_Node (Expr : CM.Expr_Access) return String is
       Op : constant String :=
         (if Expr /= null and then Expr.Kind = CM.Expr_Binary
@@ -553,11 +660,11 @@ package body Safe_Frontend.Check_Emit is
       if Op'Length > 0 then
          return
            "{""node_type"":""Relation"",""left"":"
-           & Build_Simple_Expression (Expr.Left)
+           & Shift_Expression_Node (Expr.Left)
            & ",""operator"":"
            & JS.Quote (Op)
            & ",""right"":"
-           & Build_Simple_Expression (Expr.Right)
+           & Shift_Expression_Node (Expr.Right)
            & ",""membership_test"":null,""span"":"
            & JS.Span_Object (Expr.Span)
            & "}";
@@ -565,7 +672,7 @@ package body Safe_Frontend.Check_Emit is
 
       return
         "{""node_type"":""Relation"",""left"":"
-        & Build_Simple_Expression (Expr)
+        & Shift_Expression_Node (Expr)
         & ",""operator"":null,""right"":null,""membership_test"":null,""span"":"
         & JS.Span_Object ((if Expr = null then FT.Null_Span else Expr.Span))
         & "}";
@@ -575,13 +682,30 @@ package body Safe_Frontend.Check_Emit is
       Relations : String_Vectors.Vector;
       Logical   : FT.UString := FT.To_UString ("null");
 
-      procedure Collect (Item : CM.Expr_Access) is
+      function Logical_Operator_Tag (Operator : String) return String is
       begin
-         if Item /= null
-           and then Item.Kind = CM.Expr_Binary
-           and then Operator_String (Item.Operator) = "and then"
-         then
-            Logical := FT.To_UString (JS.Quote ("AndThen"));
+         if Operator = "and" then
+            return "And";
+         elsif Operator = "and then" then
+            return "AndThen";
+         elsif Operator = "or" then
+            return "Or";
+         elsif Operator = "or else" then
+            return "OrElse";
+         elsif Operator = "xor" then
+            return "Xor";
+         end if;
+         return "";
+      end Logical_Operator_Tag;
+
+      procedure Collect (Item : CM.Expr_Access) is
+         Operator : constant String :=
+           (if Item /= null and then Item.Kind = CM.Expr_Binary
+            then Operator_String (Item.Operator)
+            else "");
+      begin
+         if Operator in "and" | "and then" | "or" | "or else" | "xor" then
+            Logical := FT.To_UString (JS.Quote (Logical_Operator_Tag (Operator)));
             Collect (Item.Left);
             Relations.Append (Relation_Node (Item.Right));
          else
@@ -611,7 +735,7 @@ package body Safe_Frontend.Check_Emit is
            "{""node_type"":""Allocator"",""kind"":""Annotated"",""subtype_indication"":null,""expression"":"
            & Expression_Node (Expr.Value.Inner)
            & ",""subtype_mark"":"
-           & Name_Node (Expr.Value.Target)
+           & Type_Target_Node (Expr.Value.Target)
            & ",""span"":"
            & JS.Span_Object (Expr.Span)
            & "}";
@@ -937,11 +1061,11 @@ package body Safe_Frontend.Check_Emit is
               & JS.Span_Object (Expr.Span)
               & "}";
          when CM.Expr_Annotated =>
-            return
+           return
               "{""node_type"":""Primary"",""kind"":""AnnotatedExpr"",""value"":{""node_type"":""AnnotatedExpression"",""expression"":"
               & Expression_Node (Expr.Inner)
               & ",""subtype_mark"":"
-              & Name_Node (Expr.Target)
+              & Type_Target_Node (Expr.Target)
               & ",""span"":"
               & JS.Span_Object (Expr.Span)
               & "},""span"":"
@@ -1029,6 +1153,19 @@ package body Safe_Frontend.Check_Emit is
               & ",""span"":"
               & JS.Span_Object (Decl.Span)
               & "},""span"":"
+              & JS.Span_Object (Decl.Span)
+              & "}";
+         when CM.Type_Decl_Binary =>
+            return
+              "{""node_type"":""TypeDeclaration"",""is_public"":"
+              & JS.Bool_Literal (Decl.Is_Public)
+              & ",""name"":"
+              & JS.Quote (Decl.Name)
+              & ",""discriminant_part"":"
+              & Discriminant_Part_Node (Decl)
+              & ",""type_definition"":"
+              & Binary_Type_Definition_Node (Decl.Binary_Width_Expr, Decl.Span)
+              & ",""span"":"
               & JS.Span_Object (Decl.Span)
               & "}";
          when CM.Type_Decl_Float =>
@@ -2437,6 +2574,9 @@ package body Safe_Frontend.Check_Emit is
       begin
       Items.Append ("""name"":" & JS.Quote (Info.Name));
       Items.Append ("""kind"":" & JS.Quote (Info.Kind));
+      if Info.Has_Bit_Width then
+         Items.Append ("""bit_width"":" & Positive'Image (Info.Bit_Width));
+      end if;
       if Info.Has_Low then
          Items.Append ("""low"":" & Long_Long_Integer'Image (Info.Low));
       end if;

@@ -431,7 +431,7 @@ lowercase-source cutover. First proof checkpoint after PR11.3.
 
 **PR11.8-PR11.8g**: numeric and value-type model reset. Unified integer type
 (superseding the earlier three-tier model), simplified predefined type names,
-modular arithmetic, value-type strings, copy-by-default value/reference
+binary arithmetic, value-type strings, copy-by-default value/reference
 semantics, a value-model proof checkpoint, and value-only channel elements.
 
 **PR11.9**: artifact contract stabilization. Machine interfaces freeze for
@@ -452,6 +452,75 @@ type system, emission rules.
 - Single-archive distribution per platform
 - Full LSP server (diagnostics, go-to-definition, hover, completion)
 - `safe fmt`, `safe test`, `safe get` (package management)
+- `safe repl` interactive exploration loop
 - Progressive SPARK annotation of the compiler
 - Gold contracts on Safelib
 - Crypto/security library at Platinum level
+
+## Interactive REPL
+
+Once `print` (PR11.8c.1) and package-level statements (PR11.8c.2) land,
+Safe has everything needed for a compile-and-run REPL. The REPL is a
+tool (`scripts/safe_repl.py` or later `safe repl`), not a language
+feature.
+
+The REPL accumulates declarations and statements into a growing package
+buffer. Each time the user presses enter, the tool wraps the buffer in
+a packageless entry file, runs `safec check` + `safec emit` + `gprbuild`,
+and executes the result. Compilation latency is under a second for the
+small packages typical of interactive exploration.
+
+The proof story carries into the REPL: if the accumulated program can't
+be proven safe, the REPL shows the compiler diagnostic instead of running.
+The programmer sees range violations, overflow, and type errors
+interactively rather than at a later build step.
+
+Tasks are not supported in REPL mode because they run indefinitely and
+can't be incrementally extended. The REPL is for computational
+exploration: defining types, writing functions, calling them, and
+printing results.
+
+## Compiler Optimization Targets
+
+These are implementation-quality improvements that do not change language
+semantics. They can land at any point without milestone coordination.
+
+- **Return value optimization:** construct return values directly in the
+  caller's frame when GNAT's RVO applies to the emitted Ada. This eliminates
+  the copy on `var result = f(args)` for composite types in the common case.
+- **Last-use move:** when a variable is dead after an assignment or channel
+  send, silently move instead of copy. Requires liveness analysis in the
+  emitter. Covers `var b = a` where `a` is never read again, and
+  `send ch, value` where `value` is never read again.
+- **Copy diagnostics:** optional `safec emit --show-copies` flag that reports
+  where actual copies occur in emitted Ada, so programmers can identify
+  unnecessary copies without reading the emitted code.
+
+## I/O Architecture
+
+The initial `print` built-in uses a thin `SPARK_Mode (Off)` wrapper around
+`Ada.Text_IO`. This is sufficient for development and testing but has
+limitations: output from concurrent tasks may interleave, and the I/O
+call is synchronous (the calling task blocks until the write completes).
+
+The long-term I/O architecture replaces direct I/O calls with dedicated
+persistent service tasks:
+
+- **stdout task:** receives string messages through an internal channel and
+  writes them to standard output in order. Output from concurrent tasks is
+  serialized through the channel — no interleaving.
+- **stderr task:** same architecture for diagnostic/error output.
+- **stdin task:** reads lines from standard input and sends them through an
+  internal channel. Consumer tasks receive input without blocking on I/O
+  directly.
+
+Under this model, `print ("hello")` lowers to `send stdout_ch, "hello"` —
+a normal channel operation that is non-blocking from the caller's
+perspective. The `SPARK_Mode (Off)` boundary is isolated to the three
+runtime I/O tasks, which the programmer never sees or declares. All user
+code remains fully provable.
+
+This architecture requires the value-type string (PR11.8d), the built-in
+container layer (PR11.10), and runtime startup/shutdown coordination for
+the persistent I/O tasks. It belongs in the library/runtime layer rather
+than in a language milestone.

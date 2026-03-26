@@ -357,6 +357,8 @@ package body Safe_Frontend.Check_Parse is
      (State : in out Parser_State) return CM.Expr_Access;
    function Parse_Name_Expression
      (State : in out Parser_State) return CM.Expr_Access;
+   function Parse_Type_Target_Expr
+     (State : in out Parser_State) return CM.Expr_Access;
    function Parse_Expression
      (State : in out Parser_State) return CM.Expr_Access;
    function Parse_Case_Statement
@@ -438,7 +440,7 @@ package body Safe_Frontend.Check_Parse is
 
    function Parse_Tuple_Type_Spec
      (State            : in out Parser_State;
-      Allow_Access_Def : Boolean) return CM.Type_Spec
+     Allow_Access_Def : Boolean) return CM.Type_Spec
    is
       Start  : constant FL.Token := Expect (State, "(");
       Result : CM.Type_Spec;
@@ -463,6 +465,55 @@ package body Safe_Frontend.Check_Parse is
       Result.Span := CM.Join (Start.Span, Ender.Span);
       return Result;
    end Parse_Tuple_Type_Spec;
+
+   function Binary_Internal_Name
+     (State     : Parser_State;
+      Bit_Width : CM.Wide_Integer) return FT.UString is
+   begin
+      case Bit_Width is
+         when 8 =>
+            return FT.To_UString ("__binary_8");
+         when 16 =>
+            return FT.To_UString ("__binary_16");
+         when 32 =>
+            return FT.To_UString ("__binary_32");
+         when 64 =>
+            return FT.To_UString ("__binary_64");
+         when others =>
+            Raise_Diag
+              (CM.Source_Frontend_Error
+                 (Path    => Path_String (State),
+                  Span    => Current (State).Span,
+                  Message => "binary width must be one of 8, 16, 32, or 64"));
+            return FT.To_UString ("");
+      end case;
+   end Binary_Internal_Name;
+
+   function Parse_Binary_Type_Spec
+     (State : in out Parser_State) return CM.Type_Spec
+   is
+      Start       : constant FL.Token := Expect (State, "binary");
+      Open_Paren  : constant FL.Token := Expect (State, "(");
+      Width_Expr  : constant CM.Expr_Access := Parse_Expression (State);
+      Close_Paren : FL.Token;
+      Result      : CM.Type_Spec;
+   begin
+      if Width_Expr = null or else Width_Expr.Kind /= CM.Expr_Int then
+         Raise_Diag
+           (CM.Source_Frontend_Error
+              (Path    => Path_String (State),
+               Span    => Open_Paren.Span,
+               Message => "binary width must be an integer literal",
+               Note    => "use one of `binary (8)`, `binary (16)`, `binary (32)`, or `binary (64)`"));
+      end if;
+
+      Result.Kind := CM.Type_Spec_Binary;
+      Result.Binary_Width_Expr := Width_Expr;
+      Result.Name := Binary_Internal_Name (State, Width_Expr.Int_Value);
+      Close_Paren := Expect (State, ")");
+      Result.Span := CM.Join (Start.Span, Close_Paren.Span);
+      return Result;
+   end Parse_Binary_Type_Spec;
 
    function Parse_Named_Type_Spec
      (State : in out Parser_State;
@@ -550,6 +601,8 @@ package body Safe_Frontend.Check_Parse is
       end if;
       if Allow_Access_Def and then Current_Lower (State) in "access" | "not" then
          return Parse_Access_Definition (State, Type_Decl_Context => False);
+      elsif Current_Lower (State) = "binary" then
+         return Parse_Binary_Type_Spec (State);
       elsif FT.To_String (Current (State).Lexeme) = "(" then
          return Parse_Tuple_Type_Spec (State, Allow_Access_Def);
       end if;
@@ -574,6 +627,11 @@ package body Safe_Frontend.Check_Parse is
       end if;
       if Current_Lower (State) = "aliased" then
          Reject_Removed_Source_Spelling (State, "aliased");
+      end if;
+      if Current_Lower (State) = "binary" then
+         Result := Parse_Binary_Type_Spec (State);
+         Result.Span := CM.Join (Start, Result.Span);
+         return Result;
       end if;
       if FT.To_String (Current (State).Lexeme) = "(" then
          Result := Parse_Tuple_Type_Spec (State, Allow_Access_Def => False);
@@ -747,7 +805,7 @@ package body Safe_Frontend.Check_Parse is
                         elsif not Case_Choice_Is_Literal (Alternative.Choice_Expr) then
                            Reject_Unsupported
                              (State,
-                              "variant alternatives currently support exactly one Boolean, integer, or Character literal choice per arm");
+                              "variant alternatives currently support exactly one Boolean, integer, Character, or converted binary literal choice per arm");
                         elsif Alternative.Choice_Expr.Kind = CM.Expr_Bool
                           and then Alternative.Choice_Expr.Bool_Value
                         then
@@ -848,6 +906,14 @@ package body Safe_Frontend.Check_Parse is
             Item.High_Expr := Parse_Expression (State);
             Item.Kind := CM.Type_Decl_Integer;
             Item.Span := CM.Join (Start.Span, Expect (State, ";").Span);
+         elsif Current_Lower (State) = "binary" then
+            declare
+               Binary_Spec : constant CM.Type_Spec := Parse_Binary_Type_Spec (State);
+            begin
+               Item.Binary_Width_Expr := Binary_Spec.Binary_Width_Expr;
+               Item.Kind := CM.Type_Decl_Binary;
+               Item.Span := CM.Join (Start.Span, Expect (State, ";").Span);
+            end;
          elsif Current_Lower (State) = "digits" then
             Advance (State);
             Item.Digits_Expr := Parse_Expression (State);
@@ -1209,6 +1275,12 @@ package body Safe_Frontend.Check_Parse is
          return False;
       elsif Expr.Kind in CM.Expr_Int | CM.Expr_Bool | CM.Expr_Char then
          return True;
+      elsif Expr.Kind in CM.Expr_Call | CM.Expr_Apply
+        and then Natural (Expr.Args.Length) = 1
+      then
+         return Case_Choice_Is_Literal (Expr.Args (Expr.Args.First_Index));
+      elsif Expr.Kind in CM.Expr_Conversion | CM.Expr_Annotated and then Expr.Inner /= null then
+         return Case_Choice_Is_Literal (Expr.Inner);
       elsif Expr.Kind = CM.Expr_Unary and then Expr.Inner /= null then
          return (FT.To_String (Expr.Operator) = "+"
                  or else FT.To_String (Expr.Operator) = "-")
@@ -1461,7 +1533,7 @@ package body Safe_Frontend.Check_Parse is
             elsif not Case_Choice_Is_Literal (Arm.Choice) then
                Reject_Unsupported
                  (State,
-                  "case arms currently support exactly one Boolean, integer, or Character literal choice per arm");
+                  "case arms currently support exactly one Boolean, integer, Character, or converted binary literal choice per arm");
             end if;
          end if;
 
@@ -1936,7 +2008,7 @@ package body Safe_Frontend.Check_Parse is
       end if;
       if Match (State, "as") then
          declare
-            Subtype_Expr : constant CM.Expr_Access := Parse_Name_Expression (State);
+            Subtype_Expr : constant CM.Expr_Access := Parse_Type_Target_Expr (State);
             Wrapped      : constant CM.Expr_Access := New_Expr;
          begin
             Ender := Expect (State, ")");
@@ -2027,6 +2099,20 @@ package body Safe_Frontend.Check_Parse is
          return Result;
       elsif Lower = "new" then
          return Parse_Allocator (State);
+      elsif Lower = "binary" then
+         declare
+            Target  : constant CM.Expr_Access := Parse_Type_Target_Expr (State);
+            Wrapped : constant CM.Expr_Access := New_Expr;
+            Ender   : FL.Token;
+         begin
+            Require (State, "(");
+            Wrapped.Kind := CM.Expr_Conversion;
+            Wrapped.Target := Target;
+            Wrapped.Inner := Parse_Expression (State);
+            Ender := Expect (State, ")");
+            Wrapped.Span := CM.Join (Token.Span, Ender.Span);
+            return Wrapped;
+         end;
       elsif Token.Kind = FL.Identifier or else Token.Kind = FL.Keyword then
          if Lower = "declare" then
             Reject_Removed_Source_Construct (State, "declare_expression");
@@ -2151,17 +2237,42 @@ package body Safe_Frontend.Check_Parse is
       return Result;
    end Parse_Simple_Expr;
 
+   function Parse_Shift_Expr
+     (State : in out Parser_State) return CM.Expr_Access
+   is
+      Result      : CM.Expr_Access := Parse_Simple_Expr (State);
+      Right       : CM.Expr_Access;
+      Next_Result : CM.Expr_Access;
+   begin
+      while FT.To_String (Current (State).Lexeme) in "<<" | ">>" loop
+         declare
+            Op : constant FT.UString := Current (State).Lexeme;
+         begin
+            Advance (State);
+            Right := Parse_Simple_Expr (State);
+            Next_Result := New_Expr;
+            Next_Result.Kind := CM.Expr_Binary;
+            Next_Result.Operator := Op;
+            Next_Result.Left := Result;
+            Next_Result.Right := Right;
+            Next_Result.Span := CM.Join (Result.Span, Right.Span);
+            Result := Next_Result;
+         end;
+      end loop;
+      return Result;
+   end Parse_Shift_Expr;
+
    function Parse_Relation
      (State : in out Parser_State) return CM.Expr_Access
    is
-      Result : CM.Expr_Access := Parse_Simple_Expr (State);
+      Result : CM.Expr_Access := Parse_Shift_Expr (State);
       Lower  : constant String := FT.To_String (Current (State).Lexeme);
       Right  : CM.Expr_Access;
       Next_Result : CM.Expr_Access;
    begin
       if Lower in "==" | "!=" | "<" | "<=" | ">" | ">=" then
          Advance (State);
-         Right := Parse_Simple_Expr (State);
+         Right := Parse_Shift_Expr (State);
          Next_Result := New_Expr;
          Next_Result.Kind := CM.Expr_Binary;
          Next_Result.Operator := FT.To_UString (Lower);
@@ -2173,33 +2284,77 @@ package body Safe_Frontend.Check_Parse is
       return Result;
    end Parse_Relation;
 
-   function Parse_And_Then
+   function Match_Logical_Operator
+     (State    : in out Parser_State;
+      Operator : out FT.UString) return Boolean
+   is
+      Lower : constant String := Current_Lower (State);
+   begin
+      if Lower = "and"
+        and then FT.Lowercase (FT.To_String (Next (State).Lexeme)) = "then"
+      then
+         Advance (State);
+         Advance (State);
+         Operator := FT.To_UString ("and then");
+         return True;
+      elsif Lower = "or"
+        and then FT.Lowercase (FT.To_String (Next (State).Lexeme)) = "else"
+      then
+         Advance (State);
+         Advance (State);
+         Operator := FT.To_UString ("or else");
+         return True;
+      elsif Lower in "and" | "or" | "xor" then
+         Operator := FT.To_UString (Lower);
+         Advance (State);
+         return True;
+      end if;
+      return False;
+   end Match_Logical_Operator;
+
+   function Parse_Logical_Expr
      (State : in out Parser_State) return CM.Expr_Access
    is
       Result : CM.Expr_Access := Parse_Relation (State);
       Right  : CM.Expr_Access;
       Next_Result : CM.Expr_Access;
+      Operator : FT.UString;
    begin
-      while Current_Lower (State) = "and" and then FT.Lowercase (FT.To_String (Next (State).Lexeme)) = "then" loop
-         Advance (State);
-         Advance (State);
+      while Match_Logical_Operator (State, Operator) loop
          Right := Parse_Relation (State);
          Next_Result := New_Expr;
          Next_Result.Kind := CM.Expr_Binary;
-         Next_Result.Operator := FT.To_UString ("and then");
+         Next_Result.Operator := Operator;
          Next_Result.Left := Result;
          Next_Result.Right := Right;
          Next_Result.Span := CM.Join (Result.Span, Right.Span);
          Result := Next_Result;
       end loop;
       return Result;
-   end Parse_And_Then;
+   end Parse_Logical_Expr;
 
    function Parse_Expression
      (State : in out Parser_State) return CM.Expr_Access is
    begin
-      return Parse_And_Then (State);
+      return Parse_Logical_Expr (State);
    end Parse_Expression;
+
+   function Parse_Type_Target_Expr
+     (State : in out Parser_State) return CM.Expr_Access
+   is
+      Result : constant CM.Expr_Access := New_Expr;
+      Spec   : CM.Type_Spec;
+   begin
+      if Current_Lower (State) = "binary" then
+         Spec := Parse_Binary_Type_Spec (State);
+         Result.Kind := CM.Expr_Ident;
+         Result.Name := Spec.Name;
+         Result.Type_Name := Spec.Name;
+         Result.Span := Spec.Span;
+         return Result;
+      end if;
+      return Parse_Name_Expression (State);
+   end Parse_Type_Target_Expr;
 
    function Parse_Name_Expression
      (State : in out Parser_State) return CM.Expr_Access

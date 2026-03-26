@@ -87,6 +87,7 @@ package Safe_Frontend.Check_Model is
    type Type_Spec_Kind is
      (Type_Spec_Unknown,
       Type_Spec_Name,
+      Type_Spec_Binary,
       Type_Spec_Tuple,
       Type_Spec_Subtype_Indication,
       Type_Spec_Access_Def);
@@ -111,6 +112,7 @@ package Safe_Frontend.Check_Model is
       Is_Constant : Boolean := False;
       Anonymous   : Boolean := False;
       Target_Name : Expr_Access := null;
+      Binary_Width_Expr : Expr_Access := null;
       Tuple_Elements : Type_Spec_Access_Vectors.Vector;
       Has_Range_Constraint : Boolean := False;
       Range_Low            : Expr_Access := null;
@@ -220,6 +222,7 @@ package Safe_Frontend.Check_Model is
      (Type_Decl_Unknown,
       Type_Decl_Incomplete,
       Type_Decl_Integer,
+      Type_Decl_Binary,
       Type_Decl_Float,
       Type_Decl_Constrained_Array,
       Type_Decl_Unconstrained_Array,
@@ -232,6 +235,7 @@ package Safe_Frontend.Check_Model is
       Kind           : Type_Decl_Kind := Type_Decl_Unknown;
       Span           : FT.Source_Span := FT.Null_Span;
       Digits_Expr    : Expr_Access := null;
+      Binary_Width_Expr : Expr_Access := null;
       Low_Expr       : Expr_Access := null;
       High_Expr      : Expr_Access := null;
       Indexes        : Array_Index_Vectors.Vector;

@@ -3,6 +3,12 @@ with Safe_Frontend.Types;
 package body Safe_Frontend.Builtin_Types is
    package FT renames Safe_Frontend.Types;
 
+   function Binary_Internal_Name (Bit_Width : Positive) return String is
+      Width_Image : constant String := Positive'Image (Bit_Width);
+   begin
+      return "__binary_" & Width_Image (Width_Image'First + 1 .. Width_Image'Last);
+   end Binary_Internal_Name;
+
    function Make_Integer_Range_Type
      (Name : String;
       Low  : Long_Long_Integer;
@@ -86,6 +92,22 @@ package body Safe_Frontend.Builtin_Types is
 
       return Result;
    end Result_Type;
+
+   function Binary_Type (Bit_Width : Positive) return GM.Type_Descriptor is
+      Result : GM.Type_Descriptor;
+   begin
+      Result.Name := FT.To_UString (Binary_Internal_Name (Bit_Width));
+      Result.Kind := FT.To_UString ("binary");
+      Result.Has_Bit_Width := True;
+      Result.Bit_Width := Bit_Width;
+      if Bit_Width in 8 | 16 | 32 then
+         Result.Has_Low := True;
+         Result.Low := 0;
+         Result.Has_High := True;
+         Result.High := (2 ** Bit_Width) - 1;
+      end if;
+      return Result;
+   end Binary_Type;
 
    function Float_Type (With_Analysis_Metadata : Boolean := False) return GM.Type_Descriptor is
    begin

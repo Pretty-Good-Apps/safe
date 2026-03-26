@@ -1,0 +1,13 @@
+Diagnostics Golden: PR11.8c Binary To Integer Out Of Range
+Source: tests/negative/neg_pr118c_binary_to_integer_oob.safe
+
+Expected diagnostic output:
+------------------------------------------------------------------------
+neg_pr118c_binary_to_integer_oob.safe:4:14: error: explicit conversion is not provably within target range
+  |
+  | 4 |       return integer (binary (64) (9223372036854775808));
+  |   |              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  |
+  note: target type 'integer' has range [-9_223_372_036_854_775_808 .. 9_223_372_036_854_775_807]
+  note: expression range is [0 .. 18_446_744_073_709_551_615]
+------------------------------------------------------------------------

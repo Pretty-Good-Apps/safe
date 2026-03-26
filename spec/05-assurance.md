@@ -94,6 +94,17 @@ This section specifies the language-level assurance guarantees provided by Safe.
 
 18. Interval analysis is one permitted technique for range analysis; no specific algorithm is mandated.
 
+18a. Fixed-width binary arithmetic is governed separately from Rule 1. For
+    `binary (8)`, `binary (16)`, `binary (32)`, and `binary (64)`,
+    arithmetic and bitwise operations use defined wraparound modulo `2^N`
+    semantics and do not create integer-overflow proof obligations.
+
+18b. Explicit conversions between `binary` and `integer`, explicit
+    conversions between different binary widths, and shift counts for `<<`
+    and `>>` remain subject to static checking. A conforming implementation
+    shall reject a shift unless the count is provably within `0 .. N - 1`.
+    `>>` on binary operands is a logical zero-fill right shift.
+
 ### 5.3.3 Provable Index Safety (Rule 2)
 
 19. The index expression in an indexed component shall be provably within the array object's index bounds at compile time. The implementation accepts the indexing if: (a) the index expression's type or subtype range is statically contained within the array object's index constraint (type containment), or (b) the implementation can establish by sound static range analysis that the index value is within the array's bounds at that program point (e.g., after a conditional guard or when using bounds-derived expressions). If neither condition holds, the program is rejected.
@@ -148,6 +159,9 @@ This section specifies the language-level assurance guarantees provided by Safe.
 | Range check — integer (parameter) | §6.4 | Sound static range analysis on integer results (Rule 1) |
 | Range check — integer (type conversion) | §4.6 | Sound static range analysis on integer results (Rule 1) |
 | Range check — integer (type annotation) | §4.7 | Sound static range analysis on integer results (Rule 1) |
+| Binary overflow | §4.5 | Not applicable — `binary (8|16|32|64)` arithmetic wraps modulo `2^N` by definition |
+| Range check — binary to integer conversion | §4.6 | Sound static range analysis on explicit conversion result; reject if not provably within signed 64-bit `integer` |
+| Shift count check — binary `<<` / `>>` | §4.5 | Reject unless the count is provably within `0 .. N - 1`; `>>` is logical zero-fill right shift |
 | Floating-point overflow | §A.5.3, §4.5 | Non-exceptional — produces ±infinity under IEEE 754 non-trapping mode; caught at narrowing points (Rule 5) |
 | Floating-point division by zero | §A.5.3, §4.5.5 | Non-exceptional — produces ±infinity under IEEE 754 non-trapping mode; caught at narrowing points (Rule 5) |
 | Floating-point invalid operation (NaN) | §A.5.3 | Non-exceptional — produces NaN under IEEE 754 non-trapping mode; caught at narrowing points (Rule 5) |
@@ -246,7 +260,7 @@ end T_B;
 
 ## 5.6 Examples
 
-### 5.6.1 Example: Arithmetic — Silver-Provable via Wide Intermediates
+### 5.6.1 Example: Arithmetic — Silver-Provable via 64-Bit Range Analysis
 
 **Conforming Example.**
 

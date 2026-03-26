@@ -1,0 +1,12 @@
+Diagnostics Golden: PR11.8c Implicit Integer Binary Mix
+Source: tests/negative/neg_pr118c_implicit_integer_binary_mix.safe
+
+Expected diagnostic output:
+------------------------------------------------------------------------
+neg_pr118c_implicit_integer_binary_mix.safe:3:25: error: binary arithmetic does not mix implicitly with integer
+  |
+  | 3 |    value : binary (8) = binary (8) (1) + 1;
+  |   |                         ^~~~~~~~~~~~~~~~~~
+  |
+------------------------------------------------------------------------
+

@@ -109,6 +109,12 @@ INTERFACE_CASES = [
         REPO_ROOT / "tests" / "interfaces" / "client_transitive_channel_send_contract_violation.safe",
         1,
     ),
+    (
+        "binary",
+        REPO_ROOT / "tests" / "interfaces" / "provider_binary.safe",
+        REPO_ROOT / "tests" / "interfaces" / "client_binary.safe",
+        0,
+    ),
 ]
 
 STATIC_INTERFACE_CASES = [
@@ -226,6 +232,22 @@ DIAGNOSTIC_GOLDEN_CASES = [
     (
         REPO_ROOT / "tests" / "negative" / "neg_pr118b1_send_contract.safe",
         REPO_ROOT / "tests" / "diagnostics_golden" / "diag_pr118b1_send_contract.txt",
+    ),
+    (
+        REPO_ROOT / "tests" / "negative" / "neg_pr118c_invalid_binary_width.safe",
+        REPO_ROOT / "tests" / "diagnostics_golden" / "diag_pr118c_invalid_binary_width.txt",
+    ),
+    (
+        REPO_ROOT / "tests" / "negative" / "neg_pr118c_implicit_integer_binary_mix.safe",
+        REPO_ROOT / "tests" / "diagnostics_golden" / "diag_pr118c_implicit_integer_binary_mix.txt",
+    ),
+    (
+        REPO_ROOT / "tests" / "negative" / "neg_pr118c_shift_count_out_of_range.safe",
+        REPO_ROOT / "tests" / "diagnostics_golden" / "diag_pr118c_shift_count_out_of_range.txt",
+    ),
+    (
+        REPO_ROOT / "tests" / "negative" / "neg_pr118c_binary_to_integer_oob.safe",
+        REPO_ROOT / "tests" / "diagnostics_golden" / "diag_pr118c_binary_to_integer_oob.txt",
     ),
 ]
 

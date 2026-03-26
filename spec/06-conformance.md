@@ -35,7 +35,7 @@ This section defines what constitutes a conforming implementation and a conformi
    (a) It uses only constructs defined by ISO/IEC 8652:2023 as restricted and modified by this specification.
 
    (b) It satisfies all legality rules defined in this specification, including:
-   - D27 Rule 1: wide intermediate arithmetic bounds
+   - D27 Rule 1: 64-bit integer arithmetic bounds
    - D27 Rule 2: provable index safety
    - D27 Rule 3: division by provably nonzero divisor
    - D27 Rule 4: not-null dereference

@@ -76,6 +76,7 @@ package body Safe_Frontend.Lexer is
           --  Safe additional reserved words (spec §8.15)
           | "public" | "channel" | "send" | "receive"
           | "try_send" | "try_receive" | "capacity" | "from"
+          | "binary"
           | "returns";
    end Is_Keyword;
 
@@ -502,7 +503,7 @@ package body Safe_Frontend.Lexer is
                Two_Char     : constant String :=
                  (if Index + 1 <= Text'Length then Text (Index .. Index + 1) else "");
             begin
-               if Two_Char in ".." | ":=" | "!=" | "<=" | ">=" | "=>" | "/=" | "==" then
+               if Two_Char in ".." | ":=" | "!=" | "<=" | ">=" | "=>" | "/=" | "==" | "<<" | ">>" then
                   Advance;
                   Advance;
                   Append_Token

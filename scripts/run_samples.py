@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the minimal Safe samples workflow."""
+"""Run the end-to-end Safe samples workflow."""
 
 from __future__ import annotations
 
@@ -7,13 +7,16 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 COMPILER_ROOT = REPO_ROOT / "compiler_impl"
+SAMPLES_ROOT = REPO_ROOT / "samples" / "rosetta"
 SAFEC_PATH = COMPILER_ROOT / "bin" / "safec"
 ALR_FALLBACK = Path.home() / "bin" / "alr"
+RUN_TIMEOUT_SECONDS = 2.0
 
 
 def repo_rel(path: Path) -> str:
@@ -29,7 +32,12 @@ def find_command(name: str, fallback: Path | None = None) -> str:
     raise FileNotFoundError(f"required command not found: {name}")
 
 
-def run_command(argv: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
+def run_command(
+    argv: list[str],
+    *,
+    cwd: Path,
+    timeout: float | None = None,
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         argv,
         cwd=cwd,
@@ -37,6 +45,7 @@ def run_command(argv: list[str], *, cwd: Path) -> subprocess.CompletedProcess[st
         text=True,
         capture_output=True,
         check=False,
+        timeout=timeout,
     )
 
 
@@ -67,6 +76,172 @@ def print_summary(*, passed: int, failures: list[tuple[str, str]]) -> None:
             print(f" - {label}: {detail}")
 
 
+def emitted_primary_unit(ada_dir: Path) -> str:
+    candidates = sorted(path for path in ada_dir.glob("*.adb"))
+    if not candidates:
+        raise FileNotFoundError(f"expected emitted Ada body in {ada_dir}")
+    return candidates[0].stem
+
+
+def executable_name() -> str:
+    return "main.exe" if os.name == "nt" else "main"
+
+
+def sample_build_paths(temp_root: Path, sample: Path) -> dict[str, Path]:
+    relative_dir = sample.relative_to(SAMPLES_ROOT).with_suffix("")
+    root = temp_root / relative_dir
+    return {
+        "root": root,
+        "out": root / "out",
+        "iface": root / "iface",
+        "ada": root / "ada",
+        "obj": root / "obj",
+        "gpr": root / "build.gpr",
+        "main": root / "main.adb",
+        "exe": root / executable_name(),
+    }
+
+
+def ensure_build_dirs(paths: dict[str, Path]) -> None:
+    paths["root"].mkdir(parents=True, exist_ok=True)
+    paths["out"].mkdir(parents=True, exist_ok=True)
+    paths["iface"].mkdir(parents=True, exist_ok=True)
+    paths["ada"].mkdir(parents=True, exist_ok=True)
+    paths["obj"].mkdir(parents=True, exist_ok=True)
+
+
+def default_driver_text(unit_name: str) -> str:
+    return (
+        f"with {unit_name};\n"
+        "\n"
+        "procedure Main is\n"
+        "begin\n"
+        "   null;\n"
+        "end Main;\n"
+    )
+
+
+def producer_consumer_driver_text(unit_name: str) -> str:
+    return (
+        "with GNAT.OS_Lib;\n"
+        f"with {unit_name};\n"
+        "\n"
+        "procedure Main is\n"
+        "begin\n"
+        "   delay 0.2;\n"
+        f"   if {unit_name}.result /= 42 then\n"
+        "      GNAT.OS_Lib.OS_Exit (1);\n"
+        "   end if;\n"
+        "   GNAT.OS_Lib.OS_Exit (0);\n"
+        "end Main;\n"
+    )
+
+
+def driver_text(sample: Path, unit_name: str) -> str:
+    relative = repo_rel(sample)
+    if relative == "samples/rosetta/concurrency/producer_consumer.safe":
+        return producer_consumer_driver_text(unit_name)
+    return default_driver_text(unit_name)
+
+
+def project_text(paths: dict[str, Path]) -> str:
+    lines = [
+        "project Build is",
+        f'   for Source_Dirs use ("{paths["root"]}", "{paths["ada"]}");',
+        f'   for Object_Dir use "{paths["obj"]}";',
+        f'   for Exec_Dir use "{paths["root"]}";',
+        '   for Main use ("main.adb");',
+    ]
+    gnat_adc = paths["ada"] / "gnat.adc"
+    if gnat_adc.exists():
+        lines.extend(
+            [
+                "   package Compiler is",
+                f'      for Default_Switches ("Ada") use ("-gnatec={gnat_adc}");',
+                "   end Compiler;",
+            ]
+        )
+    lines.append("end Build;")
+    return "\n".join(lines) + "\n"
+
+
+def stage_error(stage: str, detail: str) -> str:
+    return f"{stage}: {detail}"
+
+
+def run_sample(
+    *,
+    safec: Path,
+    sample: Path,
+    temp_root: Path,
+) -> str | None:
+    sample_label = repo_rel(sample)
+
+    try:
+        completed = run_command([str(safec), "check", sample_label], cwd=REPO_ROOT)
+    except subprocess.TimeoutExpired:
+        return stage_error("check", "timed out")
+    if completed.returncode != 0:
+        return stage_error("check", first_message(completed))
+
+    paths = sample_build_paths(temp_root, sample)
+    ensure_build_dirs(paths)
+
+    emit_command = [
+        str(safec),
+        "emit",
+        sample_label,
+        "--out-dir",
+        str(paths["out"]),
+        "--interface-dir",
+        str(paths["iface"]),
+        "--ada-out-dir",
+        str(paths["ada"]),
+    ]
+    try:
+        completed = run_command(emit_command, cwd=REPO_ROOT)
+    except subprocess.TimeoutExpired:
+        return stage_error("emit", "timed out")
+    if completed.returncode != 0:
+        return stage_error("emit", first_message(completed))
+
+    try:
+        unit_name = emitted_primary_unit(paths["ada"])
+    except FileNotFoundError as exc:
+        return stage_error("emit", str(exc))
+
+    paths["main"].write_text(driver_text(sample, unit_name), encoding="utf-8")
+    paths["gpr"].write_text(project_text(paths), encoding="utf-8")
+
+    alr = find_command("alr", ALR_FALLBACK)
+    build_command = [
+        alr,
+        "exec",
+        "--",
+        "gprbuild",
+        "-P",
+        str(paths["gpr"]),
+        "main.adb",
+    ]
+    try:
+        completed = run_command(build_command, cwd=COMPILER_ROOT)
+    except subprocess.TimeoutExpired:
+        return stage_error("build", "timed out")
+    if completed.returncode != 0:
+        return stage_error("build", first_message(completed))
+    if not paths["exe"].exists():
+        return stage_error("build", f"missing executable {paths['exe']}")
+
+    try:
+        completed = run_command([str(paths["exe"])], cwd=paths["root"], timeout=RUN_TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired:
+        return stage_error("run", f"timed out after {RUN_TIMEOUT_SECONDS:.1f}s")
+    if completed.returncode != 0:
+        return stage_error("run", first_message(completed))
+
+    return None
+
+
 def main() -> int:
     try:
         safec = build_compiler()
@@ -76,14 +251,16 @@ def main() -> int:
 
     passed = 0
     failures: list[tuple[str, str]] = []
-    samples = sorted((REPO_ROOT / "samples" / "rosetta").rglob("*.safe"))
+    samples = sorted(SAMPLES_ROOT.rglob("*.safe"))
 
-    for sample in samples:
-        completed = run_command([str(safec), "check", repo_rel(sample)], cwd=REPO_ROOT)
-        if completed.returncode == 0:
-            passed += 1
-        else:
-            failures.append((repo_rel(sample), first_message(completed)))
+    with tempfile.TemporaryDirectory(prefix="safe-samples-") as temp_dir:
+        temp_root = Path(temp_dir)
+        for sample in samples:
+            detail = run_sample(safec=safec, sample=sample, temp_root=temp_root)
+            if detail is None:
+                passed += 1
+            else:
+                failures.append((repo_rel(sample), detail))
 
     print_summary(passed=passed, failures=failures)
     return 0 if not failures else 1

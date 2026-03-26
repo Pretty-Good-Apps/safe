@@ -17,6 +17,11 @@ admitted aspect / pragma names use lowercase spelling. Uppercase `E` in
 exponents and uppercase `A` .. `F` in based numerals remain permitted as part
 of numeric literal syntax.
 
+For the post-PR11.8c surface, fixed-width binary values are written
+`binary (8)`, `binary (16)`, `binary (32)`, and `binary (64)`. Shift
+operators `<<` and `>>` are admitted for binary operands only, and `>>` is a
+logical zero-fill right shift.
+
 ---
 
 ## 8.1 Compilation Units
@@ -118,7 +123,7 @@ subprogram_renaming_declaration ::=
 type_definition ::=
     enumeration_type_definition
   | signed_integer_type_definition
-  | modular_type_definition
+  | binary_type_definition
   | floating_point_definition
   | ordinary_fixed_point_definition
   | decimal_fixed_point_definition
@@ -136,8 +141,8 @@ enumeration_literal ::=
 signed_integer_type_definition ::=
     'range' static_simple_expression 'to' static_simple_expression
 
-modular_type_definition ::=
-    'mod' static_expression
+binary_type_definition ::=
+    'binary' '(' static_expression ')'
 
 floating_point_definition ::=
     'digits' static_expression [ real_range_constraint ]
@@ -239,7 +244,7 @@ derived_type_definition ::=
 
 allocator ::=
     'new' subtype_indication
-  | 'new' '(' expression 'as' subtype_mark ')'
+  | 'new' '(' expression 'as' type_target ')'
 ```
 
 ## 8.5 Subtype Indications
@@ -247,9 +252,14 @@ allocator ::=
 ```
 subtype_indication ::=
     [ 'not' 'null' ] subtype_mark [ constraint | inline_range_constraint ]
+  | binary_type_definition
 
 subtype_mark ::=
     name
+
+type_target ::=
+    subtype_mark
+  | binary_type_definition
 
 constraint ::=
     scalar_constraint
@@ -320,7 +330,7 @@ selector_name ::=
     identifier
 
 type_conversion ::=
-    subtype_mark '(' expression ')'
+    type_target '(' expression ')'
 
 function_call ::=
     name [ actual_parameter_part ]
@@ -332,15 +342,24 @@ parameter_association ::=
     [ selector_name '=' ] expression
 
 expression ::=
-    relation { 'and' relation }
-  | relation { 'and' 'then' relation }
-  | relation { 'or' relation }
-  | relation { 'or' 'else' relation }
-  | relation { 'xor' relation }
+    relation { logical_operator relation }
+
+logical_operator ::=
+    'and'
+  | 'and' 'then'
+  | 'or'
+  | 'or' 'else'
+  | 'xor'
 
 relation ::=
-    simple_expression [ relational_operator simple_expression ]
-  | simple_expression [ 'not' ] 'in' membership_choice_list
+    shift_expression [ relational_operator shift_expression ]
+  | shift_expression [ 'not' ] 'in' membership_choice_list
+
+shift_expression ::=
+    simple_expression { shift_operator simple_expression }
+
+shift_operator ::=
+    '<<' | '>>'
 
 membership_choice_list ::=
     membership_choice { '|' membership_choice }
@@ -372,7 +391,7 @@ primary ::=
   | conditional_expression
 
 annotated_expression ::=
-    '(' expression 'as' subtype_mark ')'
+    '(' expression 'as' type_target ')'
 
 conditional_expression ::=
     if_expression
@@ -821,7 +840,7 @@ when        while       with        xor
 ```
 public      channel     send        receive
 try_send    try_receive sends       receives
-capacity    from
+capacity    from        binary
 ```
 
 ## 8.16 Grammar Summary

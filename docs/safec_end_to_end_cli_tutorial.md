@@ -229,8 +229,13 @@ end to end on this host:
 
 - This is a host-local smoke path, not a replacement for
   `scripts/run_tests.py`, `scripts/run_samples.py`, or `scripts/run_proofs.py`.
-- CI validates the compiler, fixtures, samples, and proofs, but it does not run
-  this explicit native link-and-execute path.
+- CI now runs the checked-in Rosetta sample sweep in `scripts/run_samples.py`,
+  which checks, emits, builds, and executes the sample corpus. This tutorial is
+  still useful when you want to inspect the emitted artifacts and native driver
+  steps manually on a local host.
+- For a checked-in binary-surface example, see
+  `samples/rosetta/text/opcode_dispatch.safe`, which the sample sweep now
+  checks, emits, builds, and runs end to end.
 - This tutorial assumes a supported Linux host with the local Alire GNAT
   toolchain available on `PATH`.
 - If you want a minimal emission-only sample instead, use

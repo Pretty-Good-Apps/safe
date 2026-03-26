@@ -1,0 +1,12 @@
+Diagnostics Golden: PR11.8c Shift Count Out Of Range
+Source: tests/negative/neg_pr118c_shift_count_out_of_range.safe
+
+Expected diagnostic output:
+------------------------------------------------------------------------
+neg_pr118c_shift_count_out_of_range.safe:4:32: error: shift count is not provably within operand width
+  |
+  | 4 |       return binary (8) (1) >> 8;
+  |   |                                ^
+  |
+------------------------------------------------------------------------
+

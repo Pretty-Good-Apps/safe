@@ -146,6 +146,19 @@ Virtue: you can get very strong safety properties without writing contracts.
 
 Wart: you end up designing your numeric types up front. "Just use integer everywhere" fights the language.
 
+Safe also now has a small fixed-width binary surface for protocol and bitwise
+work:
+
+- `binary (8)`, `binary (16)`, `binary (32)`, `binary (64)` for machine-word
+  values,
+- explicit conversion at the `integer` / `binary` boundary,
+- `and`, `or`, `xor`, `not` for `boolean` and `binary`,
+- `<<` and `>>` for `binary`, with `>>` defined as logical zero-fill.
+
+That keeps ordinary signed arithmetic and proof obligations centered on
+`integer` while still admitting the common "I need a byte / hash word /
+protocol field" cases without pretending they are signed numbers.
+
 See: `spec/05-assurance.md`.
 
 ## 7. Access Types With Ownership, Move, Borrow, Observe

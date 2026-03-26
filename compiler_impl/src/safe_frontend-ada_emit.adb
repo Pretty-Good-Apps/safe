@@ -183,11 +183,31 @@ package body Safe_Frontend.Ada_Emit is
      (Unit     : CM.Resolved_Unit;
       Document : GM.Mir_Document;
       Info     : GM.Type_Descriptor) return Boolean;
+   function Is_Binary_Type
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Name     : String) return Boolean;
+   function Is_Binary_Type
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Info     : GM.Type_Descriptor) return Boolean;
+   function Binary_Bit_Width
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Name     : String) return Positive;
+   function Binary_Bit_Width
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Info     : GM.Type_Descriptor) return Positive;
    function Is_Float_Type
      (Unit     : CM.Resolved_Unit;
       Document : GM.Mir_Document;
       Name     : String) return Boolean;
    function Is_Float_Type
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Info     : GM.Type_Descriptor) return Boolean;
+   function Is_Array_Type
      (Unit     : CM.Resolved_Unit;
       Document : GM.Mir_Document;
       Info     : GM.Type_Descriptor) return Boolean;
@@ -201,6 +221,11 @@ package body Safe_Frontend.Ada_Emit is
    function Is_String_Type_Name (Name : String) return Boolean;
    function Tuple_Field_Name (Index : Positive) return String;
    function Tuple_String_Discriminant_Name (Index : Positive) return String;
+   function Render_Positional_Tuple_Aggregate
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Expr     : CM.Expr_Access;
+      State    : in out Emit_State) return String;
    function Render_Scalar_Value (Value : GM.Scalar_Value) return String;
    function Render_Record_Aggregate_For_Type
      (Unit      : CM.Resolved_Unit;
@@ -215,6 +240,7 @@ package body Safe_Frontend.Ada_Emit is
       State    : in out Emit_State) return String;
    function Default_Value_Expr (Type_Name : String) return String;
    function Default_Value_Expr (Info : GM.Type_Descriptor) return String;
+   function Binary_Ada_Name (Bit_Width : Positive) return String;
    function Render_Type_Name (Info : GM.Type_Descriptor) return String;
    function Render_Param_Type_Name (Info : GM.Type_Descriptor) return String;
    function Render_Type_Name
@@ -690,9 +716,33 @@ package body Safe_Frontend.Ada_Emit is
         and then Text (Text'First .. Text'First + Prefix'Length - 1) = Prefix;
    end Starts_With;
 
-   function Ada_Safe_Name (Name : String) return String is
+   function Binary_Width_From_Name (Name : String) return Natural is
    begin
-      if Name = "integer" then
+      if Name = "__binary_8" then
+         return 8;
+      elsif Name = "__binary_16" then
+         return 16;
+      elsif Name = "__binary_32" then
+         return 32;
+      elsif Name = "__binary_64" then
+         return 64;
+      end if;
+      return 0;
+   end Binary_Width_From_Name;
+
+   function Binary_Ada_Name (Bit_Width : Positive) return String is
+   begin
+      return
+        "Interfaces.Unsigned_"
+        & Ada.Strings.Fixed.Trim (Positive'Image (Bit_Width), Ada.Strings.Both);
+   end Binary_Ada_Name;
+
+   function Ada_Safe_Name (Name : String) return String is
+      Bit_Width : constant Natural := Binary_Width_From_Name (Name);
+   begin
+      if Bit_Width /= 0 then
+         return Binary_Ada_Name (Positive (Bit_Width));
+      elsif Name = "integer" then
          return "Long_Long_Integer";
       elsif Name = "boolean" then
          return "Boolean";
@@ -1007,6 +1057,11 @@ package body Safe_Frontend.Ada_Emit is
       return Name in "integer" | "long_long_integer";
    end Is_Builtin_Integer_Name;
 
+   function Is_Builtin_Binary_Name (Name : String) return Boolean is
+   begin
+      return Binary_Width_From_Name (Name) /= 0;
+   end Is_Builtin_Binary_Name;
+
    function Is_Builtin_Float_Name (Name : String) return Boolean is
    begin
       return Name in "float" | "long_float";
@@ -1053,6 +1108,38 @@ package body Safe_Frontend.Ada_Emit is
         or else Is_Builtin_Integer_Name (Unresolved_Base);
    end Is_Integer_Type;
 
+   function Is_Binary_Type
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Info     : GM.Type_Descriptor) return Boolean
+   is
+      Base            : constant GM.Type_Descriptor := Base_Type (Unit, Document, Info);
+      Kind            : constant String := FT.To_String (Base.Kind);
+      Name            : constant String := FT.To_String (Base.Name);
+      Unresolved_Base : constant String :=
+        (if Kind = "subtype" and then Base.Has_Base then FT.To_String (Base.Base) else "");
+   begin
+      return (Kind = "binary" and then Base.Has_Bit_Width)
+        or else Is_Builtin_Binary_Name (Name)
+        or else Is_Builtin_Binary_Name (Unresolved_Base);
+   end Is_Binary_Type;
+
+   function Binary_Bit_Width
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Info     : GM.Type_Descriptor) return Positive
+   is
+      Base : constant GM.Type_Descriptor := Base_Type (Unit, Document, Info);
+      Width : constant Natural := Binary_Width_From_Name (FT.To_String (Base.Name));
+   begin
+      if Base.Has_Bit_Width then
+         return Base.Bit_Width;
+      elsif Width /= 0 then
+         return Positive (Width);
+      end if;
+      Raise_Internal ("binary type missing bit width during Ada emission");
+   end Binary_Bit_Width;
+
    function Is_Float_Type
      (Unit     : CM.Resolved_Unit;
       Document : GM.Mir_Document;
@@ -1083,6 +1170,34 @@ package body Safe_Frontend.Ada_Emit is
       return False;
    end Is_Integer_Type;
 
+   function Is_Binary_Type
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Name     : String) return Boolean
+   is
+   begin
+      if Is_Builtin_Binary_Name (Name) then
+         return True;
+      elsif Has_Type (Unit, Document, Name) then
+         return Is_Binary_Type (Unit, Document, Lookup_Type (Unit, Document, Name));
+      end if;
+      return False;
+   end Is_Binary_Type;
+
+   function Binary_Bit_Width
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Name     : String) return Positive
+   is
+   begin
+      if Is_Builtin_Binary_Name (Name) then
+         return Positive (Binary_Width_From_Name (Name));
+      elsif Has_Type (Unit, Document, Name) then
+         return Binary_Bit_Width (Unit, Document, Lookup_Type (Unit, Document, Name));
+      end if;
+      Raise_Internal ("binary type name missing width during Ada emission");
+   end Binary_Bit_Width;
+
    function Is_Float_Type
      (Unit     : CM.Resolved_Unit;
       Document : GM.Mir_Document;
@@ -1096,6 +1211,16 @@ package body Safe_Frontend.Ada_Emit is
       end if;
       return False;
    end Is_Float_Type;
+
+   function Is_Array_Type
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Info     : GM.Type_Descriptor) return Boolean
+   is
+      Base : constant GM.Type_Descriptor := Base_Type (Unit, Document, Info);
+   begin
+      return FT.Lowercase (FT.To_String (Base.Kind)) = "array";
+   end Is_Array_Type;
 
    function Is_Tuple_Type (Info : GM.Type_Descriptor) return Boolean is
    begin
@@ -1154,6 +1279,32 @@ package body Safe_Frontend.Ada_Emit is
    begin
       return Tuple_Field_Name (Index) & "_Length";
    end Tuple_String_Discriminant_Name;
+
+   function Render_Positional_Tuple_Aggregate
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Expr     : CM.Expr_Access;
+      State    : in out Emit_State) return String
+   is
+      Result : SU.Unbounded_String := SU.To_Unbounded_String ("(");
+   begin
+      if Expr = null then
+         return "()";
+      end if;
+
+      for Index in Expr.Elements.First_Index .. Expr.Elements.Last_Index loop
+         if Index /= Expr.Elements.First_Index then
+            Result := Result & SU.To_Unbounded_String (", ");
+         end if;
+         Result :=
+           Result
+           & SU.To_Unbounded_String
+               (Render_Expr (Unit, Document, Expr.Elements (Index), State));
+      end loop;
+
+      Result := Result & SU.To_Unbounded_String (")");
+      return SU.To_String (Result);
+   end Render_Positional_Tuple_Aggregate;
 
    function Render_Scalar_Value (Value : GM.Scalar_Value) return String is
    begin
@@ -1564,6 +1715,13 @@ package body Safe_Frontend.Ada_Emit is
            & " .. "
            & Trim_Image (Type_Item.High)
            & ";";
+      elsif Kind = "binary" then
+         return
+           "type "
+           & Name
+           & " is mod 2 ** "
+           & Ada.Strings.Fixed.Trim (Positive'Image (Type_Item.Bit_Width), Ada.Strings.Both)
+           & ";";
       elsif Kind = "subtype" then
          if not Type_Item.Discriminant_Constraints.Is_Empty then
             Result :=
@@ -1868,6 +2026,101 @@ package body Safe_Frontend.Ada_Emit is
       return Operator;
    end Map_Operator;
 
+   function Binary_Result_Type_Name
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Expr     : CM.Expr_Access) return String is
+   begin
+      if Expr /= null and then Has_Text (Expr.Type_Name) then
+         return Render_Type_Name (Unit, Document, FT.To_String (Expr.Type_Name));
+      elsif Expr /= null and then Expr.Left /= null and then Has_Text (Expr.Left.Type_Name) then
+         return Render_Type_Name (Unit, Document, FT.To_String (Expr.Left.Type_Name));
+      end if;
+      Raise_Internal ("binary expression missing result type during Ada emission");
+   end Binary_Result_Type_Name;
+
+   function Binary_Base_Type_Name
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Expr     : CM.Expr_Access) return String is
+   begin
+      if Expr /= null and then Has_Text (Expr.Type_Name) and then Is_Binary_Type (Unit, Document, FT.To_String (Expr.Type_Name)) then
+         return Binary_Ada_Name (Binary_Bit_Width (Unit, Document, FT.To_String (Expr.Type_Name)));
+      elsif Expr /= null and then Expr.Left /= null and then Has_Text (Expr.Left.Type_Name) then
+         return Binary_Ada_Name (Binary_Bit_Width (Unit, Document, FT.To_String (Expr.Left.Type_Name)));
+      end if;
+      Raise_Internal ("binary expression missing base type during Ada emission");
+   end Binary_Base_Type_Name;
+
+   function Render_Binary_Unary_Image
+     (Unit       : CM.Resolved_Unit;
+      Document   : GM.Mir_Document;
+      Expr       : CM.Expr_Access;
+      Inner_Image : String) return String is
+      Result_Type : constant String := Binary_Result_Type_Name (Unit, Document, Expr);
+      Base_Type   : constant String := Binary_Base_Type_Name (Unit, Document, Expr);
+   begin
+      return
+        Result_Type
+        & " (not "
+        & Base_Type
+        & " ("
+        & Inner_Image
+        & "))";
+   end Render_Binary_Unary_Image;
+
+   function Render_Binary_Operation_Image
+     (Unit        : CM.Resolved_Unit;
+      Document    : GM.Mir_Document;
+      Expr        : CM.Expr_Access;
+      Left_Image  : String;
+      Right_Image : String) return String is
+      Operator    : constant String := FT.To_String (Expr.Operator);
+      Result_Type : constant String := Binary_Result_Type_Name (Unit, Document, Expr);
+      Base_Type   : constant String := Binary_Base_Type_Name (Unit, Document, Expr);
+   begin
+      if Operator = "<<" or else Operator = ">>" then
+         return
+           Result_Type
+           & " (Interfaces."
+           & (if Operator = "<<" then "Shift_Left" else "Shift_Right")
+           & " ("
+           & Base_Type
+           & " ("
+           & Left_Image
+           & "), Natural ("
+           & Right_Image
+           & ")))";
+      elsif Operator in "==" | "!=" | "<" | "<=" | ">" | ">=" then
+         return
+           "("
+           & Base_Type
+           & " ("
+           & Left_Image
+           & ") "
+           & Map_Operator (Operator)
+           & " "
+           & Base_Type
+           & " ("
+           & Right_Image
+           & "))";
+      end if;
+
+      return
+        Result_Type
+        & " ("
+        & Base_Type
+        & " ("
+        & Left_Image
+        & ") "
+        & Map_Operator (Operator)
+        & " "
+        & Base_Type
+        & " ("
+        & Right_Image
+        & "))";
+   end Render_Binary_Operation_Image;
+
    function Render_Expr
      (Unit     : CM.Resolved_Unit;
       Document : GM.Mir_Document;
@@ -1905,18 +2158,18 @@ package body Safe_Frontend.Ada_Emit is
               (State,
                Expr.Span,
                "text literal missing source text");
-         when CM.Expr_Bool =>
+        when CM.Expr_Bool =>
             return (if Expr.Bool_Value then "true" else "false");
-         when CM.Expr_Null =>
+        when CM.Expr_Null =>
             return "null";
-         when CM.Expr_Ident =>
+        when CM.Expr_Ident =>
             if FT.Lowercase (FT.To_String (Expr.Name)) = "ok"
               and then FT.Lowercase (FT.To_String (Expr.Type_Name)) = "result"
             then
                State.Needs_Ada_Strings_Unbounded := True;
                return Render_Result_Empty_Aggregate;
             end if;
-            return FT.To_String (Expr.Name);
+            return Ada_Safe_Name (FT.To_String (Expr.Name));
          when CM.Expr_Select =>
             declare
                Prefix_Image  : constant String := Render_Expr (Unit, Document, Expr.Prefix, State);
@@ -2079,52 +2332,97 @@ package body Safe_Frontend.Ada_Emit is
             return SU.To_String (Result);
          when CM.Expr_Tuple =>
             declare
+               Is_Array_Target : constant Boolean :=
+                 Has_Text (Expr.Type_Name)
+                 and then Has_Type (Unit, Document, FT.To_String (Expr.Type_Name))
+                 and then Is_Array_Type
+                   (Unit,
+                    Document,
+                    Lookup_Type (Unit, Document, FT.To_String (Expr.Type_Name)));
                First_Association : Boolean := True;
             begin
-               Result := SU.To_Unbounded_String ("(");
-               for Index in Expr.Elements.First_Index .. Expr.Elements.Last_Index loop
-                  if Expr.Elements (Index) /= null
-                    and then Is_String_Type_Name (FT.To_String (Expr.Elements (Index).Type_Name))
-                  then
+               if Is_Array_Target then
+                  return
+                    Render_Positional_Tuple_Aggregate
+                      (Unit, Document, Expr, State);
+               else
+                  Result := SU.To_Unbounded_String ("(");
+                  for Index in Expr.Elements.First_Index .. Expr.Elements.Last_Index loop
+                     if Expr.Elements (Index) /= null
+                       and then Is_String_Type_Name (FT.To_String (Expr.Elements (Index).Type_Name))
+                     then
+                        if not First_Association then
+                           Result := Result & SU.To_Unbounded_String (", ");
+                        end if;
+                        Result :=
+                          Result
+                          & SU.To_Unbounded_String
+                              (Tuple_String_Discriminant_Name (Positive (Index))
+                               & " => "
+                               & Render_String_Length_Expr
+                                   (Unit,
+                                    Document,
+                                    Expr.Elements (Index),
+                                    State));
+                        First_Association := False;
+                     end if;
+                  end loop;
+                  for Index in Expr.Elements.First_Index .. Expr.Elements.Last_Index loop
                      if not First_Association then
                         Result := Result & SU.To_Unbounded_String (", ");
                      end if;
                      Result :=
                        Result
                        & SU.To_Unbounded_String
-                           (Tuple_String_Discriminant_Name (Positive (Index))
+                           (Tuple_Field_Name (Positive (Index))
                             & " => "
-                            & Render_String_Length_Expr
-                                (Unit,
-                                 Document,
-                                 Expr.Elements (Index),
-                                 State));
+                            & Render_Expr (Unit, Document, Expr.Elements (Index), State));
                      First_Association := False;
-                  end if;
-               end loop;
-               for Index in Expr.Elements.First_Index .. Expr.Elements.Last_Index loop
-                  if not First_Association then
-                     Result := Result & SU.To_Unbounded_String (", ");
-                  end if;
-                  Result :=
-                    Result
-                    & SU.To_Unbounded_String
-                        (Tuple_Field_Name (Positive (Index))
-                         & " => "
-                         & Render_Expr (Unit, Document, Expr.Elements (Index), State));
-                  First_Association := False;
-               end loop;
+                  end loop;
+               end if;
             end;
             Result := Result & SU.To_Unbounded_String (")");
             return SU.To_String (Result);
          when CM.Expr_Annotated =>
+            declare
+               Target_Name     : constant String := Root_Name (Expr.Target);
+               Is_Array_Target : constant Boolean :=
+                 Target_Name'Length > 0
+                 and then Has_Type (Unit, Document, Target_Name)
+                 and then Is_Array_Type
+                   (Unit,
+                    Document,
+                    Lookup_Type (Unit, Document, Target_Name));
+            begin
+               if Expr.Inner /= null
+                 and then Expr.Inner.Kind = CM.Expr_Tuple
+                 and then Is_Array_Target
+               then
+                  return
+                    Render_Expr (Unit, Document, Expr.Target, State)
+                    & "'"
+                    & Render_Positional_Tuple_Aggregate
+                        (Unit, Document, Expr.Inner, State);
+               end if;
+            end;
             return
               Render_Expr (Unit, Document, Expr.Target, State)
               & "'"
               & (if Expr.Inner /= null and then Expr.Inner.Kind = CM.Expr_Aggregate
                  then Render_Expr (Unit, Document, Expr.Inner, State)
                  else "(" & Render_Expr (Unit, Document, Expr.Inner, State) & ")");
-         when CM.Expr_Unary =>
+        when CM.Expr_Unary =>
+            if FT.To_String (Expr.Operator) = "not"
+              and then Has_Text (Expr.Type_Name)
+              and then Is_Binary_Type (Unit, Document, FT.To_String (Expr.Type_Name))
+            then
+               return
+                 Render_Binary_Unary_Image
+                   (Unit,
+                    Document,
+                    Expr,
+                    Render_Expr (Unit, Document, Expr.Inner, State));
+            end if;
             return
               "("
               & Map_Operator (FT.To_String (Expr.Operator))
@@ -2143,6 +2441,18 @@ package body Safe_Frontend.Ada_Emit is
                      return Convex_Image;
                   end if;
                end;
+            end if;
+            if Expr.Left /= null
+              and then Has_Text (Expr.Left.Type_Name)
+              and then Is_Binary_Type (Unit, Document, FT.To_String (Expr.Left.Type_Name))
+            then
+               return
+                 Render_Binary_Operation_Image
+                   (Unit,
+                    Document,
+                    Expr,
+                    Render_Expr (Unit, Document, Expr.Left, State),
+                    Render_Expr (Unit, Document, Expr.Right, State));
             end if;
             return
               "("
@@ -2898,7 +3208,17 @@ package body Safe_Frontend.Ada_Emit is
               Type_Name
               & "'"
               & Render_Record_Aggregate_For_Type
-                  (Unit, Document, Initializer, Type_Info, State);
+                 (Unit, Document, Initializer, Type_Info, State);
+         elsif Initializer /= null
+           and then Initializer.Kind = CM.Expr_Tuple
+           and then Is_Array_Type (Unit, Document, Type_Info)
+           and then Type_Name /= "safe_runtime.wide_integer"
+         then
+            return
+              Type_Name
+              & "'"
+              & Render_Positional_Tuple_Aggregate
+                  (Unit, Document, Initializer, State);
          elsif Initializer /= null
            and then Initializer.Kind in CM.Expr_Aggregate | CM.Expr_Tuple
            and then Type_Name /= "safe_runtime.wide_integer"
@@ -4002,6 +4322,21 @@ package body Safe_Frontend.Ada_Emit is
                     else "(" & Inner_Image & ")");
             end;
          when CM.Expr_Unary =>
+            if FT.To_String (Expr.Operator) = "not"
+              and then Has_Text (Expr.Type_Name)
+              and then Is_Binary_Type (Unit, Document, FT.To_String (Expr.Type_Name))
+            then
+               declare
+                  Inner_Image : constant String :=
+                    Render_Expr_With_Target_Substitution
+                      (Unit, Document, Expr.Inner, Target, Replacement, State, Supported);
+               begin
+                  if not Supported then
+                     return "";
+                  end if;
+                  return Render_Binary_Unary_Image (Unit, Document, Expr, Inner_Image);
+               end;
+            end if;
             return
                "("
                & Map_Operator (FT.To_String (Expr.Operator))
@@ -4010,6 +4345,26 @@ package body Safe_Frontend.Ada_Emit is
                    (Unit, Document, Expr.Inner, Target, Replacement, State, Supported)
                & ")";
          when CM.Expr_Binary =>
+            if Expr.Left /= null
+              and then Has_Text (Expr.Left.Type_Name)
+              and then Is_Binary_Type (Unit, Document, FT.To_String (Expr.Left.Type_Name))
+            then
+               declare
+                  Left_Image : constant String :=
+                    Render_Expr_With_Target_Substitution
+                      (Unit, Document, Expr.Left, Target, Replacement, State, Supported);
+                  Right_Image : constant String :=
+                    Render_Expr_With_Target_Substitution
+                      (Unit, Document, Expr.Right, Target, Replacement, State, Supported);
+               begin
+                  if not Supported then
+                     return "";
+                  end if;
+                  return
+                    Render_Binary_Operation_Image
+                      (Unit, Document, Expr, Left_Image, Right_Image);
+               end;
+            end if;
             return
               "("
               & Render_Expr_With_Target_Substitution
@@ -6110,6 +6465,9 @@ package body Safe_Frontend.Ada_Emit is
       if State.Needs_Ada_Strings_Unbounded then
          Add_Body_With ("Ada.Strings.Unbounded");
       end if;
+      if Ada.Strings.Fixed.Index (SU.To_String (Body_Inner), "Interfaces.") > 0 then
+         Add_Body_With ("Interfaces");
+      end if;
       if State.Needs_Safe_Runtime then
          Add_Body_With ("Safe_Runtime");
       end if;
@@ -6119,6 +6477,12 @@ package body Safe_Frontend.Ada_Emit is
       end loop;
       if State.Needs_Safe_Runtime then
          Append_Line (Body_Text, "use type Safe_Runtime.Wide_Integer;");
+      end if;
+      if Ada.Strings.Fixed.Index (SU.To_String (Body_Inner), "Interfaces.") > 0 then
+         Append_Line (Body_Text, "use type Interfaces.Unsigned_8;");
+         Append_Line (Body_Text, "use type Interfaces.Unsigned_16;");
+         Append_Line (Body_Text, "use type Interfaces.Unsigned_32;");
+         Append_Line (Body_Text, "use type Interfaces.Unsigned_64;");
       end if;
       if not Body_Withs.Is_Empty then
          Append_Line (Body_Text);
@@ -6132,9 +6496,12 @@ package body Safe_Frontend.Ada_Emit is
            Ada.Strings.Fixed.Index (Original_Spec, "Safe_Runtime.") > 0;
          Spec_Needs_Ada_Strings_Unbounded : constant Boolean :=
            State.Needs_Ada_Strings_Unbounded;
+         Spec_Needs_Interfaces : constant Boolean :=
+           Ada.Strings.Fixed.Index (Original_Spec, "Interfaces.") > 0;
       begin
          if (Spec_Needs_Safe_Runtime
              or else Spec_Needs_Ada_Strings_Unbounded
+             or else Spec_Needs_Interfaces
              or else State.Needs_Unevaluated_Use_Of_Old)
            and then Original_Spec'Length >= Pragma_Block'Length
            and then
@@ -6148,6 +6515,13 @@ package body Safe_Frontend.Ada_Emit is
             end if;
             if Spec_Needs_Ada_Strings_Unbounded then
                Append_Line (Spec_Text, "with Ada.Strings.Unbounded;");
+            end if;
+            if Spec_Needs_Interfaces then
+               Append_Line (Spec_Text, "with Interfaces;");
+               Append_Line (Spec_Text, "use type Interfaces.Unsigned_8;");
+               Append_Line (Spec_Text, "use type Interfaces.Unsigned_16;");
+               Append_Line (Spec_Text, "use type Interfaces.Unsigned_32;");
+               Append_Line (Spec_Text, "use type Interfaces.Unsigned_64;");
             end if;
             if Spec_Needs_Safe_Runtime then
                Append_Line (Spec_Text, "with Safe_Runtime;");

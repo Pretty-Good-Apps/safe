@@ -52,6 +52,7 @@ The following table maps each Safe construct to its Ada/SPARK emission pattern. 
 | `new (expr as t)` (allocator) | `new T'(Expr)` | SAFE@468cf72:spec/02-restrictions.md#2.4.2.p116 | AST: `Allocator` with `kind=Annotated`. Combined with dot-to-tick |
 | `new t` (allocator, default init) | `new T` | SAFE@468cf72:spec/02-restrictions.md#2.4.2.p116 | AST: `Allocator` with `kind=SubtypeOnly`. Direct pass-through |
 | `type t is range l to h;` | `subtype T is Long_Long_Integer range L .. H;` | SAFE@468cf72:spec/08-syntax-summary.md#8.4 | AST: `SignedIntegerTypeDefinition`. Normalized to a constrained integer subtype |
+| `type t is binary (8);` | `type T is mod 2 ** 8;` | SAFE@468cf72:spec/08-syntax-summary.md#8.4 | AST: `BinaryTypeDefinition`. Named fixed-width binary type |
 | `type t is access t2;` | `type T is access T2;` | SAFE@468cf72:spec/08-syntax-summary.md#8.4 | AST: `AccessToObjectDefinition`. Direct pass-through |
 | `subtype t_ref is not null t_ptr;` | `subtype T_Ref is not null T_Ptr;` | SAFE@468cf72:spec/02-restrictions.md#2.3.1.p95 | AST: `SubtypeDeclaration`. Direct pass-through |
 | Integer arithmetic `A + B` | `Long_Long_Integer(A) + Long_Long_Integer(B)` | SAFE@468cf72:spec/02-restrictions.md#2.8.1.p126 | AST: `Expression`. Direct 64-bit integer arithmetic |
@@ -66,6 +67,7 @@ The following table maps each Safe construct to its Ada/SPARK emission pattern. 
 | `try_send C, Expr, Ok;` | `C.Try_Send(Expr, Ok);` (procedure call) | SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29 | AST: `TrySendStatement`. Non-blocking procedure |
 | `try_receive C, Var, Ok;` | `C.Try_Receive(Var, Ok);` (procedure call) | SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p30 | AST: `TryReceiveStatement`. Non-blocking procedure |
 | `try_receive C, Var : T, Ok;` | `declare Var : T := <default>; begin C.Try_Receive(Var, Ok); ... end;` | SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p30 | Lowered before AST / MIR emission to declaration + try_receive |
+| `X << Y` / `X >> Y` on `binary (N)` | `Interfaces.Shift_Left/Shift_Right (...)` | SAFE@468cf72:spec/08-syntax-summary.md#8.6 | `>>` lowers as logical zero-fill right shift |
 | `select ... end select;` | Polling loop with `Try_Receive` calls | SAFE@468cf72:spec/04-tasks-and-channels.md#4.4.p39 | AST: `SelectStatement`. See Section 5 |
 | `delay Expr;` | `delay Duration(Expr);` | SAFE@468cf72:spec/02-restrictions.md#2.1.8.p60 | AST: `DelayStatement`. Direct pass-through if Duration typed |
 | `pragma Assert(Cond);` | `pragma Assert(Cond);` | SAFE@468cf72:spec/02-restrictions.md#2.1.10.p68 | AST: `Pragma`. Direct pass-through |
@@ -302,7 +304,7 @@ subtype Buffer_Index is Natural range 0 .. 15;  -- for capacity 16
 subtype Buffer_Count is Natural range 0 .. 16;
 ```
 
-This ensures that `Head`, `Tail`, and `Count` are provably in-range. The modular arithmetic `(Natural(Tail) + 1) mod 16` is wrapped in a `Buffer_Index(...)` conversion to produce a value in the tight subtype range. GNATprove can verify this conversion is always valid since `(x + 1) mod N` is always in `0 .. N-1`.
+This ensures that `Head`, `Tail`, and `Count` are provably in-range. The wraparound modulo step `(Natural(Tail) + 1) mod 16` is wrapped in a `Buffer_Index(...)` conversion to produce a value in the tight subtype range. GNATprove can verify this conversion is always valid since `(x + 1) mod N` is always in `0 .. N-1`.
 
 ### 4.5 Ownership Transfer through Channels
 
@@ -625,10 +627,11 @@ Narrowing (conversion back to the target type) occurs at exactly five points (SA
 This rule applies only to integer types. Floating-point and Boolean expressions
 pass through without integer-specific rewriting.
 
-**Modular types:** Modular types use modular arithmetic with well-defined
-wrapping semantics (SAFE@468cf72:spec/08-syntax-summary.md#8.4). Modular
-operations are not rewritten through the signed integer path; the emitter
-passes them through unchanged.
+**Binary types:** `binary (8|16|32|64)` uses fixed-width wrapping semantics.
+These expressions are not rewritten through the signed `integer` path. The
+emitter lowers them through Ada's `Interfaces.Unsigned_*` types and
+`Interfaces.Shift_Left` / `Interfaces.Shift_Right`, with `>>` emitted as a
+logical zero-fill right shift.
 
 ### 8.5 Static Expressions
 
@@ -1048,7 +1051,7 @@ the following table lists semantics that are underspecified or implementation-de
 | Tasking profile | Which Ada tasking profile to use | `pragma Profile(Jorvik);` | Provides static task/protected object model compatible with Safe's restrictions | SAFE@468cf72:spec/04-tasks-and-channels.md#4.7.p59 |
 | elaboration policy | partition elaboration policy | `pragma partition_elaboration_policy(sequential);` | ensures elaboration before task activation | SAFE@468cf72:spec/04-tasks-and-channels.md#4.7.p59 |
 | identifier collision avoidance | when generated names might conflict with user identifiers | prefix generated internal names with `safe_` (e.g., `safe_select_done`) | avoid collision with user identifiers while maintaining readability | SAFE@468cf72:spec/08-syntax-summary.md#8.15 |
-| modular wide arithmetic | whether modular types are lifted to wide_integer | not lifted; modular arithmetic passes through unchanged | modular wrapping semantics would be changed by lifting | safe@468cf72:spec/02-restrictions.md#2.8.1.p126 |
+| binary arithmetic lifting | whether `binary (8|16|32|64)` is lifted through signed integer machinery | not lifted; binary arithmetic passes through as fixed-width `Interfaces.Unsigned_*` operations | wrapping and logical-shift semantics would be changed by signed lifting | SAFE@468cf72:spec/08-syntax-summary.md#8.4 |
 
 ---
 

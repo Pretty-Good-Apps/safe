@@ -256,6 +256,8 @@ package body Safe_Frontend.Mir_Analyze is
      (Info : GM.Type_Descriptor) return Interval;
    function Is_Integer_Type
      (Info : GM.Type_Descriptor) return Boolean;
+   function Is_Binary_Type
+     (Info : GM.Type_Descriptor) return Boolean;
    function Is_Float_Type
      (Info : GM.Type_Descriptor) return Boolean;
    function Is_Tuple_Type
@@ -804,6 +806,30 @@ package body Safe_Frontend.Mir_Analyze is
       return UString_Value (Value) /= "";
    end Has_Text;
 
+   function Parsed_Wide_Integer (Expr : GM.Expr_Access) return Wide_Integer is
+      Text : constant String := UString_Value (Expr.Text);
+   begin
+      if Text'Length = 0 then
+         return Wide_Integer (Expr.Int_Value);
+      end if;
+
+      declare
+         Cleaned : String (1 .. Text'Length);
+         Last    : Natural := 0;
+      begin
+         for Ch of Text loop
+            if Ch /= '_' then
+               Last := Last + 1;
+               Cleaned (Last) := Ch;
+            end if;
+         end loop;
+         return Wide_Integer'Value (Cleaned (1 .. Last));
+      exception
+         when Constraint_Error =>
+            return Wide_Integer (Expr.Int_Value);
+      end;
+   end Parsed_Wide_Integer;
+
    procedure Add_Builtins (Type_Env : in out Type_Maps.Map) is
    begin
       Type_Env.Include ("integer", BT.Integer_Type);
@@ -864,6 +890,14 @@ package body Safe_Frontend.Mir_Analyze is
         or else Name = "long_float"
       then
          return Type_Env.Element (Name);
+      elsif Name = "__binary_8" then
+         return BT.Binary_Type (8);
+      elsif Name = "__binary_16" then
+         return BT.Binary_Type (16);
+      elsif Name = "__binary_32" then
+         return BT.Binary_Type (32);
+      elsif Name = "__binary_64" then
+         return BT.Binary_Type (64);
       elsif Name'Length >= 7 and then Name (Name'First .. Name'First + 6) = "access " then
          return Parse_Anonymous_Access (Name);
       end if;
@@ -917,6 +951,7 @@ package body Safe_Frontend.Mir_Analyze is
    function Range_Interval
      (Info : GM.Type_Descriptor) return Interval
    is
+      Binary_High : Wide_Integer;
    begin
       if (Lower (UString_Value (Info.Kind)) = "integer"
           or else Lower (UString_Value (Info.Kind)) = "subtype")
@@ -932,16 +967,36 @@ package body Safe_Frontend.Mir_Analyze is
          return (Low => 0, High => 1, Excludes_Zero => False);
       elsif UString_Value (Info.Name) = "character" then
          return (Low => 0, High => 255, Excludes_Zero => False);
+      elsif (Lower (UString_Value (Info.Kind)) = "binary"
+             or else (Lower (UString_Value (Info.Kind)) = "subtype" and then Info.Has_Bit_Width))
+        and then Info.Has_Bit_Width
+      then
+         Binary_High :=
+           (if Info.Has_High
+            then Wide_Integer (Info.High)
+            else (2 ** Natural (Info.Bit_Width)) - 1);
+         return
+           (Low           => (if Info.Has_Low then Wide_Integer (Info.Low) else 0),
+            High          => Binary_High,
+            Excludes_Zero => (if Info.Has_Low then Info.Low > 0 else False));
       end if;
       return (Low => INT64_LOW, High => INT64_HIGH, Excludes_Zero => False);
    end Range_Interval;
 
    function Is_Integer_Type
      (Info : GM.Type_Descriptor) return Boolean is
-      Kind : constant String := Lower (UString_Value (Info.Kind));
+     Kind : constant String := Lower (UString_Value (Info.Kind));
    begin
       return Kind = "integer" or else Kind = "subtype";
    end Is_Integer_Type;
+
+   function Is_Binary_Type
+     (Info : GM.Type_Descriptor) return Boolean is
+      Kind : constant String := Lower (UString_Value (Info.Kind));
+   begin
+      return Kind = "binary"
+        or else (Kind = "subtype" and then Info.Has_Bit_Width);
+   end Is_Binary_Type;
 
    function Is_Float_Type
      (Info : GM.Type_Descriptor) return Boolean is
@@ -3283,10 +3338,14 @@ package body Safe_Frontend.Mir_Analyze is
 
       case Expr.Kind is
          when GM.Expr_Int =>
-            return
-              (Low           => Wide_Integer (Expr.Int_Value),
-               High          => Wide_Integer (Expr.Int_Value),
-               Excludes_Zero => Expr.Int_Value /= 0);
+            declare
+               Value : constant Wide_Integer := Parsed_Wide_Integer (Expr);
+            begin
+               return
+                 (Low           => Value,
+                  High          => Value,
+                  Excludes_Zero => Value /= 0);
+            end;
          when GM.Expr_Char =>
             declare
                Text  : constant String := UString_Value (Expr.Text);
@@ -3373,6 +3432,10 @@ package body Safe_Frontend.Mir_Analyze is
          when GM.Expr_Resolved_Index =>
             return Eval_Index_Expr (Expr, Current, Var_Types, Type_Env, Functions);
          when GM.Expr_Conversion =>
+            Target := Resolve_Type (UString_Value (Expr.Name), Var_Types, Type_Env);
+            if Is_Binary_Type (Target) then
+               return Range_Interval (Target);
+            end if;
             return Eval_Int_Expr (Expr.Inner, Current, Var_Types, Type_Env, Functions);
          when GM.Expr_Call =>
             Name := FT.To_UString (Flatten_Name (Expr.Callee));
@@ -3383,6 +3446,10 @@ package body Safe_Frontend.Mir_Analyze is
             end if;
             return Range_Interval (Resolve_Type ("integer", Type_Env));
          when GM.Expr_Annotated =>
+            Target := Resolve_Type (UString_Value (Expr.Subtype_Name), Var_Types, Type_Env);
+            if Is_Binary_Type (Target) then
+               return Range_Interval (Target);
+            end if;
             return Eval_Int_Expr (Expr.Inner, Current, Var_Types, Type_Env, Functions);
          when GM.Expr_Aggregate =>
             return (Low => INT64_LOW, High => INT64_HIGH, Excludes_Zero => False);
@@ -3398,17 +3465,66 @@ package body Safe_Frontend.Mir_Analyze is
                Raise_Diag (Diag);
             end;
          when GM.Expr_Unary =>
+            if UString_Value (Expr.Operator) = "not"
+              and then Is_Binary_Type (Expr_Type (Expr, Var_Types, Type_Env, Functions))
+            then
+               return Range_Interval (Expr_Type (Expr, Var_Types, Type_Env, Functions));
+            end if;
             Inner := Eval_Int_Expr (Expr.Inner, Current, Var_Types, Type_Env, Functions);
             if UString_Value (Expr.Operator) = "-" then
                return Overflow_Checked (Expr, -Inner.High, -Inner.Low, Inner, Inner);
             end if;
             return Inner;
          when GM.Expr_Binary =>
-            if UString_Value (Expr.Operator) = "and then" then
+            if UString_Value (Expr.Operator) in "and then" | "or else" | "and" | "or" | "xor"
+              and then not Is_Binary_Type (Expr_Type (Expr, Var_Types, Type_Env, Functions))
+            then
                return (Low => 0, High => 1, Excludes_Zero => False);
             end if;
             Left := Eval_Int_Expr (Expr.Left, Current, Var_Types, Type_Env, Functions);
             Right := Eval_Int_Expr (Expr.Right, Current, Var_Types, Type_Env, Functions);
+            if Is_Binary_Type (Expr_Type (Expr, Var_Types, Type_Env, Functions))
+              or else (UString_Value (Expr.Operator) in "<<" | ">>"
+                       and then Is_Binary_Type (Expr_Type (Expr.Left, Var_Types, Type_Env, Functions)))
+            then
+               declare
+                  Result_Type : constant GM.Type_Descriptor :=
+                    (if Is_Binary_Type (Expr_Type (Expr, Var_Types, Type_Env, Functions))
+                     then Expr_Type (Expr, Var_Types, Type_Env, Functions)
+                     else Expr_Type (Expr.Left, Var_Types, Type_Env, Functions));
+                  Shift_High  : constant Wide_Integer :=
+                    Wide_Integer (Result_Type.Bit_Width - 1);
+               begin
+                  if UString_Value (Expr.Operator) in "/" | "mod" | "rem"
+                    and then not Interval_Excludes_Zero (Right)
+                  then
+                     declare
+                        Diag : MD.Diagnostic := Null_Diagnostic;
+                     begin
+                        Diag.Reason := FT.To_UString ("division_by_zero");
+                        Diag.Message := FT.To_UString ("divisor not provably nonzero");
+                        Diag.Span := Highlight_Span (Expr);
+                        Diag.Has_Highlight_Span := True;
+                        Diag.Highlight_Span := Expr.Right.Span;
+                        Raise_Diag (Diag);
+                     end;
+                  elsif UString_Value (Expr.Operator) in "<<" | ">>"
+                    and then (Right.Low < 0 or else Right.High > Shift_High)
+                  then
+                     declare
+                        Diag : MD.Diagnostic := Null_Diagnostic;
+                     begin
+                        Diag.Reason := FT.To_UString ("shift_count_out_of_range");
+                        Diag.Message := FT.To_UString ("shift count is not provably within operand width");
+                        Diag.Span := Expr.Right.Span;
+                        Diag.Has_Highlight_Span := True;
+                        Diag.Highlight_Span := Expr.Right.Span;
+                        Raise_Diag (Diag);
+                     end;
+                  end if;
+                  return Range_Interval (Result_Type);
+               end;
+            end if;
             if UString_Value (Expr.Operator) = "+" then
                return Overflow_Checked (Expr, Left.Low + Right.Low, Left.High + Right.High, Left, Right);
             elsif UString_Value (Expr.Operator) = "-" then

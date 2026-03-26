@@ -130,6 +130,9 @@ package body Safe_Frontend.Mir_Write is
       if Info.Has_High then
          Items.Append ("""high"":" & Long_Long_Integer'Image (Info.High));
       end if;
+      if Info.Has_Bit_Width then
+         Items.Append ("""bit_width"":" & Positive'Image (Info.Bit_Width));
+      end if;
       if Info.Has_Base then
          Items.Append ("""base"":" & JS.Quote (Info.Base));
       end if;

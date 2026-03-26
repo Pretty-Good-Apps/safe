@@ -157,6 +157,9 @@ package body Safe_Frontend.Mir_Validate is
    begin
       Require (Has_Text (Value.Name), Where & ": missing type name");
       Require (Has_Text (Value.Kind), Where & ": missing type kind");
+      if FT.To_String (Value.Kind) = "binary" then
+         Require (Value.Has_Bit_Width, Where & ": binary type is missing bit_width");
+      end if;
 
       if not Value.Index_Types.Is_Empty then
          for Index in Value.Index_Types.First_Index .. Value.Index_Types.Last_Index loop
