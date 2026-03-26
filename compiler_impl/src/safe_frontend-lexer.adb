@@ -74,6 +74,16 @@ package body Safe_Frontend.Lexer is
           | "returns";
    end Is_Keyword;
 
+   function Has_Uppercase_Ascii (Item : String) return Boolean is
+   begin
+      for Ch of Item loop
+         if Ch in 'A' .. 'Z' then
+            return True;
+         end if;
+      end loop;
+      return False;
+   end Has_Uppercase_Ascii;
+
    function Make_Span
      (Start_Line   : Positive;
       Start_Column : Positive;
@@ -191,6 +201,23 @@ package body Safe_Frontend.Lexer is
             Message    => Message,
             Suggestion => "Use spaces only and indent block bodies by exactly 3 spaces.");
       end Report_Indentation_Error;
+
+      procedure Report_Lowercase_Error
+        (Lexeme       : String;
+         Lowered      : String;
+         Start_Line   : Positive;
+         Start_Column : Positive;
+         End_Line     : Positive;
+         End_Column   : Positive) is
+      begin
+         FD.Add_Error
+           (Collection => Diagnostics,
+            Path       => FT.To_String (Input.Path),
+            Span       => Make_Span (Start_Line, Start_Column, End_Line, End_Column),
+            Code       => "SC1003",
+            Message    => "Safe source spellings must be lowercase",
+            Suggestion => "Rewrite `" & Lexeme & "` as `" & Lowered & "`.");
+      end Report_Lowercase_Error;
 
       function Current_Indent return Natural is
       begin
@@ -334,12 +361,22 @@ package body Safe_Frontend.Lexer is
                end loop;
                declare
                   Lexeme : constant String := Text (Start_Index .. Index - 1);
+                  Lowered : constant String := FT.Lowercase (Lexeme);
                   Kind   : constant Token_Kind :=
-                    (if Is_Keyword (Lexeme) then Keyword else Identifier);
+                    (if Is_Keyword (Lowered) then Keyword else Identifier);
                begin
+                  if Has_Uppercase_Ascii (Lexeme) then
+                     Report_Lowercase_Error
+                       (Lexeme,
+                        Lowered,
+                        Start_Line,
+                        Start_Column,
+                        Line,
+                        (if Column = 1 then 1 else Column - 1));
+                  end if;
                   Append_Token
                     (Kind,
-                     Lexeme,
+                     Lowered,
                      Start_Line,
                      Start_Column,
                      Line,
