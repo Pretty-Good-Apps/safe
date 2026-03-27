@@ -244,7 +244,7 @@ timer14: Timers.STM32_Timer @ sysbus 0x40002000
     frequency: 10000000
     initialLimit: 0xFFFF
 
-// Alternate function mapping connections. For more details see `stm32l071.repl`.
+// Alternate function mapping connections.
 timer1:
     0 -> gpioPortA#08@01 | gpioPortE#09@01 | gpioPortA#07@01 | gpioPortB#13@01 | gpioPortE#08@01
     1 -> gpioPortA#09@01 | gpioPortE#11@01 | gpioPortB#00@01 | gpioPortB#14@01 | gpioPortE#10@01

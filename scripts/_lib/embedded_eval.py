@@ -468,6 +468,24 @@ class TextSocketMonitor:
 
 def parse_monitor_value(text: str) -> int:
     cleaned = ANSI_ESCAPE_RE.sub("", text).replace("\r", "")
+    for line in cleaned.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if ":" in stripped:
+            _, _, tail = stripped.partition(":")
+            value_match = re.search(
+                r"\b(?:0x[0-9a-fA-F]+|[0-9a-fA-F]{2,16}|\d+)\b", tail.strip()
+            )
+            if value_match:
+                token = value_match.group(0)
+                if token.lower().startswith("0x"):
+                    return int(token, 16)
+                if any(ch in "abcdefABCDEF" for ch in token):
+                    return int(token, 16)
+                if len(token) > 1 and token.startswith("0"):
+                    return int(token, 16)
+                return int(token, 10)
     hex_matches = re.findall(r"0x[0-9a-fA-F]+", cleaned)
     if hex_matches:
         return int(hex_matches[-1], 16)

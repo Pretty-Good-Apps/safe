@@ -10,6 +10,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from _lib.embedded_eval import parse_monitor_value
 from _lib.harness_common import ensure_sdkroot
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -912,6 +913,19 @@ def run_embedded_case_listing() -> tuple[bool, str]:
     return True, ""
 
 
+def run_embedded_monitor_parsing_checks() -> tuple[bool, str]:
+    cases = [
+        ("renode-hex", "0x00000001\n", 1),
+        ("openocd-mdw", "0x20000000: 00000001 \n", 1),
+        ("openocd-mdw-hex", "0x20000000: 0x00000002\n", 2),
+    ]
+    for label, text, expected in cases:
+        actual = parse_monitor_value(text)
+        if actual != expected:
+            return False, f"{label} parsed as {actual}, expected {expected}"
+    return True, ""
+
+
 def main() -> int:
     try:
         safec = build_compiler()
@@ -1071,6 +1085,12 @@ def main() -> int:
         passed += 1
     else:
         failures.append(("embedded smoke case listing", detail))
+
+    ok, detail = run_embedded_monitor_parsing_checks()
+    if ok:
+        passed += 1
+    else:
+        failures.append(("embedded monitor parsing", detail))
 
     print_summary(passed=passed, failures=failures)
     return 0 if not failures else 1

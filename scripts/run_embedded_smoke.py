@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from _lib.embedded_eval import (
+    BoardConfig,
     DEFAULT_TIMEOUT_SECONDS,
     REPO_ROOT,
     build_compiler,
@@ -24,7 +25,6 @@ from _lib.embedded_eval import (
     resolve_board,
     result_driver_text,
     run_under_renode,
-    supported_boards,
     temporary_root,
     verify_runtime_available,
     work_paths,
@@ -34,7 +34,6 @@ from _lib.pr111_language_eval import emitted_primary_unit
 
 
 EMBEDDED_TESTS_ROOT = REPO_ROOT / "tests" / "embedded"
-BOARD = resolve_board("stm32f4-discovery")
 
 
 @dataclass(frozen=True)
@@ -84,8 +83,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--target",
-        choices=("stm32f4", "all"),
-        default="all",
+        choices=("stm32f4",),
+        default="stm32f4",
         help="Embedded target to exercise.",
     )
     parser.add_argument(
@@ -119,6 +118,10 @@ def selected_cases(names: list[str] | None) -> list[EmbeddedCase]:
     return [CASES[name] for name in names]
 
 
+def selected_boards(target_name: str) -> list[BoardConfig]:
+    return [resolve_board("stm32f4-discovery", target_name)]
+
+
 def preserve_or_cleanup(root: Path, *, keep_temp: bool, success: bool) -> Path | None:
     if keep_temp or not success:
         return root
@@ -132,6 +135,7 @@ def write_case_source(path: Path, contents: str) -> None:
 
 def run_case(
     *,
+    board: BoardConfig,
     safec: Path,
     gprbuild: str,
     renode: str,
@@ -142,7 +146,7 @@ def run_case(
     keep_temp: bool,
     env: dict[str, str],
 ) -> tuple[bool, str, Path | None]:
-    root = temporary_root(f"{BOARD.target}-{case.name}")
+    root = temporary_root(f"{board.target}-{case.name}")
     paths = work_paths(root)
     ensure_work_dirs(paths)
 
@@ -154,13 +158,13 @@ def run_case(
     write_support_files(
         paths=paths,
         driver_source=result_driver_text(unit_name, case.expected_result),
-        board=BOARD,
+        board=board,
     )
 
     ok, detail = build_embedded_image(
         gprbuild=gprbuild,
         triplet=triplet,
-        runtime=BOARD.runtime,
+        runtime=board.runtime,
         paths=paths,
         env=env,
     )
@@ -195,6 +199,7 @@ def write_jorvik_probe_source(path: Path) -> None:
 
 def run_jorvik_probe(
     *,
+    board: BoardConfig,
     safec: Path,
     gprbuild: str,
     renode: str,
@@ -204,7 +209,7 @@ def run_jorvik_probe(
     keep_temp: bool,
     env: dict[str, str],
 ) -> tuple[bool, str, Path | None]:
-    root = temporary_root(f"{BOARD.target}-jorvik-probe")
+    root = temporary_root(f"{board.target}-jorvik-probe")
     source = root / "embedded_jorvik_probe.safe"
     paths = work_paths(root)
     ensure_work_dirs(paths)
@@ -218,13 +223,13 @@ def run_jorvik_probe(
     write_support_files(
         paths=paths,
         driver_source=result_driver_text(unit_name, 1),
-        board=BOARD,
+        board=board,
     )
 
     ok, detail = build_embedded_image(
         gprbuild=gprbuild,
         triplet=triplet,
-        runtime=BOARD.runtime,
+        runtime=board.runtime,
         paths=paths,
         env=env,
     )
@@ -259,6 +264,9 @@ def main() -> int:
     cases = selected_cases(args.case)
     env = os.environ.copy()
 
+    boards = selected_boards(args.target)
+    board = boards[0]
+
     try:
         safec = build_compiler()
         triplet, _ = detect_arm_triplet()
@@ -268,11 +276,11 @@ def main() -> int:
             need_openocd=False,
             need_readelf=False,
         )
-        ensure_board_assets(BOARD, need_renode=True, need_openocd=False)
+        ensure_board_assets(board, need_renode=True, need_openocd=False)
         ok, detail = verify_runtime_available(
             gnatls=commands["gnatls"],
             triplet=triplet,
-            runtime=BOARD.runtime,
+            runtime=board.runtime,
             env=env,
         )
         if not ok:
@@ -282,6 +290,7 @@ def main() -> int:
         return 1
 
     probe_ok, probe_detail, probe_root = run_jorvik_probe(
+        board=board,
         safec=safec,
         gprbuild=commands["gprbuild"],
         renode=commands["renode"],
@@ -292,17 +301,20 @@ def main() -> int:
         env=env,
     )
     if not probe_ok:
-        print_summary(target_name=BOARD.target, passed=0, total=len(cases))
-        print("0 passed, 1 failed")
+        print(
+            f"{board.target}: 0/{len(cases)} cases passed "
+            "(Jorvik runtime probe failed before running tests)"
+        )
         suffix = f" (artifacts: {probe_root})" if probe_root is not None else ""
         print("Failures:")
-        print(f" - {BOARD.target}: Jorvik runtime probe failed: {probe_detail}{suffix}")
+        print(f" - {board.target}: Jorvik runtime probe failed: {probe_detail}{suffix}")
         return 1
 
     passed = 0
     failures: list[tuple[str, str, Path | None]] = []
     for case in cases:
         ok, detail, preserved = run_case(
+            board=board,
             safec=safec,
             gprbuild=commands["gprbuild"],
             renode=commands["renode"],
@@ -316,9 +328,9 @@ def main() -> int:
         if ok:
             passed += 1
         else:
-            failures.append((f"{BOARD.target}:{case.name}", detail, preserved))
+            failures.append((f"{board.target}:{case.name}", detail, preserved))
 
-    print_summary(target_name=BOARD.target, passed=passed, total=len(cases))
+    print_summary(target_name=board.target, passed=passed, total=len(cases))
     print(f"{passed} passed, {len(failures)} failed")
     if failures:
         print("Failures:")

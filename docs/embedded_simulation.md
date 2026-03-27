@@ -53,10 +53,10 @@ List the available cases:
 python3 scripts/run_embedded_smoke.py --list-cases
 ```
 
-Run both targets:
+Run the STM32F4 target:
 
 ```bash
-python3 scripts/run_embedded_smoke.py --target all
+python3 scripts/run_embedded_smoke.py --target stm32f4
 ```
 
 Run the STM32F4 target and one case:

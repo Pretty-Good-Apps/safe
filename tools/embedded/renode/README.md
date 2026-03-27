@@ -12,7 +12,7 @@ Source provenance:
 
 - `stm32f4_discovery.repl` copied from the local Renode install:
   `~/.local/opt/renode-1.16.1/platforms/boards/stm32f4_discovery.repl`
-- copied from the local Renode install:
+- `stm32f4.repl` copied from the local Renode install:
   `~/.local/opt/renode-1.16.1/platforms/cpus/stm32f4.repl`
 
 The smoke harness targets the STM32F4 Discovery / STM32F407 class board model.
