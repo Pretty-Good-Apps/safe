@@ -431,9 +431,9 @@ package body Safe_Frontend.Check_Parse is
       Dot    : constant Natural := Ada.Directories.Extension (Simple)'Length;
    begin
       if Dot = 0 then
-         return FT.Lowercase (Simple);
+         return Simple;
       end if;
-      return FT.Lowercase (Ada.Directories.Base_Name (Simple));
+      return Ada.Directories.Base_Name (Simple);
    end Source_Stem;
 
    function Is_Lowercase_Identifier (Text : String) return Boolean is
