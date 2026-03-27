@@ -55,24 +55,8 @@ package body Safe_Frontend.Ada_Emit is
      "pragma Partition_Elaboration_Policy(Sequential);" & ASCII.LF
      & "pragma Profile(Jorvik);" & ASCII.LF;
 
-   Safe_IO_Spec_Contents : constant String :=
-     "package Safe_IO" & ASCII.LF
-     & "  with SPARK_Mode => Off" & ASCII.LF
-     & "is" & ASCII.LF
-     & "   procedure Put_Line (Text : String);" & ASCII.LF
-     & "end Safe_IO;" & ASCII.LF;
-
-   Safe_IO_Body_Contents : constant String :=
-     "with Ada.Text_IO;" & ASCII.LF
-     & ASCII.LF
-     & "package body Safe_IO" & ASCII.LF
-     & "  with SPARK_Mode => Off" & ASCII.LF
-     & "is" & ASCII.LF
-     & "   procedure Put_Line (Text : String) is" & ASCII.LF
-     & "   begin" & ASCII.LF
-     & "      Ada.Text_IO.Put_Line (Text);" & ASCII.LF
-     & "   end Put_Line;" & ASCII.LF
-     & "end Safe_IO;" & ASCII.LF;
+   Safe_IO_Support_Marker : constant String :=
+     "--  Generated Safe print support";
 
    type Cleanup_Action is (Cleanup_Deallocate, Cleanup_Reset_Null);
 
@@ -534,12 +518,6 @@ package body Safe_Frontend.Ada_Emit is
 
    function Safe_Runtime_Text return String is
      (Runtime_Template);
-
-   function Safe_IO_Spec_Text return String is
-     (Safe_IO_Spec_Contents);
-
-   function Safe_IO_Body_Text return String is
-     (Safe_IO_Body_Contents);
 
    function Gnat_Adc_Text return String is
      (Gnat_Adc_Contents);
@@ -1477,6 +1455,9 @@ package body Safe_Frontend.Ada_Emit is
       Type_Info : out GM.Type_Descriptor) return Boolean
    is
       Prefix_Info : GM.Type_Descriptor;
+      Left_Info   : GM.Type_Descriptor;
+      Operator    : constant String :=
+        (if Expr /= null and then Has_Text (Expr.Operator) then FT.To_String (Expr.Operator) else "");
    begin
       if Expr = null then
          return False;
@@ -1535,6 +1516,53 @@ package body Safe_Frontend.Ada_Emit is
               or else
               (Expr.Inner /= null
                and then Resolve_Print_Type (Unit, Document, Expr.Inner, State, Type_Info));
+         when CM.Expr_Call =>
+            if Expr.Callee /= null
+              and then Expr.Callee.Kind in CM.Expr_Ident | CM.Expr_Select
+            then
+               declare
+                  Callee_Name : constant String := FT.To_String (Expr.Callee.Name);
+               begin
+                  if Callee_Name'Length > 0 then
+                     for Subprogram of Unit.Subprograms loop
+                        if FT.To_String (Subprogram.Name) = Callee_Name
+                          and then Subprogram.Has_Return_Type
+                        then
+                           Type_Info := Subprogram.Return_Type;
+                           return True;
+                        end if;
+                     end loop;
+                  end if;
+               end;
+            end if;
+            return False;
+         when CM.Expr_Unary =>
+            return
+              Expr.Inner /= null
+              and then Resolve_Print_Type (Unit, Document, Expr.Inner, State, Type_Info);
+         when CM.Expr_Binary =>
+            if Operator in "=" | "/=" | "<" | "<=" | ">" | ">=" | "and then" | "or else" then
+               Type_Info := BT.Boolean_Type;
+               return True;
+            elsif Operator in "and" | "or" | "xor" then
+               if Expr.Left /= null
+                 and then Resolve_Print_Type (Unit, Document, Expr.Left, State, Left_Info)
+               then
+                  if Is_Binary_Type (Unit, Document, Left_Info) then
+                     Type_Info := Left_Info;
+                     return True;
+                  elsif FT.Lowercase (FT.To_String (Base_Type (Unit, Document, Left_Info).Kind)) = "boolean"
+                    or else FT.Lowercase (FT.To_String (Base_Type (Unit, Document, Left_Info).Name)) = "boolean"
+                  then
+                     Type_Info := BT.Boolean_Type;
+                     return True;
+                  end if;
+               end if;
+               return False;
+            end if;
+            return
+              Expr.Left /= null
+              and then Resolve_Print_Type (Unit, Document, Expr.Left, State, Type_Info);
          when others =>
             return False;
       end case;
@@ -2965,10 +2993,10 @@ package body Safe_Frontend.Ada_Emit is
          end;
       end if;
 
-      return
-        "Ada.Strings.Fixed.Trim (Long_Long_Integer'Image (Long_Long_Integer ("
-        & Value_Image
-        & ")), Ada.Strings.Both)";
+      Raise_Unsupported
+        (State,
+         Expr.Span,
+         "print argument type was not resolved during Ada emission");
    end Render_Print_Argument;
 
    function Render_Float_Convex_Combination
@@ -6087,7 +6115,8 @@ package body Safe_Frontend.Ada_Emit is
                   State.Needs_Safe_IO := True;
                   Append_Line
                     (Buffer,
-                     "Safe_IO.Put_Line ("
+                     Safe_IO_Unit_Name (FT.To_String (Unit.Package_Name))
+                     & ".Put_Line ("
                      & Render_Print_Argument
                          (Unit,
                           Document,
@@ -6836,6 +6865,7 @@ package body Safe_Frontend.Ada_Emit is
       Task_Item : CM.Resolved_Task;
       State     : in out Emit_State)
    is
+      Uses_Print : constant Boolean := Statements_Use_Print (Task_Item.Statements);
       Previous_Wide_Count : constant Ada.Containers.Count_Type :=
         State.Wide_Local_Names.Length;
    begin
@@ -6843,7 +6873,13 @@ package body Safe_Frontend.Ada_Emit is
         (Unit, Document, State, Task_Item.Declarations, Task_Item.Statements);
       Push_Type_Binding_Frame (State);
       Register_Type_Bindings (State, Task_Item.Declarations);
-      Append_Line (Buffer, "task body " & FT.To_String (Task_Item.Name) & " is", 1);
+      Append_Line
+        (Buffer,
+         "task body "
+         & FT.To_String (Task_Item.Name)
+         & (if Uses_Print then " with SPARK_Mode => Off" else "")
+         & " is",
+         1);
       Render_Block_Declarations
         (Buffer, Unit, Document, Task_Item.Declarations, State, 2);
       Render_Free_Declarations (Buffer, Task_Item.Declarations, 2);
@@ -6871,6 +6907,62 @@ package body Safe_Frontend.Ada_Emit is
       end loop;
       return Result;
    end Unit_File_Stem;
+
+   function Safe_IO_Unit_Name (Unit_Name : String) return String is
+      Base : String := Unit_Name;
+   begin
+      if Base'Length = 0 then
+         return "generated_safe_io";
+      end if;
+
+      for Index in Base'Range loop
+         if Base (Index) = '.' then
+            Base (Index) := '_';
+         else
+            Base (Index) := Ada.Characters.Handling.To_Lower (Base (Index));
+         end if;
+      end loop;
+      return Base & "_safe_io";
+   end Safe_IO_Unit_Name;
+
+   function Safe_IO_Spec_Text (Unit_Name : String) return String is
+      Support_Name : constant String := Safe_IO_Unit_Name (Unit_Name);
+   begin
+      return
+        Safe_IO_Support_Marker & ASCII.LF
+        & ASCII.LF
+        & "package "
+        & Support_Name
+        & ASCII.LF
+        & "  with SPARK_Mode => Off" & ASCII.LF
+        & "is" & ASCII.LF
+        & "   procedure Put_Line (Text : String);" & ASCII.LF
+        & "end "
+        & Support_Name
+        & ";" & ASCII.LF;
+   end Safe_IO_Spec_Text;
+
+   function Safe_IO_Body_Text (Unit_Name : String) return String is
+      Support_Name : constant String := Safe_IO_Unit_Name (Unit_Name);
+   begin
+      return
+        Safe_IO_Support_Marker & ASCII.LF
+        & ASCII.LF
+        & "with Ada.Text_IO;" & ASCII.LF
+        & ASCII.LF
+        & "package body "
+        & Support_Name
+        & ASCII.LF
+        & "  with SPARK_Mode => Off" & ASCII.LF
+        & "is" & ASCII.LF
+        & "   procedure Put_Line (Text : String) is" & ASCII.LF
+        & "   begin" & ASCII.LF
+        & "      Ada.Text_IO.Put_Line (Text);" & ASCII.LF
+        & "   end Put_Line;" & ASCII.LF
+        & "end "
+        & Support_Name
+        & ";" & ASCII.LF;
+   end Safe_IO_Body_Text;
 
    function Emit
      (Unit     : CM.Resolved_Unit;
@@ -7012,7 +7104,7 @@ package body Safe_Frontend.Ada_Emit is
          Add_Body_With ("Interfaces");
       end if;
       if State.Needs_Safe_IO then
-         Add_Body_With ("Safe_IO");
+         Add_Body_With (Safe_IO_Unit_Name (FT.To_String (Unit.Package_Name)));
       end if;
       if State.Needs_Safe_Runtime then
          Add_Body_With ("Safe_Runtime");
@@ -7089,6 +7181,10 @@ package body Safe_Frontend.Ada_Emit is
          Unit_Name          => Unit.Package_Name,
          Spec_Text          => FT.To_UString (SU.To_String (Spec_Text)),
          Body_Text          => FT.To_UString (SU.To_String (Body_Text)),
+         Safe_IO_Unit_Name  =>
+           (if State.Needs_Safe_IO
+            then FT.To_UString (Safe_IO_Unit_Name (FT.To_String (Unit.Package_Name)))
+            else FT.To_UString ("")),
          Needs_Safe_IO      => State.Needs_Safe_IO,
          Needs_Safe_Runtime => State.Needs_Safe_Runtime,
          Needs_Gnat_Adc     => State.Needs_Gnat_Adc);

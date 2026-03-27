@@ -19,7 +19,10 @@ ALR_FALLBACK = Path.home() / "bin" / "alr"
 RUN_TIMEOUT_SECONDS = 2.0
 PRINT_SAMPLE = "samples/rosetta/text/hello_print.safe"
 PRODUCER_CONSUMER_SAMPLE = "samples/rosetta/concurrency/producer_consumer.safe"
-SUPPORT_BODY_NAMES = {"safe_io.adb"}
+GENERATED_SUPPORT_MARKERS = (
+    "--  Generated Safe print support",
+    "--  Safe Language Runtime Type Definitions",
+)
 
 
 def repo_rel(path: Path) -> str:
@@ -81,11 +84,31 @@ def print_summary(*, passed: int, failures: list[tuple[str, str]]) -> None:
 
 def emitted_primary_unit(ada_dir: Path) -> str:
     candidates = sorted(
-        path for path in ada_dir.glob("*.adb") if path.name not in SUPPORT_BODY_NAMES
+        path for path in ada_dir.glob("*.adb") if not is_generated_support_file(path)
     )
     if not candidates:
         raise FileNotFoundError(f"expected emitted Ada body in {ada_dir}")
     return candidates[0].stem
+
+
+def is_generated_support_file(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    try:
+        first_lines = path.read_text(encoding="utf-8").splitlines()[:2]
+    except OSError:
+        return False
+    return any(line in GENERATED_SUPPORT_MARKERS for line in first_lines)
+
+
+def generated_support_files(ada_dir: Path) -> tuple[list[Path], list[Path]]:
+    specs = sorted(
+        path for path in ada_dir.glob("*.ads") if is_generated_support_file(path)
+    )
+    bodies = sorted(
+        path for path in ada_dir.glob("*.adb") if is_generated_support_file(path)
+    )
+    return specs, bodies
 
 
 def executable_name() -> str:
@@ -238,13 +261,12 @@ def run_sample(
     except FileNotFoundError as exc:
         return stage_error("emit", str(exc))
 
-    safe_io_spec = paths["ada"] / "safe_io.ads"
-    safe_io_body = paths["ada"] / "safe_io.adb"
+    support_specs, support_bodies = generated_support_files(paths["ada"])
     if expects_safe_io(sample):
-        if not safe_io_spec.exists() or not safe_io_body.exists():
-            return stage_error("emit", "missing generated safe_io support files")
-    elif safe_io_spec.exists() or safe_io_body.exists():
-        return stage_error("emit", "unexpected generated safe_io support files")
+        if len(support_specs) != 1 or len(support_bodies) != 1:
+            return stage_error("emit", "missing generated print support files")
+    elif support_specs or support_bodies:
+        return stage_error("emit", "unexpected generated print support files")
 
     paths["main"].write_text(driver_text(sample, unit_name), encoding="utf-8")
     paths["gpr"].write_text(project_text(paths), encoding="utf-8")

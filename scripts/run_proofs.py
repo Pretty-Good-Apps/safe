@@ -17,6 +17,10 @@ COMPILER_ROOT = REPO_ROOT / "compiler_impl"
 SAFEC_PATH = COMPILER_ROOT / "bin" / "safec"
 ALR_FALLBACK = Path.home() / "bin" / "alr"
 GNATPROVE_FALLBACK = Path.home() / ".alire" / "bin" / "gnatprove"
+GENERATED_SUPPORT_MARKERS = (
+    "--  Generated Safe print support",
+    "--  Safe Language Runtime Type Definitions",
+)
 
 FLOW_SWITCHES = [
     "--mode=flow",
@@ -206,11 +210,21 @@ def emitted_body_file(ada_dir: Path) -> Path:
     candidates = sorted(
         path
         for path in ada_dir.glob("*.adb")
-        if path.name not in {"safe_runtime.adb", "safe_io.adb"}
+        if not is_generated_support_file(path)
     )
     if not candidates:
         raise FileNotFoundError(f"{ada_dir}: expected emitted .adb file")
     return candidates[0]
+
+
+def is_generated_support_file(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    try:
+        first_lines = path.read_text(encoding="utf-8").splitlines()[:2]
+    except OSError:
+        return False
+    return any(line in GENERATED_SUPPORT_MARKERS for line in first_lines)
 
 
 def write_emitted_project(ada_dir: Path) -> Path:

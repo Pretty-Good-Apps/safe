@@ -7,4 +7,4 @@ package pr118c1_print
    function log_status (flag : boolean)
       print ("status")
       print (value)
-      print (flag)
+      print (flag and true)

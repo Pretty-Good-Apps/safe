@@ -1613,6 +1613,18 @@ package body Safe_Frontend.Check_Resolve is
         and then FT.Lowercase (Flatten_Name (Expr.Callee)) = "print";
    end Is_Print_Call;
 
+   function Is_Print_Designator (Expr : CM.Expr_Access) return Boolean is
+   begin
+      return
+        Expr /= null
+        and then
+          ((Expr.Kind = CM.Expr_Call
+            and then FT.Lowercase (Flatten_Name (Expr.Callee)) = "print")
+           or else
+           (Expr.Kind in CM.Expr_Ident | CM.Expr_Select
+            and then FT.Lowercase (Flatten_Name (Expr)) = "print"));
+   end Is_Print_Designator;
+
    procedure Validate_Print_Call_Context
      (Expr             : CM.Expr_Access;
       Var_Types        : Type_Maps.Map;
@@ -1638,7 +1650,7 @@ package body Safe_Frontend.Check_Resolve is
          return;
       end if;
 
-      if Is_Print_Call (Expr) and then not Allow_Root_Print then
+      if Is_Print_Designator (Expr) and then not Allow_Root_Print then
          Raise_Diag
            (CM.Source_Frontend_Error
               (Path    => Path,
@@ -1657,7 +1669,9 @@ package body Safe_Frontend.Check_Resolve is
          when CM.Expr_Conversion =>
             Recurse (Expr.Inner);
          when CM.Expr_Call =>
-            Recurse (Expr.Callee);
+            if not Is_Print_Call (Expr) then
+               Recurse (Expr.Callee);
+            end if;
             for Item of Expr.Args loop
                Recurse (Item);
             end loop;
@@ -1747,9 +1761,9 @@ package body Safe_Frontend.Check_Resolve is
          return Expr;
       end if;
 
-         if Expr.Callee /= null and then Expr.Callee.Kind = CM.Expr_Ident then
-            Callee_Name := Expr.Callee.Name;
-            if Has_Type (Var_Types, UString_Value (Callee_Name))
+      if Expr.Callee /= null and then Expr.Callee.Kind = CM.Expr_Ident then
+         Callee_Name := Expr.Callee.Name;
+         if Has_Type (Var_Types, UString_Value (Callee_Name))
            and then UString_Value
              (Get_Type (Var_Types, UString_Value (Callee_Name)).Kind) = "array"
          then
@@ -1760,29 +1774,29 @@ package body Safe_Frontend.Check_Resolve is
             Result.Kind := CM.Expr_Call;
             Result.Callee := Expr.Callee;
             Result.Args := Expr.Args;
-            elsif Has_Type (Var_Types, UString_Value (Callee_Name))
-               and then UString_Value
-                 (Get_Type (Var_Types, UString_Value (Callee_Name)).Kind)
-                    in "integer" | "subtype" | "record" | "float" | "binary"
-               and then Natural (Expr.Args.Length) = 1
-            then
-               Result.Kind := CM.Expr_Conversion;
-               Result.Target := Expr.Callee;
-               Result.Inner := Expr.Args (Expr.Args.First_Index);
-            elsif UString_Value (Callee_Name) in "integer" | "float" | "long_float"
-               and then Natural (Expr.Args.Length) = 1
-            then
-               Result.Kind := CM.Expr_Conversion;
-               Result.Target := Expr.Callee;
-               Result.Inner := Expr.Args (Expr.Args.First_Index);
-            elsif Has_Type (Type_Env, UString_Value (Callee_Name))
-              and then Is_Binary_Type (Get_Type (Type_Env, UString_Value (Callee_Name)), Type_Env)
-              and then Natural (Expr.Args.Length) = 1
-            then
-               Result.Kind := CM.Expr_Conversion;
-               Result.Target := Expr.Callee;
-               Result.Inner := Expr.Args (Expr.Args.First_Index);
-            else
+         elsif Has_Type (Var_Types, UString_Value (Callee_Name))
+           and then UString_Value
+             (Get_Type (Var_Types, UString_Value (Callee_Name)).Kind)
+               in "integer" | "subtype" | "record" | "float" | "binary"
+           and then Natural (Expr.Args.Length) = 1
+         then
+            Result.Kind := CM.Expr_Conversion;
+            Result.Target := Expr.Callee;
+            Result.Inner := Expr.Args (Expr.Args.First_Index);
+         elsif UString_Value (Callee_Name) in "integer" | "float" | "long_float"
+           and then Natural (Expr.Args.Length) = 1
+         then
+            Result.Kind := CM.Expr_Conversion;
+            Result.Target := Expr.Callee;
+            Result.Inner := Expr.Args (Expr.Args.First_Index);
+         elsif Has_Type (Type_Env, UString_Value (Callee_Name))
+           and then Is_Binary_Type (Get_Type (Type_Env, UString_Value (Callee_Name)), Type_Env)
+           and then Natural (Expr.Args.Length) = 1
+         then
+            Result.Kind := CM.Expr_Conversion;
+            Result.Target := Expr.Callee;
+            Result.Inner := Expr.Args (Expr.Args.First_Index);
+         else
             Result.Kind := CM.Expr_Call;
             Result.Callee := Expr.Callee;
             Result.Args := Expr.Args;
