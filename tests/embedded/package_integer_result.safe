@@ -1,0 +1,14 @@
+-- Test: package_integer_result
+-- Description: Explicit packages can compute package-visible results at unit scope.
+-- Expected embedded result: 42
+
+package package_integer_result
+
+   subtype answer is integer (0 to 42);
+
+   function compute returns answer
+
+      return 40 + 2
+
+   result : answer = 0;
+   result = compute ()

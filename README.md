@@ -29,6 +29,10 @@ packageless entry unit. The repo-local `safe build` / `safe run` wrapper
 currently supports single-file roots only; roots with `with` clauses still use
 `safec emit` plus manual `gprbuild`.
 
+For local embedded evaluation, the repo-local wrapper also includes a first
+`safe deploy` flow for STM32F4 Discovery, with both Renode simulation and an
+OpenOCD/ST-LINK hardware path.
+
 ---
 
 ## What Does This Repository Contain?
@@ -83,11 +87,20 @@ python3 scripts/run_proofs.py
 # Check, build, and run samples
 python3 scripts/run_samples.py
 
+# Run the local Renode embedded smoke lane
+python3 scripts/run_embedded_smoke.py --list-cases
+
 # Build a single-file Safe program
 python3 scripts/safe_cli.py build samples/rosetta/text/hello_print.safe
 
 # Build and execute a single-file Safe program
 python3 scripts/safe_cli.py run samples/rosetta/text/hello_print.safe
+
+# Simulate a single-file Safe program on STM32F4 Discovery
+python3 scripts/safe_cli.py deploy --board stm32f4-discovery --simulate tests/embedded/entry_integer_result.safe
+
+# Simulate and wait for a specific embedded symbol value
+python3 scripts/safe_cli.py deploy --board stm32f4-discovery --simulate --watch-symbol entry_integer_result__result --expect-value 42 tests/embedded/entry_integer_result.safe
 
 # Prototype single-file REPL
 python3 scripts/safe_repl.py
@@ -110,6 +123,8 @@ See `spec/` for the language specification and `docs/` for the current design di
 | Safe-to-Ada translation rules | [`compiler/translation_rules.md`](compiler/translation_rules.md) |
 | Frontend workspace + output formats | [`compiler_impl/README.md`](compiler_impl/README.md) |
 | End-to-end CLI walkthrough | [`docs/safec_end_to_end_cli_tutorial.md`](docs/safec_end_to_end_cli_tutorial.md) |
+| Local embedded smoke lane | [`docs/embedded_simulation.md`](docs/embedded_simulation.md) |
+| Embedded deploy wrapper | [`docs/embedded_deploy.md`](docs/embedded_deploy.md) |
 | VS Code extension | [`editors/vscode/README.md`](editors/vscode/README.md) |
 | SPARK companion overview | [`companion/release/COMPANION_README.md`](companion/release/COMPANION_README.md) |
 

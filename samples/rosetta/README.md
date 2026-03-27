@@ -77,3 +77,14 @@ executes its emitted `main.adb` directly and asserts exact stdout:
 ```text
 hello
 ```
+
+## Embedded Smoke Lane
+
+The Renode-based embedded smoke lane does **not** reuse this Rosetta corpus as
+its pass/fail source. Bare-metal verdicts currently come from the dedicated
+`tests/embedded/` fixtures instead, because those cases expose package-visible
+integer results that can be checked through an exported status word without
+depending on `print`, UART routing, or semihosting.
+
+See [`../../docs/embedded_simulation.md`](../../docs/embedded_simulation.md)
+for the current embedded setup and prerequisites.

@@ -1,0 +1,20 @@
+-- Test: producer_consumer_result
+-- Description: Channel-based producer/consumer tasking reaches a stable shared result.
+-- Expected embedded result: 42
+
+package producer_consumer_result
+
+   subtype message is integer (0 to 1000);
+
+   channel data_ch : message capacity 1;
+   result : integer (0 to 42) = 0;
+
+   task producer with priority = 10, sends data_ch
+      loop
+         send data_ch, 41
+         delay 0.05
+
+   task consumer with priority = 10, receives data_ch
+      loop
+         receive data_ch, input : message
+         result = input + 1

@@ -48,11 +48,13 @@ The current repo-local compiler commands are:
 The repo also keeps a small wrapper CLI at `../scripts/safe_cli.py`:
 
 - `python3 ../scripts/safe_cli.py build <file.safe>`
+- `python3 ../scripts/safe_cli.py deploy --board stm32f4-discovery [--simulate] <file.safe>`
 - `python3 ../scripts/safe_cli.py run <file.safe>`
 - `python3 ../scripts/safe_cli.py check ...`
 - `python3 ../scripts/safe_cli.py emit ...`
 
-`safe build` and `safe run` are still single-file wrappers in this branch. They support:
+`safe build`, `safe run`, and `safe deploy` are still single-file wrappers in
+this branch. They support:
 
 - explicit-package roots with no leading `with` clauses, built through the
   existing generated-driver path
@@ -61,6 +63,10 @@ The repo also keeps a small wrapper CLI at `../scripts/safe_cli.py`:
 
 If the root file begins with `with`, the wrapper rejects it and points users to
 `safec emit` plus manual `gprbuild` for the current multi-file flow.
+
+`safe deploy` is currently limited to `stm32f4-discovery`. `--simulate` runs
+through Renode; omitting it uses OpenOCD + ST-LINK with the same generated
+embedded driver and startup-status protocol.
 
 The repo also now includes a prototype single-file REPL:
 

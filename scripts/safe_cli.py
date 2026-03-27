@@ -3,15 +3,36 @@
 
 from __future__ import annotations
 
+import argparse
 import os
 import re
 import sys
 from pathlib import Path
 
+from _lib.embedded_eval import (
+    DEFAULT_TIMEOUT_SECONDS,
+    build_embedded_image,
+    detect_arm_triplet,
+    deploy_root,
+    emit_source,
+    ensure_board_assets,
+    ensure_work_dirs,
+    require_embedded_commands,
+    resolve_board,
+    reset_root,
+    run_under_openocd,
+    run_under_renode_observe,
+    run_under_renode,
+    startup_driver_text,
+    verify_runtime_available,
+    work_paths,
+    write_support_files,
+)
 from _lib.harness_common import ensure_sdkroot, run_capture, run_passthrough
 from _lib.pr111_language_eval import (
     COMPILER_ROOT,
     REPO_ROOT,
+    emitted_primary_unit,
     ensure_safe_build_executable,
     prepare_safe_build_root,
     repo_rel_or_abs,
@@ -25,6 +46,7 @@ from _lib.pr111_language_eval import (
 
 USAGE = """usage:
   safe build <file.safe>
+  safe deploy [--target stm32f4] --board stm32f4-discovery [--simulate] [--watch-symbol NAME --expect-value N] [--timeout SECONDS] <file.safe>
   safe run   <file.safe>
   safe check <safec check args...>
   safe emit  <safec emit args...>
@@ -66,6 +88,54 @@ def source_has_leading_with_clause(source: Path) -> bool:
     return False
 
 
+def reject_multi_file_root(command: str) -> int:
+    print(
+        f"safe {command}: root files with `with` clauses are not supported yet; "
+        "use `safec emit` plus manual `gprbuild` for multi-file programs",
+        file=sys.stderr,
+    )
+    return 1
+
+
+def deploy_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="safe deploy",
+        description="Build and deploy a single-file Safe program to STM32F4 Discovery.",
+    )
+    parser.add_argument(
+        "--target",
+        help="Optional target name. If omitted it is inferred from --board.",
+    )
+    parser.add_argument(
+        "--board",
+        required=True,
+        choices=("stm32f4-discovery",),
+        help="Board to simulate or flash.",
+    )
+    parser.add_argument(
+        "--simulate",
+        action="store_true",
+        help="Run under Renode instead of flashing hardware.",
+    )
+    parser.add_argument(
+        "--watch-symbol",
+        help="ELF symbol name to observe under Renode after startup completes.",
+    )
+    parser.add_argument(
+        "--expect-value",
+        type=lambda text: int(text, 0),
+        help="Expected scalar value for --watch-symbol (decimal or 0x-prefixed).",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=DEFAULT_TIMEOUT_SECONDS,
+        help=f"Startup timeout in seconds (default: {DEFAULT_TIMEOUT_SECONDS:g}).",
+    )
+    parser.add_argument("source", help="Single-file Safe source to deploy.")
+    return parser
+
+
 def pass_through(command: str, args: list[str]) -> int:
     env = ensure_sdkroot(os.environ.copy())
     safec = safec_path()
@@ -77,12 +147,7 @@ def build_single_file(source_arg: str) -> tuple[dict[str, str], Path] | int:
     safec = safec_path()
     source = require_source_file(resolve_source_arg(source_arg))
     if source_has_leading_with_clause(source):
-        print(
-            "safe build: root files with `with` clauses are not supported yet; "
-            "use `safec emit` plus manual `gprbuild` for multi-file programs",
-            file=sys.stderr,
-        )
-        return 1
+        return reject_multi_file_root("build")
     paths = prepare_safe_build_root(source)
 
     check_code = run_quiet_stage([str(safec), "check", str(source)], cwd=REPO_ROOT, env=env)
@@ -134,6 +199,125 @@ def safe_run(source_arg: str) -> int:
     return run_subprocess([str(executable)], cwd=executable.parent, env=env)
 
 
+def parse_deploy_args(args: list[str]) -> argparse.Namespace | int:
+    parser = deploy_parser()
+    try:
+        return parser.parse_args(args)
+    except SystemExit as exc:
+        return int(exc.code)
+
+
+def safe_deploy(args: argparse.Namespace) -> int:
+    env = ensure_sdkroot(os.environ.copy())
+    source = require_source_file(resolve_source_arg(args.source))
+    if source_has_leading_with_clause(source):
+        return reject_multi_file_root("deploy")
+
+    if (args.watch_symbol is None) != (args.expect_value is None):
+        print(
+            "safe deploy: --watch-symbol and --expect-value must be provided together",
+            file=sys.stderr,
+        )
+        return 1
+    if args.watch_symbol is not None and not args.simulate:
+        print(
+            "safe deploy: --watch-symbol is currently supported only with --simulate",
+            file=sys.stderr,
+        )
+        return 1
+
+    try:
+        board = resolve_board(args.board, args.target)
+        triplet, _ = detect_arm_triplet()
+        commands = require_embedded_commands(
+            triplet=triplet,
+            need_renode=args.simulate,
+            need_openocd=not args.simulate,
+            need_readelf=(not args.simulate) or (args.watch_symbol is not None),
+        )
+        ensure_board_assets(board, need_renode=args.simulate, need_openocd=not args.simulate)
+        ok, detail = verify_runtime_available(
+            gnatls=commands["gnatls"],
+            triplet=triplet,
+            runtime=board.runtime,
+            env=env,
+        )
+        if not ok:
+            raise RuntimeError(detail)
+    except (FileNotFoundError, RuntimeError, ValueError) as exc:
+        print(f"safe deploy: {exc}", file=sys.stderr)
+        return 1
+
+    root = deploy_root(source, board.name)
+    paths = work_paths(root)
+    reset_root(root)
+    ensure_work_dirs(paths)
+
+    safec = safec_path()
+    ok, detail = emit_source(safec=safec, source=source, paths=paths, env=env)
+    if not ok:
+        print(f"safe deploy: {detail} (artifacts: {repo_rel_or_abs(root)})", file=sys.stderr)
+        return 1
+
+    unit_name = emitted_primary_unit(paths["ada"])
+    write_support_files(
+        paths=paths,
+        driver_source=startup_driver_text(unit_name),
+        board=board if args.simulate else None,
+    )
+    ok, detail = build_embedded_image(
+        gprbuild=commands["gprbuild"],
+        triplet=triplet,
+        runtime=board.runtime,
+        paths=paths,
+        env=env,
+    )
+    if not ok:
+        print(f"safe deploy: {detail} (artifacts: {repo_rel_or_abs(root)})", file=sys.stderr)
+        return 1
+
+    if args.simulate:
+        if args.watch_symbol is not None:
+            ok, detail = run_under_renode_observe(
+                renode=commands["renode"],
+                nm=commands["nm"],
+                readelf=commands["readelf"],
+                paths=paths,
+                timeout_seconds=args.timeout,
+                env=env,
+                watch_symbol=args.watch_symbol,
+                expect_value=args.expect_value,
+            )
+        else:
+            ok, detail = run_under_renode(
+                renode=commands["renode"],
+                nm=commands["nm"],
+                paths=paths,
+                timeout_seconds=args.timeout,
+                env=env,
+            )
+        if not ok:
+            print(f"safe deploy: {detail} (artifacts: {repo_rel_or_abs(root)})", file=sys.stderr)
+            return 1
+        print(f"safe deploy: OK (simulated on {board.name}; {repo_rel_or_abs(paths['exe'])})")
+        return 0
+
+    ok, detail = run_under_openocd(
+        openocd=commands["openocd"],
+        nm=commands["nm"],
+        readelf=commands["readelf"],
+        paths=paths,
+        board=board,
+        timeout_seconds=args.timeout,
+        env=env,
+    )
+    if not ok:
+        print(f"safe deploy: {detail} (artifacts: {repo_rel_or_abs(root)})", file=sys.stderr)
+        return 1
+    print(f"safe deploy: OK (flashed {board.name}; {repo_rel_or_abs(paths['exe'])})")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if not args:
@@ -147,6 +331,11 @@ def main(argv: list[str] | None = None) -> int:
         if len(args) != 2:
             return print_usage()
         return safe_build(args[1])
+    if command == "deploy":
+        parsed = parse_deploy_args(args[1:])
+        if isinstance(parsed, int):
+            return parsed
+        return safe_deploy(parsed)
     if command == "run":
         if len(args) != 2:
             return print_usage()

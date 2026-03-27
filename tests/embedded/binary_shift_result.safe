@@ -1,0 +1,10 @@
+-- Test: binary_shift_result
+-- Description: Binary shifts lower cleanly for fixed-width embedded targets.
+-- Expected embedded result: 32
+
+package binary_shift_result
+
+   type byte is binary (8);
+
+   shifted : byte = byte (128) >> 2;
+   result : integer (0 to 255) = integer (shifted);

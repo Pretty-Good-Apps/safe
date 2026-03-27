@@ -10,6 +10,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from _lib.embedded_eval import parse_monitor_value
 from _lib.harness_common import ensure_sdkroot
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -19,6 +20,7 @@ ALR_FALLBACK = Path.home() / "bin" / "alr"
 DIAGNOSTIC_EXIT_CODE = 1
 SAFE_CLI = REPO_ROOT / "scripts" / "safe_cli.py"
 SAFE_REPL = REPO_ROOT / "scripts" / "safe_repl.py"
+EMBEDDED_SMOKE = REPO_ROOT / "scripts" / "run_embedded_smoke.py"
 VALIDATE_OUTPUT_CONTRACTS = REPO_ROOT / "scripts" / "validate_output_contracts.py"
 
 # These fixtures live in category directories that do not match the
@@ -333,6 +335,85 @@ RUN_REJECT_CASES = [
     ),
 ]
 
+DEPLOY_REJECT_ARGV_CASES = [
+    (
+        [
+            "deploy",
+            "--simulate",
+            "tests/build/pr118c2_entry_build.safe",
+        ],
+        "--board",
+    ),
+    (
+        [
+            "deploy",
+            "--board",
+            "not-a-board",
+            "tests/build/pr118c2_entry_build.safe",
+        ],
+        "invalid choice",
+    ),
+    (
+        [
+            "deploy",
+            "--target",
+            "bogus",
+            "--board",
+            "stm32f4-discovery",
+            "--simulate",
+            "tests/build/pr118c2_entry_build.safe",
+        ],
+        "requires target 'stm32f4', got 'bogus'",
+    ),
+    (
+        [
+            "deploy",
+            "--board",
+            "stm32f4-discovery",
+            "--simulate",
+            "tests/build/pr118c2_root_with_clause.safe",
+        ],
+        "safe deploy: root files with `with` clauses are not supported yet",
+    ),
+    (
+        [
+            "deploy",
+            "--board",
+            "stm32f4-discovery",
+            "--simulate",
+            "--expect-value",
+            "42",
+            "tests/build/pr118c2_entry_build.safe",
+        ],
+        "--watch-symbol and --expect-value must be provided together",
+    ),
+    (
+        [
+            "deploy",
+            "--board",
+            "stm32f4-discovery",
+            "--simulate",
+            "--watch-symbol",
+            "entry_integer_result__result",
+            "tests/build/pr118c2_entry_build.safe",
+        ],
+        "--watch-symbol and --expect-value must be provided together",
+    ),
+    (
+        [
+            "deploy",
+            "--board",
+            "stm32f4-discovery",
+            "--watch-symbol",
+            "entry_integer_result__result",
+            "--expect-value",
+            "42",
+            "tests/build/pr118c2_entry_build.safe",
+        ],
+        "--watch-symbol is currently supported only with --simulate",
+    ),
+]
+
 OUTPUT_CONTRACT_CASES = [
     REPO_ROOT / "tests" / "positive" / "pr118c2_package_print.safe",
     REPO_ROOT / "tests" / "positive" / "pr118c2_entry_print.safe",
@@ -357,6 +438,15 @@ REPL_CASES = [
         "",
         "task declarations are not supported in repl mode",
     ),
+]
+
+EMBEDDED_SMOKE_CASES = [
+    "binary_shift_result",
+    "delay_scope_result",
+    "entry_integer_result",
+    "package_integer_result",
+    "producer_consumer_result",
+    "scoped_receive_result",
 ]
 
 
@@ -712,6 +802,27 @@ def run_safe_run_reject_case(source: Path, expected_message: str) -> tuple[bool,
     return True, ""
 
 
+def run_safe_cli_help_case(argv: list[str], expected_snippets: list[str]) -> tuple[bool, str]:
+    completed = run_command([sys.executable, str(SAFE_CLI), *argv], cwd=REPO_ROOT)
+    if completed.returncode != 0:
+        return False, f"help command failed: {first_message(completed)}"
+    text = completed.stdout + completed.stderr
+    for snippet in expected_snippets:
+        if snippet not in text:
+            return False, f"missing help snippet {snippet!r}"
+    return True, ""
+
+
+def run_safe_deploy_reject_case(argv: list[str], expected_message: str) -> tuple[bool, str]:
+    completed = run_command([sys.executable, str(SAFE_CLI), *argv], cwd=REPO_ROOT)
+    if completed.returncode == 0:
+        return False, "safe deploy unexpectedly succeeded"
+    output = completed.stderr or completed.stdout
+    if expected_message not in output:
+        return False, f"missing expected message {expected_message!r}"
+    return True, ""
+
+
 def run_output_contract_case(
     safec: Path,
     source: Path,
@@ -784,6 +895,34 @@ def run_repl_case(
         return False, f"unexpected stdout {completed.stdout!r}"
     if expected_stderr_substring is not None and expected_stderr_substring not in completed.stderr:
         return False, f"missing expected stderr {expected_stderr_substring!r}"
+    return True, ""
+
+
+def run_embedded_case_listing() -> tuple[bool, str]:
+    completed = run_command(
+        [sys.executable, str(EMBEDDED_SMOKE), "--list-cases"],
+        cwd=REPO_ROOT,
+    )
+    if completed.returncode != 0:
+        return False, f"embedded case listing failed: {first_message(completed)}"
+    expected = "".join(f"{name}\n" for name in EMBEDDED_SMOKE_CASES)
+    if completed.stdout != expected:
+        return False, f"unexpected embedded case list {completed.stdout!r}"
+    if completed.stderr:
+        return False, f"unexpected embedded case stderr {completed.stderr!r}"
+    return True, ""
+
+
+def run_embedded_monitor_parsing_checks() -> tuple[bool, str]:
+    cases = [
+        ("renode-hex", "0x00000001\n", 1),
+        ("openocd-mdw", "0x20000000: 00000001 \n", 1),
+        ("openocd-mdw-hex", "0x20000000: 0x00000002\n", 2),
+    ]
+    for label, text, expected in cases:
+        actual = parse_monitor_value(text)
+        if actual != expected:
+            return False, f"{label} parsed as {actual}, expected {expected}"
     return True, ""
 
 
@@ -904,6 +1043,25 @@ def main() -> int:
         else:
             failures.append((label, detail))
 
+    for argv, expected in (
+        (["--help"], ["safe deploy", "safe run"]),
+        (["deploy", "--help"], ["--board", "--simulate", "--watch-symbol", "--expect-value"]),
+    ):
+        ok, detail = run_safe_cli_help_case(argv, expected)
+        label = f"safe cli help {' '.join(argv)}"
+        if ok:
+            passed += 1
+        else:
+            failures.append((label, detail))
+
+    for argv, expected_message in DEPLOY_REJECT_ARGV_CASES:
+        ok, detail = run_safe_deploy_reject_case(argv, expected_message)
+        label = f"safe {' '.join(argv)}"
+        if ok:
+            passed += 1
+        else:
+            failures.append((label, detail))
+
     ok, detail = run_ensure_sdkroot_case()
     if ok:
         passed += 1
@@ -921,6 +1079,18 @@ def main() -> int:
             passed += 1
         else:
             failures.append((label, detail))
+
+    ok, detail = run_embedded_case_listing()
+    if ok:
+        passed += 1
+    else:
+        failures.append(("embedded smoke case listing", detail))
+
+    ok, detail = run_embedded_monitor_parsing_checks()
+    if ok:
+        passed += 1
+    else:
+        failures.append(("embedded monitor parsing", detail))
 
     print_summary(passed=passed, failures=failures)
     return 0 if not failures else 1
