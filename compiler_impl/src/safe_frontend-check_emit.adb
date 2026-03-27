@@ -385,6 +385,13 @@ package body Safe_Frontend.Check_Emit is
    begin
       if Spec.Kind = CM.Type_Spec_Access_Def then
          return Name_Node (Spec.Target_Name);
+      elsif Spec.Kind = CM.Type_Spec_Growable_Array then
+         return
+           "{""node_type"":""GrowableArrayTypeSpec"",""element_type"":"
+           & Object_Type_Node (Spec.Element_Type.all)
+           & ",""span"":"
+           & JS.Span_Object (Spec.Span)
+           & "}";
       elsif Spec.Kind = CM.Type_Spec_Tuple then
          declare
             Elements : String_Vectors.Vector;
@@ -513,6 +520,8 @@ package body Safe_Frontend.Check_Emit is
    begin
       if Spec.Kind = CM.Type_Spec_Access_Def then
          return Access_Definition_Node (Spec);
+      elsif Spec.Kind = CM.Type_Spec_Growable_Array then
+         return Type_Spec_Name (Spec);
       elsif Spec.Kind = CM.Type_Spec_Tuple then
          return Type_Spec_Name (Spec);
       end if;
@@ -1033,15 +1042,6 @@ package body Safe_Frontend.Check_Emit is
               & "},""span"":"
               & JS.Span_Object (Expr.Span)
               & "}";
-         when CM.Expr_Char =>
-            return
-              "{""node_type"":""Primary"",""kind"":""Literal"",""value"":{""node_type"":""CharacterLiteral"",""text"":"
-              & JS.Quote (Expr.Text)
-              & ",""span"":"
-              & JS.Span_Object (Expr.Span)
-              & "},""span"":"
-              & JS.Span_Object (Expr.Span)
-              & "}";
          when CM.Expr_Allocator =>
             return
               "{""node_type"":""Primary"",""kind"":""Allocator"",""value"":"
@@ -1059,6 +1059,13 @@ package body Safe_Frontend.Check_Emit is
          when CM.Expr_Tuple =>
             return
               "{""node_type"":""Primary"",""kind"":""Tuple"",""value"":"
+              & Tuple_Aggregate_Node (Expr)
+              & ",""span"":"
+              & JS.Span_Object (Expr.Span)
+              & "}";
+         when CM.Expr_Array_Literal =>
+            return
+              "{""node_type"":""Primary"",""kind"":""BracketAggregate"",""value"":"
               & Tuple_Aggregate_Node (Expr)
               & ",""span"":"
               & JS.Span_Object (Expr.Span)
@@ -1240,6 +1247,21 @@ package body Safe_Frontend.Check_Emit is
               & ",""span"":"
               & JS.Span_Object (Decl.Component_Type.Span)
               & "},""span"":"
+              & JS.Span_Object (Decl.Span)
+              & "},""span"":"
+              & JS.Span_Object (Decl.Span)
+              & "}";
+         when CM.Type_Decl_Growable_Array =>
+            return
+              "{""node_type"":""TypeDeclaration"",""is_public"":"
+              & JS.Bool_Literal (Decl.Is_Public)
+              & ",""name"":"
+              & JS.Quote (Decl.Name)
+              & ",""discriminant_part"":"
+              & Discriminant_Part_Node (Decl)
+              & ",""type_definition"":{""node_type"":""GrowableArrayDefinition"",""element_type"":"
+              & Object_Type_Node (Decl.Component_Type)
+              & ",""span"":"
               & JS.Span_Object (Decl.Span)
               & "},""span"":"
               & JS.Span_Object (Decl.Span)

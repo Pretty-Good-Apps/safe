@@ -2248,6 +2248,14 @@ package body Safe_Frontend.Ada_Emit is
               "subtype " & Ada_Safe_Name (Name) & " is " & Ada_Safe_Name (FT.To_String (Type_Item.Base)) & ";";
          end if;
       elsif Kind = "array" then
+         if Type_Item.Growable or else Type_Item.Index_Types.Is_Empty then
+            return
+              "type "
+              & Ada_Safe_Name (Name)
+              & " is array (Positive range <>) of "
+              & Ada_Safe_Name (FT.To_String (Type_Item.Component_Type))
+              & ";";
+         end if;
          return
            "type "
            & Ada_Safe_Name (Name)
@@ -2626,7 +2634,7 @@ package body Safe_Frontend.Ada_Emit is
               (State,
                Expr.Span,
                "real literal missing source text");
-         when CM.Expr_String | CM.Expr_Char =>
+         when CM.Expr_String =>
             if Has_Text (Expr.Text) then
                return FT.To_String (Expr.Text);
             end if;
@@ -2634,6 +2642,29 @@ package body Safe_Frontend.Ada_Emit is
               (State,
                Expr.Span,
                "text literal missing source text");
+         when CM.Expr_Array_Literal =>
+            if Expr.Elements.Is_Empty then
+               Raise_Unsupported
+                 (State,
+                  Expr.Span,
+                  "empty growable-array literal emission is not yet supported");
+            end if;
+            Result := SU.To_Unbounded_String ("(");
+            for Index in Expr.Elements.First_Index .. Expr.Elements.Last_Index loop
+               if Index /= Expr.Elements.First_Index then
+                  Result := Result & SU.To_Unbounded_String (", ");
+               end if;
+               Result :=
+                 Result
+                 & SU.To_Unbounded_String
+                     (Render_Expr
+                        (Unit,
+                         Document,
+                         Expr.Elements (Index),
+                         State));
+            end loop;
+            Result := Result & SU.To_Unbounded_String (")");
+            return SU.To_String (Result);
          when CM.Expr_Bool =>
             return (if Expr.Bool_Value then "true" else "false");
          when CM.Expr_Null =>
@@ -4485,7 +4516,7 @@ package body Safe_Frontend.Ada_Emit is
               and then Left.Int_Value = Right.Int_Value;
          when CM.Expr_Real =>
             return FT.To_String (Left.Text) = FT.To_String (Right.Text);
-         when CM.Expr_String | CM.Expr_Char =>
+         when CM.Expr_String =>
             return FT.To_String (Left.Text) = FT.To_String (Right.Text);
          when CM.Expr_Bool =>
             return Left.Bool_Value = Right.Bool_Value;
@@ -4592,7 +4623,7 @@ package body Safe_Frontend.Ada_Emit is
       end if;
 
       case Expr.Kind is
-         when CM.Expr_Int | CM.Expr_Real | CM.Expr_String | CM.Expr_Char
+         when CM.Expr_Int | CM.Expr_Real | CM.Expr_String
             | CM.Expr_Bool | CM.Expr_Null | CM.Expr_Ident =>
             return Render_Expr (Unit, Document, Expr, State);
          when CM.Expr_Select =>

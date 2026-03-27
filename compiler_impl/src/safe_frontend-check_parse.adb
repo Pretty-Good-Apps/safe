@@ -627,6 +627,21 @@ package body Safe_Frontend.Check_Parse is
      (State            : in out Parser_State;
       Allow_Access_Def : Boolean) return CM.Type_Spec;
 
+   function Parse_Growable_Array_Type_Spec
+     (State : in out Parser_State) return CM.Type_Spec
+   is
+      Start  : constant FL.Token := Expect (State, "array");
+      Result : CM.Type_Spec;
+   begin
+      Require (State, "of");
+      Result.Kind := CM.Type_Spec_Growable_Array;
+      Result.Element_Type :=
+        new CM.Type_Spec'
+          (Parse_Type_Spec_Internal (State, Allow_Access_Def => True));
+      Result.Span := CM.Join (Start.Span, Result.Element_Type.Span);
+      return Result;
+   end Parse_Growable_Array_Type_Spec;
+
    function Parse_Tuple_Type_Spec
      (State            : in out Parser_State;
      Allow_Access_Def : Boolean) return CM.Type_Spec
@@ -794,6 +809,10 @@ package body Safe_Frontend.Check_Parse is
          return Parse_Access_Definition (State, Type_Decl_Context => False);
       elsif Current_Lower (State) = "binary" then
          return Parse_Binary_Type_Spec (State);
+      elsif Current_Lower (State) = "array"
+        and then FT.To_String (Next (State).Lexeme) /= "("
+      then
+         return Parse_Growable_Array_Type_Spec (State);
       elsif FT.To_String (Current (State).Lexeme) = "(" then
          return Parse_Tuple_Type_Spec (State, Allow_Access_Def);
       end if;
@@ -821,6 +840,12 @@ package body Safe_Frontend.Check_Parse is
       end if;
       if Current_Lower (State) = "binary" then
          Result := Parse_Binary_Type_Spec (State);
+         Result.Span := CM.Join (Start, Result.Span);
+         return Result;
+      elsif Current_Lower (State) = "array"
+        and then FT.To_String (Next (State).Lexeme) /= "("
+      then
+         Result := Parse_Growable_Array_Type_Spec (State);
          Result.Span := CM.Join (Start, Result.Span);
          return Result;
       end if;
@@ -886,6 +911,22 @@ package body Safe_Frontend.Check_Parse is
       Result.Span := CM.Join (Start.Span, Semi.Span);
       return Result;
    end Parse_Array_Type;
+
+   function Parse_Growable_Array_Type
+     (State : in out Parser_State;
+      Start : FL.Token) return CM.Type_Decl
+   is
+      Result : CM.Type_Decl;
+      Semi   : FL.Token;
+   begin
+      Require (State, "array");
+      Require (State, "of");
+      Result.Component_Type := Parse_Object_Type (State);
+      Semi := Expect (State, ";");
+      Result.Kind := CM.Type_Decl_Growable_Array;
+      Result.Span := CM.Join (Start.Span, Semi.Span);
+      return Result;
+   end Parse_Growable_Array_Type;
 
    function Parse_Component_Decl
      (State : in out Parser_State) return CM.Component_Decl
@@ -1114,8 +1155,15 @@ package body Safe_Frontend.Check_Parse is
             Item.High_Expr := Parse_Expression (State);
             Item.Kind := CM.Type_Decl_Float;
             Item.Span := CM.Join (Start.Span, Expect (State, ";").Span);
-         elsif Current_Lower (State) = "array" then
+         elsif Current_Lower (State) = "array"
+           and then FT.To_String (Next (State).Lexeme) = "("
+         then
             Item := Parse_Array_Type (State, Start);
+            Item.Is_Public := Is_Public;
+            Item.Name := Name.Lexeme;
+            Item.Has_Discriminant := False;
+         elsif Current_Lower (State) = "array" then
+            Item := Parse_Growable_Array_Type (State, Start);
             Item.Is_Public := Is_Public;
             Item.Name := Name.Lexeme;
             Item.Has_Discriminant := False;
@@ -1461,7 +1509,7 @@ package body Safe_Frontend.Check_Parse is
    begin
       if Expr = null then
          return False;
-      elsif Expr.Kind in CM.Expr_Int | CM.Expr_Bool | CM.Expr_Char then
+      elsif Expr.Kind in CM.Expr_Int | CM.Expr_Bool then
          return True;
       elsif Expr.Kind in CM.Expr_Call | CM.Expr_Apply
         and then Natural (Expr.Args.Length) = 1
@@ -2215,6 +2263,25 @@ package body Safe_Frontend.Check_Parse is
       return Result;
    end Parse_Parenthesized_Like;
 
+   function Parse_Array_Literal
+     (State : in out Parser_State) return CM.Expr_Access
+   is
+      Start  : constant FL.Token := Expect (State, "[");
+      Result : constant CM.Expr_Access := New_Expr;
+      Ender  : FL.Token;
+   begin
+      Result.Kind := CM.Expr_Array_Literal;
+      if FT.To_String (Current (State).Lexeme) /= "]" then
+         loop
+            Result.Elements.Append (Parse_Expression (State));
+            exit when not Match (State, ",");
+         end loop;
+      end if;
+      Ender := Expect (State, "]");
+      Result.Span := CM.Join (Start.Span, Ender.Span);
+      return Result;
+   end Parse_Array_Literal;
+
    function Parse_Allocator
      (State : in out Parser_State) return CM.Expr_Access
    is
@@ -2282,8 +2349,16 @@ package body Safe_Frontend.Check_Parse is
          return Result;
       elsif Token.Kind = FL.Character_Literal then
          Advance (State);
-         Result.Kind := CM.Expr_Char;
-         Result.Text := Token.Lexeme;
+         Result.Kind := CM.Expr_String;
+         declare
+            Literal_Text : constant String := FT.To_String (Token.Lexeme);
+         begin
+            Result.Text :=
+              FT.To_UString
+                (Character'Val (34)
+                 & Literal_Text (Literal_Text'First + 1 .. Literal_Text'Last - 1)
+                 & Character'Val (34));
+         end;
          Result.Span := Token.Span;
          return Result;
       elsif Lower = "new" then
@@ -2320,6 +2395,8 @@ package body Safe_Frontend.Check_Parse is
          return Parse_Name_Expression (State);
       elsif FT.To_String (Token.Lexeme) = "(" then
          return Parse_Parenthesized_Like (State);
+      elsif FT.To_String (Token.Lexeme) = "[" then
+         return Parse_Array_Literal (State);
       end if;
 
       Raise_Diag
@@ -2454,7 +2531,7 @@ package body Safe_Frontend.Check_Parse is
    function Parse_Relation
      (State : in out Parser_State) return CM.Expr_Access
    is
-      Result : CM.Expr_Access := Parse_Shift_Expr (State);
+      Result : constant CM.Expr_Access := Parse_Shift_Expr (State);
       Lower  : constant String := FT.To_String (Current (State).Lexeme);
       Right  : CM.Expr_Access;
       Next_Result : CM.Expr_Access;
@@ -2600,7 +2677,16 @@ package body Safe_Frontend.Check_Parse is
             Next_Result.Callee := Result;
             if FT.To_String (Current (State).Lexeme) /= ")" then
                loop
-                  Next_Result.Args.Append (Parse_Expression (State));
+                  declare
+                     Item : constant CM.Expr_Access := Parse_Expression (State);
+                  begin
+                     Next_Result.Args.Append (Item);
+                     if Current_Lower (State) = "to" then
+                        Require_Range_Keyword (State);
+                        Next_Result.Args.Append (Parse_Expression (State));
+                        exit;
+                     end if;
+                  end;
                   exit when not Match (State, ",");
                end loop;
             end if;

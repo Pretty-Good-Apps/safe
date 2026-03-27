@@ -834,7 +834,6 @@ package body Safe_Frontend.Mir_Analyze is
    begin
       Type_Env.Include ("integer", BT.Integer_Type);
       Type_Env.Include ("boolean", BT.Boolean_Type);
-      Type_Env.Include ("character", BT.Character_Type);
       Type_Env.Include ("string", BT.String_Type);
       Type_Env.Include ("result", BT.Result_Type);
       Type_Env.Include ("float", BT.Float_Type (With_Analysis_Metadata => True));
@@ -965,8 +964,6 @@ package body Safe_Frontend.Mir_Analyze is
          return (Low => INT64_LOW, High => INT64_HIGH, Excludes_Zero => False);
       elsif UString_Value (Info.Name) = "boolean" then
          return (Low => 0, High => 1, Excludes_Zero => False);
-      elsif UString_Value (Info.Name) = "character" then
-         return (Low => 0, High => 255, Excludes_Zero => False);
       elsif (Lower (UString_Value (Info.Kind)) = "binary"
              or else (Lower (UString_Value (Info.Kind)) = "subtype" and then Info.Has_Bit_Width))
         and then Info.Has_Bit_Width
@@ -1375,7 +1372,7 @@ package body Safe_Frontend.Mir_Analyze is
             return UString_Value (Expr.Text);
          when GM.Expr_Real =>
             return UString_Value (Expr.Text);
-         when GM.Expr_String | GM.Expr_Char =>
+         when GM.Expr_String =>
             return UString_Value (Expr.Text);
          when GM.Expr_Bool =>
             if Expr.Bool_Value then
@@ -3346,20 +3343,6 @@ package body Safe_Frontend.Mir_Analyze is
                   High          => Value,
                   Excludes_Zero => Value /= 0);
             end;
-         when GM.Expr_Char =>
-            declare
-               Text  : constant String := UString_Value (Expr.Text);
-               Value : Wide_Integer := 0;
-            begin
-               if Text'Length = 3 then
-                  Value := Wide_Integer (Character'Pos (Text (Text'First + 1)));
-                  return
-                    (Low           => Value,
-                     High          => Value,
-                     Excludes_Zero => Value /= 0);
-               end if;
-               return (Low => 0, High => 255, Excludes_Zero => False);
-            end;
          when GM.Expr_Bool =>
             return
               (Low           => (if Expr.Bool_Value then 1 else 0),
@@ -3894,10 +3877,6 @@ package body Safe_Frontend.Mir_Analyze is
          when GM.Expr_Bool =>
             Value.Kind := GM.Scalar_Value_Boolean;
             Value.Bool_Value := Inner.Bool_Value;
-            return True;
-         when GM.Expr_Char =>
-            Value.Kind := GM.Scalar_Value_Character;
-            Value.Text := Inner.Text;
             return True;
          when others =>
             return False;
@@ -5381,7 +5360,6 @@ package body Safe_Frontend.Mir_Analyze is
          end;
          return Null_Diagnostic;
       elsif UString_Value (Return_Type.Name) = "boolean"
-        or else UString_Value (Return_Type.Name) = "character"
         or else UString_Value (Return_Type.Name) = "string"
       then
          declare

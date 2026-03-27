@@ -105,7 +105,7 @@ package buffers
    public subtype buffer_index is buffer_size;
 
    public type buffer is private record
-      data   : array (buffer_index) of character = (others = ' ');
+      data   : string (4096) = "";
       length : buffer_size = 1;
 ```
 

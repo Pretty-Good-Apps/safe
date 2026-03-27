@@ -78,7 +78,6 @@ package body Safe_Frontend.Check_Lower is
    begin
       Type_Env.Include ("integer", BT.Integer_Type);
       Type_Env.Include ("boolean", BT.Boolean_Type);
-      Type_Env.Include ("character", BT.Character_Type);
       Type_Env.Include ("string", BT.String_Type);
       Type_Env.Include ("result", BT.Result_Type);
       Type_Env.Include ("float", BT.Float_Type);
@@ -139,8 +138,11 @@ package body Safe_Frontend.Check_Lower is
          return BT.Integer_Type;
       elsif Expr.Kind = CM.Expr_String then
          return Resolve_Type ("string", Type_Env);
-      elsif Expr.Kind = CM.Expr_Char then
-         return Resolve_Type ("character", Type_Env);
+      elsif Expr.Kind = CM.Expr_Array_Literal then
+         if Name'Length > 0 and then Type_Env.Contains (Name) then
+            return Type_Env.Element (Name);
+         end if;
+         return BT.Integer_Type;
       elsif Expr.Kind = CM.Expr_Real then
          if Name'Length > 0 and then Type_Env.Contains (Name) then
             return Type_Env.Element (Name);
@@ -169,8 +171,6 @@ package body Safe_Frontend.Check_Lower is
             return GM.Expr_Real;
          when CM.Expr_String =>
             return GM.Expr_String;
-         when CM.Expr_Char =>
-            return GM.Expr_Char;
          when CM.Expr_Bool =>
             return GM.Expr_Bool;
          when CM.Expr_Null =>
@@ -189,6 +189,8 @@ package body Safe_Frontend.Check_Lower is
             return GM.Expr_Allocator;
          when CM.Expr_Aggregate =>
             return GM.Expr_Aggregate;
+         when CM.Expr_Array_Literal =>
+            return GM.Expr_Array_Literal;
          when CM.Expr_Tuple =>
             return GM.Expr_Tuple;
          when CM.Expr_Annotated =>
@@ -231,7 +233,7 @@ package body Safe_Frontend.Check_Lower is
             end if;
          when CM.Expr_Real =>
             Result.Text := Expr.Text;
-         when CM.Expr_String | CM.Expr_Char =>
+         when CM.Expr_String =>
             Result.Text := Expr.Text;
          when CM.Expr_Bool =>
             Result.Bool_Value := Expr.Bool_Value;
@@ -263,6 +265,10 @@ package body Safe_Frontend.Check_Lower is
                Field.Expr := Lower_Expr (Item.Expr, Var_Types, Type_Env);
                Field.Span := Item.Span;
                Result.Fields.Append (Field);
+            end loop;
+         when CM.Expr_Array_Literal =>
+            for Item of Expr.Elements loop
+               Result.Elements.Append (Lower_Expr (Item, Var_Types, Type_Env));
             end loop;
          when CM.Expr_Tuple =>
             for Item of Expr.Elements loop
