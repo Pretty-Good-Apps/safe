@@ -132,7 +132,8 @@ def safe_build_project_text(
 
 
 def write_safe_build_support_files(paths: dict[str, Path]) -> None:
-    if not paths["main"].exists():
+    ada_main = paths["ada"] / "main.adb"
+    if not paths["main"].exists() and not ada_main.exists():
         unit_name = emitted_primary_unit(paths["ada"])
         paths["main"].write_text(safe_build_main_text(unit_name), encoding="utf-8")
     paths["gpr"].write_text(

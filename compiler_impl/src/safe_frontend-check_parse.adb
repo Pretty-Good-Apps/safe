@@ -510,6 +510,12 @@ package body Safe_Frontend.Check_Parse is
                     (Path    => Path_String (State),
                      Span    => Stmt.Span,
                      Message => "unit-scope statements must not contain local declarations"));
+            when CM.Stmt_Return =>
+               Raise_Diag
+                 (CM.Source_Frontend_Error
+                    (Path    => Path_String (State),
+                     Span    => Stmt.Span,
+                     Message => "unit-scope statements must not contain return statements"));
             when CM.Stmt_Receive | CM.Stmt_Try_Receive =>
                if not Stmt.Decl.Names.Is_Empty then
                   Raise_Diag
