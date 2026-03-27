@@ -495,6 +495,72 @@ package body Safe_Frontend.Check_Parse is
       Result     : in out CM.Parsed_Unit;
       Terminated : Boolean := False) is
       Parsed_Statements : Boolean := False;
+      procedure Validate_Unit_Statement (Stmt : CM.Statement_Access);
+
+      procedure Validate_Unit_Statement (Stmt : CM.Statement_Access) is
+      begin
+         if Stmt = null then
+            return;
+         end if;
+
+         case Stmt.Kind is
+            when CM.Stmt_Object_Decl | CM.Stmt_Destructure_Decl =>
+               Raise_Diag
+                 (CM.Source_Frontend_Error
+                    (Path    => Path_String (State),
+                     Span    => Stmt.Span,
+                     Message => "unit-scope statements must not contain local declarations"));
+            when CM.Stmt_Receive | CM.Stmt_Try_Receive =>
+               if not Stmt.Decl.Names.Is_Empty then
+                  Raise_Diag
+                    (CM.Source_Frontend_Error
+                       (Path    => Path_String (State),
+                        Span    => Stmt.Span,
+                        Message => "unit-scope statements must not contain local declarations"));
+               end if;
+            when CM.Stmt_If =>
+               for Nested of Stmt.Then_Stmts loop
+                  Validate_Unit_Statement (Nested);
+               end loop;
+               for Part of Stmt.Elsifs loop
+                  for Nested of Part.Statements loop
+                     Validate_Unit_Statement (Nested);
+                  end loop;
+               end loop;
+               if Stmt.Has_Else then
+                  for Nested of Stmt.Else_Stmts loop
+                     Validate_Unit_Statement (Nested);
+                  end loop;
+               end if;
+            when CM.Stmt_Case =>
+               for Arm of Stmt.Case_Arms loop
+                  for Nested of Arm.Statements loop
+                     Validate_Unit_Statement (Nested);
+                  end loop;
+               end loop;
+            when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
+               for Nested of Stmt.Body_Stmts loop
+                  Validate_Unit_Statement (Nested);
+               end loop;
+            when CM.Stmt_Select =>
+               for Arm of Stmt.Arms loop
+                  case Arm.Kind is
+                     when CM.Select_Arm_Channel =>
+                        for Nested of Arm.Channel_Data.Statements loop
+                           Validate_Unit_Statement (Nested);
+                        end loop;
+                     when CM.Select_Arm_Delay =>
+                        for Nested of Arm.Delay_Data.Statements loop
+                           Validate_Unit_Statement (Nested);
+                        end loop;
+                     when others =>
+                        null;
+                  end case;
+               end loop;
+            when others =>
+               null;
+         end case;
+      end Validate_Unit_Statement;
    begin
       loop
          exit when Current (State).Kind = FL.End_Of_File
@@ -515,7 +581,12 @@ package body Safe_Frontend.Check_Parse is
                      Message => "top-level declarations must appear before top-level statements"));
             end if;
             Parsed_Statements := True;
-            Result.Statements.Append (Parse_Statement (State));
+            declare
+               Stmt : constant CM.Statement_Access := Parse_Statement (State);
+            begin
+               Validate_Unit_Statement (Stmt);
+               Result.Statements.Append (Stmt);
+            end;
          end if;
       end loop;
    end Parse_Unit_Suite;
@@ -1399,32 +1470,6 @@ package body Safe_Frontend.Check_Parse is
       end if;
       return False;
    end Case_Choice_Is_Literal;
-
-   function Parse_Statement_Sequence
-     (State        : in out Parser_State;
-      End_Keywords : FT.UString_Vectors.Vector)
-      return CM.Statement_Access_Vectors.Vector
-   is
-      Result    : CM.Statement_Access_Vectors.Vector;
-      Match_End : Boolean;
-   begin
-      loop
-         declare
-            Lower : constant String := Current_Lower (State);
-         begin
-            Match_End := False;
-            for Keyword of End_Keywords loop
-               if Lower = FT.Lowercase (FT.To_String (Keyword)) then
-                  Match_End := True;
-                  exit;
-               end if;
-            end loop;
-            exit when Match_End or else Current (State).Kind = FL.End_Of_File;
-            Append_Parsed_Statement (Result, Parse_Statement (State));
-         end;
-      end loop;
-      return Result;
-   end Parse_Statement_Sequence;
 
    function Parse_Indented_Statement_Sequence
      (State    : in out Parser_State;

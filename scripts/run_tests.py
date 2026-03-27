@@ -25,7 +25,6 @@ VALIDATE_OUTPUT_CONTRACTS = REPO_ROOT / "scripts" / "validate_output_contracts.p
 NEGATIVE_SUCCESS_FIXTURES = {
     REPO_ROOT / "tests" / "negative" / "neg_chan_empty_recv.safe",
     REPO_ROOT / "tests" / "negative" / "neg_chan_full_send.safe",
-    REPO_ROOT / "tests" / "negative" / "neg_pr115_var_package_item.safe",
 }
 
 CONCURRENCY_REJECT_FIXTURES = {

@@ -3898,12 +3898,26 @@ package body Safe_Frontend.Check_Resolve is
    begin
       for Stmt of Statements loop
          case Stmt.Kind is
+            when CM.Stmt_Object_Decl | CM.Stmt_Destructure_Decl =>
+               Raise_Diag
+                 (CM.Source_Frontend_Error
+                    (Path    => Path,
+                     Span    => Stmt.Span,
+                     Message => "unit-scope statements must not contain local declarations"));
             when CM.Stmt_Return =>
                Raise_Diag
                  (CM.Source_Frontend_Error
                     (Path    => Path,
                      Span    => Stmt.Span,
-                     Message => "package-level statements must not contain return statements"));
+                     Message => "unit-scope statements must not contain return statements"));
+            when CM.Stmt_Receive | CM.Stmt_Try_Receive =>
+               if not Stmt.Decl.Names.Is_Empty then
+                  Raise_Diag
+                    (CM.Source_Frontend_Error
+                       (Path    => Path,
+                        Span    => Stmt.Span,
+                        Message => "unit-scope statements must not contain local declarations"));
+               end if;
             when CM.Stmt_If =>
                Validate_Unit_Statements (Stmt.Then_Stmts, Path);
                for Part of Stmt.Elsifs loop

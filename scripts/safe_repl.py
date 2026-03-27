@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import os
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -52,7 +51,6 @@ def compile_and_run(
     source: Path,
 ) -> tuple[bool, str]:
     paths = prepare_safe_build_root(source)
-    source_text = source.read_text(encoding="utf-8")
 
     check = run_command([str(safec), "check", str(source)], cwd=COMPILER_ROOT.parent, env=env)
     if check.returncode != 0:
@@ -87,7 +85,6 @@ def compile_and_run(
         detail = run.stderr or run.stdout or first_message(run)
         return False, detail
 
-    del source_text
     return True, run.stdout
 
 
