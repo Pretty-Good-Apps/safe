@@ -1,14 +1,11 @@
-package lookup_pair
+function find_code (opcode : in integer) returns (boolean, integer)
 
-   function find_code (opcode : in integer) returns (boolean, integer)
+   case opcode
+      when 1
+         return (true, 10)
 
-      case opcode
-         when 1
-            return (true, 10)
+      when 2
+         return (true, 20)
 
-         when 2
-            return (true, 20)
-
-         when others
-            return (false, 0)
-
+      when others
+         return (false, 0)

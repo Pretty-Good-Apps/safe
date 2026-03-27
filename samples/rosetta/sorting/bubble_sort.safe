@@ -1,17 +1,15 @@
-package bubble_sort
+subtype index is integer (1 to 8);
+subtype pass_index is integer (1 to 7);
+subtype element is integer (0 to 1000);
+type values is array (index) of element;
 
-   subtype index is integer (1 to 8);
-   subtype pass_index is integer (1 to 7);
-   subtype element is integer (0 to 1000);
-   type values is array (index) of element;
+function sort (data : in out values)
 
-   function sort (data : in out values)
-
-      var temp : element
-      for pass in pass_index
-         for j in pass_index
-            if data (index (j)) > data (index (j + 1))
-               temp = data (index (j))
-               data (index (j)) = data (index (j + 1))
-               data (index (j + 1)) = temp
+   var temp : element
+   for pass in pass_index
+      for j in pass_index
+         if data (index (j)) > data (index (j + 1))
+            temp = data (index (j))
+            data (index (j)) = data (index (j + 1))
+            data (index (j + 1)) = temp
 

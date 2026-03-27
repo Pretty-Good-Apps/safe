@@ -1,63 +1,61 @@
-package bounded_stack
+subtype slot is integer (1 to 8);
+subtype depth is integer (0 to 8);
+subtype item is integer (0 to 255);
+type storage is array (slot) of item;
 
-   subtype slot is integer (1 to 8);
-   subtype depth is integer (0 to 8);
-   subtype item is integer (0 to 255);
-   type storage is array (slot) of item;
+type stack is record
+   data : storage;
+   size : depth;
 
-   type stack is record
-      data : storage;
-      size : depth;
+function reset (s : out stack)
 
-   function reset (s : out stack)
+   s.size = 0
+   for i in slot
+      s.data (i) = 0
 
-      s.size = 0
-      for i in slot
-         s.data (i) = 0
+function push (s : in out stack; value : item)
 
-   function push (s : in out stack; value : item)
+   var next_size : depth = s.size
+   if s.size < depth.last
+      next_size = s.size + 1
+      s.size = next_size
+      s.data (slot (next_size)) = value
 
-      var next_size : depth = s.size
-      if s.size < depth.last
-         next_size = s.size + 1
-         s.size = next_size
-         s.data (slot (next_size)) = value
+function pop (s : in out stack; value : out item)
 
-   function pop (s : in out stack; value : out item)
+   case s.size
+      when 1
+         value = s.data (1)
+         s.size = 0
 
-      case s.size
-         when 1
-            value = s.data (1)
-            s.size = 0
+      when 2
+         value = s.data (2)
+         s.size = 1
 
-         when 2
-            value = s.data (2)
-            s.size = 1
+      when 3
+         value = s.data (3)
+         s.size = 2
 
-         when 3
-            value = s.data (3)
-            s.size = 2
+      when 4
+         value = s.data (4)
+         s.size = 3
 
-         when 4
-            value = s.data (4)
-            s.size = 3
+      when 5
+         value = s.data (5)
+         s.size = 4
 
-         when 5
-            value = s.data (5)
-            s.size = 4
+      when 6
+         value = s.data (6)
+         s.size = 5
 
-         when 6
-            value = s.data (6)
-            s.size = 5
+      when 7
+         value = s.data (7)
+         s.size = 6
 
-         when 7
-            value = s.data (7)
-            s.size = 6
+      when 8
+         value = s.data (8)
+         s.size = 7
 
-         when 8
-            value = s.data (8)
-            s.size = 7
-
-         when others
-            value = 0
+      when others
+         value = 0
 

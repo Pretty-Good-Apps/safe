@@ -1,14 +1,12 @@
-package lookup_result
+function lookup_name (opcode : in integer) returns (result, integer)
 
-   function lookup_name (opcode : in integer) returns (result, integer)
+   case opcode
+      when 1
+         return (ok (), 100)
 
-      case opcode
-         when 1
-            return (ok (), 100)
+      when 2
+         return (ok (), 200)
 
-         when 2
-            return (ok (), 200)
-
-         when others
-            return (fail ("unknown"), 0)
+      when others
+         return (fail ("unknown"), 0)
 

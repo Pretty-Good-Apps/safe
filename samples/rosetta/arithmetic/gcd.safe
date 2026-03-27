@@ -1,22 +1,20 @@
-package gcd
+subtype input_value is integer (1 to 10_000);
+subtype working_value is integer (0 to 10_000);
+subtype step_limit is integer (1 to 32);
 
-   subtype input_value is integer (1 to 10_000);
-   subtype working_value is integer (0 to 10_000);
-   subtype step_limit is integer (1 to 32);
+function compute (left : input_value; right : input_value) returns working_value
 
-   function compute (left : input_value; right : input_value) returns working_value
+   var a : working_value = left
+   var b : working_value = right
+   var temp : working_value = 0
+   for step in step_limit
+      if b == 0
+         return a
 
-      var a : working_value = left
-      var b : working_value = right
-      var temp : working_value = 0
-      for step in step_limit
-         if b == 0
-            return a
+      temp = b
+      b = a mod b
+      a = temp
 
-         temp = b
-         b = a mod b
-         a = temp
+   return a
 
-      return a
-
-   print (compute (48, 18))
+print (compute (48, 18))

@@ -1,18 +1,16 @@
-package opcode_dispatch
+type opcode is binary (8);
+code : opcode = opcode (1);
 
-   type opcode is binary (8);
-   code : opcode = opcode (1);
+function render (op : opcode) returns string
 
-   function render (op : opcode) returns string
+   case op
+      when opcode (0)
+         return "nop"
 
-      case op
-         when opcode (0)
-            return "nop"
+      when opcode (1)
+         return "load"
 
-         when opcode (1)
-            return "load"
+      when others
+         return "unknown"
 
-         when others
-            return "unknown"
-
-   print (render (code))
+print (render (code))
