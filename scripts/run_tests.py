@@ -253,6 +253,18 @@ DIAGNOSTIC_GOLDEN_CASES = [
         REPO_ROOT / "tests" / "negative" / "neg_pr118c_mixed_logical_operators.safe",
         REPO_ROOT / "tests" / "diagnostics_golden" / "diag_pr118c_mixed_logical_operators.txt",
     ),
+    (
+        REPO_ROOT / "tests" / "negative" / "neg_pr118c1_print_expression.safe",
+        REPO_ROOT / "tests" / "diagnostics_golden" / "diag_pr118c1_print_expression.txt",
+    ),
+    (
+        REPO_ROOT / "tests" / "negative" / "neg_pr118c1_print_bare_identifier.safe",
+        REPO_ROOT / "tests" / "diagnostics_golden" / "diag_pr118c1_print_bare_identifier.txt",
+    ),
+    (
+        REPO_ROOT / "tests" / "negative" / "neg_pr118c1_print_unsupported_type.safe",
+        REPO_ROOT / "tests" / "diagnostics_golden" / "diag_pr118c1_print_unsupported_type.txt",
+    ),
 ]
 
 

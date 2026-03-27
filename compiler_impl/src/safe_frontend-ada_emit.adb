@@ -55,6 +55,9 @@ package body Safe_Frontend.Ada_Emit is
      "pragma Partition_Elaboration_Policy(Sequential);" & ASCII.LF
      & "pragma Profile(Jorvik);" & ASCII.LF;
 
+   Safe_IO_Support_Marker : constant String :=
+     "--  Generated Safe print support";
+
    type Cleanup_Action is (Cleanup_Deallocate, Cleanup_Reset_Null);
 
    type Cleanup_Item is record
@@ -76,13 +79,32 @@ package body Safe_Frontend.Ada_Emit is
      (Index_Type   => Positive,
       Element_Type => Cleanup_Frame);
 
+   type Type_Binding is record
+      Name      : FT.UString := FT.To_UString ("");
+      Type_Info : GM.Type_Descriptor;
+   end record;
+
+   package Type_Binding_Vectors is new Ada.Containers.Indefinite_Vectors
+     (Index_Type   => Positive,
+      Element_Type => Type_Binding);
+
+   type Type_Binding_Frame is record
+      Bindings : Type_Binding_Vectors.Vector;
+   end record;
+
+   package Type_Binding_Frame_Vectors is new Ada.Containers.Indefinite_Vectors
+     (Index_Type   => Positive,
+      Element_Type => Type_Binding_Frame);
+
    type Emit_State is record
+      Needs_Safe_IO : Boolean := False;
       Needs_Safe_Runtime : Boolean := False;
       Needs_Ada_Strings_Unbounded : Boolean := False;
       Needs_Unevaluated_Use_Of_Old : Boolean := False;
       Needs_Gnat_Adc     : Boolean := False;
       Needs_Unchecked_Deallocation : Boolean := False;
       Wide_Local_Names   : FT.UString_Vectors.Vector;
+      Type_Binding_Stack : Type_Binding_Frame_Vectors.Vector;
       Unsupported_Span   : FT.Source_Span := FT.Null_Span;
       Unsupported_Message : FT.UString := FT.To_UString ("");
       Cleanup_Stack      : Cleanup_Frame_Vectors.Vector;
@@ -120,6 +142,25 @@ package body Safe_Frontend.Ada_Emit is
    procedure Restore_Wide_Names
      (State           : in out Emit_State;
       Previous_Length : Ada.Containers.Count_Type);
+   procedure Push_Type_Binding_Frame (State : in out Emit_State);
+   procedure Pop_Type_Binding_Frame (State : in out Emit_State);
+   procedure Add_Type_Binding
+     (State     : in out Emit_State;
+      Name      : String;
+      Type_Info : GM.Type_Descriptor);
+   procedure Register_Type_Bindings
+     (State        : in out Emit_State;
+      Declarations : CM.Resolved_Object_Decl_Vectors.Vector);
+   procedure Register_Type_Bindings
+     (State        : in out Emit_State;
+      Declarations : CM.Object_Decl_Vectors.Vector);
+   procedure Register_Param_Type_Bindings
+     (State  : in out Emit_State;
+      Params  : CM.Symbol_Vectors.Vector);
+   function Lookup_Bound_Type
+     (State     : Emit_State;
+      Name      : String;
+      Type_Info : out GM.Type_Descriptor) return Boolean;
    procedure Push_Cleanup_Frame (State : in out Emit_State);
    procedure Pop_Cleanup_Frame (State : in out Emit_State);
    procedure Add_Cleanup_Item
@@ -173,8 +214,29 @@ package body Safe_Frontend.Ada_Emit is
       Info     : GM.Type_Descriptor) return GM.Type_Descriptor;
    function Has_Type
      (Unit     : CM.Resolved_Unit;
-      Document : GM.Mir_Document;
-      Name     : String) return Boolean;
+     Document : GM.Mir_Document;
+     Name     : String) return Boolean;
+   function Type_Info_From_Name
+     (Unit      : CM.Resolved_Unit;
+      Document  : GM.Mir_Document;
+      Name      : String;
+      Type_Info : out GM.Type_Descriptor) return Boolean;
+   function Lookup_Object_Type
+     (Unit      : CM.Resolved_Unit;
+      Name      : String;
+      Type_Info : out GM.Type_Descriptor) return Boolean;
+   function Lookup_Selected_Type
+     (Unit      : CM.Resolved_Unit;
+      Document  : GM.Mir_Document;
+      Prefix    : GM.Type_Descriptor;
+      Selector  : String;
+      Type_Info : out GM.Type_Descriptor) return Boolean;
+   function Resolve_Print_Type
+     (Unit      : CM.Resolved_Unit;
+      Document  : GM.Mir_Document;
+      Expr      : CM.Expr_Access;
+      State     : Emit_State;
+      Type_Info : out GM.Type_Descriptor) return Boolean;
    function Is_Integer_Type
      (Unit     : CM.Resolved_Unit;
       Document : GM.Mir_Document;
@@ -282,6 +344,11 @@ package body Safe_Frontend.Ada_Emit is
       Local_Context : Boolean := False) return String;
 
    function Render_Expr
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Expr     : CM.Expr_Access;
+      State    : in out Emit_State) return String;
+   function Render_Print_Argument
      (Unit     : CM.Resolved_Unit;
       Document : GM.Mir_Document;
       Expr     : CM.Expr_Access;
@@ -493,6 +560,73 @@ package body Safe_Frontend.Ada_Emit is
       return Image;
    end Trim_Wide_Image;
 
+   function Is_Print_Call (Expr : CM.Expr_Access) return Boolean is
+   begin
+      return
+        Expr /= null
+        and then Expr.Kind = CM.Expr_Call
+        and then FT.Lowercase (CM.Flatten_Name (Expr.Callee)) = "print";
+   end Is_Print_Call;
+
+   function Statements_Use_Print
+     (Statements : CM.Statement_Access_Vectors.Vector) return Boolean
+   is
+   begin
+      for Item of Statements loop
+         if Item = null then
+            null;
+         else
+            case Item.Kind is
+               when CM.Stmt_Call =>
+                  if Is_Print_Call (Item.Call) then
+                     return True;
+                  end if;
+               when CM.Stmt_If =>
+                  if Statements_Use_Print (Item.Then_Stmts) then
+                     return True;
+                  end if;
+                  for Part of Item.Elsifs loop
+                     if Statements_Use_Print (Part.Statements) then
+                        return True;
+                     end if;
+                  end loop;
+                  if Item.Has_Else and then Statements_Use_Print (Item.Else_Stmts) then
+                     return True;
+                  end if;
+               when CM.Stmt_Case =>
+                  for Arm of Item.Case_Arms loop
+                     if Statements_Use_Print (Arm.Statements) then
+                        return True;
+                     end if;
+                  end loop;
+               when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
+                  if Statements_Use_Print (Item.Body_Stmts) then
+                     return True;
+                  end if;
+               when CM.Stmt_Select =>
+                  for Arm of Item.Arms loop
+                     case Arm.Kind is
+                        when CM.Select_Arm_Channel =>
+                           if Statements_Use_Print (Arm.Channel_Data.Statements) then
+                              return True;
+                           end if;
+                        when CM.Select_Arm_Delay =>
+                           if Statements_Use_Print (Arm.Delay_Data.Statements) then
+                              return True;
+                           end if;
+                        when others =>
+                           null;
+                     end case;
+                  end loop;
+               when others =>
+                  null;
+            end case;
+         end if;
+      end loop;
+
+      return False;
+   end Statements_Use_Print;
+
    function Indentation (Depth : Natural) return String is
    begin
       if Depth = 0 then
@@ -569,6 +703,101 @@ package body Safe_Frontend.Ada_Emit is
          State.Wide_Local_Names.Delete_Last;
       end loop;
    end Restore_Wide_Names;
+
+   procedure Push_Type_Binding_Frame (State : in out Emit_State) is
+   begin
+      State.Type_Binding_Stack.Append ((Bindings => <>));
+   end Push_Type_Binding_Frame;
+
+   procedure Pop_Type_Binding_Frame (State : in out Emit_State) is
+   begin
+      if State.Type_Binding_Stack.Is_Empty then
+         Raise_Internal ("type binding frame stack underflow during Ada emission");
+      end if;
+      State.Type_Binding_Stack.Delete_Last;
+   end Pop_Type_Binding_Frame;
+
+   procedure Add_Type_Binding
+     (State     : in out Emit_State;
+      Name      : String;
+      Type_Info : GM.Type_Descriptor) is
+   begin
+      if State.Type_Binding_Stack.Is_Empty then
+         Raise_Internal ("type binding added outside an active binding scope during Ada emission");
+      end if;
+
+      declare
+         Frame : Type_Binding_Frame := State.Type_Binding_Stack.Last_Element;
+      begin
+         Frame.Bindings.Append
+           ((Name      => FT.To_UString (Name),
+             Type_Info => Type_Info));
+         State.Type_Binding_Stack.Replace_Element (State.Type_Binding_Stack.Last_Index, Frame);
+      end;
+   end Add_Type_Binding;
+
+   procedure Register_Type_Bindings
+     (State        : in out Emit_State;
+      Declarations : CM.Resolved_Object_Decl_Vectors.Vector) is
+   begin
+      for Decl of Declarations loop
+         for Name of Decl.Names loop
+            Add_Type_Binding (State, FT.To_String (Name), Decl.Type_Info);
+         end loop;
+      end loop;
+   end Register_Type_Bindings;
+
+   procedure Register_Type_Bindings
+     (State        : in out Emit_State;
+      Declarations : CM.Object_Decl_Vectors.Vector) is
+   begin
+      for Decl of Declarations loop
+         for Name of Decl.Names loop
+            Add_Type_Binding (State, FT.To_String (Name), Decl.Type_Info);
+         end loop;
+      end loop;
+   end Register_Type_Bindings;
+
+   procedure Register_Param_Type_Bindings
+     (State  : in out Emit_State;
+      Params  : CM.Symbol_Vectors.Vector) is
+   begin
+      for Param of Params loop
+         Add_Type_Binding (State, FT.To_String (Param.Name), Param.Type_Info);
+      end loop;
+   end Register_Param_Type_Bindings;
+
+   function Lookup_Bound_Type
+     (State     : Emit_State;
+      Name      : String;
+      Type_Info : out GM.Type_Descriptor) return Boolean
+   is
+   begin
+      if Name'Length = 0 or else State.Type_Binding_Stack.Is_Empty then
+         return False;
+      end if;
+
+      for Frame_Index in reverse State.Type_Binding_Stack.First_Index .. State.Type_Binding_Stack.Last_Index loop
+         declare
+            Frame : constant Type_Binding_Frame := State.Type_Binding_Stack (Frame_Index);
+         begin
+            if not Frame.Bindings.Is_Empty then
+               for Binding_Index in reverse Frame.Bindings.First_Index .. Frame.Bindings.Last_Index loop
+                  declare
+                     Binding : constant Type_Binding := Frame.Bindings (Binding_Index);
+                  begin
+                     if FT.To_String (Binding.Name) = Name then
+                        Type_Info := Binding.Type_Info;
+                        return True;
+                     end if;
+                  end;
+               end loop;
+            end if;
+         end;
+      end loop;
+
+      return False;
+   end Lookup_Bound_Type;
 
    procedure Push_Cleanup_Frame (State : in out Emit_State) is
    begin
@@ -1091,6 +1320,253 @@ package body Safe_Frontend.Ada_Emit is
    begin
       return Has_Text (Item.Name);
    end Has_Type;
+
+   function Type_Info_From_Name
+     (Unit      : CM.Resolved_Unit;
+      Document  : GM.Mir_Document;
+      Name      : String;
+      Type_Info : out GM.Type_Descriptor) return Boolean
+   is
+      Lower_Name : constant String := FT.Lowercase (Name);
+   begin
+      if Name'Length = 0 then
+         return False;
+      elsif Has_Type (Unit, Document, Name) then
+         Type_Info := Lookup_Type (Unit, Document, Name);
+         return True;
+      elsif Lower_Name = "integer" or else Lower_Name = "long_long_integer" then
+         Type_Info := BT.Integer_Type;
+         return True;
+      elsif Lower_Name = "boolean" then
+         Type_Info := BT.Boolean_Type;
+         return True;
+      elsif Lower_Name = "string" then
+         Type_Info := BT.String_Type;
+         return True;
+      elsif Lower_Name = "result" then
+         Type_Info := BT.Result_Type;
+         return True;
+      elsif Is_Builtin_Binary_Name (Lower_Name) then
+         Type_Info := BT.Binary_Type (Positive (Binary_Width_From_Name (Lower_Name)));
+         return True;
+      end if;
+
+      return False;
+   end Type_Info_From_Name;
+
+   function Lookup_Object_Type
+     (Unit      : CM.Resolved_Unit;
+      Name      : String;
+      Type_Info : out GM.Type_Descriptor) return Boolean
+   is
+   begin
+      for Decl of Unit.Objects loop
+         for Object_Name of Decl.Names loop
+            if FT.To_String (Object_Name) = Name then
+               Type_Info := Decl.Type_Info;
+               return True;
+            end if;
+         end loop;
+      end loop;
+      return False;
+   end Lookup_Object_Type;
+
+   function Lookup_Selected_Type
+     (Unit      : CM.Resolved_Unit;
+      Document  : GM.Mir_Document;
+      Prefix    : GM.Type_Descriptor;
+      Selector  : String;
+      Type_Info : out GM.Type_Descriptor) return Boolean
+   is
+      Base : GM.Type_Descriptor := Base_Type (Unit, Document, Prefix);
+   begin
+      if Selector'Length = 0 or else not Has_Text (Base.Name) then
+         return False;
+      end if;
+
+      if FT.Lowercase (Selector) = "all"
+        and then Is_Access_Type (Base)
+        and then Base.Has_Target
+      then
+         return Type_Info_From_Name (Unit, Document, FT.To_String (Base.Target), Type_Info);
+      end if;
+
+      if Is_Access_Type (Base) and then Base.Has_Target then
+         Base := Lookup_Type (Unit, Document, FT.To_String (Base.Target));
+      end if;
+
+      if Is_Result_Builtin (Base) and then FT.Lowercase (Selector) = "message" then
+         Type_Info := BT.String_Type;
+         return True;
+      end if;
+
+      if Is_Tuple_Type (Base)
+        and then Selector (Selector'First) in '0' .. '9'
+      then
+         declare
+            Tuple_Index : constant Positive := Positive (Natural'Value (Selector));
+         begin
+            if Tuple_Index in Base.Tuple_Element_Types.First_Index .. Base.Tuple_Element_Types.Last_Index then
+               return
+                 Type_Info_From_Name
+                   (Unit,
+                    Document,
+                    FT.To_String (Base.Tuple_Element_Types (Tuple_Index)),
+                    Type_Info);
+            end if;
+         exception
+            when Constraint_Error =>
+               return False;
+         end;
+      end if;
+
+      if FT.To_String (Base.Kind) = "record" then
+         if Base.Has_Discriminant
+           and then FT.To_String (Base.Discriminant_Name) = Selector
+         then
+            return
+              Type_Info_From_Name
+                (Unit,
+                 Document,
+                 FT.To_String (Base.Discriminant_Type),
+                 Type_Info);
+         end if;
+
+         for Field of Base.Fields loop
+            if FT.To_String (Field.Name) = Selector then
+               return
+                 Type_Info_From_Name
+                   (Unit,
+                    Document,
+                    FT.To_String (Field.Type_Name),
+                    Type_Info);
+            end if;
+         end loop;
+      end if;
+
+      return False;
+   end Lookup_Selected_Type;
+
+   function Resolve_Print_Type
+     (Unit      : CM.Resolved_Unit;
+      Document  : GM.Mir_Document;
+      Expr      : CM.Expr_Access;
+      State     : Emit_State;
+      Type_Info : out GM.Type_Descriptor) return Boolean
+   is
+      Prefix_Info : GM.Type_Descriptor;
+      Left_Info   : GM.Type_Descriptor;
+      Operator    : constant String :=
+        (if Expr /= null and then Has_Text (Expr.Operator) then FT.To_String (Expr.Operator) else "");
+   begin
+      if Expr = null then
+         return False;
+      elsif Has_Text (Expr.Type_Name)
+        and then Type_Info_From_Name (Unit, Document, FT.To_String (Expr.Type_Name), Type_Info)
+      then
+         return True;
+      end if;
+
+      case Expr.Kind is
+         when CM.Expr_String =>
+            Type_Info := BT.String_Type;
+            return True;
+         when CM.Expr_Bool =>
+            Type_Info := BT.Boolean_Type;
+            return True;
+         when CM.Expr_Int =>
+            Type_Info := BT.Integer_Type;
+            return True;
+         when CM.Expr_Ident =>
+            return
+              Lookup_Bound_Type (State, FT.To_String (Expr.Name), Type_Info)
+              or else Lookup_Object_Type (Unit, FT.To_String (Expr.Name), Type_Info);
+         when CM.Expr_Select =>
+            return
+              Expr.Prefix /= null
+              and then Resolve_Print_Type (Unit, Document, Expr.Prefix, State, Prefix_Info)
+              and then Lookup_Selected_Type
+                (Unit,
+                 Document,
+                 Prefix_Info,
+                 FT.To_String (Expr.Selector),
+                 Type_Info);
+         when CM.Expr_Resolved_Index =>
+            if Expr.Prefix /= null
+              and then Resolve_Print_Type (Unit, Document, Expr.Prefix, State, Prefix_Info)
+            then
+               declare
+                  Base : constant GM.Type_Descriptor := Base_Type (Unit, Document, Prefix_Info);
+               begin
+                  if Base.Has_Component_Type then
+                     return
+                       Type_Info_From_Name
+                         (Unit,
+                          Document,
+                          FT.To_String (Base.Component_Type),
+                          Type_Info);
+                  end if;
+               end;
+            end if;
+            return False;
+         when CM.Expr_Conversion | CM.Expr_Annotated | CM.Expr_Subtype_Indication =>
+            return
+              (Expr.Target /= null
+               and then Resolve_Print_Type (Unit, Document, Expr.Target, State, Type_Info))
+              or else
+              (Expr.Inner /= null
+               and then Resolve_Print_Type (Unit, Document, Expr.Inner, State, Type_Info));
+         when CM.Expr_Call =>
+            if Expr.Callee /= null
+              and then Expr.Callee.Kind in CM.Expr_Ident | CM.Expr_Select
+            then
+               declare
+                  Callee_Name : constant String := FT.To_String (Expr.Callee.Name);
+               begin
+                  if Callee_Name'Length > 0 then
+                     for Subprogram of Unit.Subprograms loop
+                        if FT.To_String (Subprogram.Name) = Callee_Name
+                          and then Subprogram.Has_Return_Type
+                        then
+                           Type_Info := Subprogram.Return_Type;
+                           return True;
+                        end if;
+                     end loop;
+                  end if;
+               end;
+            end if;
+            return False;
+         when CM.Expr_Unary =>
+            return
+              Expr.Inner /= null
+              and then Resolve_Print_Type (Unit, Document, Expr.Inner, State, Type_Info);
+         when CM.Expr_Binary =>
+            if Operator in "=" | "/=" | "<" | "<=" | ">" | ">=" | "and then" | "or else" then
+               Type_Info := BT.Boolean_Type;
+               return True;
+            elsif Operator in "and" | "or" | "xor" then
+               if Expr.Left /= null
+                 and then Resolve_Print_Type (Unit, Document, Expr.Left, State, Left_Info)
+               then
+                  if Is_Binary_Type (Unit, Document, Left_Info) then
+                     Type_Info := Left_Info;
+                     return True;
+                  elsif FT.Lowercase (FT.To_String (Base_Type (Unit, Document, Left_Info).Kind)) = "boolean"
+                    or else FT.Lowercase (FT.To_String (Base_Type (Unit, Document, Left_Info).Name)) = "boolean"
+                  then
+                     Type_Info := BT.Boolean_Type;
+                     return True;
+                  end if;
+               end if;
+               return False;
+            end if;
+            return
+              Expr.Left /= null
+              and then Resolve_Print_Type (Unit, Document, Expr.Left, State, Type_Info);
+         when others =>
+            return False;
+      end case;
+   end Resolve_Print_Type;
 
    function Is_Integer_Type
      (Unit     : CM.Resolved_Unit;
@@ -2158,11 +2634,11 @@ package body Safe_Frontend.Ada_Emit is
               (State,
                Expr.Span,
                "text literal missing source text");
-        when CM.Expr_Bool =>
+         when CM.Expr_Bool =>
             return (if Expr.Bool_Value then "true" else "false");
-        when CM.Expr_Null =>
+         when CM.Expr_Null =>
             return "null";
-        when CM.Expr_Ident =>
+         when CM.Expr_Ident =>
             if FT.Lowercase (FT.To_String (Expr.Name)) = "ok"
               and then FT.Lowercase (FT.To_String (Expr.Type_Name)) = "result"
             then
@@ -2411,7 +2887,7 @@ package body Safe_Frontend.Ada_Emit is
               & (if Expr.Inner /= null and then Expr.Inner.Kind = CM.Expr_Aggregate
                  then Render_Expr (Unit, Document, Expr.Inner, State)
                  else "(" & Render_Expr (Unit, Document, Expr.Inner, State) & ")");
-        when CM.Expr_Unary =>
+         when CM.Expr_Unary =>
             if FT.To_String (Expr.Operator) = "not"
               and then Has_Text (Expr.Type_Name)
               and then Is_Binary_Type (Unit, Document, FT.To_String (Expr.Type_Name))
@@ -2479,6 +2955,49 @@ package body Safe_Frontend.Ada_Emit is
                   & "'");
       end case;
    end Render_Expr;
+
+   function Render_Print_Argument
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Expr     : CM.Expr_Access;
+      State    : in out Emit_State) return String
+   is
+      Value_Image : constant String := Render_Expr (Unit, Document, Expr, State);
+      Info        : GM.Type_Descriptor;
+   begin
+      if Expr.Kind = CM.Expr_String then
+         return Value_Image;
+      elsif Expr.Kind = CM.Expr_Bool then
+         return "(if " & Value_Image & " then ""true"" else ""false"")";
+      elsif Expr.Kind = CM.Expr_Int then
+         return
+           "Ada.Strings.Fixed.Trim (Long_Long_Integer'Image (Long_Long_Integer ("
+           & Value_Image
+           & ")), Ada.Strings.Both)";
+      elsif Resolve_Print_Type (Unit, Document, Expr, State, Info) then
+         declare
+            Base_Info : constant GM.Type_Descriptor := Base_Type (Unit, Document, Info);
+            Base_Kind : constant String := FT.Lowercase (FT.To_String (Base_Info.Kind));
+            Base_Name : constant String := FT.Lowercase (FT.To_String (Base_Info.Name));
+         begin
+            if Base_Kind = "string" or else Base_Name = "string" then
+               return Value_Image;
+            elsif Base_Kind = "boolean" or else Base_Name = "boolean" then
+               return "(if " & Value_Image & " then ""true"" else ""false"")";
+            elsif Is_Integer_Type (Unit, Document, Info) then
+               return
+                 "Ada.Strings.Fixed.Trim (Long_Long_Integer'Image (Long_Long_Integer ("
+                 & Value_Image
+                 & ")), Ada.Strings.Both)";
+            end if;
+         end;
+      end if;
+
+      Raise_Unsupported
+        (State,
+         Expr.Span,
+         "print argument type was not resolved during Ada emission");
+   end Render_Print_Argument;
 
    function Render_Float_Convex_Combination
      (Unit     : CM.Resolved_Unit;
@@ -4511,6 +5030,7 @@ package body Safe_Frontend.Ada_Emit is
    is
       Summary : constant MB.Graph_Summary :=
         Find_Graph_Summary (Bronze, FT.To_String (Subprogram.Name));
+      Uses_Print : constant Boolean := Statements_Use_Print (Subprogram.Statements);
       Global_Image  : constant String := Render_Global_Aspect (Unit, Summary);
       Depends_Image : constant String :=
         Render_Depends_Aspect (Unit, Subprogram, Summary);
@@ -4518,41 +5038,42 @@ package body Safe_Frontend.Ada_Emit is
         Render_Access_Param_Precondition (Unit, Document, Subprogram, State);
       Post_Image : constant String :=
         Render_Access_Param_Postcondition (Unit, Document, Subprogram, State);
-      Result : SU.Unbounded_String :=
-        SU.To_Unbounded_String (" with Global => " & Global_Image);
+      Result : SU.Unbounded_String;
+      Has_Aspect : Boolean := False;
+
+      procedure Append_Aspect (Text : String) is
+      begin
+         if not Has_Aspect then
+            Result := Result & SU.To_Unbounded_String (" with " & Text);
+            Has_Aspect := True;
+         else
+            Result :=
+              Result
+              & SU.To_Unbounded_String
+                  ("," & ASCII.LF
+                   & Indentation (4)
+                   & Text);
+         end if;
+      end Append_Aspect;
    begin
-      if not Has_Text (Summary.Name) then
-         return "";
+      if Uses_Print then
+         Append_Aspect ("SPARK_Mode => Off");
       end if;
 
-      if Depends_Image'Length > 0 then
-         Result :=
-           Result
-           & SU.To_Unbounded_String
-               ("," & ASCII.LF
-                & Indentation (4)
-                & "Depends => ("
-                & Depends_Image
-                & ")");
+      if Has_Text (Summary.Name) then
+         Append_Aspect ("Global => " & Global_Image);
+
+         if Depends_Image'Length > 0 then
+            Append_Aspect ("Depends => (" & Depends_Image & ")");
+         end if;
+         if Pre_Image'Length > 0 then
+            Append_Aspect ("Pre => " & Pre_Image);
+         end if;
+         if Post_Image'Length > 0 then
+            Append_Aspect ("Post => " & Post_Image);
+         end if;
       end if;
-      if Pre_Image'Length > 0 then
-         Result :=
-           Result
-           & SU.To_Unbounded_String
-               ("," & ASCII.LF
-                & Indentation (4)
-                & "Pre => "
-                & Pre_Image);
-      end if;
-      if Post_Image'Length > 0 then
-         Result :=
-           Result
-           & SU.To_Unbounded_String
-               ("," & ASCII.LF
-                & Indentation (4)
-                & "Post => "
-                & Post_Image);
-      end if;
+
       return SU.To_String (Result);
    end Render_Subprogram_Aspects;
 
@@ -5470,6 +5991,8 @@ package body Safe_Frontend.Ada_Emit is
                      State,
                      Block_Declarations,
                      Tail);
+                  Push_Type_Binding_Frame (State);
+                  Register_Type_Bindings (State, Block_Declarations);
                   Push_Cleanup_Frame (State);
                   Register_Cleanup_Items (State, Block_Declarations);
                   Append_Line (Buffer, "declare", Depth);
@@ -5493,6 +6016,7 @@ package body Safe_Frontend.Ada_Emit is
                   end if;
                   Append_Line (Buffer, "end;", Depth);
                   Pop_Cleanup_Frame (State);
+                  Pop_Type_Binding_Frame (State);
                   Restore_Wide_Names (State, Previous_Wide_Count);
                end;
                return;
@@ -5515,6 +6039,7 @@ package body Safe_Frontend.Ada_Emit is
                      State,
                      Empty_Declarations,
                      Tail_Statements (Index));
+                  Push_Type_Binding_Frame (State);
                   Push_Cleanup_Frame (State);
                   Append_Line (Buffer, "declare", Depth);
                   Append_Line
@@ -5532,19 +6057,34 @@ package body Safe_Frontend.Ada_Emit is
                      Depth + 1);
                   for Tuple_Index in Item.Destructure.Names.First_Index .. Item.Destructure.Names.Last_Index loop
                      Append_Line
-                       (Buffer,
-                        FT.To_String (Item.Destructure.Names (Tuple_Index))
-                        & " : "
-                        & Render_Type_Name
-                            (Unit,
+                        (Buffer,
+                         FT.To_String (Item.Destructure.Names (Tuple_Index))
+                         & " : "
+                         & Render_Type_Name
+                             (Unit,
                              Document,
                              FT.To_String (Tuple_Type.Tuple_Element_Types (Tuple_Index)))
                         & " := "
                         & Temp_Name
-                        & "."
-                        & Tuple_Field_Name (Positive (Tuple_Index))
-                        & ";",
+                             & "."
+                             & Tuple_Field_Name (Positive (Tuple_Index))
+                             & ";",
                         Depth + 1);
+                     declare
+                        Element_Type : GM.Type_Descriptor;
+                     begin
+                        if Type_Info_From_Name
+                             (Unit,
+                              Document,
+                              FT.To_String (Tuple_Type.Tuple_Element_Types (Tuple_Index)),
+                              Element_Type)
+                        then
+                           Add_Type_Binding
+                             (State,
+                              FT.To_String (Item.Destructure.Names (Tuple_Index)),
+                              Element_Type);
+                        end if;
+                     end;
                   end loop;
                   Append_Line (Buffer, "begin", Depth);
                   Render_Required_Statement_Suite
@@ -5558,6 +6098,7 @@ package body Safe_Frontend.Ada_Emit is
                      In_Loop);
                   Append_Line (Buffer, "end;", Depth);
                   Pop_Cleanup_Frame (State);
+                  Pop_Type_Binding_Frame (State);
                   Restore_Wide_Names (State, Previous_Wide_Count);
                end;
                return;
@@ -5570,10 +6111,25 @@ package body Safe_Frontend.Ada_Emit is
                     (Buffer, Unit, Document, State, Item.Target, Depth);
                end if;
             when CM.Stmt_Call =>
-               Append_Line
-                 (Buffer,
-                  Render_Expr (Unit, Document, Item.Call, State) & ";",
-                  Depth);
+               if Is_Print_Call (Item.Call) then
+                  State.Needs_Safe_IO := True;
+                  Append_Line
+                    (Buffer,
+                     Safe_IO_Unit_Name (FT.To_String (Unit.Package_Name))
+                     & ".Put_Line ("
+                     & Render_Print_Argument
+                         (Unit,
+                          Document,
+                          Item.Call.Args (Item.Call.Args.First_Index),
+                          State)
+                     & ");",
+                     Depth);
+               else
+                  Append_Line
+                    (Buffer,
+                     Render_Expr (Unit, Document, Item.Call, State) & ";",
+                     Depth);
+               end if;
             when CM.Stmt_Return =>
                if Item.Value /= null and then Has_Active_Cleanup_Items (State) then
                   Append_Return_With_Cleanup
@@ -6239,11 +6795,15 @@ package body Safe_Frontend.Ada_Emit is
         Non_Alias_Declarations (Subprogram.Declarations);
       Inner_Alias_Declarations : constant CM.Resolved_Object_Decl_Vectors.Vector :=
         Alias_Declarations (Subprogram.Declarations);
+      Uses_Print : constant Boolean := Statements_Use_Print (Subprogram.Statements);
       Previous_Wide_Count : constant Ada.Containers.Count_Type :=
         State.Wide_Local_Names.Length;
    begin
       Collect_Wide_Locals
         (Unit, Document, State, Subprogram.Declarations, Subprogram.Statements);
+      Push_Type_Binding_Frame (State);
+      Register_Param_Type_Bindings (State, Subprogram.Params);
+      Register_Type_Bindings (State, Outer_Declarations);
       Push_Cleanup_Frame (State);
       Register_Cleanup_Items (State, Outer_Declarations);
       Append_Line
@@ -6253,6 +6813,7 @@ package body Safe_Frontend.Ada_Emit is
          & FT.To_String (Subprogram.Name)
          & Render_Subprogram_Params (Unit, Document, Subprogram.Params)
          & Render_Subprogram_Return (Subprogram)
+         & (if Uses_Print then " with SPARK_Mode => Off" else "")
          & " is",
          1);
       Render_Block_Declarations
@@ -6261,6 +6822,8 @@ package body Safe_Frontend.Ada_Emit is
       Append_Line (Buffer, "begin", 1);
       Render_In_Out_Param_Stabilizers (Buffer, Subprogram, 2);
       if not Inner_Alias_Declarations.Is_Empty then
+         Push_Type_Binding_Frame (State);
+         Register_Type_Bindings (State, Inner_Alias_Declarations);
          Append_Line (Buffer, "declare", 2);
          Render_Block_Declarations
            (Buffer, Unit, Document, Inner_Alias_Declarations, State, 3);
@@ -6274,6 +6837,7 @@ package body Safe_Frontend.Ada_Emit is
             3,
             (if Subprogram.Has_Return_Type then Render_Type_Name (Subprogram.Return_Type) else ""));
          Append_Line (Buffer, "end;", 2);
+         Pop_Type_Binding_Frame (State);
       else
          Render_Required_Statement_Suite
            (Buffer,
@@ -6290,6 +6854,7 @@ package body Safe_Frontend.Ada_Emit is
       Append_Line (Buffer, "end " & FT.To_String (Subprogram.Name) & ";", 1);
       Append_Line (Buffer);
       Pop_Cleanup_Frame (State);
+      Pop_Type_Binding_Frame (State);
       Restore_Wide_Names (State, Previous_Wide_Count);
    end Render_Subprogram_Body;
 
@@ -6300,12 +6865,21 @@ package body Safe_Frontend.Ada_Emit is
       Task_Item : CM.Resolved_Task;
       State     : in out Emit_State)
    is
+      Uses_Print : constant Boolean := Statements_Use_Print (Task_Item.Statements);
       Previous_Wide_Count : constant Ada.Containers.Count_Type :=
         State.Wide_Local_Names.Length;
    begin
       Collect_Wide_Locals
         (Unit, Document, State, Task_Item.Declarations, Task_Item.Statements);
-      Append_Line (Buffer, "task body " & FT.To_String (Task_Item.Name) & " is", 1);
+      Push_Type_Binding_Frame (State);
+      Register_Type_Bindings (State, Task_Item.Declarations);
+      Append_Line
+        (Buffer,
+         "task body "
+         & FT.To_String (Task_Item.Name)
+         & (if Uses_Print then " with SPARK_Mode => Off" else "")
+         & " is",
+         1);
       Render_Block_Declarations
         (Buffer, Unit, Document, Task_Item.Declarations, State, 2);
       Render_Free_Declarations (Buffer, Task_Item.Declarations, 2);
@@ -6317,6 +6891,7 @@ package body Safe_Frontend.Ada_Emit is
       end if;
       Append_Line (Buffer, "end " & FT.To_String (Task_Item.Name) & ";", 1);
       Append_Line (Buffer);
+      Pop_Type_Binding_Frame (State);
       Restore_Wide_Names (State, Previous_Wide_Count);
    end Render_Task_Body;
 
@@ -6332,6 +6907,62 @@ package body Safe_Frontend.Ada_Emit is
       end loop;
       return Result;
    end Unit_File_Stem;
+
+   function Safe_IO_Unit_Name (Unit_Name : String) return String is
+      Base : String := Unit_Name;
+   begin
+      if Base'Length = 0 then
+         return "generated_safe_io";
+      end if;
+
+      for Index in Base'Range loop
+         if Base (Index) = '.' then
+            Base (Index) := '_';
+         else
+            Base (Index) := Ada.Characters.Handling.To_Lower (Base (Index));
+         end if;
+      end loop;
+      return Base & "_safe_io";
+   end Safe_IO_Unit_Name;
+
+   function Safe_IO_Spec_Text (Unit_Name : String) return String is
+      Support_Name : constant String := Safe_IO_Unit_Name (Unit_Name);
+   begin
+      return
+        Safe_IO_Support_Marker & ASCII.LF
+        & ASCII.LF
+        & "package "
+        & Support_Name
+        & ASCII.LF
+        & "  with SPARK_Mode => Off" & ASCII.LF
+        & "is" & ASCII.LF
+        & "   procedure Put_Line (Text : String);" & ASCII.LF
+        & "end "
+        & Support_Name
+        & ";" & ASCII.LF;
+   end Safe_IO_Spec_Text;
+
+   function Safe_IO_Body_Text (Unit_Name : String) return String is
+      Support_Name : constant String := Safe_IO_Unit_Name (Unit_Name);
+   begin
+      return
+        Safe_IO_Support_Marker & ASCII.LF
+        & ASCII.LF
+        & "with Ada.Text_IO;" & ASCII.LF
+        & ASCII.LF
+        & "package body "
+        & Support_Name
+        & ASCII.LF
+        & "  with SPARK_Mode => Off" & ASCII.LF
+        & "is" & ASCII.LF
+        & "   procedure Put_Line (Text : String) is" & ASCII.LF
+        & "   begin" & ASCII.LF
+        & "      Ada.Text_IO.Put_Line (Text);" & ASCII.LF
+        & "   end Put_Line;" & ASCII.LF
+        & "end "
+        & Support_Name
+        & ";" & ASCII.LF;
+   end Safe_IO_Body_Text;
 
    function Emit
      (Unit     : CM.Resolved_Unit;
@@ -6465,8 +7096,15 @@ package body Safe_Frontend.Ada_Emit is
       if State.Needs_Ada_Strings_Unbounded then
          Add_Body_With ("Ada.Strings.Unbounded");
       end if;
+      if Ada.Strings.Fixed.Index (SU.To_String (Body_Inner), "Ada.Strings.Fixed.") > 0 then
+         Add_Body_With ("Ada.Strings");
+         Add_Body_With ("Ada.Strings.Fixed");
+      end if;
       if Ada.Strings.Fixed.Index (SU.To_String (Body_Inner), "Interfaces.") > 0 then
          Add_Body_With ("Interfaces");
+      end if;
+      if State.Needs_Safe_IO then
+         Add_Body_With (Safe_IO_Unit_Name (FT.To_String (Unit.Package_Name)));
       end if;
       if State.Needs_Safe_Runtime then
          Add_Body_With ("Safe_Runtime");
@@ -6543,6 +7181,11 @@ package body Safe_Frontend.Ada_Emit is
          Unit_Name          => Unit.Package_Name,
          Spec_Text          => FT.To_UString (SU.To_String (Spec_Text)),
          Body_Text          => FT.To_UString (SU.To_String (Body_Text)),
+         Safe_IO_Unit_Name  =>
+           (if State.Needs_Safe_IO
+            then FT.To_UString (Safe_IO_Unit_Name (FT.To_String (Unit.Package_Name)))
+            else FT.To_UString ("")),
+         Needs_Safe_IO      => State.Needs_Safe_IO,
          Needs_Safe_Runtime => State.Needs_Safe_Runtime,
          Needs_Gnat_Adc     => State.Needs_Gnat_Adc);
    exception

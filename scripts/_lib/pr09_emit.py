@@ -22,6 +22,10 @@ from .harness_common import (
 
 COMPILER_ROOT = REPO_ROOT / "compiler_impl"
 SAFE_RUNTIME_TEMPLATE = REPO_ROOT / "companion" / "templates" / "safe_runtime.ads"
+GENERATED_SUPPORT_MARKERS = (
+    "--  Generated Safe print support",
+    "--  Safe Language Runtime Type Definitions",
+)
 
 
 def repo_arg(path: Path) -> str:
@@ -110,7 +114,7 @@ def ensure_emit_success(
     adb_files = sorted(
         path
         for path in (root / "ada").glob("*.adb")
-        if path.name != "safe_runtime.adb"
+        if not is_generated_support_file(path)
     )
     require(adb_files, f"{source}: expected emitted .adb file")
     return paths
@@ -132,16 +136,32 @@ def emitted_ada_files(ada_dir: Path) -> list[str]:
     return sorted(path.name for path in ada_dir.glob("*") if path.is_file())
 
 
+def is_generated_support_file(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    try:
+        first_lines = path.read_text(encoding="utf-8").splitlines()[:2]
+    except OSError:
+        return False
+    return any(line in GENERATED_SUPPORT_MARKERS for line in first_lines)
+
+
 def emitted_body_file(ada_dir: Path) -> Path:
     candidates = sorted(
-        path for path in ada_dir.glob("*.adb") if path.name != "safe_runtime.adb"
+        path
+        for path in ada_dir.glob("*.adb")
+        if not is_generated_support_file(path)
     )
     require(candidates, f"{display_path(ada_dir)}: expected emitted .adb file")
     return candidates[0]
 
 
 def emitted_spec_file(ada_dir: Path) -> Path:
-    candidates = sorted(path for path in ada_dir.glob("*.ads") if path.name != "safe_runtime.ads")
+    candidates = sorted(
+        path
+        for path in ada_dir.glob("*.ads")
+        if not is_generated_support_file(path)
+    )
     require(candidates, f"{display_path(ada_dir)}: expected emitted .ads file")
     return candidates[0]
 
