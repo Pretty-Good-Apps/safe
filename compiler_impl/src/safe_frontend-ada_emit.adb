@@ -153,7 +153,13 @@ package body Safe_Frontend.Ada_Emit is
      & ASCII.LF
      & "   function Slice (Value : Safe_String; Low, High : Natural) return Safe_String is" & ASCII.LF
      & "   begin" & ASCII.LF
-     & "      if Value.Data = null or else High < Low then" & ASCII.LF
+     & "      if Value.Data = null" & ASCII.LF
+     & "        or else Low = 0" & ASCII.LF
+     & "        or else High = 0" & ASCII.LF
+     & "        or else High < Low" & ASCII.LF
+     & "        or else Low > Value.Data'Length" & ASCII.LF
+     & "        or else High > Value.Data'Length" & ASCII.LF
+     & "      then" & ASCII.LF
      & "         return Empty;" & ASCII.LF
      & "      end if;" & ASCII.LF
      & "      return From_Literal (Value.Data (Positive (Low) .. Positive (High)));" & ASCII.LF
@@ -285,7 +291,13 @@ package body Safe_Frontend.Ada_Emit is
      & "      Result : Safe_Array := Empty;" & ASCII.LF
      & "      Offset : Natural := 0;" & ASCII.LF
      & "   begin" & ASCII.LF
-     & "      if Value.Data = null or else High < Low then" & ASCII.LF
+     & "      if Value.Data = null" & ASCII.LF
+     & "        or else Low = 0" & ASCII.LF
+     & "        or else High = 0" & ASCII.LF
+     & "        or else High < Low" & ASCII.LF
+     & "        or else Low > Value.Data'Length" & ASCII.LF
+     & "        or else High > Value.Data'Length" & ASCII.LF
+     & "      then" & ASCII.LF
      & "         return Empty;" & ASCII.LF
      & "      end if;" & ASCII.LF
      & "      Result.Data := new Element_Array (1 .. Positive (High - Low + 1));" & ASCII.LF

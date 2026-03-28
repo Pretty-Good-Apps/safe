@@ -1270,12 +1270,12 @@ package body Safe_Frontend.Check_Resolve is
                        Path,
                        "string bounds must be integer literals or constant references");
                begin
-                  if Bound < 0 then
+                  if Bound < 1 then
                      Raise_Diag
                        (CM.Source_Frontend_Error
                           (Path    => Path,
                            Span    => Spec.Span,
-                           Message => "string bounds must be non-negative"));
+                           Message => "string bounds must be at least 1"));
                   end if;
                   declare
                      Result : constant GM.Type_Descriptor :=
@@ -3014,7 +3014,7 @@ package body Safe_Frontend.Check_Resolve is
          Result.Initializer :=
            Normalize_Expr_Checked
              (Decl.Initializer, Var_Types, Functions, Type_Env, Path);
-         if Result.Initializer.Kind in CM.Expr_Aggregate | CM.Expr_Tuple then
+         if Result.Initializer.Kind in CM.Expr_Aggregate | CM.Expr_Tuple | CM.Expr_Array_Literal then
             Result.Initializer.Type_Name := Result.Type_Info.Name;
          end if;
          Validate_Static_Binary_Boundaries
