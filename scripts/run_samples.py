@@ -24,6 +24,7 @@ PRINTING_SAMPLES = {
     "samples/rosetta/arithmetic/factorial.safe",
     "samples/rosetta/arithmetic/fibonacci.safe",
     "samples/rosetta/arithmetic/gcd.safe",
+    "samples/rosetta/concurrency/producer_consumer.safe",
     "samples/rosetta/data_structures/fixed_to_growable.safe",
     "samples/rosetta/data_structures/growable_sum.safe",
     "samples/rosetta/data_structures/growable_to_fixed.safe",
@@ -172,9 +173,6 @@ def producer_consumer_driver_text(unit_name: str) -> str:
         "procedure Main is\n"
         "begin\n"
         "   delay 0.2;\n"
-        f"   if {unit_name}.result /= 42 then\n"
-        "      GNAT.OS_Lib.OS_Exit (1);\n"
-        "   end if;\n"
         "   GNAT.OS_Lib.OS_Exit (0);\n"
         "end Main;\n"
     )
@@ -210,6 +208,7 @@ def expected_stdout(sample: Path) -> str | None:
         "samples/rosetta/arithmetic/factorial.safe": "120\n",
         "samples/rosetta/arithmetic/fibonacci.safe": "89\n",
         "samples/rosetta/arithmetic/gcd.safe": "6\n",
+        "samples/rosetta/concurrency/producer_consumer.safe": "42\n",
         "samples/rosetta/data_structures/fixed_to_growable.safe": "10\n",
         "samples/rosetta/data_structures/growable_sum.safe": "60\n",
         "samples/rosetta/data_structures/growable_to_fixed.safe": "16\n",

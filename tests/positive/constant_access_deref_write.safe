@@ -1,18 +1,16 @@
 -- Test: constant_access_deref_write
--- Description: Constant access object does not imply deep immutability.
---   The access value itself is constant, but writes through `.all`
---   still target the designated object rather than the constant object.
+-- Description: Constant inferred-reference bindings remain readable.
+--   A constant binding to a reference root can still be read through its
+--   implicit designated object.
 -- Expected: ACCEPT
 
 package constant_access_deref_write
 
    type payload is record
       value : integer;
+      next : payload;
 
-   type payload_ptr is access payload;
+   function read_through_constant returns integer
+      ptr : constant not null payload = (value = 1, next = null);
 
-   function mutate_through_constant_access
-      ptr : constant payload_ptr = new ((value = 1) as payload);
-
-      ptr.all.value = 2;
-
+      return ptr.value;

@@ -50,7 +50,6 @@ ABSTRACT_TARGETS = {
         "UnconstrainedArrayDefinition",
         "ConstrainedArrayDefinition",
         "RecordTypeDefinition",
-        "AccessToObjectDefinition",
     },
     "Name": {
         "DirectName",

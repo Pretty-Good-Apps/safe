@@ -5,7 +5,7 @@ package pr118d_fixed_to_growable_build
    type fixed_three is array (slot) of item;
    type grow_list is array of item;
 
-   function sum_edges (values : in grow_list) returns integer
+   function sum_edges (values : grow_list) returns integer
       return values (1) + values (3);
 
    function widen (values : fixed_three) returns grow_list

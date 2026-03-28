@@ -1,7 +1,6 @@
-function parse_count (input : in integer) returns (result, integer)
+function parse_count (input : integer) returns (result, integer)
 
    if input >= 0
       return (ok (), input)
 
    return (fail ("negative"), 0)
-

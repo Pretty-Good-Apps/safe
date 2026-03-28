@@ -15,6 +15,6 @@ package pr113_discriminant_constraints
    positional : packet (true, 1, 1);
    named : packet (active = true, kind = default_kind, count = default_count);
 
-   function take (item : in packet (active = true, kind = default_kind, count = default_count))
+   function take (item : packet (active = true, kind = default_kind, count = default_count))
       returns packet (active = true, kind = default_kind, count = default_count)
       return item;

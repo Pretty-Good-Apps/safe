@@ -15,9 +15,6 @@ package select_priority
 
    channel high_ch : command capacity 2;
    channel low_ch  : status capacity 2;
-   processed : processed_count = 0;
-   last_high : command = 0;
-   last_low  : status = 0;
 
    --  Feeder_High: sends commands on the high-priority channel.
    task feeder_high with priority = 10
@@ -44,6 +41,9 @@ package select_priority
    --  Dispatcher: uses select to receive from multiple channels.
    --  High_Ch arm appears first, so it has priority when both are ready.
    task dispatcher with priority = 10
+      processed : processed_count = 0;
+      last_high : command = 0;
+      last_low  : status = 0;
       loop
          select
             when cmd : command from high_ch

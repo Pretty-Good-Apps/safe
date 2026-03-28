@@ -1,46 +1,37 @@
 -- Test: rule4_linked_list_sum
--- Description: Linked-list prefix accumulation with null-guarded dereferences.
---   The sample performs arithmetic on both a visit count and node values
---   across a bounded prefix of a linked structure.
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.8.4.p136:fa5e94b7
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.2.p96a:0eaf48aa
+-- Description: Linked-list prefix accumulation with null-guarded implicit dereferences.
 -- Expected: ACCEPT
 
 package safe_linked_list_sum
 
-   type node;
-   type node_ptr is access node;
    subtype visit_count is integer (0 to 3);
    subtype node_value is integer (0 to 100);
    subtype total_value is integer (0 to 300);
 
    type node is record
       value : node_value;
-      next  : node_ptr;
+      next  : node;
 
-   function summarize_prefix (head : node_ptr) returns total_value
-      count : visit_count = 0;
-      total : total_value = 0;
+   function visit (current : node;
+                   count : visit_count;
+                   total : total_value) returns total_value
+      next_count : visit_count;
+      next_total : total_value;
+      rest       : total_value;
 
-      if head != null
-         count = count + 1;
-         total = total + total_value (head.all.value);
-         if count == 3
-            return total_value (total);
+      if current == null or else count == 3
+         return total;
 
-         if head.all.next != null
-            var second : access constant node = head.all.next.access;
-            count = count + 1;
-            total = total + total_value (second.all.value);
-            if count == 3
-               return total_value (total);
+      next_count = count + 1;
+      next_total = total + total_value (current.value);
+      if next_count == 3
+         return next_total;
 
-            if second.all.next != null
-               var third : access constant node = second.all.next.access;
-               count = count + 1;
-               total = total + total_value (third.all.value);
-               if count == 3
-                  return total_value (total);
+      rest = visit (current.next, next_count, next_total);
+      return rest;
 
-      return total_value (total);
+   function summarize_prefix (head : node) returns total_value
+      result : total_value = 0;
 
+      result = visit (head, 0, 0);
+      return result;

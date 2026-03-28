@@ -4,7 +4,6 @@
 
 package pr118d_string_equality
 
-   function same (left : in string; right : in string) returns boolean
+   function same (left : string; right : string) returns boolean
 
       return left == right;
-

@@ -1,10 +1,7 @@
 -- Test: ownership_borrow
--- Description: Mutable borrow and return of ownership.
---   An owning access value is borrowed via an anonymous access parameter.
---   The lender is frozen during the borrow. After the borrow ends,
---   the lender regains ownership.
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.3.p99b:47108b45
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.3.p100a:ba849e66
+-- Description: Mutable borrow and continued use with `mut`.
+--   A reference root is passed through a mutable borrow, then used again
+--   after the call returns.
 -- Expected: ACCEPT
 
 package ownership_borrow
@@ -15,26 +12,14 @@ package ownership_borrow
    type data is record
       x : data_x;
       y : data_y;
+      next : data;
 
-   type data_ptr is access data;
+   function modify_via_borrow (ref : mut data)
+      ref.x = 11;
+      ref.y = 40;
 
-   --  Modify_Via_Borrow: borrows the designated object via anonymous
-   --  access parameter. The lender (P) is frozen during this call.
-   function modify_via_borrow (ref : access data)
-
-      --  Ref is an anonymous access (borrow). Safe to dereference
-      --  because the lender provides a non-null owned value.
-      ref.all.x = 11;
-      ref.all.y = 40;
-
-   --  Use_Borrow: creates an owned pointer, borrows it for mutation,
-   --  then continues using it after the borrow scope ends.
    function use_borrow
-      owner : data_ptr = new ((x = 10, y = 20) as data);
+      owner : not null data = (x = 10, y = 20, next = null);
 
-      --  Borrow: Owner is frozen during the call.
       modify_via_borrow (owner);
-      --  Borrow has ended. Owner regains full ownership.
-      --  Safe to dereference Owner again.
-      owner.all.x = 16;
-      --  Owner goes out of scope; automatic deallocation.
+      owner.x = 16;

@@ -7,13 +7,13 @@ type stack is record
    data : storage;
    size : depth;
 
-function reset (s : out stack)
+function reset (s : mut stack)
 
    s.size = 0
    for i in slot
       s.data (i) = 0
 
-function push (s : in out stack; value : item)
+function push (s : mut stack; value : item)
 
    var next_size : depth = s.size
    if s.size < depth.last
@@ -21,41 +21,35 @@ function push (s : in out stack; value : item)
       s.size = next_size
       s.data (slot (next_size)) = value
 
-function pop (s : in out stack; value : out item)
+function pop (s : stack) returns item
+   var result : item = 0
 
    case s.size
       when 1
-         value = s.data (1)
-         s.size = 0
+         result = s.data (1)
 
       when 2
-         value = s.data (2)
-         s.size = 1
+         result = s.data (2)
 
       when 3
-         value = s.data (3)
-         s.size = 2
+         result = s.data (3)
 
       when 4
-         value = s.data (4)
-         s.size = 3
+         result = s.data (4)
 
       when 5
-         value = s.data (5)
-         s.size = 4
+         result = s.data (5)
 
       when 6
-         value = s.data (6)
-         s.size = 5
+         result = s.data (6)
 
       when 7
-         value = s.data (7)
-         s.size = 6
+         result = s.data (7)
 
       when 8
-         value = s.data (8)
-         s.size = 7
+         result = s.data (8)
 
       when others
-         value = 0
+         result = 0
 
+   return result

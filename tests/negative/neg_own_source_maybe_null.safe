@@ -1,16 +1,15 @@
 -- Test: neg_own_source_maybe_null
 -- Description: Moving from a source that is not provably non-null.
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.2.p96a:0eaf48aa
 -- Expected: REJECT move_source_not_nonnull
 
 package move_source_maybe_null_test
 
-   subtype payload is integer (0 to 10);
-   type payload_ptr is access payload;
+   type payload is record
+      value : integer;
+      next : payload;
 
    function bad_move
-      source : payload_ptr = null;
-      target : payload_ptr = null;
+      source : payload = null;
+      target : payload = null;
 
       target = source;  -- ERROR: source is not provably non-null
-

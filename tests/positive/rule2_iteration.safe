@@ -25,8 +25,11 @@ package safe_iteration
       return max_val;
 
    --  Zero_All: sets every element to zero.
-   function zero_all (bank : out register_bank)
+   function zero_all (bank : register_bank) returns register_bank
+      cleared : register_bank = bank;
 
       for i in slot
-         bank (i) = 0;
+         if cleared (i) != 0
+            cleared (i) = 0;
 
+      return cleared;

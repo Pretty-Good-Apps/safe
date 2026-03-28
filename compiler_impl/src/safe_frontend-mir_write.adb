@@ -551,8 +551,6 @@ package body Safe_Frontend.Mir_Write is
       Fields.Append
         ("""return_type"":"
          & (if Item.Has_Return_Type then Type_Json (Item.Return_Type) else "null"));
-      Fields.Append
-        ("""return_is_access_def"":" & JS.Bool_Literal (Item.Return_Is_Access_Def));
       Fields.Append ("""span"":" & JS.Span_Object (Item.Span));
       Fields.Append ("""effect_summary"":" & Effect_Summary_Json (Item.Effect_Summary));
       Fields.Append

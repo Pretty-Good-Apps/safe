@@ -3,9 +3,9 @@ Source: tests/negative/neg_own_lifetime.safe
 
 Expected diagnostic output:
 ------------------------------------------------------------------------
-neg_own_lifetime.safe:19:14: error: returned borrow value cannot outlive lender 'owner'
+neg_own_lifetime.safe:12:14: error: returned observe value cannot outlive lender 'ref'
   |
-  | 19 |       return ref;  -- ERROR: borrowed value outlives local owner
+  | 12 |       return ref;  -- ERROR: borrowed value outlives lender
   |    |              ^~~
   |
   note: borrowed and observed values must remain within the lender lifetime.

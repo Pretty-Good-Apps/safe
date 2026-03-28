@@ -15,11 +15,19 @@ The current numeric surface is split between signed `integer` and fixed-width
 `binary (8|16|32|64)`. Emitted Ada maps binary values to
 `Interfaces.Unsigned_*`.
 
+The current PR11.8e reference/parameter surface is also active:
+
+- direct self-recursive record types are inferred as references
+- source `access`, `new`, `.all`, `.access`, `in`, `out`, and `in out` are removed
+- parameters are either ordinary immutable borrows or `mut` mutable borrows
+- `null` and `not null` apply only to inferred reference-typed bindings
+- task bodies may use only locals and channels
+
 The current PR11.8d text/array surface is shipped and buildable end to end
 with these explicit boundaries:
 
 - `string (N)` is the stack-backed bounded string form
-- plain `string` is supported in locals, params/results, out formals, tuple
+- plain `string` is supported in locals, params/results, tuple
   elements, record fields, and fixed-array components
 - `array of T` is supported in locals, params/results, record fields, and
   fixed-array components
@@ -88,11 +96,11 @@ The repo also now includes a prototype single-file REPL:
 - `<stem>.ast.json`
   The parser AST, shaped to [`../compiler/ast_schema.json`](../compiler/ast_schema.json).
 - `<stem>.typed.json`
-  The typed frontend snapshot (`typed-v2`).
+  The typed frontend snapshot (`typed-v3`).
 - `<stem>.mir.json`
-  The lowered MIR document (`mir-v2`).
+  The lowered MIR document (`mir-v3`).
 - `<stem>.safei.json`
-  The dependency interface contract (`safei-v1`).
+  The dependency interface contract (`safei-v2`).
 
 When `--ada-out-dir <dir>` is provided, `safec emit` also writes emitted
 Ada/SPARK artifacts:
@@ -168,7 +176,7 @@ run the unit.
 
 - Python remains repo glue and orchestration only. The compiler itself is the
   Ada-native `safec` binary.
-- Cross-unit resolution uses emitted `safei-v1` interfaces plus
+- Cross-unit resolution uses emitted `safei-v2` interfaces plus
   `--interface-search-dir`.
 - [`../docs/emitted_output_verification_matrix.md`](../docs/emitted_output_verification_matrix.md)
   is the current statement of what is compile-only versus `flow` / `prove`

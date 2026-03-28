@@ -90,10 +90,10 @@ INTERFACE_CASES = [
         0,
     ),
     (
-        "transitive-global-ok",
+        "transitive-global-rejected",
         REPO_ROOT / "tests" / "interfaces" / "provider_transitive_global.safe",
         REPO_ROOT / "tests" / "interfaces" / "client_transitive_global_ok.safe",
-        0,
+        1,
     ),
     (
         "imported-borrow-observe",

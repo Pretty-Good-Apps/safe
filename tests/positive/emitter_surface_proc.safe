@@ -8,8 +8,7 @@ package emitter_surface_proc
 
    subtype small is integer (0 to 5);
 
-   function copy (input : small; output : out small)
+   function copy (input : small) returns small
       local : small = input;
 
-      output = local;
-
+      return local;

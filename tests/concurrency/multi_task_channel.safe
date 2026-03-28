@@ -14,8 +14,6 @@ package multi_task_channel
    subtype event_count is integer (0 to 1_000);
 
    channel event_ch : event_code capacity 8;
-   count_a : event_count = 0;
-   count_b : event_count = 0;
 
    --  Producer_A: sends low-range event codes.
    task producer_a with priority = 10
@@ -42,7 +40,9 @@ package multi_task_channel
    --  Consumer: receives events from both producers.
    --  Channel atomicity guarantees each code is received intact.
    task consumer with priority = 10
-      e : event_code;
+      e       : event_code;
+      count_a : event_count = 0;
+      count_b : event_count = 0;
 
       loop
          receive event_ch, e;

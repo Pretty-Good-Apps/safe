@@ -1,20 +1,14 @@
 -- Test: ownership_early_return
--- Description: Early return cleans up owned values from the active suite.
---   A function returns while multiple owned access values are still live in
---   the enclosing executable suite.
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.2.p96a:0eaf48aa
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.4a.p102a:2ed757bd
+-- Description: Early return cleans up inferred-reference owners from the active suite.
 -- Expected: ACCEPT
 
 package ownership_early_return
 
    type payload is record
       value : integer;
-
-   type payload_ptr is access payload;
+      next : payload;
 
    function read_and_exit returns integer
-      outer : payload_ptr = new ((value = 7) as payload);
-      inner : payload_ptr = new ((value = 9) as payload);
-      return outer.all.value;
-
+      outer : not null payload = (value = 7, next = null);
+      inner : not null payload = (value = 9, next = null);
+      return outer.value;

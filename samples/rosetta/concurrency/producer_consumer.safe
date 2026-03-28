@@ -3,7 +3,6 @@ package producer_consumer
    subtype message is integer (0 to 1000);
 
    channel data_ch : message capacity 1;
-   result : message = 0;
 
    task producer with priority = 10, sends data_ch
 
@@ -12,7 +11,10 @@ package producer_consumer
          delay 0.05
 
    task consumer with priority = 10, receives data_ch
+      printed : boolean = false;
 
       loop
          receive data_ch, input : message
-         result = input + 1
+         if not printed
+            print (input + 1)
+            printed = true

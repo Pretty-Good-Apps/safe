@@ -1,23 +1,11 @@
 -- Test: neg_own_anon_reassign_join
--- Description: Anonymous access reassignment remains illegal after CFG join.
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.3.p100a:ba849e66
--- Expected: REJECT anonymous_access_reassign
+-- Description: Allocators are removed in PR11.8e.
+-- Expected: REJECT parser_error
 
 package anonymous_reassign_join_test
 
    type data is record
       value : integer;
 
-   type data_ptr is access data;
-
-   function reassign_after_join (pick : integer)
-      owner : data_ptr = new ((value = 1) as data);
-      other : data_ptr = new ((value = 2) as data);
-      ref   : access data;
-
-      if pick == 0
-         ref = owner;
-      else
-
-      ref = other;  -- ERROR: merge must not reset init-only tracking
-
+   function build returns data
+      return new ((value = 1) as data);

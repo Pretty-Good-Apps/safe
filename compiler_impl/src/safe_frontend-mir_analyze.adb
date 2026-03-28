@@ -2424,6 +2424,12 @@ package body Safe_Frontend.Mir_Analyze is
             return (State => Access_Null, others => <>);
          when GM.Expr_Allocator =>
             return (State => Access_NonNull, others => <>);
+         when GM.Expr_Aggregate | GM.Expr_Tuple =>
+            Info := Expr_Type (Expr, Var_Types, Type_Env, Functions);
+            if Lower (UString_Value (Info.Kind)) = "access" then
+               return (State => Access_NonNull, others => <>);
+            end if;
+            return (State => Access_MaybeNull, others => <>);
          when GM.Expr_Ident =>
             Name := Expr.Name;
             Role := Type_Access_Role (Resolve_Type (UString_Value (Name), Var_Types, Type_Env));
@@ -2516,6 +2522,12 @@ package body Safe_Frontend.Mir_Analyze is
             end if;
             return (State => Access_MaybeNull, others => <>);
          when others =>
+            Info := Expr_Type (Expr, Var_Types, Type_Env, Functions);
+            if Lower (UString_Value (Info.Kind)) = "access"
+              and then Info.Not_Null
+            then
+               return (State => Access_NonNull, others => <>);
+            end if;
             return (State => Access_MaybeNull, others => <>);
       end case;
    end Eval_Access_Expr;
@@ -3029,6 +3041,11 @@ package body Safe_Frontend.Mir_Analyze is
             end if;
             Ensure_Discriminant_Safe (Expr, Current, Var_Types, Type_Env, Functions);
             Prefix := Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions);
+            if Lower (UString_Value (Prefix.Kind)) = "access" then
+               Ensure_Access_Safe (Expr.Prefix, Expr.Span, Current, Var_Types, Type_Env, Functions);
+               return Float_Interval_For
+                 (Field_Type (Access_Target_Type (Prefix, Type_Env), UString_Value (Expr.Selector), Type_Env));
+            end if;
             return Float_Interval_For (Field_Type (Prefix, UString_Value (Expr.Selector), Type_Env));
          when GM.Expr_Resolved_Index =>
             declare
@@ -3525,8 +3542,7 @@ package body Safe_Frontend.Mir_Analyze is
             then
                return (Low => 0, High => INT64_HIGH, Excludes_Zero => False);
             elsif Lower (UString_Value (Prefix.Kind)) = "access" then
-               Fact := Eval_Access_Expr (Expr.Prefix, Current, Var_Types, Type_Env, Functions);
-               pragma Unreferenced (Fact);
+               Ensure_Access_Safe (Expr.Prefix, Expr.Span, Current, Var_Types, Type_Env, Functions);
                Ensure_Discriminant_Safe (Expr, Current, Var_Types, Type_Env, Functions);
                return Range_Interval (Field_Type (Access_Target_Type (Prefix, Type_Env), UString_Value (Expr.Selector), Type_Env));
             end if;
@@ -5024,6 +5040,28 @@ package body Safe_Frontend.Mir_Analyze is
          begin
             Formal_Role := Type_Access_Role (Formal.Type_Info);
             Actual_Name := FT.To_UString (Root_Name (Actual));
+            if UString_Value (Formal.Mode) = "mut"
+              and then Has_Text (Actual_Name)
+            then
+               for Other_Index in Function_Def.Params.First_Index .. Function_Def.Params.Last_Index loop
+                  if Other_Index /= Index then
+                     declare
+                        Other_Actual : constant GM.Expr_Access :=
+                          Expr.Args (Expr.Args.First_Index + (Other_Index - Function_Def.Params.First_Index));
+                     begin
+                        if Root_Name (Other_Actual) = UString_Value (Actual_Name) then
+                           return
+                             Ownership_Diagnostic
+                               ("mut_alias_conflict",
+                                Actual.Span,
+                                "mutable borrow actual '" & UString_Value (Actual_Name)
+                                & "' aliases another actual in the same call",
+                                "PR11.8e uses a conservative same-root alias rule for `mut` parameters.");
+                        end if;
+                     end;
+                  end if;
+               end loop;
+            end if;
             if Is_Integer_Type (Formal.Type_Info) then
                Interval_Value :=
                  Eval_Int_Expr_With_Diag
@@ -5070,7 +5108,9 @@ package body Safe_Frontend.Mir_Analyze is
                   return Diag;
                end if;
                goto Continue;
-            elsif (UString_Value (Formal.Mode) = "out" or else UString_Value (Formal.Mode) = "in out")
+            elsif (UString_Value (Formal.Mode) = "mut"
+                   or else UString_Value (Formal.Mode) = "out"
+                   or else UString_Value (Formal.Mode) = "in out")
               and then Formal.Type_Info.Has_Discriminant
             then
                if Has_Text (Actual_Name) then
@@ -5109,6 +5149,28 @@ package body Safe_Frontend.Mir_Analyze is
                   if Has_Text (Diag.Reason) then
                      return Diag;
                   end if;
+               end if;
+            elsif UString_Value (Formal.Mode) = "mut" then
+               if not Has_Text (Actual_Name) then
+                  goto Continue;
+               end if;
+               Diag := Owner_Write_Conflict (UString_Value (Actual_Name), Current, Actual.Span);
+               if Has_Text (Diag.Reason) then
+                  return Diag;
+               elsif Fact.State = Access_Moved then
+                  return
+                    Ownership_Diagnostic
+                      ("double_move",
+                       Actual.Span,
+                       "use of moved value '" & UString_Value (Actual_Name) & "'",
+                       "the mutable-borrow actual for this call was already moved earlier on this path.");
+               elsif Fact.State = Access_Null then
+                  return
+                    Ownership_Diagnostic
+                      ("move_source_not_nonnull",
+                       Actual.Span,
+                       "mutable borrow actual '" & UString_Value (Actual_Name) & "' is null",
+                       "mutable borrows of inferred references require a non-null actual.");
                end if;
             elsif (UString_Value (Formal.Mode) = "out" or else UString_Value (Formal.Mode) = "in out")
               and then (Formal_Role = Role_Owner or else Formal_Role = Role_General_Access)
@@ -5175,6 +5237,24 @@ package body Safe_Frontend.Mir_Analyze is
             if Has_Text (Diag.Reason) then
                return Diag;
             end if;
+            if UString_Value (Expr.Selector) = "all"
+              or else Lower
+                (UString_Value
+                   (Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions).Kind)) = "access"
+            then
+               begin
+                  Ensure_Access_Safe
+                    (Expr.Prefix,
+                     Expr.Prefix.Span,
+                     Current,
+                     Var_Types,
+                     Type_Env,
+                     Functions);
+               exception
+                  when Diagnostic_Failure =>
+                     return Raised_Diagnostic;
+               end;
+            end if;
          when GM.Expr_Resolved_Index =>
             Diag :=
               Analyze_Runtime_Expr
@@ -5186,6 +5266,23 @@ package body Safe_Frontend.Mir_Analyze is
                  Functions);
             if Has_Text (Diag.Reason) then
                return Diag;
+            end if;
+            if Lower
+                 (UString_Value
+                    (Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions).Kind)) = "access"
+            then
+               begin
+                  Ensure_Access_Safe
+                    (Expr.Prefix,
+                     Expr.Prefix.Span,
+                     Current,
+                     Var_Types,
+                     Type_Env,
+                     Functions);
+               exception
+                  when Diagnostic_Failure =>
+                     return Raised_Diagnostic;
+               end;
             end if;
             if not Expr.Indices.Is_Empty then
                for Index in Expr.Indices.First_Index .. Expr.Indices.Last_Index loop
@@ -6129,8 +6226,8 @@ package body Safe_Frontend.Mir_Analyze is
         (if Document.Has_Source_Path then UString_Value (Document.Source_Path) else UString_Value (Document.Path));
       Basename    : constant String := Ada.Directories.Simple_Name (Path_String);
    begin
-      if Document.Format /= GM.Mir_V2 then
-         return Error (UString_Value (Document.Path) & ": analyze-mir requires mir-v2 input");
+      if Document.Format not in GM.Mir_V2 | GM.Mir_V3 then
+         return Error (UString_Value (Document.Path) & ": analyze-mir requires mir-v2 or mir-v3 input");
       end if;
 
       Bronze := MB.Summarize (Document, Tasks, Path_String);
@@ -6196,8 +6293,8 @@ package body Safe_Frontend.Mir_Analyze is
       begin
          if not Validation.Success then
             return Error (Path & ": " & UString_Value (Validation.Message));
-         elsif Loaded.Document.Format /= GM.Mir_V2 then
-            return Error (Path & ": analyze-mir requires mir-v2 input");
+         elsif Loaded.Document.Format not in GM.Mir_V2 | GM.Mir_V3 then
+            return Error (Path & ": analyze-mir requires mir-v2 or mir-v3 input");
          end if;
       end;
 

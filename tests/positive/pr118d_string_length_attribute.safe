@@ -4,6 +4,6 @@
 
 package pr118d_string_length_attribute
 
-   function measure (name : in string) returns integer
+   function measure (name : string) returns integer
 
       return name.length;

@@ -5,7 +5,7 @@ with Safe_Frontend.Types;
 package Safe_Frontend.Mir_Model is
    package FT renames Safe_Frontend.Types;
 
-   type Mir_Format_Kind is (Mir_V1, Mir_V2);
+   type Mir_Format_Kind is (Mir_V1, Mir_V2, Mir_V3);
    function Image (Item : Mir_Format_Kind) return String;
 
    type Ownership_Effect_Kind is

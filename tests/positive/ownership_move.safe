@@ -1,30 +1,18 @@
 -- Test: ownership_move
--- Description: Variable move between scopes.
---   An owning access value is moved from one variable to another.
---   The source becomes null after the move, and only the target
---   is dereferenced subsequently.
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.2.p96a:0eaf48aa
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.2.p96c:0b45de01
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.2.p97a:8d0214d5
+-- Description: Variable move between scopes for inferred references.
+--   A direct self-recursive record is inferred as a reference root and moves
+--   on assignment.
 -- Expected: ACCEPT
 
 package ownership_move
 
    type payload is record
       value : integer;
+      next : payload;
 
-   type payload_ptr is access payload;
-
-   --  Transfer: moves ownership from Source to Target.
-   --  After the move, Source is null and only Target is used.
    function transfer
-      source : payload_ptr = new ((value = 42) as payload);
-      target : payload_ptr = null;
+      source : not null payload = (value = 42, next = null);
+      target : payload = null;
 
-      --  Target is provably null before the move (just declared null).
       target = source;
-      --  Source is now null (moved). Do not dereference Source.
-      --  Target is now the owner and can be safely dereferenced.
-      target.all.value = 100;
-      --  Target goes out of scope; automatic deallocation occurs.
-
+      target.value = 100;

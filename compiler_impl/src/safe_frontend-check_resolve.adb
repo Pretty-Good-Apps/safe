@@ -241,7 +241,7 @@ package body Safe_Frontend.Check_Resolve is
       Info.Return_Type := BT.Result_Type;
       Symbol.Name := FT.To_UString ("message");
       Symbol.Kind := FT.To_UString ("param");
-      Symbol.Mode := FT.To_UString ("in");
+      Symbol.Mode := FT.To_UString ("borrow");
       Symbol.Type_Info := BT.String_Type;
       Info.Params.Append (Symbol);
       Put_Function (Functions, "fail", Info);
@@ -252,7 +252,7 @@ package body Safe_Frontend.Check_Resolve is
       Symbol := (others => <>);
       Symbol.Name := FT.To_UString ("value");
       Symbol.Kind := FT.To_UString ("param");
-      Symbol.Mode := FT.To_UString ("in");
+      Symbol.Mode := FT.To_UString ("borrow");
       Symbol.Type_Info := BT.String_Type;
       Info.Params.Append (Symbol);
       Put_Function (Functions, "print", Info);
@@ -373,6 +373,10 @@ package body Safe_Frontend.Check_Resolve is
 
    function Make_Growable_Array_Type
      (Component_Type : GM.Type_Descriptor) return GM.Type_Descriptor;
+
+   function Sanitize_Type_Name_Component (Value : String) return String;
+
+   function Hidden_Reference_Target_Name (Name : String) return String;
 
    function Is_Discrete_Case_Type
      (Info     : GM.Type_Descriptor;
@@ -751,6 +755,11 @@ package body Safe_Frontend.Check_Resolve is
       Result.Component_Type := Component_Type.Name;
       return Result;
    end Make_Growable_Array_Type;
+
+   function Hidden_Reference_Target_Name (Name : String) return String is
+   begin
+      return "safe_ref_target_" & Sanitize_Type_Name_Component (Name);
+   end Hidden_Reference_Target_Name;
 
    function Is_Tuple_Element_Type_Allowed
      (Info     : GM.Type_Descriptor;
@@ -1614,7 +1623,22 @@ package body Safe_Frontend.Check_Resolve is
                Result.Base := Base.Name;
                return Result;
             end if;
-            return Resolve_Type (UString_Value (Spec.Name), Type_Env, Path, Spec.Span);
+            declare
+               Resolved : GM.Type_Descriptor :=
+                 Resolve_Type (UString_Value (Spec.Name), Type_Env, Path, Spec.Span);
+            begin
+               if Spec.Not_Null then
+                  if FT.Lowercase (UString_Value (Base_Type (Resolved, Type_Env).Kind)) /= "access" then
+                     Raise_Diag
+                       (CM.Source_Frontend_Error
+                          (Path    => Path,
+                           Span    => Spec.Span,
+                           Message => "`not null` applies only to inferred reference types in PR11.8e"));
+                  end if;
+                  Resolved.Not_Null := True;
+               end if;
+               return Resolved;
+            end;
          when CM.Type_Spec_Binary =>
             declare
                Width : constant CM.Wide_Integer :=
@@ -4548,10 +4572,44 @@ package body Safe_Frontend.Check_Resolve is
                 (Resolve_Type_Spec (Decl.Component_Type, Type_Env, Const_Env, Path));
             Result.Name := Decl.Name;
          when CM.Type_Decl_Record =>
-            Result.Kind := FT.To_UString ("record");
             declare
-               Decl_Discriminants : CM.Discriminant_Spec_Vectors.Vector := Decl.Discriminants;
+               Record_Result          : GM.Type_Descriptor;
+               Self_Name              : constant String := UString_Value (Decl.Name);
+               Hidden_Target_Name     : constant String := Hidden_Reference_Target_Name (Self_Name);
+               Inferred_Reference     : Boolean := False;
+               Decl_Discriminants     : CM.Discriminant_Spec_Vectors.Vector := Decl.Discriminants;
+
+               function Normalize_Record_Field_Type
+                 (Field_Type : GM.Type_Descriptor;
+                  Span       : FT.Source_Span) return GM.Type_Descriptor
+               is
+                  Base_Field : constant GM.Type_Descriptor := Base_Type (Field_Type, Type_Env);
+                  Adjusted   : GM.Type_Descriptor := Field_Type;
+               begin
+                  if FT.Lowercase (UString_Value (Base_Field.Kind)) = "incomplete" then
+                     if UString_Value (Base_Field.Name) = Self_Name then
+                        Inferred_Reference := True;
+                        Adjusted.Name := Decl.Name;
+                        if Adjusted.Has_Base
+                          and then UString_Value (Adjusted.Base) = Self_Name
+                        then
+                           Adjusted.Base := Decl.Name;
+                        end if;
+                        return Adjusted;
+                     end if;
+
+                     Raise_Diag
+                       (CM.Unsupported_Source_Construct
+                          (Path    => Path,
+                           Span    => Span,
+                           Message =>
+                             "mutually recursive record families are deferred in PR11.8e"));
+                  end if;
+                  return Field_Type;
+               end Normalize_Record_Field_Type;
             begin
+               Record_Result.Name := FT.To_UString (Hidden_Target_Name);
+               Record_Result.Kind := FT.To_UString ("record");
                if Decl_Discriminants.Is_Empty and then Decl.Has_Discriminant then
                   Decl_Discriminants.Append (Decl.Discriminant);
                end if;
@@ -4588,49 +4646,50 @@ package body Safe_Frontend.Check_Resolve is
                         Disc_Desc.Has_Default := True;
                         Disc_Desc.Default_Value := To_Scalar_Value (Static_Value);
                      end if;
-                     Result.Discriminants.Append (Disc_Desc);
+                     Record_Result.Discriminants.Append (Disc_Desc);
                   end;
                end loop;
-               if not Result.Discriminants.Is_Empty then
-                  Result.Has_Discriminant := True;
-                  Result.Discriminant_Name := Result.Discriminants (Result.Discriminants.First_Index).Name;
-                  Result.Discriminant_Type := Result.Discriminants (Result.Discriminants.First_Index).Type_Name;
-                  if Result.Discriminants (Result.Discriminants.First_Index).Has_Default
-                    and then Result.Discriminants (Result.Discriminants.First_Index).Default_Value.Kind =
+               if not Record_Result.Discriminants.Is_Empty then
+                  Record_Result.Has_Discriminant := True;
+                  Record_Result.Discriminant_Name := Record_Result.Discriminants (Record_Result.Discriminants.First_Index).Name;
+                  Record_Result.Discriminant_Type := Record_Result.Discriminants (Record_Result.Discriminants.First_Index).Type_Name;
+                  if Record_Result.Discriminants (Record_Result.Discriminants.First_Index).Has_Default
+                    and then Record_Result.Discriminants (Record_Result.Discriminants.First_Index).Default_Value.Kind =
                       GM.Scalar_Value_Boolean
                   then
-                     Result.Has_Discriminant_Default := True;
-                     Result.Discriminant_Default_Bool :=
-                       Result.Discriminants (Result.Discriminants.First_Index).Default_Value.Bool_Value;
+                     Record_Result.Has_Discriminant_Default := True;
+                     Record_Result.Discriminant_Default_Bool :=
+                       Record_Result.Discriminants (Record_Result.Discriminants.First_Index).Default_Value.Bool_Value;
                   end if;
                end if;
-            end;
-            for Field_Decl of Decl.Components loop
-               for Name of Field_Decl.Names loop
-                  Item.Name := Name;
-                  declare
-                     Field_Type : constant GM.Type_Descriptor :=
-                       Resolve_Type_Spec (Field_Decl.Field_Type, Type_Env, Const_Env, Path);
+               for Field_Decl of Decl.Components loop
+                  for Name of Field_Decl.Names loop
+                     Item.Name := Name;
+                     declare
+                        Field_Type : constant GM.Type_Descriptor :=
+                       Normalize_Record_Field_Type
+                         (Resolve_Type_Spec (Field_Decl.Field_Type, Type_Env, Const_Env, Path),
+                          Field_Decl.Span);
                   begin
                      Item.Type_Name := Field_Type.Name;
                   end;
-                  Result.Fields.Append (Item);
+                  Record_Result.Fields.Append (Item);
+                  end loop;
                end loop;
-            end loop;
-            if not Decl.Variants.Is_Empty then
-               declare
-                  Control_Type : GM.Type_Descriptor;
-                  Found_Control : Boolean := False;
-               begin
-                  if Result.Discriminants.Is_Empty then
+               if not Decl.Variants.Is_Empty then
+                  declare
+                     Control_Type : GM.Type_Descriptor;
+                     Found_Control : Boolean := False;
+                  begin
+                  if Record_Result.Discriminants.Is_Empty then
                      Raise_Diag
                        (CM.Source_Frontend_Error
                           (Path    => Path,
                            Span    => Decl.Span,
                            Message => "variant parts require declared discriminants"));
                   end if;
-                  Result.Variant_Discriminant_Name := Decl.Variant_Discriminant_Name;
-                  for Disc of Result.Discriminants loop
+                  Record_Result.Variant_Discriminant_Name := Decl.Variant_Discriminant_Name;
+                  for Disc of Record_Result.Discriminants loop
                      if UString_Value (Disc.Name) = UString_Value (Decl.Variant_Discriminant_Name) then
                         Control_Type :=
                           Resolve_Type (UString_Value (Disc.Type_Name), Type_Env, Path, Decl.Span);
@@ -4675,11 +4734,13 @@ package body Safe_Frontend.Check_Resolve is
                               Item.Name := Name;
                               declare
                                  Field_Type : constant GM.Type_Descriptor :=
-                                   Resolve_Type_Spec (Field_Decl.Field_Type, Type_Env, Const_Env, Path);
+                                   Normalize_Record_Field_Type
+                                     (Resolve_Type_Spec (Field_Decl.Field_Type, Type_Env, Const_Env, Path),
+                                      Field_Decl.Span);
                               begin
                                  Item.Type_Name := Field_Type.Name;
                               end;
-                              Result.Fields.Append (Item);
+                              Record_Result.Fields.Append (Item);
                               declare
                                  Variant_Field : GM.Variant_Field;
                               begin
@@ -4690,14 +4751,29 @@ package body Safe_Frontend.Check_Resolve is
                                  if Variant_Choice.Kind = GM.Scalar_Value_Boolean then
                                     Variant_Field.When_True := Variant_Choice.Bool_Value;
                                  end if;
-                                 Result.Variant_Fields.Append (Variant_Field);
+                                 Record_Result.Variant_Fields.Append (Variant_Field);
                               end;
                            end loop;
                         end loop;
                      end;
                   end loop;
                end;
-            end if;
+               end if;
+               if Inferred_Reference then
+                  Put_Type (Type_Env, Hidden_Target_Name, Record_Result);
+                  Result.Kind := FT.To_UString ("access");
+                  Result.Has_Target := True;
+                  Result.Target := FT.To_UString (Hidden_Target_Name);
+                  Result.Anonymous := False;
+                  Result.Is_All := False;
+                  Result.Is_Constant := False;
+                  Result.Has_Access_Role := True;
+                  Result.Access_Role := FT.To_UString ("Owner");
+               else
+                  Result := Record_Result;
+                  Result.Name := Decl.Name;
+               end if;
+            end;
          when CM.Type_Decl_Access =>
             Result.Kind := FT.To_UString ("access");
             Result.Has_Target := True;
@@ -5105,6 +5181,18 @@ package body Safe_Frontend.Check_Resolve is
       end if;
 
       for Item of Unit.Items loop
+         if Item.Kind = CM.Item_Type_Decl then
+            declare
+               Placeholder : GM.Type_Descriptor;
+            begin
+               Placeholder.Name := Item.Type_Data.Name;
+               Placeholder.Kind := FT.To_UString ("incomplete");
+               Put_Type (Type_Env, UString_Value (Placeholder.Name), Placeholder);
+            end;
+         end if;
+      end loop;
+
+      for Item of Unit.Items loop
          if Unit.Kind = CM.Unit_Entry and then Item_Is_Public (Item) then
             Raise_Diag
               (CM.Source_Frontend_Error
@@ -5131,7 +5219,21 @@ package body Safe_Frontend.Check_Resolve is
                        UString_Value (Unit.Path));
                begin
                   if not Is_Builtin_Name (UString_Value (Info.Name)) then
-                     Result.Types.Append (Info);
+                     declare
+                        Hidden_Target : constant String :=
+                          (if FT.Lowercase (UString_Value (Info.Kind)) = "access" and then Info.Has_Target
+                           then UString_Value (Info.Target)
+                           else "");
+                     begin
+                        Result.Types.Append (Info);
+                        if Hidden_Target'Length > 0
+                          and then Hidden_Target'Length >= 16
+                          and then Hidden_Target (Hidden_Target'First .. Hidden_Target'First + 15) = "safe_ref_target_"
+                          and then Has_Type (Type_Env, Hidden_Target)
+                        then
+                           Result.Types.Append (Get_Type (Type_Env, Hidden_Target));
+                        end if;
+                     end;
                   end if;
                   Put_Type (Package_Vars, UString_Value (Info.Name), Info);
                end;

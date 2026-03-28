@@ -4,11 +4,10 @@
 
 package pr112_string_param
 
-   function echo (name : in string) returns string
+   function echo (name : string) returns string
 
       return name;
 
    function greeting returns string
 
       return echo ("hello");
-

@@ -2,9 +2,9 @@ with provider_types;
 
 package client_types
 
-   type handle_ref is access provider_types.handle;
+   function read_next returns provider_types.count
+      value   : provider_types.small_count = 1;
+      result  : provider_types.count = 0;
 
-   current    : handle_ref = null;
-   value      : provider_types.small_count = 1;
-   next_value : provider_types.count = provider_types.next (value);
-
+      result = provider_types.next (value);
+      return result;

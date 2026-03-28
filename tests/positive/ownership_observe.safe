@@ -1,9 +1,6 @@
 -- Test: ownership_observe
--- Description: Shared observation of an owned access value.
---   Multiple observers can read the designated object simultaneously.
---   No mutation is permitted through an observer.
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.4a.p102a:5bc5ab8b
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.4a.p102a-a:ae729065
+-- Description: Shared observation of an inferred-reference owner.
+--   Multiple immutable borrows can read the designated object.
 -- Expected: ACCEPT
 
 package ownership_observe
@@ -11,29 +8,18 @@ package ownership_observe
    type config is record
       rate  : integer;
       limit : integer;
+      next  : config;
 
-   type config_ptr is access config;
+   function read_rate (ref : config) returns integer
+      return ref.rate;
 
-   --  Read_Rate: observes the config through a constant access parameter.
-   --  The observer does not mutate the designated object.
-   function read_rate (ref : access constant config) returns integer
+   function read_limit (ref : config) returns integer
+      return ref.limit;
 
-      return ref.all.rate;
-
-   --  Read_Limit: another observer on the same object.
-   function read_limit (ref : access constant config) returns integer
-
-      return ref.all.limit;
-
-   --  Use_Observe: creates an owned config, then observes it twice.
-   --  Multiple observations of the same owned object are safe.
    function use_observe
-      owner : config_ptr = new ((rate = 100, limit = 500) as config);
+      owner : not null config = (rate = 100, limit = 500, next = null);
       r     : integer;
       l     : integer;
 
       r = read_rate (owner);
       l = read_limit (owner);
-      --  Owner regains full ownership after observations end.
-      --  Owner goes out of scope; automatic deallocation.
-

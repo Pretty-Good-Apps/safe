@@ -1,28 +1,23 @@
 -- Test: rule4_optional
--- Description: Optional value access with null check before dereference.
---   The access value is checked for null before any dereference,
---   so the dereference is proven safe.
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.8.4.p136:fa5e94b7
+-- Description: Optional inferred-reference access with null checks.
 -- Expected: ACCEPT
 
 package safe_optional
 
    subtype value is integer (0 to 10_000);
-   type value_ptr is access value;
 
-   --  Get_Or_Default: returns the designated value if non-null,
-   --  otherwise returns a default.
-   function get_or_default (p : value_ptr;
+   type value_box is record
+      stored : value;
+      next   : value_box;
+
+   function get_or_default (p : value_box;
                             default : value) returns value
 
       if p != null
-         --  P is provably not null by the guard.
-         return p.all;
+         return p.stored;
       else
          return default;
 
-   --  Has_Value: checks if the pointer is non-null.
-   function has_value (p : value_ptr) returns boolean
+   function has_value (p : value_box) returns boolean
 
       return p != null;
-

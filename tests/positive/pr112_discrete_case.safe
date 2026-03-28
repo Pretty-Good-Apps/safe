@@ -4,7 +4,7 @@
 
 package pr112_discrete_case
 
-   function flag_value (flag : in boolean) returns integer
+   function flag_value (flag : boolean) returns integer
 
       case flag
          when true
@@ -13,7 +13,7 @@ package pr112_discrete_case
          when others
             return 0;
 
-   function opcode_name (opcode : in integer) returns string
+   function opcode_name (opcode : integer) returns string
 
       case opcode
          when -1
@@ -27,4 +27,3 @@ package pr112_discrete_case
 
          when others
             return "unknown";
-

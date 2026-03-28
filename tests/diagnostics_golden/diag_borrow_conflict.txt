@@ -1,13 +1,13 @@
-Diagnostics Golden: Borrow Conflict
+Diagnostics Golden: Mutable Borrow Alias Conflict
 Source: tests/negative/neg_own_borrow_conflict.safe
 
 Expected diagnostic output:
 ------------------------------------------------------------------------
-neg_own_borrow_conflict.safe:24:11: error: lender 'owner' is frozen by an active mutable borrow
+neg_own_borrow_conflict.safe:17:14: error: mutable borrow actual 'owner' aliases another actual in the same call
   |
-  | 24 |       v = owner.all.value;  -- ERROR: lender accessed during active borrow
-  |    |           ^~~~~
+  | 17 |       touch (owner, owner);  -- ERROR: same-root alias in one call
+  |    |              ^~~~~
   |
-  note: reads, writes, and moves of the lender are forbidden while the borrow is active.
-  note: rule: Safe §2.3.3 (mutable borrow freezes lender)
+  note: PR11.8e uses a conservative same-root alias rule for `mut` parameters.
+  note: 
 ------------------------------------------------------------------------

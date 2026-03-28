@@ -253,7 +253,17 @@ package body Safe_Frontend.Interfaces is
          Result.Name := FT.To_UString (Get (Value, "name"));
       end if;
       if Has_Field (Value, "kind") and then Get (Value, "kind").Kind = JSON_String_Type then
-         Result.Kind := FT.To_UString (Get (Value, "kind"));
+         declare
+            Kind_Name : constant String := Get (Value, "kind");
+         begin
+            if Kind_Name = "reference" then
+               Result.Kind := FT.To_UString ("access");
+               Result.Has_Access_Role := True;
+               Result.Access_Role := FT.To_UString ("Owner");
+            else
+               Result.Kind := FT.To_UString (Kind_Name);
+            end if;
+         end;
       end if;
       if Has_Field (Value, "low") and then Get (Value, "low").Kind = JSON_Int_Type then
          Result.Has_Low := True;
@@ -830,9 +840,13 @@ package body Safe_Frontend.Interfaces is
       if Root.Kind /= JSON_Object_Type then
          raise Constraint_Error with File_Path & ": top-level payload must be an object";
       end if;
-      if Require_String (Root, "format", File_Path) /= "safei-v1" then
-         raise Constraint_Error with File_Path & ": format must be safei-v1";
-      end if;
+      declare
+         Format : constant String := Require_String (Root, "format", File_Path);
+      begin
+         if Format /= "safei-v1" and then Format /= "safei-v2" then
+            raise Constraint_Error with File_Path & ": format must be safei-v1 or safei-v2";
+         end if;
+      end;
 
       if Has_Field (Root, "unit_kind") then
          declare
@@ -983,8 +997,6 @@ package body Safe_Frontend.Interfaces is
                  and then Get (Item, "return_is_access_def").Kind = JSON_Boolean_Type
                then
                   Subp.Return_Is_Access_Def := Get (Get (Item, "return_is_access_def"));
-               else
-                  raise Constraint_Error with File_Path & ": subprograms[].return_is_access_def must be a boolean";
                end if;
                if Subp.Has_Return_Type then
                   Subp.Return_Type :=

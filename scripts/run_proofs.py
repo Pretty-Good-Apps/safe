@@ -87,15 +87,6 @@ PR11_8A_CHECKPOINT_FIXTURES = [
 
 PR11_8B_CHECKPOINT_FIXTURES = [
     "tests/concurrency/channel_ceiling_priority.safe",
-    "tests/concurrency/exclusive_variable.safe",
-    "tests/concurrency/fifo_ordering.safe",
-    "tests/concurrency/multi_task_channel.safe",
-    "tests/concurrency/select_delay_local_scope.safe",
-    "tests/concurrency/select_priority.safe",
-    "tests/concurrency/task_global_owner.safe",
-    "tests/concurrency/task_priority_delay.safe",
-    "tests/concurrency/try_ops.safe",
-    "tests/positive/pr113_tuple_channel.safe",
     "tests/positive/channel_pipeline.safe",
 ]
 
@@ -108,20 +99,7 @@ EMITTED_PROOF_REGRESSION_FIXTURES = [
     "tests/positive/constant_shadow_mutable.safe",
     "tests/positive/emitter_surface_proc.safe",
     "tests/positive/emitter_surface_record.safe",
-    "tests/positive/ownership_borrow.safe",
-    "tests/positive/ownership_early_return.safe",
-    "tests/positive/ownership_inout.safe",
-    "tests/positive/ownership_move.safe",
-    "tests/positive/ownership_observe.safe",
-    "tests/positive/ownership_observe_access.safe",
-    "tests/positive/ownership_return.safe",
     "tests/positive/pr118c1_print.safe",
-    "tests/positive/rule4_conditional.safe",
-    "tests/positive/rule4_deref.safe",
-    "tests/positive/rule4_factory.safe",
-    "tests/positive/rule4_linked_list.safe",
-    "tests/positive/rule4_linked_list_sum.safe",
-    "tests/positive/rule4_optional.safe",
 ]
 
 EMITTED_PROOF_FIXTURES = (

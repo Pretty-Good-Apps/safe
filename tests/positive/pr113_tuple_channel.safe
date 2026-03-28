@@ -5,7 +5,6 @@
 package pr113_tuple_channel
 
    channel pair_ch : (boolean, integer) capacity 1;
-   result : integer = 0;
 
    task producer with priority = 10
 
@@ -15,9 +14,9 @@ package pr113_tuple_channel
 
    task consumer with priority = 10
       payload : (boolean, integer);
+      result  : integer = 0;
 
       loop
          receive pair_ch, payload;
          if payload.1
             result = payload.2;
-

@@ -203,9 +203,6 @@ def validate_optional_mir_externals(value: Any, path: str) -> list[dict[str, Any
         has_return_type = require_boolean(
             entry.get("has_return_type"), f"{path}[{index}].has_return_type"
         )
-        require_boolean(
-            entry.get("return_is_access_def"), f"{path}[{index}].return_is_access_def"
-        )
         if has_return_type:
             validate_type_descriptor(entry.get("return_type"), f"{path}[{index}].return_type")
         elif entry.get("return_type") is not None:
@@ -362,8 +359,8 @@ def validate_ast_payload(ast_payload: Any, *, path: str) -> dict[str, Any]:
 
 def validate_typed_payload(payload: Any, *, path: str, ast_payload: dict[str, Any]) -> dict[str, Any]:
     typed = require_mapping(payload, path)
-    if typed.get("format") != "typed-v2":
-        fail(f"{path}.format must be typed-v2")
+    if typed.get("format") != "typed-v3":
+        fail(f"{path}.format must be typed-v3")
     for field in (
         "unit_kind",
         "package_name",
@@ -402,8 +399,8 @@ def validate_typed_payload(payload: Any, *, path: str, ast_payload: dict[str, An
 
 def validate_mir_payload(payload: Any, *, path: str, expected_source_path: str) -> dict[str, Any]:
     mir = require_mapping(payload, path)
-    if mir.get("format") != "mir-v2":
-        fail(f"{path}.format must be mir-v2")
+    if mir.get("format") != "mir-v3":
+        fail(f"{path}.format must be mir-v3")
     for field in ("source_path", "unit_kind", "package_name", "types", "graphs"):
         if field not in mir:
             fail(f"{path}.{field} is required")
@@ -478,7 +475,6 @@ def validate_safei_subprograms(items: Any, path: str) -> list[dict[str, Any]]:
         require_string(entry.get("signature"), f"{path}[{index}].signature")
         validate_safei_params(entry.get("params"), f"{path}[{index}].params")
         has_return_type = require_boolean(entry.get("has_return_type"), f"{path}[{index}].has_return_type")
-        require_boolean(entry.get("return_is_access_def"), f"{path}[{index}].return_is_access_def")
         if has_return_type:
             if "return_type" not in entry:
                 fail(f"{path}[{index}].return_type is required when has_return_type is true")
@@ -532,8 +528,8 @@ def validate_safei_channel_access_summaries(items: Any, path: str) -> list[dict[
 
 def validate_safei_payload(payload: Any, *, path: str) -> dict[str, Any]:
     safei = require_mapping(payload, path)
-    if safei.get("format") != "safei-v1":
-        fail(f"{path}.format must be safei-v1")
+    if safei.get("format") != "safei-v2":
+        fail(f"{path}.format must be safei-v2")
     for field in (
         "unit_kind",
         "package_name",

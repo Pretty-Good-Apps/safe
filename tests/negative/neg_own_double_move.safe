@@ -1,23 +1,17 @@
 -- Test: neg_own_double_move
--- Description: Moving an access value that has already been moved.
---   After the first move, Source is null/moved. The second move
---   attempts to transfer ownership from a moved variable.
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.2.p96a:0eaf48aa
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.2.p96c:0b45de01
+-- Description: Moving an inferred-reference value that has already been moved.
 -- Expected: REJECT double_move
 
 package double_move_test
 
-   subtype payload is integer (0 to 100);
-   type payload_ptr is access payload;
+   type payload is record
+      value : integer;
+      next : payload;
 
-   --  Double_Move: moves Source twice.
    function double_move
-      source  : payload_ptr = new (42 as payload);
-      target1 : payload_ptr = null;
-      target2 : payload_ptr = null;
+      source  : not null payload = (value = 42, next = null);
+      target1 : payload = null;
+      target2 : payload = null;
 
       target1 = source;
-      --  Source is now null (moved).
       target2 = source;  -- ERROR: Source has already been moved
-

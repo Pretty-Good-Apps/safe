@@ -1,14 +1,14 @@
-Diagnostics Golden: Null Deref
+Diagnostics Golden: Null Dereference
 Source: tests/negative/neg_rule4_null_deref.safe
 
 Expected diagnostic output:
 ------------------------------------------------------------------------
-neg_rule4_null_deref.safe:13:14: error: dereference of possibly null access value
+neg_rule4_null_deref.safe:14:14: error: dereference of possibly null access value
   |
-  | 13 |       return p.all;  -- ERROR: P may be null
-  |    |              ^~~~~
+  | 14 |       return p.value;  -- ERROR: P may be null
+  |    |              ^~~~~~~
   |
-  note: p is of type value_ptr (access value), which does not exclude null.
+  note: p is of type value_box (access safe_ref_target_value_box), which does not exclude null.
   note: no null check precedes this dereference on all paths reaching
         this program point.
   note: rule: D27 Rule 4 (Not-Null Dereference)
