@@ -348,9 +348,25 @@ package body Safe_Frontend.Check_Resolve is
      (Info     : GM.Type_Descriptor;
       Type_Env : Type_Maps.Map) return Boolean;
 
+   function Bounded_String_Capacity
+     (Info      : GM.Type_Descriptor;
+      Type_Env  : Type_Maps.Map;
+      Capacity  : out Natural) return Boolean;
+
    function Is_Growable_Array_Type
      (Info     : GM.Type_Descriptor;
       Type_Env : Type_Maps.Map) return Boolean;
+
+   function Try_Static_String_Length
+     (Expr   : CM.Expr_Access;
+      Length : out Natural) return Boolean;
+
+   procedure Reject_Static_Bounded_String_Overflow
+     (Source_Expr : CM.Expr_Access;
+      Target      : GM.Type_Descriptor;
+      Type_Env    : Type_Maps.Map;
+      Path        : String;
+      Span        : FT.Source_Span);
 
    function Make_Bounded_String_Type
      (Bound : Natural) return GM.Type_Descriptor;
@@ -513,6 +529,28 @@ package body Safe_Frontend.Check_Resolve is
       return False;
    end Is_Bounded_String_Type;
 
+   function Bounded_String_Capacity
+     (Info      : GM.Type_Descriptor;
+      Type_Env  : Type_Maps.Map;
+      Capacity  : out Natural) return Boolean
+   is
+      Current : GM.Type_Descriptor := Info;
+   begin
+      loop
+         if FT.Lowercase (UString_Value (Current.Kind)) = "string"
+           and then Current.Has_Length_Bound
+         then
+            Capacity := Current.Length_Bound;
+            return True;
+         end if;
+         exit when not Current.Has_Base
+           or else not Has_Type (Type_Env, UString_Value (Current.Base));
+         Current := Get_Type (Type_Env, UString_Value (Current.Base));
+      end loop;
+      Capacity := 0;
+      return False;
+   end Bounded_String_Capacity;
+
    function Is_Growable_Array_Type
      (Info     : GM.Type_Descriptor;
       Type_Env : Type_Maps.Map) return Boolean is
@@ -521,6 +559,155 @@ package body Safe_Frontend.Check_Resolve is
       return FT.Lowercase (UString_Value (Base.Kind)) = "array"
         and then Base.Growable;
    end Is_Growable_Array_Type;
+
+   function Try_Static_String_Length
+     (Expr   : CM.Expr_Access;
+      Length : out Natural) return Boolean
+   is
+      Quote : constant Character := Character'Val (34);
+   begin
+      Length := 0;
+
+      if Expr = null or else Expr.Kind /= CM.Expr_String then
+         return False;
+      end if;
+
+      declare
+         Text : constant String := UString_Value (Expr.Text);
+         Last : Natural;
+         Pos  : Natural;
+      begin
+         if Text'Length < 2
+           or else Text (Text'First) /= Quote
+           or else Text (Text'Last) /= Quote
+         then
+            return False;
+         end if;
+
+         Last := Text'Last - 1;
+         Pos := Text'First + 1;
+
+         while Pos <= Last loop
+            if Text (Pos) = Quote then
+               if Pos < Last and then Text (Pos + 1) = Quote then
+                  Length := Length + 1;
+                  Pos := Pos + 2;
+               else
+                  return False;
+               end if;
+            else
+               Length := Length + 1;
+               Pos := Pos + 1;
+            end if;
+         end loop;
+      end;
+
+      return True;
+   end Try_Static_String_Length;
+
+   procedure Reject_Static_Bounded_String_Overflow
+     (Source_Expr : CM.Expr_Access;
+      Target      : GM.Type_Descriptor;
+      Type_Env    : Type_Maps.Map;
+      Path        : String;
+      Span        : FT.Source_Span)
+   is
+      Base_Target   : constant GM.Type_Descriptor := Base_Type (Target, Type_Env);
+      Capacity      : Natural := 0;
+      Static_Length : Natural := 0;
+   begin
+      if Bounded_String_Capacity (Target, Type_Env, Capacity) then
+         if Try_Static_String_Length (Source_Expr, Static_Length)
+           and then Static_Length > Capacity
+         then
+            Raise_Diag
+              (CM.Source_Frontend_Error
+                 (Path    => Path,
+                  Span    => (if Source_Expr = null then Span else Source_Expr.Span),
+                  Message => "string value length exceeds bounded string capacity"));
+         end if;
+         return;
+      end if;
+
+      if Is_Tuple_Type (Target, Type_Env)
+        and then Source_Expr /= null
+        and then Source_Expr.Kind = CM.Expr_Tuple
+      then
+         declare
+            Tuple_Type : constant GM.Type_Descriptor := Base_Type (Target, Type_Env);
+         begin
+            if Natural (Source_Expr.Elements.Length) =
+              Natural (Tuple_Type.Tuple_Element_Types.Length)
+            then
+               for Index in Source_Expr.Elements.First_Index .. Source_Expr.Elements.Last_Index loop
+                  Reject_Static_Bounded_String_Overflow
+                    (Source_Expr.Elements (Index),
+                     Resolve_Type
+                       (UString_Value (Tuple_Type.Tuple_Element_Types (Index)),
+                        Type_Env,
+                        "",
+                        FT.Null_Span),
+                     Type_Env,
+                     Path,
+                     Source_Expr.Elements (Index).Span);
+               end loop;
+            end if;
+         end;
+      elsif FT.Lowercase (UString_Value (Base_Target.Kind)) = "record"
+        and then Source_Expr /= null
+        and then Source_Expr.Kind = CM.Expr_Aggregate
+      then
+         for Item of Source_Expr.Fields loop
+            declare
+               Field_Target : GM.Type_Descriptor := Default_Integer;
+               Found        : Boolean := False;
+            begin
+               for Field of Base_Target.Fields loop
+                  if UString_Value (Field.Name) = UString_Value (Item.Field_Name) then
+                     Field_Target :=
+                       Resolve_Type
+                         (UString_Value (Field.Type_Name),
+                          Type_Env,
+                          "",
+                          FT.Null_Span);
+                     Found := True;
+                     exit;
+                  end if;
+               end loop;
+               if Found then
+                  Reject_Static_Bounded_String_Overflow
+                    (Item.Expr,
+                     Field_Target,
+                     Type_Env,
+                     Path,
+                     Item.Span);
+               end if;
+            end;
+         end loop;
+      elsif FT.Lowercase (UString_Value (Base_Target.Kind)) = "array"
+        and then Base_Target.Has_Component_Type
+        and then Source_Expr /= null
+        and then Source_Expr.Kind = CM.Expr_Array_Literal
+      then
+         declare
+            Component_Type : constant GM.Type_Descriptor :=
+              Resolve_Type
+                (UString_Value (Base_Target.Component_Type),
+                 Type_Env,
+                 "",
+                 FT.Null_Span);
+         begin
+            for Item of Source_Expr.Elements loop
+               Reject_Static_Bounded_String_Overflow
+                 (Item,
+                  Component_Type,
+                  Type_Env,
+                  Path,
+                  Item.Span);
+            end loop;
+         end;
+      end if;
+   end Reject_Static_Bounded_String_Overflow;
 
    function Make_Bounded_String_Type
      (Bound : Natural) return GM.Type_Descriptor
@@ -3350,6 +3537,12 @@ package body Safe_Frontend.Check_Resolve is
          elsif Static_Slice_Narrowing_OK then
             Result.Initializer.Type_Name := Result.Type_Info.Name;
          end if;
+         Reject_Static_Bounded_String_Overflow
+           (Result.Initializer,
+            Result.Type_Info,
+            Type_Env,
+            Path,
+            Result.Initializer.Span);
          if not Static_Slice_Narrowing_OK
            and then not Compatible_Source_Expr_To_Target_Type
            (Result.Initializer,
@@ -3588,6 +3781,12 @@ package body Safe_Frontend.Check_Resolve is
             Result.Destructure.Initializer :=
               Normalize_Expr_Checked
                 (Stmt.Destructure.Initializer, Var_Types, Functions, Type_Env, Path);
+            Reject_Static_Bounded_String_Overflow
+              (Result.Destructure.Initializer,
+               Result.Destructure.Type_Info,
+               Type_Env,
+               Path,
+               Result.Destructure.Initializer.Span);
             if not Compatible_Source_Expr_To_Target_Type
               (Result.Destructure.Initializer,
                Expr_Type (Result.Destructure.Initializer, Var_Types, Functions, Type_Env),
@@ -3617,7 +3816,7 @@ package body Safe_Frontend.Check_Resolve is
                end if;
             end;
 
-        when CM.Stmt_Assign =>
+         when CM.Stmt_Assign =>
             Result.Target := Normalize_Expr_Checked (Stmt.Target, Var_Types, Functions, Type_Env, Path);
             if not Is_Assignable_Target (Result.Target) then
                Raise_Diag
@@ -3683,6 +3882,12 @@ package body Safe_Frontend.Check_Resolve is
                   Result.Value.Type_Name := Target_Info.Name;
                end if;
             end;
+            Reject_Static_Bounded_String_Overflow
+              (Result.Value,
+               Expr_Type (Result.Target, Var_Types, Functions, Type_Env),
+               Type_Env,
+               Path,
+               Result.Value.Span);
             if not Compatible_Source_Expr_To_Target_Type
               (Result.Value,
                Expr_Type (Result.Value, Var_Types, Functions, Type_Env),
@@ -3787,7 +3992,7 @@ package body Safe_Frontend.Check_Resolve is
                  Normalize_Expr_Checked (Stmt.Condition, Var_Types, Functions, Type_Env, Path);
             end if;
 
-        when CM.Stmt_For =>
+         when CM.Stmt_For =>
             if Stmt.Loop_Iterable /= null then
                declare
                   Iterable_Type : GM.Type_Descriptor;
@@ -4313,7 +4518,7 @@ package body Safe_Frontend.Check_Resolve is
                Result.Component_Type := Component_Type.Name;
             end;
             Result.Unconstrained := Decl.Kind = CM.Type_Decl_Unconstrained_Array;
-        when CM.Type_Decl_Growable_Array =>
+         when CM.Type_Decl_Growable_Array =>
             Result :=
               Make_Growable_Array_Type
                 (Resolve_Type_Spec (Decl.Component_Type, Type_Env, Const_Env, Path));
