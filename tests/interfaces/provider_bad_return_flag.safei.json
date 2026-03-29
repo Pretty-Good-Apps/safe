@@ -1,5 +1,6 @@
 {
   "format": "safei-v2",
+  "unit_kind": "package",
   "package_name": "provider_bad_return_flag",
   "dependencies": [],
   "executables": [],

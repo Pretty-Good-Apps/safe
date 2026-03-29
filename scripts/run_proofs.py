@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the minimal Safe proof workflow."""
+"""Run the live all-proved-only Safe proof workflow."""
 
 from __future__ import annotations
 
@@ -90,11 +90,36 @@ PR11_8B_CHECKPOINT_FIXTURES = [
     "tests/positive/channel_pipeline.safe",
 ]
 
+# Accepted/emitted concurrency fixtures that remain outside the current strict
+# warnings-as-errors proof lane. Keep them explicit here so coverage reductions
+# do not become silent manifest drift.
+PR11_8B_DEFERRED_FIXTURES = [
+    "tests/concurrency/exclusive_variable.safe",
+    "tests/concurrency/fifo_ordering.safe",
+    "tests/concurrency/multi_task_channel.safe",
+    "tests/concurrency/select_delay_local_scope.safe",
+    "tests/concurrency/select_priority.safe",
+    "tests/concurrency/task_global_owner.safe",
+    "tests/concurrency/task_priority_delay.safe",
+    "tests/concurrency/try_ops.safe",
+    "tests/positive/pr113_tuple_channel.safe",
+]
+
 PR11_8E_CHECKPOINT_FIXTURES = [
     "tests/positive/ownership_move.safe",
     "tests/positive/ownership_early_return.safe",
     "tests/positive/pr118e_not_null_self_reference.safe",
     "tests/concurrency/pr118c2_pre_task_init.safe",
+]
+
+# Accepted/emitted ownership fixtures that remain outside the current PR11.8e
+# checkpoint until they are green again under the same strict proof policy.
+PR11_8E_DEFERRED_FIXTURES = [
+    "tests/positive/ownership_borrow.safe",
+    "tests/positive/ownership_observe.safe",
+    "tests/positive/ownership_observe_access.safe",
+    "tests/positive/ownership_return.safe",
+    "tests/positive/ownership_inout.safe",
 ]
 
 EMITTED_PROOF_REGRESSION_FIXTURES = [
@@ -188,7 +213,9 @@ def validate_manifest(
 def validate_manifests() -> None:
     validate_manifest("PR11.8a checkpoint manifest", PR11_8A_CHECKPOINT_FIXTURES)
     validate_manifest("PR11.8b checkpoint manifest", PR11_8B_CHECKPOINT_FIXTURES)
+    validate_manifest("PR11.8b deferred fixture list", PR11_8B_DEFERRED_FIXTURES)
     validate_manifest("PR11.8e checkpoint manifest", PR11_8E_CHECKPOINT_FIXTURES)
+    validate_manifest("PR11.8e deferred fixture list", PR11_8E_DEFERRED_FIXTURES)
     validate_manifest("emitted proof regression manifest", EMITTED_PROOF_REGRESSION_FIXTURES)
     validate_manifest("emitted proof manifest", EMITTED_PROOF_FIXTURES)
 
