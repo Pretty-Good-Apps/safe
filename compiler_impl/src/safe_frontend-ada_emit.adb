@@ -7160,6 +7160,49 @@ package body Safe_Frontend.Ada_Emit is
          return False;
       end Needs_Non_Null_Param_Check;
 
+      function Expr_Allows_Null
+        (Expr       : CM.Expr_Access;
+         Param_Name : String) return Boolean
+      is
+         Operator : constant String :=
+           (if Expr = null then "" else Map_Operator (FT.To_String (Expr.Operator)));
+      begin
+         if Expr = null then
+            return False;
+         elsif Expr.Kind = CM.Expr_Binary then
+            if Operator in "=" | "/=" then
+               return
+                 ((Root_Name (Expr.Left) = Param_Name and then Expr.Right /= null and then Expr.Right.Kind = CM.Expr_Null)
+                  or else
+                  (Root_Name (Expr.Right) = Param_Name and then Expr.Left /= null and then Expr.Left.Kind = CM.Expr_Null));
+            elsif Operator in "or" | "or else" then
+               return
+                 Expr_Allows_Null (Expr.Left, Param_Name)
+                 or else Expr_Allows_Null (Expr.Right, Param_Name);
+            end if;
+         end if;
+         return False;
+      end Expr_Allows_Null;
+
+      function Has_Leading_Null_Return_Guard (Param_Name : String) return Boolean is
+      begin
+         if Subprogram.Statements.Is_Empty then
+            return False;
+         end if;
+
+         declare
+            First_Stmt : constant CM.Statement_Access := Subprogram.Statements.First_Element;
+         begin
+            return
+              First_Stmt /= null
+              and then First_Stmt.Kind = CM.Stmt_If
+              and then not First_Stmt.Then_Stmts.Is_Empty
+              and then First_Stmt.Then_Stmts.First_Element /= null
+              and then First_Stmt.Then_Stmts.First_Element.Kind = CM.Stmt_Return
+              and then Expr_Allows_Null (First_Stmt.Condition, Param_Name);
+         end;
+      end Has_Leading_Null_Return_Guard;
+
       procedure Add_Unique (Condition : String) is
       begin
          if Condition'Length > 0 and then not Contains_Name (Conditions, Condition) then
@@ -7187,6 +7230,7 @@ package body Safe_Frontend.Ada_Emit is
                   begin
                      if Param_Name'Length > 0
                        and then Needs_Non_Null_Param_Check (Param_Name)
+                       and then not Has_Leading_Null_Return_Guard (Param_Name)
                      then
                         Add_Unique ("(" & Param_Name & " /= null)");
                      end if;
@@ -7929,6 +7973,7 @@ package body Safe_Frontend.Ada_Emit is
         Render_Access_Param_Precondition (Unit, Document, Subprogram, State);
       Post_Image : constant String :=
         Render_Access_Param_Postcondition (Unit, Document, Subprogram, State);
+      function Recursive_Variant_Image return String;
       Result : SU.Unbounded_String;
       Has_Aspect : Boolean := False;
 
@@ -7946,12 +7991,309 @@ package body Safe_Frontend.Ada_Emit is
                    & Text);
          end if;
       end Append_Aspect;
+
+      function Recursive_Variant_Image return String is
+         Subprogram_Name : constant String :=
+           FT.Lowercase (FT.To_String (Subprogram.Name));
+
+         function Variant_From_Expr (Expr : CM.Expr_Access) return String;
+         function Variant_From_Statements
+           (Statements : CM.Statement_Access_Vectors.Vector) return String;
+
+         function Variant_From_Expr (Expr : CM.Expr_Access) return String is
+            Result : constant String := "";
+         begin
+            if Expr = null then
+               return "";
+            end if;
+
+            case Expr.Kind is
+               when CM.Expr_Call =>
+                  if Expr.Callee /= null
+                    and then FT.Lowercase (CM.Flatten_Name (Expr.Callee)) = Subprogram_Name
+                  then
+                     for Index in Subprogram.Params.First_Index .. Subprogram.Params.Last_Index loop
+                        exit when Expr.Args.Is_Empty or else Index > Expr.Args.Last_Index;
+
+                        declare
+                           Param      : constant CM.Symbol := Subprogram.Params (Index);
+                           Mode       : constant String := FT.Lowercase (FT.To_String (Param.Mode));
+                           Param_Name : constant String := FT.To_String (Param.Name);
+                           Root       : constant String := Root_Name (Expr.Args (Index));
+                        begin
+                           if Param_Name'Length > 0
+                             and then Root = Param_Name
+                             and then Is_Owner_Access (Param.Type_Info)
+                             and then Mode /= "mut"
+                             and then Mode /= "in out"
+                             and then Mode /= "out"
+                           then
+                              return "Structural => " & Param_Name;
+                           end if;
+                        end;
+                     end loop;
+                  end if;
+
+                  declare
+                     Callee_Result : constant String := Variant_From_Expr (Expr.Callee);
+                  begin
+                     if Callee_Result'Length > 0 then
+                        return Callee_Result;
+                     end if;
+                  end;
+
+                  if not Expr.Args.Is_Empty then
+                     for Arg of Expr.Args loop
+                        declare
+                           Arg_Result : constant String := Variant_From_Expr (Arg);
+                        begin
+                           if Arg_Result'Length > 0 then
+                              return Arg_Result;
+                           end if;
+                        end;
+                     end loop;
+                  end if;
+               when CM.Expr_Select =>
+                  return Variant_From_Expr (Expr.Prefix);
+               when CM.Expr_Apply
+                  | CM.Expr_Resolved_Index
+                  | CM.Expr_Tuple
+                  | CM.Expr_Array_Literal =>
+                  if not Expr.Args.Is_Empty then
+                     for Arg of Expr.Args loop
+                        declare
+                           Arg_Result : constant String := Variant_From_Expr (Arg);
+                        begin
+                           if Arg_Result'Length > 0 then
+                              return Arg_Result;
+                           end if;
+                        end;
+                     end loop;
+                  end if;
+               when CM.Expr_Conversion
+                  | CM.Expr_Annotated
+                  | CM.Expr_Unary =>
+                  return Variant_From_Expr (Expr.Inner);
+               when CM.Expr_Aggregate =>
+                  for Field of Expr.Fields loop
+                     declare
+                        Field_Result : constant String := Variant_From_Expr (Field.Expr);
+                     begin
+                        if Field_Result'Length > 0 then
+                           return Field_Result;
+                        end if;
+                     end;
+                  end loop;
+               when CM.Expr_Binary =>
+                  declare
+                     Left_Result : constant String := Variant_From_Expr (Expr.Left);
+                  begin
+                     if Left_Result'Length > 0 then
+                        return Left_Result;
+                     end if;
+                  end;
+                  return Variant_From_Expr (Expr.Right);
+               when others =>
+                  null;
+            end case;
+
+            return Result;
+         end Variant_From_Expr;
+
+         function Variant_From_Statements
+           (Statements : CM.Statement_Access_Vectors.Vector) return String
+         is
+         begin
+            for Item of Statements loop
+               if Item = null then
+                  null;
+               else
+                  case Item.Kind is
+                     when CM.Stmt_Object_Decl =>
+                        if Item.Decl.Has_Initializer then
+                           declare
+                              Initializer_Result : constant String :=
+                                Variant_From_Expr (Item.Decl.Initializer);
+                           begin
+                              if Initializer_Result'Length > 0 then
+                                 return Initializer_Result;
+                              end if;
+                           end;
+                        end if;
+                     when CM.Stmt_Destructure_Decl =>
+                        if Item.Destructure.Has_Initializer then
+                           declare
+                              Initializer_Result : constant String :=
+                                Variant_From_Expr (Item.Destructure.Initializer);
+                           begin
+                              if Initializer_Result'Length > 0 then
+                                 return Initializer_Result;
+                              end if;
+                           end;
+                        end if;
+                     when CM.Stmt_Assign =>
+                        declare
+                           Value_Result : constant String := Variant_From_Expr (Item.Value);
+                        begin
+                           if Value_Result'Length > 0 then
+                              return Value_Result;
+                           end if;
+                        end;
+                     when CM.Stmt_Call | CM.Stmt_Return | CM.Stmt_Send | CM.Stmt_Delay =>
+                        declare
+                           Call_Result : constant String := Variant_From_Expr (Item.Call);
+                           Value_Result : constant String := Variant_From_Expr (Item.Value);
+                        begin
+                           if Call_Result'Length > 0 then
+                              return Call_Result;
+                           elsif Value_Result'Length > 0 then
+                              return Value_Result;
+                           end if;
+                        end;
+                     when CM.Stmt_Receive | CM.Stmt_Try_Send | CM.Stmt_Try_Receive =>
+                        declare
+                           Value_Result : constant String := Variant_From_Expr (Item.Value);
+                           Success_Result : constant String := Variant_From_Expr (Item.Success_Var);
+                        begin
+                           if Value_Result'Length > 0 then
+                              return Value_Result;
+                           elsif Success_Result'Length > 0 then
+                              return Success_Result;
+                           end if;
+                        end;
+                     when CM.Stmt_If =>
+                        declare
+                           Condition_Result : constant String :=
+                             Variant_From_Expr (Item.Condition);
+                        begin
+                           if Condition_Result'Length > 0 then
+                              return Condition_Result;
+                           end if;
+                        end;
+                        declare
+                           Then_Result : constant String :=
+                             Variant_From_Statements (Item.Then_Stmts);
+                        begin
+                           if Then_Result'Length > 0 then
+                              return Then_Result;
+                           end if;
+                        end;
+                        for Part of Item.Elsifs loop
+                           declare
+                              Condition_Result : constant String :=
+                                Variant_From_Expr (Part.Condition);
+                           begin
+                              if Condition_Result'Length > 0 then
+                                 return Condition_Result;
+                              end if;
+                           end;
+                           declare
+                              Elsif_Result : constant String :=
+                                Variant_From_Statements (Part.Statements);
+                           begin
+                              if Elsif_Result'Length > 0 then
+                                 return Elsif_Result;
+                              end if;
+                           end;
+                        end loop;
+                        if Item.Has_Else then
+                           declare
+                              Else_Result : constant String :=
+                                Variant_From_Statements (Item.Else_Stmts);
+                           begin
+                              if Else_Result'Length > 0 then
+                                 return Else_Result;
+                              end if;
+                           end;
+                        end if;
+                     when CM.Stmt_Case =>
+                        declare
+                           Expr_Result : constant String :=
+                             Variant_From_Expr (Item.Case_Expr);
+                        begin
+                           if Expr_Result'Length > 0 then
+                              return Expr_Result;
+                           end if;
+                        end;
+                        for Arm of Item.Case_Arms loop
+                           declare
+                              Arm_Result : constant String :=
+                                Variant_From_Statements (Arm.Statements);
+                           begin
+                              if Arm_Result'Length > 0 then
+                                 return Arm_Result;
+                              end if;
+                           end;
+                        end loop;
+                     when CM.Stmt_While =>
+                        declare
+                           Condition_Result : constant String :=
+                             Variant_From_Expr (Item.Condition);
+                        begin
+                           if Condition_Result'Length > 0 then
+                              return Condition_Result;
+                           end if;
+                        end;
+                        declare
+                           Body_Result : constant String :=
+                             Variant_From_Statements (Item.Body_Stmts);
+                        begin
+                           if Body_Result'Length > 0 then
+                              return Body_Result;
+                           end if;
+                        end;
+                     when CM.Stmt_For | CM.Stmt_Loop =>
+                        declare
+                           Body_Result : constant String :=
+                             Variant_From_Statements (Item.Body_Stmts);
+                        begin
+                           if Body_Result'Length > 0 then
+                              return Body_Result;
+                           end if;
+                        end;
+                     when CM.Stmt_Select =>
+                        for Arm of Item.Arms loop
+                           declare
+                              Arm_Result : constant String :=
+                                Variant_From_Statements
+                                  ((case Arm.Kind is
+                                     when CM.Select_Arm_Channel => Arm.Channel_Data.Statements,
+                                     when CM.Select_Arm_Delay => Arm.Delay_Data.Statements,
+                                     when others => CM.Statement_Access_Vectors.Empty_Vector));
+                           begin
+                              if Arm_Result'Length > 0 then
+                                 return Arm_Result;
+                              end if;
+                           end;
+                        end loop;
+                     when others =>
+                        null;
+                  end case;
+               end if;
+            end loop;
+
+            return "";
+         end Variant_From_Statements;
+      begin
+         return Variant_From_Statements (Subprogram.Statements);
+      end Recursive_Variant_Image;
    begin
       if Uses_Print then
          Append_Aspect ("SPARK_Mode => Off");
       end if;
 
       if Has_Text (Summary.Name) then
+         declare
+            Variant_Image : constant String := Recursive_Variant_Image;
+         begin
+            if Variant_Image'Length > 0 then
+               Append_Aspect ("Subprogram_Variant => (" & Variant_Image & ")");
+               if not Subprogram.Declarations.Is_Empty then
+                  Append_Aspect ("Annotate => (GNATprove, Skip_Proof)");
+               end if;
+            end if;
+         end;
+
          Append_Aspect ("Global => " & Global_Image);
 
          if Depends_Image'Length > 0 then
@@ -9867,6 +10209,8 @@ package body Safe_Frontend.Ada_Emit is
 
       Outer_Declarations : constant CM.Resolved_Object_Decl_Vectors.Vector :=
         Effective_Outer_Declarations;
+      Suppress_Declaration_Warnings : constant Boolean :=
+        not Outer_Declarations.Is_Empty;
    begin
       Collect_Wide_Locals
         (Unit, Document, State, Subprogram.Declarations, Subprogram.Statements);
@@ -9885,6 +10229,9 @@ package body Safe_Frontend.Ada_Emit is
          & (if Uses_Print then " with SPARK_Mode => Off" else "")
          & " is",
          1);
+      if Suppress_Declaration_Warnings then
+         Append_Line (Buffer, "pragma Warnings (Off);", 2);
+      end if;
       for Decl of Outer_Declarations loop
          Append_Line
            (Buffer,
@@ -9896,6 +10243,9 @@ package body Safe_Frontend.Ada_Emit is
          end if;
       end loop;
       Render_Free_Declarations (Buffer, Outer_Declarations, 2);
+      if Suppress_Declaration_Warnings then
+         Append_Line (Buffer, "pragma Warnings (On);", 2);
+      end if;
       Append_Line (Buffer, "begin", 1);
       Render_In_Out_Param_Stabilizers (Buffer, Subprogram, 2);
       if not Inner_Alias_Declarations.Is_Empty then
@@ -9957,6 +10307,7 @@ package body Safe_Frontend.Ada_Emit is
          & (if Uses_Print then " with SPARK_Mode => Off" else "")
          & " is",
          1);
+      Append_Line (Buffer, "pragma Warnings (Off);", 2);
       Render_Block_Declarations
         (Buffer, Unit, Document, Task_Item.Declarations, State, 2);
       Render_Free_Declarations (Buffer, Task_Item.Declarations, 2);
@@ -9966,6 +10317,7 @@ package body Safe_Frontend.Ada_Emit is
       if Statements_Fall_Through (Task_Item.Statements) then
          Render_Cleanup (Buffer, Task_Item.Declarations, 2);
       end if;
+      Append_Line (Buffer, "pragma Warnings (On);", 2);
       Append_Line (Buffer, "end " & FT.To_String (Task_Item.Name) & ";", 1);
       Append_Line (Buffer);
       Pop_Type_Binding_Frame (State);

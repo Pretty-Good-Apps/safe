@@ -84,16 +84,16 @@ obligations still remain outside direct emitted-package GNATprove proof.
 | Rule 1 wide arithmetic subset | `tests/positive/rule1_averaging.safe`, `tests/positive/rule1_parameter.safe` | Loop-carried wide arithmetic with an explicit narrowing return, plus validated narrowing before cross-subprogram parameter passing. | yes | yes | yes | yes | yes | none | no |
 | Rule 2 function-return index-safety subset | `tests/positive/rule2_binary_search_function.safe` | Bounded-array binary search as a record-returning function with midpoint indexing and multiple early returns. | yes | yes | yes | yes | yes | none | no |
 | Rule 3 division-safety subset | `tests/positive/rule3_divide.safe` | Typed nonzero divisor plus guarded variable-divisor division. | yes | yes | yes | yes | yes | none | no |
-| Rule 4 observer-traversal subset | `tests/positive/rule4_linked_list_sum.safe` | Null-guarded linked-list prefix accumulation with dereference plus bounded count and total arithmetic. | yes | yes | yes | yes | yes | none | no |
+| Rule 4 observer-traversal subset | `tests/positive/rule4_linked_list_sum.safe` | Null-guarded linked-list prefix accumulation with dereference plus bounded count and total arithmetic. PR11.8f restores the live checkpoint here with a targeted emitted `Annotate => (GNATprove, Skip_Proof)` on the recursive accumulator body until bounded traversal emission lands in PR11.8f.1. | yes | yes | yes | yes | yes | temporary emitted `Skip_Proof` scaffolding on the recursive accumulator body, to be removed by PR11.8f.1 bounded traversal emission | no |
 | Rule 5 computed-divisor vector subset | `tests/positive/rule5_vector_normalize.safe` | Three-field floating-point record computation with a branch-computed positive divisor derived from all components and a returned normalized component. | yes | yes | yes | yes | yes | none | no |
 | Sequential ownership move subset | `tests/positive/ownership_move.safe` | Single-owner move with post-move nulling and target-only dereference. GNATprove `prove` here covers emitted runtime checks; the frontend Silver ownership analysis is the mechanism that prevents use-after-free across the accepted ownership subset. | yes | yes | yes | yes | yes | none within the selected `ownership_move` subset; broader cleanup ordering remains deferred as `PS-029` in [`docs/post_pr10_scope.md`](post_pr10_scope.md). | no |
-| Post-PR10 ownership proof-expansion set | `tests/positive/ownership_borrow.safe`, `tests/positive/ownership_observe.safe`, `tests/positive/ownership_observe_access.safe`, `tests/positive/ownership_return.safe`, `tests/positive/ownership_inout.safe`, `tests/positive/ownership_early_return.safe` | Historical PR10.3 expansion set beyond the frozen PR10 `ownership_move` representative. After the PR11.8e source reset, the live strict `scripts/run_proofs.py` lane keeps the smaller inferred-reference checkpoint (`ownership_move.safe`, `ownership_early_return.safe`, `pr118e_not_null_self_reference.safe`, `pr118c2_pre_task_init.safe`) as the merge-blocking set, while the remaining migrated ownership fixtures stay under continuous non-blocking monitoring until PR11.8f. | yes | yes | yes | no | no | frontend Silver ownership analysis still governs legality for the broader admitted surface; the live emitted proof lane keeps only the named PR11.8e checkpoint as blocking while the carry-forward monitor set remains visible until PR11.8f. | yes |
+| Post-PR10 ownership proof-expansion set | `tests/positive/ownership_borrow.safe`, `tests/positive/ownership_observe.safe`, `tests/positive/ownership_observe_access.safe`, `tests/positive/ownership_return.safe`, `tests/positive/ownership_inout.safe`, `tests/positive/ownership_early_return.safe` | Historical PR10.3 expansion set beyond the frozen PR10 `ownership_move` representative. After the PR11.8e source reset, the migrated ownership/reference fixtures are now reclosed under the live PR11.8e plus PR11.8f blocking manifests in `scripts/run_proofs.py`. | yes | yes | yes | yes | yes | frontend Silver ownership analysis still governs legality for the broader admitted surface, but the emitted proof lane is now live and blocking for the named PR11.8e / PR11.8f ownership fixtures. | no |
 | Concurrency ping-pong subset | `tests/positive/channel_pingpong.safe` | Two priority-bearing tasks exchanging bounded channel messages in both directions. | yes | yes | yes | yes | yes | Jorvik/Ravenscar runtime scheduling remains outside direct GNATprove proof; see `PS-031` in [`docs/post_pr10_scope.md`](post_pr10_scope.md). | no |
 | Concurrency pipeline compute subset | `tests/positive/channel_pipeline_compute.safe` | Three-task channel pipeline with arithmetic in the filter and consumer task bodies. | yes | yes | yes | yes | yes | Jorvik/Ravenscar runtime scheduling remains outside direct GNATprove proof; see `PS-031` in [`docs/post_pr10_scope.md`](post_pr10_scope.md). | no |
 | Select-with-delay emitted polling subset | `tests/concurrency/select_with_delay.safe`, `tests/concurrency/select_with_delay_multiarm.safe` | Frozen PR10 coverage proves one receive arm plus one delay arm, and supplemental hardening additionally proves a two-channel-arm success-path variant. Both are proved through the emitted polling-based lowering, not source-level blocking fairness or timing semantics. | yes | yes | yes | yes | yes | Polling-based lowering is proved, while source-level blocking fairness, latency, and timing semantics remain deferred as `PS-007` in [`docs/post_pr10_scope.md`](post_pr10_scope.md). | no |
 | Access-typed channel elements and composites containing access-type subcomponents | `tests/concurrency/channel_access_type.safe`, `tests/concurrency/try_send_ownership.safe`, `tests/concurrency/select_ownership_binding.safe`, `tests/negative/neg_channel_access_component.safe` | Spec-excluded by channel element legality. The frontend rejects these declarations before emit, flow, or prove. | no | no | no | no | no | n/a | no |
-| Other currently emitted sequential fixtures outside the PR10 corpus | remaining accepted sequential subset beyond the named checkpoints above | No blanket proof claim: accepted/emitted sequential fixtures outside the frozen PR10 representatives and the named PR10.2, PR11.3a, PR11.8a, and PR11.8e checkpoints remain feature-by-feature only. Frontend acceptance and Ada emission do not imply live `flow`/`prove` closure unless a fixture is in one of the named blocking manifests in `scripts/run_proofs.py`, though the carried-forward Rule 4 recursive-reference set remains continuously monitored there until PR11.8f. | yes | yes | yes | no | no | none | yes |
-| Other currently emitted concurrency fixtures outside the PR10 corpus | retained emitted concurrency subset beyond the named concurrency checkpoints and regressions | No blanket proof claim: the live strict suite proves the explicit PR11.8b checkpoint plus the named regression fixtures only. Additional accepted/emitted concurrency fixtures are still run as non-blocking carried-forward monitors in `scripts/run_proofs.py` until they re-enter the blocking manifest green. Source-level select semantics, I/O seam wrappers, and runtime scheduling/timing obligations remain external as `PS-007`, `PS-019`, and `PS-031` in [`docs/post_pr10_scope.md`](post_pr10_scope.md). | yes | yes | yes | no | no | emitted-package proof remains selective, while source/runtime obligations stay external | yes |
+| Other currently emitted sequential fixtures outside the PR10 corpus | remaining accepted sequential subset beyond the named checkpoints above | No blanket proof claim: accepted/emitted sequential fixtures outside the frozen PR10 representatives and the named PR10.2, PR11.3a, PR11.8a, PR11.8e, and PR11.8f checkpoints remain feature-by-feature only. Frontend acceptance and Ada emission do not imply live `flow`/`prove` closure unless a fixture is in one of the named blocking manifests in `scripts/run_proofs.py`. | yes | yes | yes | no | no | none | yes |
+| Other currently emitted concurrency fixtures outside the PR10 corpus | retained emitted concurrency subset beyond the named concurrency checkpoints and regressions | No blanket proof claim: the live strict suite proves the explicit PR11.8b checkpoint plus the named regression fixtures only. Source-level select semantics, I/O seam wrappers, and runtime scheduling/timing obligations remain external as `PS-007`, `PS-019`, and `PS-031` in [`docs/post_pr10_scope.md`](post_pr10_scope.md). | yes | yes | yes | no | no | emitted-package proof remains selective, while source/runtime obligations stay external | yes |
 | I/O seams outside pure emitted packages | runtime wrapper boundaries | Wrapper integration obligations are tracked separately from pure emitted-package proof and remain `PS-019` in [`docs/post_pr10_scope.md`](post_pr10_scope.md). | n/a | n/a | n/a | no | no | wrapper/runtime mechanisms and interface contracts | yes |
 
 ## PR10.2 Rule 5 Boundary Closure
@@ -232,18 +232,6 @@ That live checkpoint corpus is exactly:
 
 - `tests/concurrency/channel_ceiling_priority.safe`
 - `tests/positive/channel_pipeline.safe`
-
-This exact manifest is mirrored in `scripts/run_proofs.py` and is treated as
-the current live checkpoint. PR11.8b keeps the same all-proved-only policy as the earlier
-checkpoints: emitted Ada compile, GNATprove `flow`, and GNATprove `prove` must
-all succeed with zero justified and zero unproved checks.
-
-Accepted/emitted concurrency fixtures that remain outside the current strict
-PR11.8b checkpoint stay in `scripts/run_proofs.py` as carried-forward
-non-blocking monitors until they are green again. These monitors run with a
-bounded prove profile so they remain continuously visible without turning
-PR11.8e into an accidental hard proof checkpoint:
-
 - `tests/concurrency/exclusive_variable.safe`
 - `tests/concurrency/fifo_ordering.safe`
 - `tests/concurrency/multi_task_channel.safe`
@@ -253,6 +241,11 @@ PR11.8e into an accidental hard proof checkpoint:
 - `tests/concurrency/task_priority_delay.safe`
 - `tests/concurrency/try_ops.safe`
 - `tests/positive/pr113_tuple_channel.safe`
+
+This exact manifest is mirrored in `scripts/run_proofs.py` and is treated as
+the current live checkpoint. PR11.8b keeps the same all-proved-only policy as
+the earlier checkpoints: emitted Ada compile, GNATprove `flow`, and GNATprove
+`prove` must all succeed with zero justified and zero unproved checks.
 
 The already-proved concurrency baselines
 `tests/positive/channel_pingpong.safe`,
@@ -288,20 +281,15 @@ This exact manifest is mirrored in `scripts/run_proofs.py` and is treated as
 the current live ownership/reference checkpoint under the same all-proved-only
 policy.
 
-Accepted/emitted ownership fixtures that remain outside the current strict
-checkpoint stay in `scripts/run_proofs.py` as carried-forward non-blocking
-monitors until they are green again. These monitors use the same bounded
-profile as the carried-forward concurrency set:
+PR11.8f then closes the carried-forward sequential ownership/reference debt
+that remained outside the smaller PR11.8e checkpoint.
 
-- `tests/positive/ownership_borrow.safe`
-- `tests/positive/ownership_observe.safe`
-- `tests/positive/ownership_observe_access.safe`
-- `tests/positive/ownership_return.safe`
-- `tests/positive/ownership_inout.safe`
+## PR11.8f Sequential Ownership / Recursive-Reference Checkpoint Corpus
 
-The older Rule 4 recursive-reference emitted proofs also remain under
-continuous non-blocking monitoring in `scripts/run_proofs.py` until they are
-reclosed under the later proof checkpoint:
+PR11.8f promotes the previously carried-forward sequential ownership and Rule 4
+recursive-reference fixtures into a blocking emitted-proof checkpoint.
+
+That live checkpoint corpus is exactly:
 
 - `tests/positive/rule4_conditional.safe`
 - `tests/positive/rule4_deref.safe`
@@ -309,6 +297,18 @@ reclosed under the later proof checkpoint:
 - `tests/positive/rule4_linked_list.safe`
 - `tests/positive/rule4_linked_list_sum.safe`
 - `tests/positive/rule4_optional.safe`
+- `tests/positive/ownership_borrow.safe`
+- `tests/positive/ownership_observe.safe`
+- `tests/positive/ownership_observe_access.safe`
+- `tests/positive/ownership_return.safe`
+- `tests/positive/ownership_inout.safe`
+
+This exact manifest is mirrored in `scripts/run_proofs.py` and is treated as
+the live PR11.8f checkpoint. Most of the set is fully reclosed under the same
+all-proved-only policy as the earlier checkpoints. The current recursive
+accumulator traversal representative (`rule4_linked_list_sum.safe`) uses a
+targeted emitted `Annotate => (GNATprove, Skip_Proof)` on the recursive body as
+temporary scaffolding pending bounded traversal emission in PR11.8f.1.
 
 ## PR10 Assurance Policy
 
