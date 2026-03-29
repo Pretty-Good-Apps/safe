@@ -1389,10 +1389,11 @@ package body Safe_Frontend.Check_Resolve is
    end Make_Tuple_Type;
 
    function Resolve_Type_Spec
-     (Spec     : CM.Type_Spec;
-      Type_Env : Type_Maps.Map;
+     (Spec      : CM.Type_Spec;
+      Type_Env  : Type_Maps.Map;
       Const_Env : Static_Value_Maps.Map := Static_Value_Maps.Empty_Map;
-      Path     : String) return GM.Type_Descriptor
+      Path      : String;
+      Current_Record_Name : String := "") return GM.Type_Descriptor
    is
       Result : GM.Type_Descriptor;
       Target : GM.Type_Descriptor;
@@ -1629,10 +1630,22 @@ package body Safe_Frontend.Check_Resolve is
             begin
                if Spec.Not_Null then
                   declare
+                     Base_Info : constant GM.Type_Descriptor := Base_Type (Resolved, Type_Env);
                      Base_Kind : constant String :=
-                       FT.Lowercase (UString_Value (Base_Type (Resolved, Type_Env).Kind));
+                       FT.Lowercase (UString_Value (Base_Info.Kind));
+                     Is_Current_Self_Reference : constant Boolean :=
+                       Base_Kind = "incomplete"
+                       and then Current_Record_Name /= ""
+                       and then Canonical_Name (UString_Value (Base_Info.Name)) =
+                         Canonical_Name (Current_Record_Name);
                   begin
-                     if Base_Kind /= "access" and then Base_Kind /= "incomplete" then
+                     if Base_Kind = "incomplete" and then not Is_Current_Self_Reference then
+                        Raise_Diag
+                          (CM.Source_Frontend_Error
+                             (Path    => Path,
+                              Span    => Spec.Span,
+                              Message => "`not null` applies only to inferred reference types in PR11.8e"));
+                     elsif Base_Kind /= "access" and then Base_Kind /= "incomplete" then
                         Raise_Diag
                           (CM.Source_Frontend_Error
                              (Path    => Path,
@@ -4688,7 +4701,12 @@ package body Safe_Frontend.Check_Resolve is
                      declare
                         Field_Type : constant GM.Type_Descriptor :=
                        Normalize_Record_Field_Type
-                         (Resolve_Type_Spec (Field_Decl.Field_Type, Type_Env, Const_Env, Path),
+                         (Resolve_Type_Spec
+                            (Field_Decl.Field_Type,
+                             Type_Env,
+                             Const_Env,
+                             Path,
+                             Current_Record_Name => Self_Name),
                           Field_Decl.Span);
                   begin
                      Item.Type_Name := Field_Type.Name;
@@ -4755,7 +4773,12 @@ package body Safe_Frontend.Check_Resolve is
                               declare
                                  Field_Type : constant GM.Type_Descriptor :=
                                    Normalize_Record_Field_Type
-                                     (Resolve_Type_Spec (Field_Decl.Field_Type, Type_Env, Const_Env, Path),
+                                     (Resolve_Type_Spec
+                                        (Field_Decl.Field_Type,
+                                         Type_Env,
+                                         Const_Env,
+                                         Path,
+                                         Current_Record_Name => Self_Name),
                                       Field_Decl.Span);
                               begin
                                  Item.Type_Name := Field_Type.Name;
