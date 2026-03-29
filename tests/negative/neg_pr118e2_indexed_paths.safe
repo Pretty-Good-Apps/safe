@@ -1,0 +1,22 @@
+-- Test: neg_pr118e2_indexed_paths
+-- Description: Indexed same-root paths remain conservatively rejected in PR11.8e.2.
+-- Expected: REJECT mut_alias_conflict
+
+package neg_pr118e2_indexed_paths
+
+   subtype count is integer (0 to 20);
+   subtype slot is integer (1 to 2);
+
+   type node is record
+      value : count;
+      next  : node;
+
+   type row is array (slot) of node;
+
+   function touch (left : mut node; right : node)
+      return;
+
+   function run
+      owner : row = ((value = 1, next = null), (value = 2, next = null));
+
+      touch (owner (1), owner (2));  -- ERROR: indexed paths are not part of PR11.8e.2

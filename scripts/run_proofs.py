@@ -104,6 +104,7 @@ PR11_8E_CHECKPOINT_FIXTURES = [
     "tests/positive/ownership_early_return.safe",
     "tests/positive/pr118e_not_null_self_reference.safe",
     "tests/positive/pr118e1_mutual_record_family.safe",
+    "tests/positive/pr118e2_disjoint_mut_borrow_fields.safe",
     "tests/concurrency/pr118c2_pre_task_init.safe",
 ]
 

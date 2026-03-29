@@ -122,6 +122,12 @@ package body Safe_Frontend.Mir_Analyze is
       Hash            => Ada.Strings.Hash,
       Equivalent_Keys => "=");
 
+   type Alias_Path is record
+      Root       : FT.UString := FT.To_UString ("");
+      Components : String_Vectors.Vector;
+      Supported  : Boolean := False;
+   end record;
+
    package Type_Maps is new Ada.Containers.Indefinite_Hashed_Maps
      (Key_Type        => String,
       Element_Type    => GM.Type_Descriptor,
@@ -339,6 +345,17 @@ package body Safe_Frontend.Mir_Analyze is
      (Expr : GM.Expr_Access) return String;
    function Strip_Conversion
      (Expr : GM.Expr_Access) return GM.Expr_Access;
+   function Is_Record_Field_Selector
+     (Info       : GM.Type_Descriptor;
+      Field_Name : String;
+      Type_Env   : Type_Maps.Map) return Boolean;
+   function Normalize_Alias_Path
+     (Expr      : GM.Expr_Access;
+      Var_Types : Type_Maps.Map;
+      Type_Env  : Type_Maps.Map;
+      Functions : Function_Maps.Map) return Alias_Path;
+   function Paths_Overlap
+     (Left, Right : Alias_Path) return Boolean;
    function Highlight_Span
      (Expr : GM.Expr_Access) return FT.Source_Span;
    function Expr_Type
@@ -1506,6 +1523,91 @@ package body Safe_Frontend.Mir_Analyze is
       end if;
       return Expr;
    end Strip_Conversion;
+
+   function Is_Record_Field_Selector
+     (Info       : GM.Type_Descriptor;
+      Field_Name : String;
+      Type_Env   : Type_Maps.Map) return Boolean
+   is
+      Base : GM.Type_Descriptor := Info;
+   begin
+      if Lower (UString_Value (Base.Kind)) = "access" then
+         Base := Access_Target_Type (Base, Type_Env);
+      end if;
+      if Lower (UString_Value (Base.Kind)) /= "record" then
+         return False;
+      end if;
+      for Field of Base.Fields loop
+         if UString_Value (Field.Name) = Field_Name then
+            return True;
+         end if;
+      end loop;
+      return False;
+   end Is_Record_Field_Selector;
+
+   function Normalize_Alias_Path
+     (Expr      : GM.Expr_Access;
+      Var_Types : Type_Maps.Map;
+      Type_Env  : Type_Maps.Map;
+      Functions : Function_Maps.Map) return Alias_Path
+   is
+      Result      : Alias_Path;
+      Prefix_Path : Alias_Path;
+   begin
+      if Expr = null then
+         return Result;
+      end if;
+      case Expr.Kind is
+         when GM.Expr_Conversion =>
+            return Normalize_Alias_Path (Expr.Inner, Var_Types, Type_Env, Functions);
+         when GM.Expr_Ident =>
+            Result.Root := Expr.Name;
+            Result.Supported := True;
+            return Result;
+         when GM.Expr_Select =>
+            Prefix_Path := Normalize_Alias_Path (Expr.Prefix, Var_Types, Type_Env, Functions);
+            Result.Root := Prefix_Path.Root;
+            Result.Components := Prefix_Path.Components;
+            if Prefix_Path.Supported
+              and then Is_Record_Field_Selector
+                        (Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions),
+                         UString_Value (Expr.Selector),
+                         Type_Env)
+            then
+               Result.Components.Append (UString_Value (Expr.Selector));
+               Result.Supported := True;
+            end if;
+            return Result;
+         when GM.Expr_Resolved_Index =>
+            Result.Root := FT.To_UString (Root_Name (Expr.Prefix));
+            return Result;
+         when others =>
+            Result.Root := FT.To_UString (Root_Name (Expr));
+            return Result;
+      end case;
+   end Normalize_Alias_Path;
+
+   function Paths_Overlap
+     (Left, Right : Alias_Path) return Boolean
+   is
+      Common_Length : Natural := 0;
+   begin
+      if not Left.Supported or else not Right.Supported then
+         return True;
+      end if;
+
+      Common_Length :=
+        Natural'Min
+          (Natural (Left.Components.Length),
+           Natural (Right.Components.Length));
+
+      for Index in 1 .. Common_Length loop
+         if Left.Components (Positive (Index)) /= Right.Components (Positive (Index)) then
+            return False;
+         end if;
+      end loop;
+      return True;
+   end Paths_Overlap;
 
    function Highlight_Span
      (Expr : GM.Expr_Access) return FT.Source_Span
@@ -5021,6 +5123,7 @@ package body Safe_Frontend.Mir_Analyze is
       Function_Def : Function_Info;
       Formal_Role : Access_Role_Kind;
       Actual_Name : FT.UString := FT.To_UString ("");
+      Actual_Path : Alias_Path;
       Fact        : Access_Fact;
       Diag        : MD.Diagnostic := Null_Diagnostic;
       Has_Diag    : Boolean;
@@ -5040,7 +5143,8 @@ package body Safe_Frontend.Mir_Analyze is
             Formal : constant GM.Local_Entry := Function_Def.Params (Index);
          begin
             Formal_Role := Type_Access_Role (Formal.Type_Info);
-            Actual_Name := FT.To_UString (Root_Name (Actual));
+            Actual_Path := Normalize_Alias_Path (Actual, Var_Types, Type_Env, Functions);
+            Actual_Name := Actual_Path.Root;
             if UString_Value (Formal.Mode) = "mut"
               and then Has_Text (Actual_Name)
             then
@@ -5049,15 +5153,19 @@ package body Safe_Frontend.Mir_Analyze is
                      declare
                         Other_Actual : constant GM.Expr_Access :=
                           Expr.Args (Expr.Args.First_Index + (Other_Index - Function_Def.Params.First_Index));
+                        Other_Path : constant Alias_Path :=
+                          Normalize_Alias_Path (Other_Actual, Var_Types, Type_Env, Functions);
                      begin
-                        if Root_Name (Other_Actual) = UString_Value (Actual_Name) then
+                        if Other_Path.Root = Actual_Name
+                          and then Paths_Overlap (Actual_Path, Other_Path)
+                        then
                            return
                              Ownership_Diagnostic
                                ("mut_alias_conflict",
                                 Actual.Span,
-                                "mutable borrow actual '" & UString_Value (Actual_Name)
+                                "mutable borrow actual '" & Source_Text_For_Expr (Actual)
                                 & "' aliases another actual in the same call",
-                                "PR11.8e uses a conservative same-root alias rule for `mut` parameters.");
+                                "PR11.8e.2 allows same-root calls only for statically disjoint record-field paths; overlapping or unsupported paths remain rejected.");
                         end if;
                      end;
                   end if;
