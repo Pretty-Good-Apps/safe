@@ -562,6 +562,7 @@ package body Safe_Frontend.Ada_Emit is
    function Has_Active_Cleanup_Items (State : Emit_State) return Boolean;
    function Starts_With (Text : String; Prefix : String) return Boolean;
    function Ada_Safe_Name (Name : String) return String;
+   function Sanitized_Helper_Name (Name : String) return String;
    function Normalize_Aspect_Name
      (Subprogram_Name : String;
       Raw_Name        : String) return String;
@@ -1379,10 +1380,10 @@ package body Safe_Frontend.Ada_Emit is
       Depth  : Natural) is
       Free_Call : constant String :=
         (if Item.Is_Constant and then not Has_Text (Item.Free_Proc)
-         then "Dispose_" & FT.To_String (Item.Type_Name)
+         then "Dispose_" & Sanitized_Helper_Name (FT.To_String (Item.Type_Name))
          elsif Has_Text (Item.Free_Proc)
          then FT.To_String (Item.Free_Proc)
-         else "Free_" & FT.To_String (Item.Type_Name));
+         else "Free_" & Sanitized_Helper_Name (FT.To_String (Item.Type_Name)));
    begin
       case Item.Action is
          when Cleanup_Deallocate =>
@@ -9802,8 +9803,37 @@ package body Safe_Frontend.Ada_Emit is
       Previous_Wide_Count : constant Ada.Containers.Count_Type :=
         State.Wide_Local_Names.Length;
 
+      function Later_Outer_Declarations_Use_Name
+        (Decl_Index : Positive;
+         Name       : String) return Boolean is
+      begin
+         if Raw_Outer_Declarations.Is_Empty
+           or else Decl_Index >= Raw_Outer_Declarations.Last_Index
+         then
+            return False;
+         end if;
+
+         for Later_Index in Decl_Index + 1 .. Raw_Outer_Declarations.Last_Index loop
+            declare
+               Later_Decl : constant CM.Resolved_Object_Decl :=
+                 Raw_Outer_Declarations (Later_Index);
+            begin
+               if Later_Decl.Initializer /= null
+                 and then Expr_Uses_Name (Later_Decl.Initializer, Name)
+               then
+                  return True;
+               end if;
+            end;
+         end loop;
+
+         return False;
+      end Later_Outer_Declarations_Use_Name;
+
       function Should_Elide_Dead_Owner_Decl
-        (Decl : CM.Resolved_Object_Decl) return Boolean is
+        (Decl_Index : Positive;
+         Decl       : CM.Resolved_Object_Decl) return Boolean is
+         Decl_Name : constant String :=
+           FT.To_String (Decl.Names (Decl.Names.First_Index));
       begin
          return
            not Decl.Is_Constant
@@ -9813,8 +9843,8 @@ package body Safe_Frontend.Ada_Emit is
            and then Decl.Initializer /= null
            and then Decl.Initializer.Kind in CM.Expr_Aggregate | CM.Expr_Tuple
            and then not
-             Statements_Use_Name
-               (Subprogram.Statements, FT.To_String (Decl.Names (Decl.Names.First_Index)));
+             Statements_Use_Name (Subprogram.Statements, Decl_Name)
+           and then not Later_Outer_Declarations_Use_Name (Decl_Index, Decl_Name);
       end Should_Elide_Dead_Owner_Decl;
 
       function Effective_Outer_Declarations
@@ -9822,10 +9852,15 @@ package body Safe_Frontend.Ada_Emit is
       is
          Result : CM.Resolved_Object_Decl_Vectors.Vector;
       begin
-         for Decl of Raw_Outer_Declarations loop
-            if not Should_Elide_Dead_Owner_Decl (Decl) then
-               Result.Append (Decl);
-            end if;
+         for Decl_Index in Raw_Outer_Declarations.First_Index .. Raw_Outer_Declarations.Last_Index loop
+            declare
+               Decl : constant CM.Resolved_Object_Decl :=
+                 Raw_Outer_Declarations (Decl_Index);
+            begin
+               if not Should_Elide_Dead_Owner_Decl (Decl_Index, Decl) then
+                  Result.Append (Decl);
+               end if;
+            end;
          end loop;
          return Result;
       end Effective_Outer_Declarations;
