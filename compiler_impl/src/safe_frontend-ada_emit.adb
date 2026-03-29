@@ -2156,6 +2156,24 @@ package body Safe_Frontend.Ada_Emit is
       Span      : FT.Source_Span;
       Type_Info : out GM.Type_Descriptor) return Boolean
    is
+      function Before
+        (Left  : FT.Source_Position;
+         Right : FT.Source_Position) return Boolean is
+      begin
+         return Left.Line < Right.Line
+           or else (Left.Line = Right.Line and then Left.Column < Right.Column);
+      end Before;
+
+      function Starts_After_Use (Item_Span : FT.Source_Span) return Boolean is
+      begin
+         return
+           not (Item_Span.Start_Pos.Line = FT.Null_Span.Start_Pos.Line
+                and then Item_Span.Start_Pos.Column = FT.Null_Span.Start_Pos.Column
+                and then Item_Span.End_Pos.Line = FT.Null_Span.End_Pos.Line
+                and then Item_Span.End_Pos.Column = FT.Null_Span.End_Pos.Column)
+           and then Before (Span.Start_Pos, Item_Span.Start_Pos);
+      end Starts_After_Use;
+
       function Lookup_In_Decls
         (Decls : CM.Resolved_Object_Decl_Vectors.Vector) return Boolean is
       begin
@@ -2187,56 +2205,65 @@ package body Safe_Frontend.Ada_Emit is
       is
       begin
          for Item of Statements loop
-            if Item = null or else not Span_Contains (Item.Span, Span) then
+            if Item = null then
                null;
+            elsif Starts_After_Use (Item.Span) then
+               return False;
             else
-               case Item.Kind is
-                  when CM.Stmt_Object_Decl =>
-                     if Lookup_In_Decl (Item.Decl) then
-                        return True;
-                     end if;
-                  when CM.Stmt_If =>
-                     if Lookup_In_Statements (Item.Then_Stmts) then
-                        return True;
-                     end if;
-                     for Part of Item.Elsifs loop
-                        if Lookup_In_Statements (Part.Statements) then
+               if Item.Kind = CM.Stmt_Object_Decl and then Lookup_In_Decl (Item.Decl) then
+                  return True;
+               end if;
+
+               if not Span_Contains (Item.Span, Span) then
+                  null;
+               else
+                  case Item.Kind is
+                     when CM.Stmt_Object_Decl =>
+                        return Lookup_In_Decl (Item.Decl);
+                     when CM.Stmt_If =>
+                        if Lookup_In_Statements (Item.Then_Stmts) then
                            return True;
                         end if;
-                     end loop;
-                     if Item.Has_Else
-                       and then Lookup_In_Statements (Item.Else_Stmts)
-                     then
-                        return True;
-                     end if;
-                  when CM.Stmt_Case =>
-                     for Arm of Item.Case_Arms loop
-                        if Lookup_In_Statements (Arm.Statements) then
+                        for Part of Item.Elsifs loop
+                           if Lookup_In_Statements (Part.Statements) then
+                              return True;
+                           end if;
+                        end loop;
+                        if Item.Has_Else
+                          and then Lookup_In_Statements (Item.Else_Stmts)
+                        then
                            return True;
                         end if;
-                     end loop;
-                  when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
-                     if Lookup_In_Statements (Item.Body_Stmts) then
-                        return True;
-                     end if;
-                  when CM.Stmt_Select =>
-                     for Arm of Item.Arms loop
-                        case Arm.Kind is
-                           when CM.Select_Arm_Channel =>
-                              if Lookup_In_Statements (Arm.Channel_Data.Statements) then
-                                 return True;
-                              end if;
-                           when CM.Select_Arm_Delay =>
-                              if Lookup_In_Statements (Arm.Delay_Data.Statements) then
-                                 return True;
-                              end if;
-                           when others =>
-                              null;
-                        end case;
-                     end loop;
-                  when others =>
-                     null;
-               end case;
+                        return False;
+                     when CM.Stmt_Case =>
+                        for Arm of Item.Case_Arms loop
+                           if Lookup_In_Statements (Arm.Statements) then
+                              return True;
+                           end if;
+                        end loop;
+                        return False;
+                     when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
+                        return Lookup_In_Statements (Item.Body_Stmts);
+                     when CM.Stmt_Select =>
+                        for Arm of Item.Arms loop
+                           case Arm.Kind is
+                              when CM.Select_Arm_Channel =>
+                                 if Lookup_In_Statements (Arm.Channel_Data.Statements) then
+                                    return True;
+                                 end if;
+                              when CM.Select_Arm_Delay =>
+                                 if Lookup_In_Statements (Arm.Delay_Data.Statements) then
+                                    return True;
+                                 end if;
+                              when others =>
+                                 null;
+                           end case;
+                        end loop;
+                        return False;
+                     when others =>
+                        return False;
+                  end case;
+               end if;
             end if;
          end loop;
          return False;

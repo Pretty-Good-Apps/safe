@@ -97,14 +97,58 @@ package body Safe_Frontend.Check_Lower is
       return Result;
    end Bounded_String_Type;
 
+   function Synthetic_Bounded_String_Type
+     (Name  : String;
+      Found : out Boolean) return GM.Type_Descriptor
+   is
+      Prefix : constant String := "__bounded_string_";
+   begin
+      Found := False;
+      if Name'Length < Prefix'Length
+        or else Name (Name'First .. Name'First + Prefix'Length - 1) /= Prefix
+      then
+         return BT.Integer_Type;
+      end if;
+
+      declare
+         Bound_Text : constant String := Name (Name'First + Prefix'Length .. Name'Last);
+      begin
+         if Bound_Text'Length = 0 then
+            return BT.Integer_Type;
+         end if;
+
+         for Ch of Bound_Text loop
+            if Ch not in '0' .. '9' then
+               return BT.Integer_Type;
+            end if;
+         end loop;
+
+         Found := True;
+         return Bounded_String_Type (Natural'Value (Bound_Text));
+      exception
+         when Constraint_Error =>
+            return BT.Integer_Type;
+      end;
+   end Synthetic_Bounded_String_Type;
+
    function Resolve_Type
      (Name     : String;
       Type_Env : Type_Maps.Map) return GM.Type_Descriptor is
+      Found : Boolean := False;
    begin
       if Name = "" then
          return BT.Integer_Type;
       elsif Type_Env.Contains (Name) then
          return Type_Env.Element (Name);
+      else
+         declare
+            Synthetic : constant GM.Type_Descriptor :=
+              Synthetic_Bounded_String_Type (Name, Found);
+         begin
+            if Found then
+               return Synthetic;
+            end if;
+         end;
       end if;
       return BT.Integer_Type;
    end Resolve_Type;
@@ -217,6 +261,8 @@ package body Safe_Frontend.Check_Lower is
          return Type_Env.Element (Name);
       elsif Name'Length > 0 and then Var_Types.Contains (Name) then
          return Var_Types.Element (Name);
+      elsif Name'Length > 0 then
+         return Resolve_Type (Name, Type_Env);
       end if;
       return BT.Integer_Type;
    end Expr_Type;
@@ -686,19 +732,6 @@ package body Safe_Frontend.Check_Lower is
 
    function Local_Names
      (Decls : CM.Resolved_Object_Decl_Vectors.Vector) return FT.UString_Vectors.Vector
-   is
-      Result : FT.UString_Vectors.Vector;
-   begin
-      for Decl of Decls loop
-         for Name of Decl.Names loop
-            Result.Append (Name);
-         end loop;
-      end loop;
-      return Result;
-   end Local_Names;
-
-   function Local_Names
-     (Decls : CM.Object_Decl_Vectors.Vector) return FT.UString_Vectors.Vector
    is
       Result : FT.UString_Vectors.Vector;
    begin
@@ -1355,7 +1388,6 @@ package body Safe_Frontend.Check_Lower is
       Assign_Op   : GM.Op_Entry;
       Call_Op     : GM.Op_Entry;
       Terminator  : GM.Terminator_Entry;
-      Child_Types : Type_Maps.Map;
    begin
       case Stmt.Kind is
          when CM.Stmt_Object_Decl =>
@@ -1980,9 +2012,7 @@ package body Safe_Frontend.Check_Lower is
                        new CM.Expr_Node'
                          (Kind      => CM.Expr_Resolved_Index,
                           Span      => Stmt.Span,
-                          Type_Name => (if FT.Lowercase (UString_Value (Iterable_Type.Kind)) = "string"
-                                        then FT.To_UString ("string")
-                                        else Loop_Item_Type.Name),
+                          Type_Name => Loop_Item_Type.Name,
                           Prefix    => Snapshot_Expr,
                           Args      => CM.Expr_Access_Vectors.Empty_Vector,
                           others    => <>);
