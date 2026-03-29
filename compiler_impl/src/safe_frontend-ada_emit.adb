@@ -655,6 +655,10 @@ package body Safe_Frontend.Ada_Emit is
    function Is_Access_Type (Info : GM.Type_Descriptor) return Boolean;
    function Is_Owner_Access (Info : GM.Type_Descriptor) return Boolean;
    function Is_Alias_Access (Info : GM.Type_Descriptor) return Boolean;
+   function Needs_Implicit_Dereference
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Expr     : CM.Expr_Access) return Boolean;
    function Is_String_Type_Name (Name : String) return Boolean;
    function Is_Bounded_String_Type (Info : GM.Type_Descriptor) return Boolean;
    function Bounded_String_Instance_Name (Bound : Natural) return String;
@@ -2235,6 +2239,23 @@ package body Safe_Frontend.Ada_Emit is
         and then Role in "Borrow" | "Observe";
    end Is_Alias_Access;
 
+   function Needs_Implicit_Dereference
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Expr     : CM.Expr_Access) return Boolean
+   is
+      Prefix_Info : GM.Type_Descriptor := (others => <>);
+   begin
+      return Expr /= null
+        and then Has_Text (Expr.Type_Name)
+        and then Type_Info_From_Name
+          (Unit,
+           Document,
+           FT.To_String (Expr.Type_Name),
+           Prefix_Info)
+        and then Is_Access_Type (Base_Type (Unit, Document, Prefix_Info));
+   end Needs_Implicit_Dereference;
+
    function Is_String_Type_Name (Name : String) return Boolean is
    begin
       return FT.Lowercase (Name) = "string";
@@ -3400,6 +3421,24 @@ package body Safe_Frontend.Ada_Emit is
            & ".To_Bounded ("
            & Render_String_Expr (Unit, Document, Expr, State)
            & ")";
+      elsif Is_Owner_Access (Target_Info)
+        and then Target_Info.Has_Target
+        and then Expr.Kind in CM.Expr_Aggregate | CM.Expr_Tuple
+      then
+         declare
+            Access_Target : constant GM.Type_Descriptor :=
+              Resolve_Type_Name (Unit, Document, FT.To_String (Target_Info.Target));
+         begin
+            return
+              "new "
+              & Render_Type_Name (Access_Target)
+              & "'"
+              & (if Expr.Kind = CM.Expr_Aggregate
+                 then
+                   Render_Record_Aggregate_For_Type
+                     (Unit, Document, Expr, Access_Target, State)
+                 else Render_Expr (Unit, Document, Expr, State));
+         end;
       elsif Is_Plain_String_Type (Unit, Document, Target_Info) then
          State.Needs_Safe_String_RT := True;
          return Render_Heap_String_Expr (Unit, Document, Expr, State);
@@ -3715,7 +3754,8 @@ package body Safe_Frontend.Ada_Emit is
       Document : GM.Mir_Document;
       Result   : in out GM.Type_Descriptor_Vectors.Vector)
    is
-      Seen : FT.UString_Vectors.Vector;
+      Seen      : FT.UString_Vectors.Vector;
+      Processed : FT.UString_Vectors.Vector;
 
       procedure Add_From_Info (Info : GM.Type_Descriptor);
       procedure Add_From_Statements (Statements : CM.Statement_Access_Vectors.Vector);
@@ -3760,10 +3800,15 @@ package body Safe_Frontend.Ada_Emit is
       end Add_From_Name;
 
       procedure Add_From_Info (Info : GM.Type_Descriptor) is
+         Name_Text : constant String := FT.To_String (Info.Name);
       begin
-         if not Has_Text (Info.Name) then
+         if not Has_Text (Info.Name)
+           or else Contains_Name (Processed, Name_Text)
+         then
             return;
          end if;
+
+         Processed.Append (Info.Name);
 
          if Info.Has_Base then
             Add_From_Name (FT.To_String (Info.Base));
@@ -3878,6 +3923,8 @@ package body Safe_Frontend.Ada_Emit is
       Document : GM.Mir_Document;
       State    : in out Emit_State)
    is
+      Processed : FT.UString_Vectors.Vector;
+
       procedure Add_From_Info (Info : GM.Type_Descriptor);
 
       procedure Add_From_Name (Name : String) is
@@ -3900,7 +3947,16 @@ package body Safe_Frontend.Ada_Emit is
       end Add_From_Name;
 
       procedure Add_From_Info (Info : GM.Type_Descriptor) is
+         Name_Text : constant String := FT.To_String (Info.Name);
       begin
+         if Has_Text (Info.Name)
+           and then Contains_Name (Processed, Name_Text)
+         then
+            return;
+         elsif Has_Text (Info.Name) then
+            Processed.Append (Info.Name);
+         end if;
+
          Register_Bounded_String_Type (State, Info);
          if Info.Has_Base then
             Add_From_Name (FT.To_String (Info.Base));
@@ -4373,15 +4429,25 @@ package body Safe_Frontend.Ada_Emit is
             return SU.To_String (Result);
          end;
       elsif Kind = "access" then
-         return
-           "type "
-           & Name
-           & " is "
-           & (if Type_Item.Not_Null then "not null " else "")
-           & "access "
-           & (if Type_Item.Is_Constant then "constant " else "")
-           & FT.To_String (Type_Item.Target)
-           & ";";
+         declare
+            Target_Name : constant String := FT.To_String (Type_Item.Target);
+            Target_Decl : constant String :=
+              (if Target_Name'Length > 0
+                  and then Starts_With (Target_Name, "safe_ref_target_")
+               then "type " & Target_Name & ";" & ASCII.LF
+               else "");
+         begin
+            return
+              Target_Decl
+              & "type "
+              & Name
+              & " is "
+              & (if Type_Item.Not_Null then "not null " else "")
+              & "access "
+              & (if Type_Item.Is_Constant then "constant " else "")
+              & Target_Name
+              & ";";
+         end;
       elsif Kind = "float" then
          if Type_Item.Has_Digits_Text then
             return
@@ -4690,6 +4756,10 @@ package body Safe_Frontend.Ada_Emit is
          when CM.Expr_Select =>
             declare
                Prefix_Image  : constant String := Render_Expr (Unit, Document, Expr.Prefix, State);
+               Selected_Prefix : constant String :=
+                 (if Needs_Implicit_Dereference (Unit, Document, Expr.Prefix)
+                  then Prefix_Image & ".all"
+                  else Prefix_Image);
                Selector_Name : constant String := FT.To_String (Expr.Selector);
             begin
                if Selector_Name = "length"
@@ -4778,7 +4848,7 @@ package body Safe_Frontend.Ada_Emit is
                   State.Needs_Ada_Strings_Unbounded := True;
                   return "Ada.Strings.Unbounded.To_String (" & Prefix_Image & ".Message)";
                end if;
-               return Prefix_Image & "." & Selector_Name;
+               return Selected_Prefix & "." & Selector_Name;
             end;
          when CM.Expr_Resolved_Index =>
             if Expr.Prefix /= null
@@ -4813,7 +4883,9 @@ package body Safe_Frontend.Ada_Emit is
                     and then Natural (Prefix_Type.Index_Types.Length) = 1
                   then
                      return
-                       Render_Expr (Unit, Document, Expr.Prefix, State)
+                       (if Needs_Implicit_Dereference (Unit, Document, Expr.Prefix)
+                        then Render_Expr (Unit, Document, Expr.Prefix, State) & ".all"
+                        else Render_Expr (Unit, Document, Expr.Prefix, State))
                        & " ("
                        & Render_Expr (Unit, Document, Expr.Args (Expr.Args.First_Index), State)
                        & " .. "
@@ -4824,7 +4896,10 @@ package body Safe_Frontend.Ada_Emit is
             end if;
             Result :=
               SU.To_Unbounded_String
-                (Render_Expr (Unit, Document, Expr.Prefix, State) & " (");
+                ((if Needs_Implicit_Dereference (Unit, Document, Expr.Prefix)
+                  then Render_Expr (Unit, Document, Expr.Prefix, State) & ".all"
+                  else Render_Expr (Unit, Document, Expr.Prefix, State))
+                 & " (");
             for Index in Expr.Args.First_Index .. Expr.Args.Last_Index loop
                if Index /= Expr.Args.First_Index then
                   Result := Result & SU.To_Unbounded_String (", ");
@@ -4924,7 +4999,7 @@ package body Safe_Frontend.Ada_Emit is
                                  Position := Position + 1;
                                  exit when Position > Natural (Index);
                                  if Position = Natural (Index) then
-                                    if FT.To_String (Formal.Mode) in "" | "in" then
+                                    if FT.To_String (Formal.Mode) in "" | "in" | "borrow" then
                                        Arg_Image :=
                                          SU.To_Unbounded_String
                                            (Render_Expr_For_Target_Type
@@ -5936,7 +6011,11 @@ package body Safe_Frontend.Ada_Emit is
          else Render_Type_Name (Type_Info));
       function Render_Initializer return String is
       begin
-         if Initializer /= null and then Is_Bounded_String_Type (Type_Info) then
+         if Initializer /= null and then Is_Owner_Access (Type_Info) then
+            return
+              Render_Expr_For_Target_Type
+                (Unit, Document, Initializer, Type_Info, State);
+         elsif Initializer /= null and then Is_Bounded_String_Type (Type_Info) then
             return
               Render_Expr_For_Target_Type
                 (Unit, Document, Initializer, Type_Info, State);
@@ -6096,7 +6175,13 @@ package body Safe_Frontend.Ada_Emit is
               & SU.To_Unbounded_String
                   (FT.To_String (Param.Name)
                    & " : "
-                   & (if Mode = "in" or else Mode = "" then "" else Mode & " ")
+                   & (if Mode = "" or else Mode = "borrow"
+                      then "in "
+                      elsif Mode = "mut"
+                      then "in out "
+                      elsif Mode = "in"
+                      then "in "
+                      else Mode & " ")
                    & Render_Param_Type_Name (Param.Type_Info));
          end;
       end loop;
@@ -6158,7 +6243,7 @@ package body Safe_Frontend.Ada_Emit is
    is
    begin
       for Param of Subprogram.Params loop
-         if FT.To_String (Param.Mode) = "in out"
+         if FT.To_String (Param.Mode) in "mut" | "in out"
            and then Is_Owner_Access (Param.Type_Info)
          then
             declare
@@ -6388,7 +6473,11 @@ package body Safe_Frontend.Ada_Emit is
             Name : constant String := FT.To_String (Param.Name);
             Mode : constant String := FT.To_String (Param.Mode);
          begin
-            if Mode = "out" then
+            if Mode = "mut" then
+               Add_Unique (Allowed_Outputs, Name);
+               Add_Unique (Allowed_Inputs, Name);
+               Add_Unique (Formal_Input_Params, Name);
+            elsif Mode = "out" then
                Add_Unique (Allowed_Outputs, Name);
             elsif Mode = "in out" then
                Add_Unique (Allowed_Outputs, Name);
@@ -7965,6 +8054,11 @@ package body Safe_Frontend.Ada_Emit is
            (Buffer,
            "return "
            & (if Return_Type'Length > 0
+               and then Is_Owner_Access (Return_Info)
+              then
+                Render_Expr_For_Target_Type
+                  (Unit, Document, Value, Return_Info, State)
+              elsif Return_Type'Length > 0
                and then Is_Bounded_String_Type (Return_Info)
               then
                 Render_Expr_For_Target_Type

@@ -4,7 +4,7 @@
 
 package pr113_tuple_destructure
 
-   function lookup (flag : in boolean) returns (boolean, integer)
+   function lookup (flag : boolean) returns (boolean, integer)
 
       if flag
          return (true, 7);
@@ -19,4 +19,3 @@ package pr113_tuple_destructure
          return value;
 
       return direct.2;
-

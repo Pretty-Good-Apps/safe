@@ -1,4 +1,4 @@
-function lookup_name (opcode : in integer) returns (result, integer)
+function lookup_name (opcode : integer) returns (result, integer)
 
    case opcode
       when 1
@@ -9,4 +9,3 @@ function lookup_name (opcode : in integer) returns (result, integer)
 
       when others
          return (fail ("unknown"), 0)
-

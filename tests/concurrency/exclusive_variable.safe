@@ -1,7 +1,7 @@
 -- Test: exclusive_variable
--- Description: Exclusive variable ownership across tasks.
---   Each variable is accessed by exactly one task. No variable
---   is shared between tasks, satisfying the task-variable ownership rule.
+-- Description: Task-local variable state across tasks.
+--   Each task keeps its mutable state local and communicates only through
+--   channels, satisfying the PR11.8e task-body restriction.
 -- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.5.p45:8bdd0c99
 -- Clause: SAFE@468cf72:spec/05-assurance.md#5.4.1.p32:90d4f527
 -- Clause: SAFE@468cf72:spec/05-assurance.md#5.4.1.p33:0fc25399
@@ -11,11 +11,7 @@ package exclusive_variable
 
    subtype counter is integer (0 to 1_000_000);
 
-   --  Each task has its own private working counter variable.
-   --  The package-global Task_B_Total is updated only by Task_B.
-
    channel sync_ch : counter capacity 1;
-   task_b_total : counter = 0;
 
    --  Task_A: owns Counter_A exclusively. Sends result via channel.
    task task_a with priority = 10
@@ -31,7 +27,8 @@ package exclusive_variable
 
    --  Task_B: owns Counter_B exclusively. Receives via channel.
    task task_b with priority = 10
-      received  : counter;
+      received     : counter;
+      task_b_total : counter = 0;
 
       loop
          receive sync_ch, received;

@@ -1,13 +1,11 @@
-Diagnostics Golden: Observe Requires Access
+Diagnostics Golden: Removed Explicit Dereference
 Source: tests/negative/neg_own_observe_requires_access.safe
 
 Expected diagnostic output:
 ------------------------------------------------------------------------
-neg_own_observe_requires_access.safe:15:7: error: observer 'observer' must be initialized from X.access
+neg_own_observe_requires_access.safe:14:20: error: removed source spelling `.all` is not allowed in postfix selectors
   |
-  | 15 |       observer : access constant config = owner;  -- ERROR: must use owner.access
-  |    |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  | 14 |       return owner.all.rate;
+  |    |                    ^~~
   |
-  note: local observe uses anonymous access constant and requires an explicit .access attribute.
-  note: rule: Safe §2.3.4 (local observe must use .access)
 ------------------------------------------------------------------------

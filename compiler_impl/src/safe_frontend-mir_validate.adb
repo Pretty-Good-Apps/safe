@@ -43,6 +43,11 @@ package body Safe_Frontend.Mir_Validate is
       return Text (Item) /= "";
    end Has_Text;
 
+   function Has_V2_Features (Format : GM.Mir_Format_Kind) return Boolean is
+   begin
+      return Format in GM.Mir_V2 | GM.Mir_V3;
+   end Has_V2_Features;
+
    function Contains
      (Items : FT.UString_Vectors.Vector;
       Value : String) return Boolean
@@ -484,8 +489,8 @@ package body Safe_Frontend.Mir_Validate is
       Require (Has_Text (Value.Id), Where & ": missing local id");
       Require (Has_Text (Value.Name), Where & ": missing local name");
       Validate_Type_Descriptor (Value.Type_Info, Where & ".type");
-      if Format = GM.Mir_V2 then
-         Require (Has_Text (Value.Scope_Id), Where & ": mir-v2 locals must have scope_id");
+      if Has_V2_Features (Format) then
+         Require (Has_Text (Value.Scope_Id), Where & ": mir-v2/v3 locals must have scope_id");
       end if;
    end Validate_Local;
 
@@ -540,10 +545,10 @@ package body Safe_Frontend.Mir_Validate is
    begin
       Require (Has_Text (Value.Id), Where & ": missing block id");
 
-      if Format = GM.Mir_V2 then
+      if Has_V2_Features (Format) then
          Require
            (Has_Text (Value.Active_Scope_Id),
-            Where & ": mir-v2 blocks must have active_scope_id");
+            Where & ": mir-v2/v3 blocks must have active_scope_id");
          Require
            (Contains (Valid_Scope_Ids, Text (Value.Active_Scope_Id)),
             Where & ": invalid active_scope_id");
@@ -562,13 +567,13 @@ package body Safe_Frontend.Mir_Validate is
                      Require
                        (Has_Text (Op.Scope_Id),
                         Op_Where & ": " & GM.Image (Op.Kind) & " missing scope_id");
-                     if Format = GM.Mir_V2 then
+                     if Has_V2_Features (Format) then
                         Require
                           (Contains (Valid_Scope_Ids, Text (Op.Scope_Id)),
                            Op_Where & ": invalid scope_id");
                      end if;
                   when GM.Op_Assign =>
-                     if Format = GM.Mir_V2 then
+                     if Has_V2_Features (Format) then
                         Require
                           (Op.Ownership_Effect /= GM.Ownership_Invalid,
                            Op_Where & ": invalid ownership_effect");
@@ -577,7 +582,7 @@ package body Safe_Frontend.Mir_Validate is
                            Op_Where & ": missing op type");
                         Require
                           (Op.Has_Declaration_Init,
-                           Op_Where & ": mir-v2 assign ops must include declaration_init");
+                           Op_Where & ": mir-v2/v3 assign ops must include declaration_init");
                         Require
                           (Op.Declaration_Init_Valid,
                            Op_Where & ": invalid declaration_init");
@@ -585,7 +590,7 @@ package body Safe_Frontend.Mir_Validate is
                      Validate_Expr (Op.Target, Op_Where & ".target");
                      Validate_Expr (Op.Value, Op_Where & ".value");
                   when GM.Op_Call =>
-                     if Format = GM.Mir_V2 then
+                     if Has_V2_Features (Format) then
                         Require
                           (Op.Ownership_Effect /= GM.Ownership_Invalid,
                            Op_Where & ": invalid ownership_effect");
@@ -655,7 +660,7 @@ package body Safe_Frontend.Mir_Validate is
                Where & ".terminator: invalid false_target");
             Validate_Expr (Value.Terminator.Condition, Where & ".terminator.condition");
          when GM.Terminator_Return =>
-            if Format = GM.Mir_V2 then
+            if Has_V2_Features (Format) then
                Require
                  (Value.Terminator.Ownership_Effect /= GM.Ownership_Invalid,
                   Where & ".terminator: invalid ownership_effect");
@@ -750,14 +755,14 @@ package body Safe_Frontend.Mir_Validate is
          end loop;
       end if;
 
-      if Format = GM.Mir_V2 and then Value.Has_Return_Type then
+      if Has_V2_Features (Format) and then Value.Has_Return_Type then
          Validate_Type_Descriptor (Value.Return_Type, Where & ".return_type");
       end if;
 
-      if Format = GM.Mir_V2 then
+      if Has_V2_Features (Format) then
          Require
            (not Value.Scopes.Is_Empty,
-            Where & ": mir-v2 graphs must have a non-empty scopes list");
+            Where & ": mir-v2/v3 graphs must have a non-empty scopes list");
 
          for Index in Value.Scopes.First_Index .. Value.Scopes.Last_Index loop
             if Has_Text (Value.Scopes (Index).Id) then
@@ -807,10 +812,10 @@ package body Safe_Frontend.Mir_Validate is
         (not Document.Graphs.Is_Empty,
          "root: graphs must be a non-empty list");
 
-      if Document.Format = GM.Mir_V2 then
+      if Has_V2_Features (Document.Format) then
          Require
            (Document.Has_Source_Path and then Has_Text (Document.Source_Path),
-            "root: mir-v2 payloads must include source_path");
+            "root: mir-v2/v3 payloads must include source_path");
       end if;
 
       if not Document.Types.Is_Empty then

@@ -1,23 +1,22 @@
 -- Test: task_global_owner
--- Description: One task reaches one package global through a local helper.
---   This is the minimal passing case for the local task/global ownership map
---   and the conservative Depends summary.
+-- Description: One task uses a local helper and task-local state only.
+--   This keeps the helper-call path while satisfying the PR11.8e task-body
+--   locals-plus-channels restriction.
 -- Expected: ACCEPT
 
 package task_global_owner
 
    subtype counter is integer (0 to 100);
 
-   shared : counter = 0;
+   function bump (value : counter) returns counter
 
-   function bump
-
-      if shared < 100
-         shared = shared + 1;
+      if value < 100
+         return value + 1
       else
-         shared = 0;
+         return 0
 
    task worker
+      shared : counter = 0;
 
       loop
-         bump;
+         shared = bump (shared);

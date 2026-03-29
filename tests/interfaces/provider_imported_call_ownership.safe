@@ -4,16 +4,15 @@ package provider_imported_call_ownership
 
    public type payload is record
       value : payload_value;
+      link  : payload;
 
-   public type payload_ptr is access payload;
+   public function bump (ref : mut payload)
 
-   public function bump (ref : access payload)
+      ref.value = 6;
 
-      ref.all.value = 6;
+   public function read_value (ref : payload) returns payload_value
 
-   public function read_value (ref : access constant payload) returns payload_value
+      return ref.value;
 
-      return ref.all.value;
-
-   public function consume (ref : in out payload_ptr)
-      return;
+   public function consume (ref : mut payload)
+      ref.value = ref.value;

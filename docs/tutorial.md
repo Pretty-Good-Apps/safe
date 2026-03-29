@@ -40,7 +40,7 @@ Safe keeps most Ada surface syntax, but changes a few high-impact parts:
 |------|-------------|--------------|---------------|
 | Visibility | `public` keyword, default-private | simple interface model, simpler separate compilation | surprising if you expect Ada's spec/body + private part model |
 | Attributes | dot notation: `t.first` not `t'First` | uniform "selected" syntax | breaks muscle memory; `'` reserved for character literals |
-| Qualified exprs | no `t'(expr)`; use type annotation `(expr as t)` | makes narrowing points explicit | extra parentheses; more "ceremony" in aggregates and allocators |
+| Qualified exprs | no `t'(expr)`; use type annotation `(expr as t)` | makes narrowing points explicit | extra parentheses; more "ceremony" in aggregates and narrowed initializers |
 | Exceptions | none (no handlers, no `raise`) | control-flow stays explicit; proof story is cleaner | error handling becomes explicit and sometimes verbose |
 | Tasking | static tasks + typed channels | analyzable concurrency | less expressive than full Ada tasking/protected objects |
 
@@ -135,22 +135,20 @@ Ada uses `T'(Expr)` to qualify an expression (often an aggregate). Safe replaces
 (expr as t)
 ```
 
-This matters in allocators and aggregates. In Safe, you would write:
+This matters in aggregates and other target-typed initializers. In Safe, you would write:
 
 ```safe
 type payload is record
    value : integer;
 
-type payload_ptr is access payload;
-
-p : payload_ptr = new ((value = 42) as payload);
+p : payload = ((value = 42) as payload);
 ```
 
 Virtue: qualification becomes a consistent surface form, and (more importantly) narrowing points become easier to identify and reason about.
 
 Wart: you will write more parentheses than in Ada.
 
-See: `spec/02-restrictions.md` (qualified expressions and allocators) and `spec/08-syntax-summary.md` (allocator grammar).
+See: `spec/02-restrictions.md` (qualified expressions) and `spec/08-syntax-summary.md`.
 
 ## 5.1 Text and Arrays (PR11.8d Surface)
 
@@ -217,7 +215,7 @@ Practically, this pushes you toward:
 
 - defining range types for indices and counts,
 - using those types pervasively (especially for array indices and divisors),
-- making narrowing explicit (conversions, type annotations, allocator initializers).
+- making narrowing explicit (conversions, type annotations, target-typed initializers).
 
 Virtue: you can get very strong safety properties without writing contracts.
 
@@ -238,31 +236,41 @@ protocol field" cases without pretending they are signed numbers.
 
 See: `spec/05-assurance.md`.
 
-## 7. Access Types With Ownership, Move, Borrow, Observe
+## 7. Inferred References, Moves, and Borrows
 
-Safe retains access-to-object types, but adopts SPARK's ownership model:
+Safe no longer exposes `access`, `new`, `.all`, or source-level `in` / `out`
+/ `in out`. Instead:
 
-- assignments of owning access values are moves (source becomes null),
-- mutable access parameters act like borrows (lender is frozen),
-- `access constant` parameters act like read-only observations.
+- direct self-recursive record types are inferred as reference roots,
+- assignment of inferred references moves ownership,
+- ordinary parameters are immutable borrows,
+- `mut` parameters are mutable borrows,
+- `null` and `not null` are admitted only for inferred reference-typed
+  bindings.
 
 Example sketch (move):
 
 ```safe
 type node is record
    v : integer;
-type node_ptr is access node;
+   next : node;
+
+function set_value (target : mut not null node; value : integer)
+   target.v = value
 
 function demo_move
-   var a : node_ptr = new ((v = 1) as node)
-   var b : node_ptr = null
-   b = a        -- move A into B; A becomes null
-   b.all.v = 2  -- safe dereference through the new owner
+   var a : node = (v = 1, next = null)
+   var b : node = null
+   b = a      -- move A into B; A becomes null
+   set_value (b, 2)
 ```
 
-Virtue: eliminates an entire class of aliasing and lifetime bugs, while staying in an Ada-like surface syntax.
+Virtue: ownership and borrowing still prevent the usual aliasing and lifetime
+mistakes, but the source surface stays simpler because the programmer writes
+ordinary record types and ordinary field selection.
 
-Wart: you must think about who owns what, and you cannot freely copy pointers around to "share" data.
+Wart: you still need to think about ownership, moves, and mutable-borrow
+aliasing, and mutually recursive record families remain a later follow-up.
 
 See: `spec/02-restrictions.md` (Section 2.3).
 
@@ -315,6 +323,9 @@ task control with priority = 10
 Virtue: concurrency is structured around explicit communication points, which is easier to analyze and makes "what can race" more tractable.
 
 Wart: you do not get the full expressive power of Ada tasking (entries, accept, requeue, etc.), and tasks are intentionally constrained (including a non-termination rule).
+
+Post-PR11.8e, task bodies may use only their own locals and channels. Package-
+scope result slots and counters no longer count as legal task communication.
 
 See: `spec/04-tasks-and-channels.md`.
 

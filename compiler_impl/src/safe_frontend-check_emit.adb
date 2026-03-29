@@ -1819,11 +1819,7 @@ package body Safe_Frontend.Check_Emit is
                & ",""is_aliased"":false,""mode"":"
                & JS.Quote (FT.To_String (Param.Mode))
                & ",""param_type"":"
-               & (if Param.Param_Type.Kind = CM.Type_Spec_Access_Def
-                  then Access_Definition_Node (Param.Param_Type)
-                  else Type_Spec_Name (Param.Param_Type))
-               & ",""is_access_definition"":"
-               & JS.Bool_Literal (Param.Param_Type.Kind = CM.Type_Spec_Access_Def)
+               & Object_Type_Node (Param.Param_Type)
                & ",""default_expression"":null,""span"":"
                & JS.Span_Object (Param.Span)
                & "}");
@@ -1902,11 +1898,7 @@ package body Safe_Frontend.Check_Emit is
            & (if Parsed.Spec.Params.Is_Empty then "null"
               else Formal_Part_Node (Parsed.Spec.Params, Parsed.Spec.Span))
            & ",""return_type"":"
-           & (if Parsed.Spec.Return_Type.Kind = CM.Type_Spec_Access_Def
-              then Access_Definition_Node (Parsed.Spec.Return_Type)
-              else Type_Spec_Name (Parsed.Spec.Return_Type))
-           & ",""returns_access_definition"":"
-           & JS.Bool_Literal (Parsed.Spec.Return_Is_Access_Def)
+           & Object_Type_Node (Parsed.Spec.Return_Type)
            & ",""span"":"
            & JS.Span_Object (Parsed.Spec.Span)
            & "},""declarative_part"":"
@@ -2307,6 +2299,13 @@ package body Safe_Frontend.Check_Emit is
    is
       Items      : String_Vectors.Vector;
       Type_Index : Natural := 0;
+      function Is_Hidden_Reference_Target
+        (Info : GM.Type_Descriptor) return Boolean is
+        Target_Name : constant String := FT.To_String (Info.Name);
+      begin
+        return Target_Name'Length > 16
+          and then Target_Name (Target_Name'First .. Target_Name'First + 15) = "safe_ref_target_";
+      end Is_Hidden_Reference_Target;
    begin
       for Item of Parsed.Items loop
          if Item.Kind in CM.Item_Type_Decl | CM.Item_Subtype_Decl then
@@ -2314,11 +2313,23 @@ package body Safe_Frontend.Check_Emit is
             if not Resolved.Types.Is_Empty
               and then Type_Index in Resolved.Types.First_Index .. Resolved.Types.Last_Index
             then
-               if Item.Kind = CM.Item_Type_Decl
-                 and then not Subtype_Only
-                 and then Item.Type_Data.Is_Public
-               then
-                  Items.Append (Type_Json (Resolved.Types (Type_Index)));
+               if Item.Kind = CM.Item_Type_Decl then
+                  if not Subtype_Only and then Item.Type_Data.Is_Public then
+                     Items.Append (Type_Json (Resolved.Types (Type_Index)));
+                  elsif Subtype_Only
+                    and then Item.Type_Data.Is_Public
+                    and then Resolved.Types (Type_Index).Has_Target
+                    and then Type_Index + 1 in Resolved.Types.First_Index .. Resolved.Types.Last_Index
+                    and then Is_Hidden_Reference_Target (Resolved.Types (Type_Index + 1))
+                  then
+                     Items.Append (Type_Json (Resolved.Types (Type_Index + 1)));
+                  end if;
+                  if Resolved.Types (Type_Index).Has_Target
+                    and then Type_Index + 1 in Resolved.Types.First_Index .. Resolved.Types.Last_Index
+                    and then Is_Hidden_Reference_Target (Resolved.Types (Type_Index + 1))
+                  then
+                     Type_Index := Type_Index + 1;
+                  end if;
                elsif Item.Kind = CM.Item_Subtype_Decl
                  and then Subtype_Only
                  and then Item.Sub_Data.Is_Public
@@ -2474,8 +2485,6 @@ package body Safe_Frontend.Check_Emit is
                      & JS.Bool_Literal (Subp.Has_Return_Type)
                      & ",""return_type"":"
                      & (if Subp.Has_Return_Type then Type_Json (Subp.Return_Type) else "null")
-                     & ",""return_is_access_def"":"
-                     & JS.Bool_Literal (Subp.Return_Is_Access_Def)
                      & ",""span"":"
                      & JS.Span_Object (Subp.Span)
                      & "}");
@@ -2643,6 +2652,14 @@ package body Safe_Frontend.Check_Emit is
       Fields : String_Vectors.Vector;
    begin
       declare
+         function Public_Type_Kind (Value : GM.Type_Descriptor) return String is
+         begin
+            if FT.To_String (Value.Kind) = "access" then
+               return "reference";
+            end if;
+            return FT.To_String (Value.Kind);
+         end Public_Type_Kind;
+
          function Scalar_Value_Json (Value : GM.Scalar_Value) return String is
          begin
             case Value.Kind is
@@ -2667,7 +2684,7 @@ package body Safe_Frontend.Check_Emit is
          end Scalar_Value_Json;
       begin
       Items.Append ("""name"":" & JS.Quote (Info.Name));
-      Items.Append ("""kind"":" & JS.Quote (Info.Kind));
+      Items.Append ("""kind"":" & JS.Quote (Public_Type_Kind (Info)));
       if Info.Has_Bit_Width then
          Items.Append ("""bit_width"":" & Positive'Image (Info.Bit_Width));
       end if;
@@ -2796,12 +2813,6 @@ package body Safe_Frontend.Check_Emit is
       end if;
       if FT.To_String (Info.Kind) = "access" then
          Items.Append ("""not_null"":" & JS.Bool_Literal (Info.Not_Null));
-         Items.Append ("""anonymous"":" & JS.Bool_Literal (Info.Anonymous));
-         Items.Append ("""is_constant"":" & JS.Bool_Literal (Info.Is_Constant));
-         Items.Append ("""is_all"":" & JS.Bool_Literal (Info.Is_All));
-         if Info.Has_Access_Role then
-            Items.Append ("""access_role"":" & JS.Quote (Info.Access_Role));
-         end if;
       end if;
       return
         "{"
@@ -2920,7 +2931,7 @@ package body Safe_Frontend.Check_Emit is
    begin
       return
         "{"
-        & """format"":""typed-v2"","
+        & """format"":""typed-v3"","
         & """unit_kind"":"
         & JS.Quote ((if Parsed.Kind = CM.Unit_Entry then "entry" else "package"))
         & ","
@@ -2958,7 +2969,7 @@ package body Safe_Frontend.Check_Emit is
    begin
       return
         "{"
-        & """format"":""safei-v1"","
+        & """format"":""safei-v2"","
         & """unit_kind"":"
         & JS.Quote ((if Parsed.Kind = CM.Unit_Entry then "entry" else "package"))
         & ","

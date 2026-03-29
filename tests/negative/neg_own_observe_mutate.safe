@@ -1,22 +1,12 @@
 -- Test: neg_own_observe_mutate
--- Description: Mutating the designated object through an observer.
---   An observer (access constant) should provide read-only access.
---   Writing through it violates the observation contract.
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.4a.p102a:5bc5ab8b
+-- Description: Mutating through an immutable borrow.
 -- Expected: REJECT observe_mutation
 
 package observe_mutate_test
 
    type config is record
       rate : integer;
+      next : config;
 
-   type config_ptr is access config;
-
-   --  Mutate_Through_Observer: attempts to write via a constant access.
-   function mutate_through_observer
-      owner    : config_ptr = new ((rate = 100) as config);
-      observer : access constant config = owner.access;  -- observe
-
-      --  Observer is access constant; writing through it is illegal.
-      observer.all.rate = 200;  -- ERROR: mutation through observer
-
+   function mutate_through_observer (observer : config)
+      observer.rate = 200;  -- ERROR: mutation through observer

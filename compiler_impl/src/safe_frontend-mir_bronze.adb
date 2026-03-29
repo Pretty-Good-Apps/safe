@@ -122,6 +122,10 @@ package body Safe_Frontend.Mir_Bronze is
 
    function Lower (Value : String) return String renames FT.Lowercase;
    function Starts_With (Text : String; Prefix : String) return Boolean;
+   function Ends_With (Text : String; Suffix : String) return Boolean;
+   function Is_Synthetic_Attribute_Marker
+     (Name         : String;
+      Global_Spans : Span_Maps.Map) return Boolean;
 
    function Flatten_Name (Expr : GM.Expr_Access) return String;
    function Root_Name (Expr : GM.Expr_Access) return String;
@@ -225,6 +229,37 @@ package body Safe_Frontend.Mir_Bronze is
 
       return Text (Text'First .. Text'First + Prefix'Length - 1) = Prefix;
    end Starts_With;
+
+   function Ends_With (Text : String; Suffix : String) return Boolean is
+   begin
+      if Suffix'Length = 0 then
+         return True;
+      elsif Text'Length < Suffix'Length then
+         return False;
+      end if;
+
+      return Text (Text'Last - Suffix'Length + 1 .. Text'Last) = Suffix;
+   end Ends_With;
+
+   function Is_Synthetic_Attribute_Marker
+     (Name         : String;
+      Global_Spans : Span_Maps.Map) return Boolean
+   is
+      First_Dot : constant Natural := Ada.Strings.Fixed.Index (Name, ".");
+      Last_Dot  : constant Natural :=
+        Ada.Strings.Fixed.Index (Name, ".", Ada.Strings.Backward);
+      Root_Name : constant String :=
+        (if First_Dot > 1 then Name (Name'First .. First_Dot - 1) else "");
+      Is_Attribute_Name : constant Boolean :=
+        Ends_With (Name, ".first")
+        or else Ends_With (Name, ".last")
+        or else Ends_With (Name, ".length");
+   begin
+      return Is_Attribute_Name
+        and then First_Dot = Last_Dot
+        and then Root_Name /= ""
+        and then not Global_Spans.Contains (Root_Name);
+   end Is_Synthetic_Attribute_Marker;
 
    function Signature_For (Graph : GM.Graph_Entry) return Callable_Signature is
       Result : Callable_Signature;
@@ -530,7 +565,7 @@ package body Safe_Frontend.Mir_Bronze is
                Note_Binding_Marker ("global:" & Name, Span, Binding.all);
             end if;
          elsif UString_Value (Local.Kind) = "param"
-           and then UString_Value (Local.Mode) in "out" | "in out"
+           and then UString_Value (Local.Mode) in "mut" | "out" | "in out"
          then
             Outputs.Include ("param:" & Name);
             if Binding /= null then
@@ -565,7 +600,7 @@ package body Safe_Frontend.Mir_Bronze is
             if UString_Value (Local.Kind) = "global" then
                Note_Binding_Marker ("global:" & Name, Expr.Span, Binding);
             elsif UString_Value (Local.Kind) = "param"
-              and then UString_Value (Local.Mode) in "out" | "in out"
+              and then UString_Value (Local.Mode) in "mut" | "out" | "in out"
             then
                Note_Binding_Marker ("param:" & Name, Expr.Span, Binding);
             end if;
@@ -794,7 +829,7 @@ package body Safe_Frontend.Mir_Bronze is
                                  Actual_Input'Access);
                            end if;
 
-                           if Mode in "out" | "in out" then
+                           if Mode in "mut" | "out" | "in out" then
                               Collect_Output_Binding
                                 (Expr.Args (Index),
                                  Locals,
@@ -1533,13 +1568,46 @@ package body Safe_Frontend.Mir_Bronze is
                         while String_Sets.Has_Element (Global_Cursor) loop
                            declare
                               Global_Name : constant String := String_Sets.Element (Global_Cursor);
+                           begin
+                              if not Is_Synthetic_Attribute_Marker (Global_Name, Global_Spans) then
+                                 declare
+                                    Use_Span : constant FT.Source_Span := Use_Span_For (Summary, Global_Name);
+                                 begin
+                                    Result.Diagnostics.Append
+                                      (Summary_Diagnostic
+                                         (Path_String,
+                                          "task_variable_ownership",
+                                          "task '" & UString_Value (Summary.Name)
+                                          & "' accesses package global '"
+                                          & Global_Name
+                                          & "'",
+                                          Use_Span,
+                                          "task bodies may use only locals and channels",
+                                          Local_Use_Note (Use_Span)));
+                                 end;
+                              end if;
+                              String_Sets.Next (Global_Cursor);
+                           end;
+                        end loop;
+                     end;
+                  end if;
+
+                  if not Accessed.Is_Empty then
+                     declare
+                        Global_Cursor : String_Sets.Cursor := Accessed.First;
+                     begin
+                        while String_Sets.Has_Element (Global_Cursor) loop
+                           declare
+                              Global_Name : constant String := String_Sets.Element (Global_Cursor);
                               Owners      : String_Sets.Set;
                            begin
-                              if Task_Access.Contains (Global_Name) then
-                                 Owners := Task_Access.Element (Global_Name);
+                              if not Is_Synthetic_Attribute_Marker (Global_Name, Global_Spans) then
+                                 if Task_Access.Contains (Global_Name) then
+                                    Owners := Task_Access.Element (Global_Name);
+                                 end if;
+                                 Owners.Include (UString_Value (Summary.Name));
+                                 Task_Access.Include (Global_Name, Owners);
                               end if;
-                              Owners.Include (UString_Value (Summary.Name));
-                              Task_Access.Include (Global_Name, Owners);
                               String_Sets.Next (Global_Cursor);
                            end;
                         end loop;

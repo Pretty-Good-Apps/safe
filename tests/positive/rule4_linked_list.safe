@@ -1,49 +1,29 @@
 -- Test: rule4_linked_list
--- Description: Linked list traversal with null guards.
---   Each dereference is preceded by a null check on the current node.
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.8.4.p136:fa5e94b7
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.2.p96a:0eaf48aa
+-- Description: Linked-list traversal with null guards on inferred references.
 -- Expected: ACCEPT
 
 package safe_linked_list
 
-   type node;
-   type node_ptr is access node;
-
    type node is record
       value : integer;
-      next  : node_ptr;
+      next  : node;
 
-   --  Last_Value: traverses to the tail and returns its value.
-   --  The traversal uses a local observer derived from Head.Access.
-   function last_value (head : node_ptr) returns integer
+   function last_value (head : node) returns integer
 
       if head == null
          return 0;
+      else if head.next == null
+         return head.value;
+      else
+         return last_value (head.next);
 
-      var current : access constant node = head.access;
-      while current != null
-         if current.all.next == null
-            return current.all.value;
-         else
-            current = current.all.next.access;
-
-      return 0;
-
-   --  Has_Tail: proves nested null guards before traversing further.
-   function has_tail (head : node_ptr) returns boolean
+   function has_tail (head : node) returns boolean
 
       if head == null
          return false;
-
-      var current : access constant node = head.access;
-      while current != null
-         if current.all.next == null
-            return false;
-         else if current.all.next.all.next == null
-            return true;
-         else
-            current = current.all.next.access;
-
-      return false;
-
+      else if head.next == null
+         return false;
+      else if head.next.next == null
+         return true;
+      else
+         return has_tail (head.next);

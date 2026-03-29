@@ -1,0 +1,41 @@
+{
+  "format": "safei-v2",
+  "package_name": "provider_missing_unit_kind",
+  "dependencies": [],
+  "executables": [],
+  "public_declarations": [
+    {
+      "name": "ping",
+      "kind": "FunctionDeclaration",
+      "signature": "function ping ()",
+      "span": {"start_line": 1, "start_col": 1, "end_line": 1, "end_col": 20}
+    }
+  ],
+  "types": [],
+  "subtypes": [],
+  "channels": [],
+  "objects": [],
+  "subprograms": [
+    {
+      "name": "ping",
+      "kind": "function",
+      "signature": "function ping ()",
+      "params": [],
+      "has_return_type": false,
+      "return_type": null,
+      "span": {"start_line": 1, "start_col": 1, "end_line": 1, "end_col": 20}
+    }
+  ],
+  "effect_summaries": [
+    {
+      "name": "ping",
+      "signature": "function ping ()",
+      "reads": [],
+      "writes": [],
+      "inputs": [],
+      "outputs": [],
+      "depends": []
+    }
+  ],
+  "channel_access_summaries": []
+}

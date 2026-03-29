@@ -1,13 +1,12 @@
-Diagnostics Golden: Anonymous Access Reassign Join
+Diagnostics Golden: Removed Allocator
 Source: tests/negative/neg_own_anon_reassign_join.safe
 
 Expected diagnostic output:
 ------------------------------------------------------------------------
-neg_own_anon_reassign_join.safe:22:7: error: anonymous access 'ref' may only be assigned at its declaration
+neg_own_anon_reassign_join.safe:11:14: error: removed source construct `new` is not allowed
   |
-  | 22 |       ref = other;  -- ERROR: merge must not reset init-only tracking
-  |    |       ^~~~~~~~~~~~
+  | 11 |       return new ((value = 1) as data);
+  |    |              ^~~
   |
-  note: borrow and observe locals are initialization-only.
-  note: rule: Safe §2.3.3 / §2.3.4a (anonymous access is initialization-only)
+  note: PR11.8e removes explicit allocation from the source surface
 ------------------------------------------------------------------------

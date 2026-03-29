@@ -1,32 +1,26 @@
 -- Test: rule4_conditional
--- Description: Conditional dereference with null guard.
---   Multiple access values are conditionally dereferenced after
---   explicit null checks on each path.
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.8.4.p136:fa5e94b7
+-- Description: Conditional dereference with null guard on inferred references.
 -- Expected: ACCEPT
 
 package safe_conditional
 
    subtype config_value is integer (0 to 1000);
-   type config_ptr is access config_value;
 
-   --  Max_Of_Two: returns the maximum of two optional values.
-   --  Each pointer is null-checked before dereference.
-   function max_of_two (a, b : config_ptr) returns config_value
+   type config_box is record
+      value : config_value;
+      next : config_box;
+
+   function max_of_two (a, b : config_box) returns config_value
 
       if a != null and then b != null
-         --  Both A and B are provably not null.
-         if a.all >= b.all
-            return a.all;
+         if a.value >= b.value
+            return a.value;
          else
-            return b.all;
+            return b.value;
 
       else if a != null
-         --  A is provably not null.
-         return a.all;
+         return a.value;
       else if b != null
-         --  B is provably not null.
-         return b.all;
+         return b.value;
       else
          return 0;
-

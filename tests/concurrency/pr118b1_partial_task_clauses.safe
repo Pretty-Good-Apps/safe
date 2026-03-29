@@ -8,7 +8,6 @@ package pr118b1_partial_task_clauses
 
    channel input_ch : message capacity 1;
    channel output_ch : message capacity 1;
-   observed : message = 0;
 
    function push_output
 
@@ -19,5 +18,4 @@ package pr118b1_partial_task_clauses
       loop
          var incoming : message = 0
          receive input_ch, incoming
-         observed = incoming
          push_output

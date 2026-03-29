@@ -1,18 +1,15 @@
 -- Test: neg_own_target_not_null
 -- Description: Moving into a target that is not provably null.
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.2.p97a:8d0214d5
 -- Expected: REJECT move_target_not_null
 
 package move_target_not_null_test
 
    type payload is record
       value : integer;
-
-   type payload_ptr is access payload;
+      next : payload;
 
    function bad_move
-      source : payload_ptr = new ((value = 1) as payload);
-      target : payload_ptr = new ((value = 2) as payload);
+      source : not null payload = (value = 1, next = null);
+      target : not null payload = (value = 2, next = null);
 
       target = source;  -- ERROR: target is not provably null
-

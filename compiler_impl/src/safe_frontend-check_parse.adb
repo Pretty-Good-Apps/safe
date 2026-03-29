@@ -597,31 +597,24 @@ package body Safe_Frontend.Check_Parse is
       end loop;
    end Parse_Unit_Suite;
 
-   function Parse_Access_Definition
-     (State                : in out Parser_State;
-      Type_Decl_Context    : Boolean) return CM.Type_Spec
-   is
-      Start      : constant FT.Source_Span := Current (State).Span;
-      Result     : CM.Type_Spec;
-      Target_Expr : CM.Expr_Access;
+   function Starts_Removed_Access_Definition
+     (State : Parser_State) return Boolean is
+      Lower : constant String := Current_Lower (State);
    begin
-      if Match (State, "not") then
-         Require (State, "null");
-         Result.Not_Null := True;
+      if Lower = "access" then
+         return True;
+      elsif Lower /= "not" then
+         return False;
+      elsif FT.Lowercase (FT.To_String (Next (State).Lexeme)) /= "null" then
+         return False;
       end if;
-      Require (State, "access");
-      if Match (State, "all") then
-         Result.Is_All := True;
-      elsif Match (State, "constant") then
-         Result.Is_Constant := True;
-      end if;
-      Target_Expr := Parse_Name_Expression (State);
-      Result.Kind := CM.Type_Spec_Access_Def;
-      Result.Target_Name := Target_Expr;
-      Result.Anonymous := not Type_Decl_Context;
-      Result.Span := CM.Join (Start, Target_Expr.Span);
-      return Result;
-   end Parse_Access_Definition;
+
+      declare
+         Third : constant String := FT.Lowercase (FT.To_String (Next (State, 2).Lexeme));
+      begin
+         return Third = "access";
+      end;
+   end Starts_Removed_Access_Definition;
 
    function Parse_Type_Spec_Internal
      (State            : in out Parser_State;
@@ -641,6 +634,10 @@ package body Safe_Frontend.Check_Parse is
       Result.Span := CM.Join (Start.Span, Result.Element_Type.Span);
       return Result;
    end Parse_Growable_Array_Type_Spec;
+
+   function Parse_Object_Type_Core
+     (State            : in out Parser_State;
+      Allow_Access_Def : Boolean := False) return CM.Type_Spec;
 
    function Parse_Tuple_Type_Spec
      (State            : in out Parser_State;
@@ -797,16 +794,19 @@ package body Safe_Frontend.Check_Parse is
       return Result;
    end Parse_Named_Type_Spec;
 
-   function Parse_Type_Spec_Internal
+   function Parse_Object_Type_Core
      (State            : in out Parser_State;
-      Allow_Access_Def : Boolean) return CM.Type_Spec
+      Allow_Access_Def : Boolean := False) return CM.Type_Spec
    is
    begin
       if Current_Lower (State) = "aliased" then
          Reject_Removed_Source_Spelling (State, "aliased");
       end if;
-      if Allow_Access_Def and then Current_Lower (State) in "access" | "not" then
-         return Parse_Access_Definition (State, Type_Decl_Context => False);
+      if Allow_Access_Def and then Starts_Removed_Access_Definition (State) then
+         Reject_Removed_Source_Construct
+           (State,
+            "access_definition",
+            "PR11.8e infers references from direct self-recursive record types; source `access` is removed");
       elsif Current_Lower (State) = "binary" then
          return Parse_Binary_Type_Spec (State);
       elsif Current_Lower (State) = "array"
@@ -817,12 +817,38 @@ package body Safe_Frontend.Check_Parse is
          return Parse_Tuple_Type_Spec (State, Allow_Access_Def);
       end if;
       return Parse_Named_Type_Spec (State, CM.Type_Spec_Name);
+   end Parse_Object_Type_Core;
+
+   function Parse_Type_Spec_Internal
+     (State            : in out Parser_State;
+      Allow_Access_Def : Boolean) return CM.Type_Spec is
+   begin
+      return Parse_Object_Type_Core (State, Allow_Access_Def);
    end Parse_Type_Spec_Internal;
 
    function Parse_Object_Type
-     (State : in out Parser_State) return CM.Type_Spec is
+     (State : in out Parser_State) return CM.Type_Spec
+   is
+      Start  : constant FT.Source_Span := Current (State).Span;
+      Result : CM.Type_Spec;
    begin
-      return Parse_Type_Spec_Internal (State, Allow_Access_Def => True);
+      if Match (State, "not") then
+         if Current_Lower (State) /= "null" then
+            Reject_Removed_Source_Spelling (State, "not");
+         end if;
+         Require (State, "null");
+         if Current_Lower (State) = "access" then
+            Reject_Removed_Source_Construct
+              (State,
+               "access_definition",
+               "PR11.8e infers references from direct self-recursive record types; source `access` is removed");
+         end if;
+         Result := Parse_Object_Type_Core (State);
+         Result.Not_Null := True;
+         Result.Span := CM.Join (Start, Result.Span);
+         return Result;
+      end if;
+      return Parse_Object_Type_Core (State);
    end Parse_Object_Type;
 
    function Parse_Subtype_Indication
@@ -831,6 +857,12 @@ package body Safe_Frontend.Check_Parse is
       Start  : constant FT.Source_Span := Current (State).Span;
       Result : CM.Type_Spec;
    begin
+      if Starts_Removed_Access_Definition (State) then
+         Reject_Removed_Source_Construct
+           (State,
+            "access_definition",
+            "PR11.8e infers references from direct self-recursive record types; source `access` is removed");
+      end if;
       if Match (State, "not") then
          Require (State, "null");
          Result.Not_Null := True;
@@ -863,12 +895,6 @@ package body Safe_Frontend.Check_Parse is
    function Parse_Return_Type
      (State : in out Parser_State) return CM.Type_Spec is
    begin
-      if Current_Lower (State) = "aliased" then
-         Reject_Removed_Source_Spelling (State, "aliased");
-      end if;
-      if Current_Lower (State) in "access" | "not" then
-         return Parse_Access_Definition (State, Type_Decl_Context => False);
-      end if;
       return Parse_Object_Type (State);
    end Parse_Return_Type;
 
@@ -1176,10 +1202,11 @@ package body Safe_Frontend.Check_Parse is
                Parsed_Record.Name := Name.Lexeme;
                Item := Parsed_Record;
             end;
-         elsif Current_Lower (State) in "access" | "not" then
-            Item.Access_Type := Parse_Access_Definition (State, Type_Decl_Context => True);
-            Item.Kind := CM.Type_Decl_Access;
-            Item.Span := CM.Join (Start.Span, Expect (State, ";").Span);
+         elsif Starts_Removed_Access_Definition (State) then
+            Reject_Removed_Source_Construct
+              (State,
+               "access_type_definition",
+               "PR11.8e infers references from direct self-recursive record types; named access types are removed");
          else
             Reject_Unsupported
               (State,
@@ -1228,14 +1255,19 @@ package body Safe_Frontend.Check_Parse is
          Result.Names.Append (Expect_Identifier (State).Lexeme);
       end loop;
       Require (State, ":");
-      if Match (State, "out") then
-         Result.Mode := FT.To_UString ("out");
-      elsif Match (State, "in") then
-         if Match (State, "out") then
-            Result.Mode := FT.To_UString ("in out");
-         else
-            Result.Mode := FT.To_UString ("in");
-         end if;
+      Result.Mode := FT.To_UString ("borrow");
+      if Match (State, "mut") then
+         Result.Mode := FT.To_UString ("mut");
+      elsif Current_Lower (State) = "in" then
+         Reject_Removed_Source_Spelling
+           (State,
+            "in",
+            "parameter declarations");
+      elsif Current_Lower (State) = "out" then
+         Reject_Removed_Source_Spelling
+           (State,
+            "out",
+            "parameter declarations");
       end if;
       Result.Param_Type := Parse_Return_Type (State);
       Span_End := Result.Param_Type.Span;
@@ -2319,26 +2351,12 @@ package body Safe_Frontend.Check_Parse is
    function Parse_Allocator
      (State : in out Parser_State) return CM.Expr_Access
    is
-      Start  : constant FL.Token := Expect (State, "new");
-      Result : constant CM.Expr_Access := New_Expr;
    begin
-      Result.Kind := CM.Expr_Allocator;
-      if Current (State).Lexeme = FT.To_UString ("(") then
-         Result.Value := Parse_Parenthesized_Like (State);
-      else
-         declare
-            Name_Expr : constant CM.Expr_Access := Parse_Name_Expression (State);
-            Inner     : constant CM.Expr_Access := New_Expr;
-         begin
-            Inner.Kind := CM.Expr_Subtype_Indication;
-            Inner.Name := FT.To_UString (Name_To_String (Name_Expr));
-            Inner.Target := Name_Expr;
-            Inner.Span := Name_Expr.Span;
-            Result.Value := Inner;
-         end;
-      end if;
-      Result.Span := CM.Join (Start.Span, Result.Value.Span);
-      return Result;
+      Reject_Removed_Source_Construct
+        (State,
+         "new",
+         "PR11.8e removes explicit allocation from the source surface");
+      return null;
    end Parse_Allocator;
 
    function Parse_Primary
@@ -2697,6 +2715,17 @@ package body Safe_Frontend.Check_Parse is
          if Match (State, ".") then
             if Current (State).Kind in FL.Identifier | FL.Keyword | FL.Integer_Literal then
                Selector := Current (State);
+               if FT.Lowercase (FT.To_String (Selector.Lexeme)) = "all" then
+                  Reject_Removed_Source_Spelling
+                    (State,
+                     ".all",
+                     "postfix selectors");
+               elsif FT.Lowercase (FT.To_String (Selector.Lexeme)) = "access" then
+                  Reject_Removed_Source_Spelling
+                    (State,
+                     ".access",
+                     "postfix selectors");
+               end if;
                Advance (State);
                Next_Result := New_Expr;
                Next_Result.Kind := CM.Expr_Select;

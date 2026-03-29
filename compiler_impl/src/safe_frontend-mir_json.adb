@@ -1293,7 +1293,7 @@ package body Safe_Frontend.Mir_Json is
          return
            (Success => False,
             Message =>
-              FT.To_UString (Path & ": expected format mir-v1 or mir-v2"));
+              FT.To_UString (Path & ": expected format mir-v1, mir-v2, or mir-v3"));
       end if;
 
       Format := Get (Root, "format");
@@ -1301,7 +1301,7 @@ package body Safe_Frontend.Mir_Json is
          return
            (Success => False,
             Message =>
-              FT.To_UString (Path & ": expected format mir-v1 or mir-v2"));
+              FT.To_UString (Path & ": expected format mir-v1, mir-v2, or mir-v3"));
       end if;
 
       declare
@@ -1311,11 +1311,13 @@ package body Safe_Frontend.Mir_Json is
             Kind := GM.Mir_V1;
          elsif Value = "mir-v2" then
             Kind := GM.Mir_V2;
+         elsif Value = "mir-v3" then
+            Kind := GM.Mir_V3;
          else
             return
               (Success => False,
                Message =>
-                 FT.To_UString (Path & ": expected format mir-v1 or mir-v2"));
+                 FT.To_UString (Path & ": expected format mir-v1, mir-v2, or mir-v3"));
          end if;
       end;
 

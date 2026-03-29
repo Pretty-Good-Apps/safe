@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import os
+import json
 import shutil
 import subprocess
 import sys
@@ -92,10 +93,16 @@ INTERFACE_CASES = [
         0,
     ),
     (
-        "transitive-global-ok",
+        "transitive-global-rejected",
         REPO_ROOT / "tests" / "interfaces" / "provider_transitive_global.safe",
         REPO_ROOT / "tests" / "interfaces" / "client_transitive_global_ok.safe",
-        0,
+        1,
+    ),
+    (
+        "imported-global-length-attribute-rejected",
+        REPO_ROOT / "tests" / "interfaces" / "provider_string_object.safe",
+        REPO_ROOT / "tests" / "interfaces" / "client_imported_length_attribute_rejected.safe",
+        1,
     ),
     (
         "imported-borrow-observe",
@@ -146,6 +153,18 @@ STATIC_INTERFACE_CASES = [
         "legacy-channel-requires-regen",
         REPO_ROOT / "tests" / "interfaces" / "provider_transitive_channel.safei.json",
         REPO_ROOT / "tests" / "interfaces" / "client_transitive_channel_receive_only.safe",
+        1,
+    ),
+    (
+        "bad-return-flag-type",
+        REPO_ROOT / "tests" / "interfaces" / "provider_bad_return_flag.safei.json",
+        REPO_ROOT / "tests" / "interfaces" / "client_bad_return_flag.safe",
+        1,
+    ),
+    (
+        "missing-unit-kind",
+        REPO_ROOT / "tests" / "interfaces" / "provider_missing_unit_kind.safei.json",
+        REPO_ROOT / "tests" / "interfaces" / "client_missing_unit_kind.safe",
         1,
     ),
 ]
@@ -533,6 +552,14 @@ OUTPUT_CONTRACT_CASES = [
     REPO_ROOT / "tests" / "positive" / "pr118c2_package_print.safe",
     REPO_ROOT / "tests" / "positive" / "pr118c2_entry_print.safe",
     REPO_ROOT / "tests" / "build" / "pr118d_for_of_growable_build.safe",
+]
+
+OUTPUT_CONTRACT_REJECT_CASES = [
+    (
+        "safei-bad-return-flag",
+        REPO_ROOT / "tests" / "interfaces" / "provider_binary.safe",
+        "subprograms[0].return_is_access_def must be a boolean",
+    ),
 ]
 
 REPL_CASES = [
@@ -993,6 +1020,73 @@ def run_output_contract_case(
     return True, ""
 
 
+def run_output_contract_reject_case(
+    safec: Path,
+    *,
+    label: str,
+    source: Path,
+    expected_message: str,
+    temp_root: Path,
+) -> tuple[bool, str]:
+    case_root = temp_root / f"{source.stem}-{label}"
+    out_dir = case_root / "out"
+    iface_dir = case_root / "iface"
+    ada_dir = case_root / "ada"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    iface_dir.mkdir(parents=True, exist_ok=True)
+    ada_dir.mkdir(parents=True, exist_ok=True)
+
+    emit = run_command(
+        [
+            str(safec),
+            "emit",
+            repo_rel(source),
+            "--out-dir",
+            str(out_dir),
+            "--interface-dir",
+            str(iface_dir),
+            "--ada-out-dir",
+            str(ada_dir),
+        ],
+        cwd=REPO_ROOT,
+    )
+    if emit.returncode != 0:
+        return False, f"emit failed: {first_message(emit)}"
+
+    stem = source.stem.lower()
+    safei_path = iface_dir / f"{stem}.safei.json"
+    payload = json.loads(safei_path.read_text(encoding="utf-8"))
+    subprograms = payload.get("subprograms")
+    if not isinstance(subprograms, list) or not subprograms:
+        return False, "emitted safei has no subprograms to mutate"
+    subprograms[0]["return_is_access_def"] = "bad"
+    safei_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    validate = run_command(
+        [
+            sys.executable,
+            str(VALIDATE_OUTPUT_CONTRACTS),
+            "--ast",
+            str(out_dir / f"{stem}.ast.json"),
+            "--typed",
+            str(out_dir / f"{stem}.typed.json"),
+            "--mir",
+            str(out_dir / f"{stem}.mir.json"),
+            "--safei",
+            str(safei_path),
+            "--source-path",
+            repo_rel(source),
+        ],
+        cwd=REPO_ROOT,
+    )
+    if validate.returncode == 0:
+        return False, "validate_output_contracts unexpectedly succeeded"
+    output = validate.stderr or validate.stdout
+    if expected_message not in output:
+        return False, f"missing expected message {expected_message!r}"
+    return True, ""
+
+
 def run_repl_case(
     *,
     label: str,
@@ -1118,6 +1212,20 @@ def main() -> int:
                 passed += 1
             else:
                 failures.append((label, detail))
+
+        for label, source, expected_message in OUTPUT_CONTRACT_REJECT_CASES:
+            ok, detail = run_output_contract_reject_case(
+                safec,
+                label=label,
+                source=source,
+                expected_message=expected_message,
+                temp_root=temp_root,
+            )
+            case_label = f"contracts-reject:{label}:{repo_rel(source)}"
+            if ok:
+                passed += 1
+            else:
+                failures.append((case_label, detail))
 
     for source, golden in DIAGNOSTIC_GOLDEN_CASES:
         ok, detail = run_diagnostic_golden(safec, source, golden)

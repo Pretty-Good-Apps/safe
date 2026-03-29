@@ -1,19 +1,18 @@
 -- Test: ownership_observe_access
--- Description: Local observe via the .Access attribute.
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.4.p101a:ef2d8fd1
+-- Description: Immutable borrow uses ordinary parameter syntax in PR11.8e.
 -- Expected: ACCEPT
 
 package ownership_observe_access
 
    type config is record
       rate : integer;
+      next : config;
 
-   type config_ptr is access config;
+   function read_with_observer (observer : config) returns integer
+      return observer.rate;
 
    function read_with_local_observer
-      owner    : config_ptr = new ((rate = 100) as config);
-      observer : access constant config = owner.access;
-      rate     : integer;
+      owner : not null config = (rate = 100, next = null);
+      rate  : integer;
 
-      rate = observer.all.rate;
-
+      rate = read_with_observer (owner);

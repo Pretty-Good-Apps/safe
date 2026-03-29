@@ -12,14 +12,14 @@ package pr113_variant_guard
             when others
                beta : integer;
 
-   function read_alpha (p : in packet) returns integer
+   function read_alpha (p : packet) returns integer
 
       if p.kind == 0
          return p.alpha;
 
       return 0;
 
-   function read_alpha_with_case (p : in packet) returns integer
+   function read_alpha_with_case (p : packet) returns integer
 
       case p.kind
          when 0

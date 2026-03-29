@@ -1,0 +1,26 @@
+{
+  "format": "safei-v2",
+  "unit_kind": "package",
+  "package_name": "provider_bad_return_flag",
+  "dependencies": [],
+  "executables": [],
+  "public_declarations": [],
+  "types": [],
+  "subtypes": [],
+  "channels": [],
+  "objects": [],
+  "subprograms": [
+    {
+      "name": "ping",
+      "kind": "function",
+      "signature": "function ping ()",
+      "params": [],
+      "has_return_type": false,
+      "return_is_access_def": "bad",
+      "return_type": null,
+      "span": null
+    }
+  ],
+  "effect_summaries": [],
+  "channel_access_summaries": []
+}

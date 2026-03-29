@@ -397,7 +397,13 @@ package body Safe_Frontend.Check_Lower is
       for Subprogram of Functions loop
          if UString_Value (Subprogram.Name) = Name then
             for Param of Subprogram.Params loop
-               if Type_Access_Role (Param.Type_Info) = "Borrow" then
+               if UString_Value (Param.Mode) = "mut" then
+                  return GM.Ownership_Borrow;
+               elsif UString_Value (Param.Mode) = "borrow"
+                 and then Type_Access_Role (Param.Type_Info) in "Owner" | "GeneralAccess"
+               then
+                  return GM.Ownership_Observe;
+               elsif Type_Access_Role (Param.Type_Info) = "Borrow" then
                   return GM.Ownership_Borrow;
                elsif Type_Access_Role (Param.Type_Info) = "Observe" then
                   return GM.Ownership_Observe;
@@ -2488,12 +2494,18 @@ package body Safe_Frontend.Check_Lower is
             Param_Type : GM.Type_Descriptor := Param.Type_Info;
             Param_Role : FT.UString := FT.To_UString (Type_Access_Role (Param_Type));
          begin
-            if UString_Value (Param.Mode) = "in"
-              and then UString_Value (Param_Role) = "Owner"
+            if UString_Value (Param.Mode) = "borrow"
+              and then UString_Value (Param_Role) in "Owner" | "GeneralAccess"
             then
                Param_Type.Has_Access_Role := True;
-               Param_Type.Access_Role := FT.To_UString ("GeneralAccess");
-               Param_Role := FT.To_UString ("GeneralAccess");
+               Param_Type.Access_Role := FT.To_UString ("Observe");
+               Param_Role := FT.To_UString ("Observe");
+            elsif UString_Value (Param.Mode) = "mut"
+              and then UString_Value (Param_Role) in "Owner" | "GeneralAccess"
+            then
+               Param_Type.Has_Access_Role := True;
+               Param_Type.Access_Role := FT.To_UString ("Borrow");
+               Param_Role := FT.To_UString ("Borrow");
             end if;
             Visible.Include (UString_Value (Param.Name), Param_Type);
             Work.Scopes (Work.Scope_Map.Element ("scope0")).Local_Ids.Append
@@ -2926,7 +2938,7 @@ package body Safe_Frontend.Check_Lower is
       end loop;
 
       Result.Path := Unit.Path;
-      Result.Format := GM.Mir_V2;
+      Result.Format := GM.Mir_V3;
       Result.Has_Source_Path := True;
       Result.Source_Path := Unit.Path;
       Result.Unit_Kind := FT.To_UString ((if Unit.Kind = CM.Unit_Entry then "entry" else "package"));

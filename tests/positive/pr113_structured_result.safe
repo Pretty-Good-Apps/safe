@@ -4,21 +4,20 @@
 
 package pr113_structured_result
 
-   function reject (msg : in string) returns result
+   function reject (msg : string) returns result
 
       return fail (msg);
 
-   function parse (input : in integer) returns (result, integer)
+   function parse (input : integer) returns (result, integer)
 
       if input >= 0
          return (ok (), input);
 
       return (reject ("negative"), 0);
 
-   function legacy (input : in integer) returns (boolean, integer)
+   function legacy (input : integer) returns (boolean, integer)
 
       if input >= 0
          return (true, input);
 
       return (false, 0);
-

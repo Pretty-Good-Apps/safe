@@ -1,0 +1,3 @@
+package provider_string_object
+
+   public label : string (5) = "hello";

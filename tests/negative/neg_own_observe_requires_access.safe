@@ -1,15 +1,14 @@
 -- Test: neg_own_observe_requires_access
--- Description: Local observe must use the .access attribute.
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.4.p101a:ef2d8fd1
--- Expected: REJECT observe_requires_access
+-- Description: Explicit `.all` dereference syntax is removed in PR11.8e.
+-- Expected: REJECT parser_error
 
 package observe_requires_access_test
 
    type config is record
       rate : integer;
-
-   type config_ptr is access config;
+      next : config;
 
    function bad_observe
-      owner    : config_ptr = new ((rate = 100) as config);
-      observer : access constant config = owner;  -- ERROR: must use owner.access
+      owner : not null config = (rate = 100, next = null);
+
+      return owner.all.rate;

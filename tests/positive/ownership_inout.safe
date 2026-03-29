@@ -1,20 +1,17 @@
 -- Test: ownership_inout
--- Description: Passing an owner by in out without using it afterward.
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.2.p96a:0eaf48aa
+-- Description: Passing an inferred-reference owner by `mut`.
 -- Expected: ACCEPT
 
 package ownership_inout
 
    type payload is record
       value : integer;
+      next : payload;
 
-   type payload_ptr is access payload;
-
-   function consume (ref : in out payload_ptr)
-      return;
+   function consume (ref : mut payload)
+      ref.value = 6;
 
    function use_inout
-      owner : payload_ptr = new ((value = 5) as payload);
+      owner : not null payload = (value = 5, next = null);
 
       consume (owner);
-

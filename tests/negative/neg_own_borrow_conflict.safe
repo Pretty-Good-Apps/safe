@@ -1,25 +1,17 @@
 -- Test: neg_own_borrow_conflict
--- Description: Accessing the lender while a mutable borrow is active.
---   The lender is frozen during the borrow scope. Any read, write,
---   or move of the lender during an active borrow is rejected.
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.3.p99b:47108b45
--- Expected: REJECT borrow_conflict
+-- Description: Passing the same root object to a `mut` parameter and another actual.
+-- Expected: REJECT mut_alias_conflict
 
 package borrow_conflict_test
 
    type data is record
       value : integer;
+      next : data;
 
-   type data_ptr is access data;
+   function touch (left : mut data; right : data)
+      return;
 
-   --  Modify_Both: borrows Owner to Ref, then tries to read Owner
-   --  while the borrow is still active.
    function modify_both
-      owner : data_ptr = new ((value = 10) as data);
-      ref   : access data = owner;  -- borrow begins
-      v     : integer;
+      owner : not null data = (value = 10, next = null);
 
-      ref.all.value = 20;
-      --  Owner is frozen while Ref (the borrow) is active.
-      v = owner.all.value;  -- ERROR: lender accessed during active borrow
-
+      touch (owner, owner);  -- ERROR: same-root alias in one call

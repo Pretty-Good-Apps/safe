@@ -1,4 +1,4 @@
-function find_code (opcode : in integer) returns (boolean, integer)
+function find_code (opcode : integer) returns (boolean, integer)
 
    case opcode
       when 1

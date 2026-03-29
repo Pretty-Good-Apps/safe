@@ -1,7 +1,6 @@
 -- Test: neg_own_anon_reassign
--- Description: Reassigning an anonymous access local after declaration.
--- Clause: SAFE@468cf72:spec/02-restrictions.md#2.3.3.p100a:ba849e66
--- Expected: REJECT anonymous_access_reassign
+-- Description: Named access type declarations are removed in PR11.8e.
+-- Expected: REJECT parser_error
 
 package anonymous_reassign_test
 
@@ -9,11 +8,3 @@ package anonymous_reassign_test
       value : integer;
 
    type data_ptr is access data;
-
-   function reassign_borrow
-      owner : data_ptr = new ((value = 1) as data);
-      other : data_ptr = new ((value = 2) as data);
-      ref   : access data = owner;
-
-      ref = other;  -- ERROR: anonymous access reassignment after declaration
-

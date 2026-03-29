@@ -31,6 +31,12 @@ package unit or a packageless entry unit. Executable statements are admitted at
 unit scope after declarations. Once the first unit-scope statement appears,
 later unit-scope declarations are illegal.
 
+For the post-PR11.8e surface, explicit `access`, `new`, `.all`, `.access`,
+source `in`, `out`, and `in out` are removed. Direct self-recursive record
+types are inferred as references, parameters are either ordinary borrows or
+`mut` mutable borrows, and task bodies may use only their own locals and
+channels.
+
 ---
 
 ## 8.1 Compilation Units
@@ -115,8 +121,6 @@ object_declaration ::=
         subtype_indication [ '=' expression ] ';'
   | [ 'public' ] defining_identifier_list ':' [ 'constant' ]
         array_type_definition [ '=' expression ] ';'
-  | [ 'public' ] defining_identifier_list ':' [ 'constant' ]
-        access_definition [ '=' expression ] ';'
 
 number_declaration ::=
     [ 'public' ] defining_identifier_list ':' 'constant' '=' static_expression ';'
@@ -154,7 +158,6 @@ type_definition ::=
   | decimal_fixed_point_definition
   | array_type_definition
   | record_type_definition
-  | access_type_definition
   | derived_type_definition
 
 enumeration_type_definition ::=
@@ -206,7 +209,6 @@ discrete_subtype_definition ::=
 component_definition ::=
     subtype_indication
   | growable_array_type_spec
-  | access_definition
 
 growable_array_type_spec ::=
     'array' 'of' component_definition
@@ -261,23 +263,8 @@ discrete_choice_list ::=
 discrete_choice ::=
     choice_expression | discrete_subtype_indication | range | 'others'
 
-access_type_definition ::=
-    access_to_object_definition
-
-access_to_object_definition ::=
-    [ 'not' 'null' ] 'access' [ 'all' ] subtype_indication
-  | [ 'not' 'null' ] 'access' [ 'constant' ] subtype_indication
-
-access_definition ::=
-    [ 'not' 'null' ] 'access' [ 'all' ] subtype_mark
-  | [ 'not' 'null' ] 'access' [ 'constant' ] subtype_mark
-
 derived_type_definition ::=
     [ 'limited' ] 'new' subtype_indication
-
-allocator ::=
-    'new' subtype_indication
-  | 'new' '(' expression 'as' type_target ')'
 ```
 
 ## 8.5 Subtype Indications
@@ -533,16 +520,12 @@ local_object_declaration ::=
         subtype_indication [ '=' expression ] statement_terminator
   | defining_identifier_list ':' [ 'constant' ]
         array_type_definition [ '=' expression ] statement_terminator
-  | defining_identifier_list ':' [ 'constant' ]
-        access_definition [ '=' expression ] statement_terminator
 
 var_statement ::=
     'var' defining_identifier_list ':'
         subtype_indication [ '=' expression ] statement_terminator
   | 'var' defining_identifier_list ':'
         array_type_definition [ '=' expression ] statement_terminator
-  | 'var' defining_identifier_list ':'
-        access_definition [ '=' expression ] statement_terminator
 
 statement_terminator ::=
     ';'
@@ -590,10 +573,6 @@ simple_return_statement ::=
 
 extended_return_statement ::=
     'return' defining_identifier ':' subtype_indication
-        [ '=' expression ] 'do'
-        handled_sequence_of_statements
-    'end' 'return' ';'
-  | 'return' defining_identifier ':' access_definition
         [ '=' expression ] 'do'
         handled_sequence_of_statements
     'end' 'return' ';'
@@ -667,19 +646,13 @@ subprogram_specification ::=
 
 function_specification ::=
     'function' defining_identifier [ formal_part ] [ 'returns' subtype_indication ]
-  | 'function' defining_identifier [ formal_part ] [ 'returns' access_definition ]
 
 formal_part ::=
     '(' parameter_specification { ';' parameter_specification } ')'
 
 parameter_specification ::=
-    defining_identifier_list ':' mode subtype_indication
+    defining_identifier_list ':' [ 'mut' ] subtype_indication
         [ '=' default_expression ]
-  | defining_identifier_list ':' access_definition
-        [ '=' default_expression ]
-
-mode ::=
-    [ 'in' ] | 'in' 'out' | 'out'
 
 declarative_part ::=
     { basic_declaration }

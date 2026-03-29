@@ -25,8 +25,8 @@ package low_pass_filter
    --  Alpha in 0.01..0.99, input in -100..100, output in -100..100.
    --  Weighted sum of two values each in -100..100 is in -100..100 (convex).
    --  No NaN or infinity possible with bounded finite inputs.
-   function update (state : in out filter_state;
-                     input : signal)
+   function update (state : mut filter_state;
+                    input : signal)
       a : long_float;
       result : long_float;
 
@@ -37,4 +37,3 @@ package low_pass_filter
       );
       --  Narrowing point (assignment): Result is in -100..100, finite.
       state.output = signal (result);
-
