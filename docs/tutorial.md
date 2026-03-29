@@ -271,8 +271,9 @@ ordinary record types and ordinary field selection.
 
 Wart: you still need to think about ownership, moves, and mutable-borrow
 aliasing. PR11.8e.1 extends the model to mutually recursive record families,
-but the alias rule is still conservative: same-root `mut` actuals remain
-rejected until a later follow-up.
+and PR11.8e.2 relaxes the alias rule only for statically disjoint record-field
+paths. Same-field, ancestor/descendant, whole-object-plus-field, indexed, and
+other unsupported same-root paths still reject conservatively.
 
 See: `spec/02-restrictions.md` (Section 2.3).
 
