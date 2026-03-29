@@ -5156,11 +5156,8 @@ package body Safe_Frontend.Mir_Analyze is
                         Other_Path : constant Alias_Path :=
                           Normalize_Alias_Path (Other_Actual, Var_Types, Type_Env, Functions);
                      begin
-                        if UString_Value (Other_Path.Root) = UString_Value (Actual_Name)
-                          and then
-                            (not Actual_Path.Supported
-                             or else not Other_Path.Supported
-                             or else Paths_Overlap (Actual_Path, Other_Path))
+                        if Other_Path.Root = Actual_Name
+                          and then Paths_Overlap (Actual_Path, Other_Path)
                         then
                            return
                              Ownership_Diagnostic
