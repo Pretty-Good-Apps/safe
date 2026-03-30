@@ -8,7 +8,7 @@
 - Draft PR: `#160`
 - Green locally:
   - `alr build`
-  - `python3 scripts/run_tests.py` -> `428 passed, 0 failed`
+  - `python3 scripts/run_tests.py` -> `434 passed, 0 failed`
   - `python3 scripts/run_samples.py` -> `18 passed, 0 failed`
 - Remaining blocker: full `python3 scripts/run_proofs.py`
 

@@ -20,20 +20,6 @@ ALR_FALLBACK = Path.home() / "bin" / "alr"
 RUN_TIMEOUT_SECONDS = 2.0
 PRINT_SAMPLE = "samples/rosetta/text/hello_print.safe"
 PRODUCER_CONSUMER_SAMPLE = "samples/rosetta/concurrency/producer_consumer.safe"
-PRINTING_SAMPLES = {
-    "samples/rosetta/arithmetic/collatz_bounded.safe",
-    "samples/rosetta/arithmetic/factorial.safe",
-    "samples/rosetta/arithmetic/fibonacci.safe",
-    "samples/rosetta/arithmetic/gcd.safe",
-    "samples/rosetta/concurrency/producer_consumer.safe",
-    "samples/rosetta/data_structures/fixed_to_growable.safe",
-    "samples/rosetta/data_structures/growable_sum.safe",
-    "samples/rosetta/data_structures/growable_to_fixed.safe",
-    "samples/rosetta/text/grade_message.safe",
-    "samples/rosetta/text/bounded_prefix.safe",
-    "samples/rosetta/text/hello_print.safe",
-    "samples/rosetta/text/opcode_dispatch.safe",
-}
 GENERATED_SUPPORT_MARKERS = (
     "--  Generated Safe print support",
     "--  Safe Language Runtime Type Definitions",
