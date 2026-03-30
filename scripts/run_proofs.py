@@ -122,6 +122,36 @@ PR11_8F_CHECKPOINT_FIXTURES = [
     "tests/positive/ownership_inout.safe",
 ]
 
+PR11_8G1_CHECKPOINT_FIXTURES = [
+    "tests/positive/pr09_emitter_discriminant.safe",
+    "tests/positive/pr115_compound_terminators.safe",
+    "tests/positive/pr115_declare_terminator.safe",
+    "tests/positive/pr115_legacy_local_decl.safe",
+    "tests/positive/pr115_multiline_return.safe",
+    "tests/positive/pr1162_empty_subprogram_body_followed_by_sibling.safe",
+    "tests/positive/pr116_bare_return.safe",
+    "tests/positive/pr118c_binary_case_dispatch.safe",
+    "tests/positive/pr118d_bounded_string_array_component.safe",
+    "tests/positive/pr118d_bounded_string_field.safe",
+    "tests/positive/pr118d_string_equality.safe",
+    "tests/positive/pr118e1_not_null_mutual_family.safe",
+    "tests/positive/pr118e1_three_type_family.safe",
+    "tests/concurrency/pr118b1_partial_task_clauses.safe",
+    "tests/concurrency/pr118b1_scoped_receive.safe",
+    "tests/concurrency/pr118b1_scoped_try_receive.safe",
+    "tests/concurrency/pr118b1_transitive_local_task_clause.safe",
+    "tests/build/pr118c2_package_pre_task.safe",
+    "tests/build/pr118d1_for_of_string_build.safe",
+    "tests/build/pr118d1_string_case_build.safe",
+    "tests/build/pr118d1_string_order_build.safe",
+    "tests/build/pr118d_bounded_string_array_component_build.safe",
+    "tests/build/pr118d_bounded_string_index_build.safe",
+    "tests/build/pr118d_bounded_string_tick_build.safe",
+    "tests/build/pr118d_for_of_fixed_build.safe",
+    "tests/build/pr118d_for_of_growable_build.safe",
+    "tests/build/pr118d_for_of_heap_element_build.safe",
+]
+
 EMITTED_PROOF_REGRESSION_FIXTURES = [
     "tests/concurrency/select_with_delay.safe",
     "tests/concurrency/select_with_delay_multiarm.safe",
@@ -139,6 +169,7 @@ EMITTED_PROOF_FIXTURES = (
     + PR11_8B_CHECKPOINT_FIXTURES
     + PR11_8E_CHECKPOINT_FIXTURES
     + PR11_8F_CHECKPOINT_FIXTURES
+    + PR11_8G1_CHECKPOINT_FIXTURES
     + EMITTED_PROOF_REGRESSION_FIXTURES
 )
 
@@ -227,6 +258,7 @@ def validate_manifests() -> None:
     validate_manifest("PR11.8b checkpoint manifest", PR11_8B_CHECKPOINT_FIXTURES)
     validate_manifest("PR11.8e checkpoint manifest", PR11_8E_CHECKPOINT_FIXTURES)
     validate_manifest("PR11.8f checkpoint manifest", PR11_8F_CHECKPOINT_FIXTURES)
+    validate_manifest("PR11.8g.1 checkpoint manifest", PR11_8G1_CHECKPOINT_FIXTURES)
     validate_manifest("emitted proof regression manifest", EMITTED_PROOF_REGRESSION_FIXTURES)
     validate_manifest("emitted proof manifest", EMITTED_PROOF_FIXTURES)
 
@@ -517,6 +549,8 @@ def main() -> int:
     checkpoint_e_failures: list[tuple[str, str]] = []
     checkpoint_f_passed = 0
     checkpoint_f_failures: list[tuple[str, str]] = []
+    checkpoint_g1_passed = 0
+    checkpoint_g1_failures: list[tuple[str, str]] = []
     regression_passed = 0
     regression_failures: list[tuple[str, str]] = []
 
@@ -564,6 +598,13 @@ def main() -> int:
             alr=alr,
             gnatprove=gnatprove,
         )
+        checkpoint_g1_passed, checkpoint_g1_failures = run_fixture_group(
+            safec=safec,
+            fixtures=PR11_8G1_CHECKPOINT_FIXTURES,
+            temp_root=temp_root,
+            alr=alr,
+            gnatprove=gnatprove,
+        )
         regression_passed, regression_failures = run_fixture_group(
             safec=safec,
             fixtures=EMITTED_PROOF_REGRESSION_FIXTURES,
@@ -578,6 +619,7 @@ def main() -> int:
         + checkpoint_b_passed
         + checkpoint_e_passed
         + checkpoint_f_passed
+        + checkpoint_g1_passed
         + regression_passed
     )
     total_failures = (
@@ -586,6 +628,7 @@ def main() -> int:
         + checkpoint_b_failures
         + checkpoint_e_failures
         + checkpoint_f_failures
+        + checkpoint_g1_failures
         + regression_failures
     )
 
@@ -617,6 +660,12 @@ def main() -> int:
         passed=checkpoint_f_passed,
         failures=checkpoint_f_failures,
         title="PR11.8f checkpoint",
+        trailing_blank_line=True,
+    )
+    print_summary(
+        passed=checkpoint_g1_passed,
+        failures=checkpoint_g1_failures,
+        title="PR11.8g.1 checkpoint",
         trailing_blank_line=True,
     )
     print_summary(

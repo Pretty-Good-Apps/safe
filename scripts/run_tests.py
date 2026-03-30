@@ -637,6 +637,14 @@ EMITTED_SHAPE_CASES = [
     ),
 ]
 
+SOURCE_SHAPE_CASES = [
+    (
+        "ada-emit-no-skip-proof-fallback",
+        REPO_ROOT / "compiler_impl" / "src" / "safe_frontend-ada_emit.adb",
+        ["Skip_Proof"],
+    ),
+]
+
 REPL_CASES = [
     (
         "repl-prints",
@@ -1211,6 +1219,18 @@ def run_emitted_shape_case(
     return True, ""
 
 
+def run_source_shape_case(
+    *,
+    source: Path,
+    forbidden_snippets: list[str],
+) -> tuple[bool, str]:
+    source_text = source.read_text(encoding="utf-8")
+    for snippet in forbidden_snippets:
+        if snippet in source_text:
+            return False, f"found forbidden source snippet {snippet!r}"
+    return True, ""
+
+
 def run_repl_case(
     *,
     label: str,
@@ -1360,6 +1380,17 @@ def main() -> int:
                 temp_root=temp_root,
             )
             case_label = f"emitted-shape:{label}:{repo_rel(source)}"
+            if ok:
+                passed += 1
+            else:
+                failures.append((case_label, detail))
+
+        for label, source, forbidden_snippets in SOURCE_SHAPE_CASES:
+            ok, detail = run_source_shape_case(
+                source=source,
+                forbidden_snippets=forbidden_snippets,
+            )
+            case_label = f"source-shape:{label}:{repo_rel(source)}"
             if ok:
                 passed += 1
             else:

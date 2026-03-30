@@ -929,10 +929,6 @@ package body Safe_Frontend.Ada_Emit is
       Document  : GM.Mir_Document;
       Condition : CM.Expr_Access;
       State     : in out Emit_State) return String;
-   function Contains_Recursive_Accumulator_Pattern
-     (Subprogram_Name : String;
-      Local_Names     : FT.UString_Vectors.Vector;
-      Statements      : CM.Statement_Access_Vectors.Vector) return Boolean;
    function Uses_Structural_Traversal_Lowering
      (Subprogram : CM.Resolved_Subprogram) return Boolean;
    function Replace_Identifier_Token
@@ -8831,13 +8827,6 @@ package body Safe_Frontend.Ada_Emit is
             begin
                if Variant_Image'Length > 0 then
                   Append_Aspect ("Subprogram_Variant => (" & Variant_Image & ")");
-                  if Contains_Recursive_Accumulator_Pattern
-                       (FT.Lowercase (FT.To_String (Subprogram.Name)),
-                        Local_Names,
-                        Subprogram.Statements)
-                  then
-                     Append_Aspect ("Annotate => (GNATprove, Skip_Proof)");
-                  end if;
                end if;
             end;
          end if;
@@ -9032,7 +9021,7 @@ package body Safe_Frontend.Ada_Emit is
            and then Condition.Right.Kind = CM.Expr_Ident
            and then Is_Integer_Type (Unit, Document, FT.To_String (Condition.Left.Type_Name))
            and then Is_Integer_Type (Unit, Document, FT.To_String (Condition.Right.Type_Name))
-           then
+         then
             return
               "Increases => "
               & FT.To_String (Condition.Left.Name)
@@ -9067,165 +9056,6 @@ package body Safe_Frontend.Ada_Emit is
 
       return "";
    end Loop_Variant_Image;
-
-   function Contains_Recursive_Accumulator_Pattern
-     (Subprogram_Name : String;
-      Local_Names     : FT.UString_Vectors.Vector;
-      Statements      : CM.Statement_Access_Vectors.Vector) return Boolean
-   is
-      function Is_Local_Name (Name : String) return Boolean is
-      begin
-         return Name'Length > 0 and then Contains_Name (Local_Names, Name);
-      end Is_Local_Name;
-
-      function Is_Recursive_Call (Expr : CM.Expr_Access) return Boolean is
-      begin
-         return
-           Expr /= null
-           and then Expr.Kind = CM.Expr_Call
-           and then Expr.Callee /= null
-           and then FT.Lowercase (CM.Flatten_Name (Expr.Callee)) = Subprogram_Name;
-      end Is_Recursive_Call;
-
-      function Returns_Local_Name
-        (Statements : CM.Statement_Access_Vectors.Vector;
-         Name       : String) return Boolean;
-
-      function Contains_Pattern
-        (Statements : CM.Statement_Access_Vectors.Vector) return Boolean;
-
-      function Returns_Local_Name
-        (Statements : CM.Statement_Access_Vectors.Vector;
-         Name       : String) return Boolean
-      is
-      begin
-         for Item of Statements loop
-            if Item = null then
-               null;
-            else
-               case Item.Kind is
-                  when CM.Stmt_Return =>
-                     if Root_Name (Item.Value) = Name then
-                        return True;
-                     end if;
-                  when CM.Stmt_If =>
-                     if Returns_Local_Name (Item.Then_Stmts, Name) then
-                        return True;
-                     end if;
-                     for Part of Item.Elsifs loop
-                        if Returns_Local_Name (Part.Statements, Name) then
-                           return True;
-                        end if;
-                     end loop;
-                     if Item.Has_Else
-                       and then Returns_Local_Name (Item.Else_Stmts, Name)
-                     then
-                        return True;
-                     end if;
-                  when CM.Stmt_Case =>
-                     for Arm of Item.Case_Arms loop
-                        if Returns_Local_Name (Arm.Statements, Name) then
-                           return True;
-                        end if;
-                     end loop;
-                  when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
-                     if Returns_Local_Name (Item.Body_Stmts, Name) then
-                        return True;
-                     end if;
-                  when CM.Stmt_Select =>
-                     for Arm of Item.Arms loop
-                        case Arm.Kind is
-                           when CM.Select_Arm_Channel =>
-                              if Returns_Local_Name (Arm.Channel_Data.Statements, Name) then
-                                 return True;
-                              end if;
-                           when CM.Select_Arm_Delay =>
-                              if Returns_Local_Name (Arm.Delay_Data.Statements, Name) then
-                                 return True;
-                              end if;
-                           when others =>
-                              null;
-                        end case;
-                     end loop;
-                  when others =>
-                     null;
-               end case;
-            end if;
-         end loop;
-
-         return False;
-      end Returns_Local_Name;
-
-      function Contains_Pattern
-        (Statements : CM.Statement_Access_Vectors.Vector) return Boolean
-      is
-      begin
-         for Item of Statements loop
-            if Item = null then
-               null;
-            else
-               case Item.Kind is
-                  when CM.Stmt_Assign =>
-                     declare
-                        Target_Name : constant String := Root_Name (Item.Target);
-                     begin
-                        if Is_Local_Name (Target_Name)
-                          and then Is_Recursive_Call (Item.Value)
-                          and then Returns_Local_Name (Statements, Target_Name)
-                        then
-                           return True;
-                        end if;
-                     end;
-                  when CM.Stmt_If =>
-                     if Contains_Pattern (Item.Then_Stmts) then
-                        return True;
-                     end if;
-                     for Part of Item.Elsifs loop
-                        if Contains_Pattern (Part.Statements) then
-                           return True;
-                        end if;
-                     end loop;
-                     if Item.Has_Else
-                       and then Contains_Pattern (Item.Else_Stmts)
-                     then
-                        return True;
-                     end if;
-                  when CM.Stmt_Case =>
-                     for Arm of Item.Case_Arms loop
-                        if Contains_Pattern (Arm.Statements) then
-                           return True;
-                        end if;
-                     end loop;
-                  when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
-                     if Contains_Pattern (Item.Body_Stmts) then
-                        return True;
-                     end if;
-                  when CM.Stmt_Select =>
-                     for Arm of Item.Arms loop
-                        case Arm.Kind is
-                           when CM.Select_Arm_Channel =>
-                              if Contains_Pattern (Arm.Channel_Data.Statements) then
-                                 return True;
-                              end if;
-                           when CM.Select_Arm_Delay =>
-                              if Contains_Pattern (Arm.Delay_Data.Statements) then
-                                 return True;
-                              end if;
-                           when others =>
-                              null;
-                        end case;
-                     end loop;
-                  when others =>
-                     null;
-               end case;
-            end if;
-         end loop;
-
-         return False;
-      end Contains_Pattern;
-   begin
-      return not Local_Names.Is_Empty and then Contains_Pattern (Statements);
-   end Contains_Recursive_Accumulator_Pattern;
 
    function Uses_Structural_Traversal_Lowering
      (Subprogram : CM.Resolved_Subprogram) return Boolean
