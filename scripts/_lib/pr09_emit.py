@@ -21,7 +21,9 @@ from .harness_common import (
 
 
 COMPILER_ROOT = REPO_ROOT / "compiler_impl"
-SAFE_RUNTIME_TEMPLATE = REPO_ROOT / "companion" / "templates" / "safe_runtime.ads"
+STDLIB_ROOT = COMPILER_ROOT / "stdlib"
+STDLIB_GPR = STDLIB_ROOT / "safe_stdlib.gpr"
+SAFE_RUNTIME_TEMPLATE = STDLIB_ROOT / "ada" / "safe_runtime.ads"
 GENERATED_SUPPORT_MARKERS = (
     "--  Generated Safe print support",
     "--  Safe Language Runtime Type Definitions",
@@ -173,6 +175,7 @@ def emitted_ada_project_text(
 ) -> str:
     del platform_name
     lines = [
+        f'with "{STDLIB_GPR}";',
         "project Build is",
         '   for Source_Dirs use (".");',
         '   for Object_Dir use "obj";',
@@ -250,11 +253,11 @@ def structural_assertions(path: Path, required_fragments: list[str]) -> list[str
 
 
 def safe_runtime_matches_template(ada_dir: Path) -> dict[str, str]:
-    emitted = ada_dir / "safe_runtime.ads"
-    require(emitted.exists(), f"{display_path(ada_dir)}: expected safe_runtime.ads")
+    emitted = SAFE_RUNTIME_TEMPLATE
+    require(emitted.exists(), f"missing shared stdlib runtime template {display_path(emitted)}")
     template_text = SAFE_RUNTIME_TEMPLATE.read_text(encoding="utf-8")
     emitted_text = emitted.read_text(encoding="utf-8")
-    require(emitted_text == template_text, "emitted safe_runtime.ads drifted from companion template")
+    require(emitted_text == template_text, "shared safe_runtime.ads drifted from template path")
     return {
         "emitted": sha256_file(emitted),
         "template": sha256_file(SAFE_RUNTIME_TEMPLATE),
@@ -268,6 +271,7 @@ def compile_emitted_ada(
     temp_root: Path,
 ) -> dict[str, Any]:
     gpr_path = write_emitted_ada_project(ada_dir)
+    (ada_dir / "stdlib_obj").mkdir(parents=True, exist_ok=True)
     result = run(
         compile_emitted_ada_command(ada_dir=ada_dir, gpr_path=gpr_path),
         cwd=COMPILER_ROOT,
@@ -290,6 +294,7 @@ def compile_emitted_ada_command(*, ada_dir: Path, gpr_path: Path | None = None) 
         "-c",
         "-P",
         str(gpr_path or write_emitted_ada_project(ada_dir)),
+        f"-XSAFE_STDLIB_OBJECT_DIR={ada_dir / 'stdlib_obj'}",
         emitted_body_file(ada_dir).name,
     ]
     if (ada_dir / "gnat.adc").exists():

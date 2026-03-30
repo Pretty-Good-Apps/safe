@@ -14,6 +14,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 COMPILER_ROOT = REPO_ROOT / "compiler_impl"
+STDLIB_ROOT = COMPILER_ROOT / "stdlib"
+STDLIB_GPR = STDLIB_ROOT / "safe_stdlib.gpr"
 SAFEC_PATH = COMPILER_ROOT / "bin" / "safec"
 ALR_FALLBACK = Path.home() / "bin" / "alr"
 GNATPROVE_FALLBACK = Path.home() / ".alire" / "bin" / "gnatprove"
@@ -286,6 +288,7 @@ def is_generated_support_file(path: Path) -> bool:
 
 def write_emitted_project(ada_dir: Path) -> Path:
     lines = [
+        f'with "{STDLIB_GPR}";',
         "project Build is",
         '   for Source_Dirs use (".");',
         '   for Object_Dir use "obj";',
@@ -307,6 +310,7 @@ def write_emitted_project(ada_dir: Path) -> Path:
 
 def compile_emitted_ada(ada_dir: Path, *, alr: str) -> subprocess.CompletedProcess[str]:
     gpr_path = write_emitted_project(ada_dir)
+    (ada_dir / "stdlib_obj").mkdir(parents=True, exist_ok=True)
     argv = [
         alr,
         "exec",
@@ -315,6 +319,7 @@ def compile_emitted_ada(ada_dir: Path, *, alr: str) -> subprocess.CompletedProce
         "-c",
         "-P",
         str(gpr_path),
+        f"-XSAFE_STDLIB_OBJECT_DIR={ada_dir / 'stdlib_obj'}",
         emitted_body_file(ada_dir).name,
     ]
     if (ada_dir / "gnat.adc").exists():
@@ -458,11 +463,21 @@ def run_emitted_fixture(
     gpr_path = write_emitted_project(ada_dir)
     adc_path = ada_dir / "gnat.adc"
     summary_path = ada_dir / "obj" / "gnatprove" / "gnatprove.out"
+    (ada_dir / "stdlib_obj").mkdir(parents=True, exist_ok=True)
 
     prove_args = PROVE_SWITCHES if prove_switches is None else prove_switches
 
     for mode, switches in (("flow", FLOW_SWITCHES), ("prove", prove_args)):
-        argv = [alr, "exec", "--", gnatprove, "-P", str(gpr_path), *switches]
+        argv = [
+            alr,
+            "exec",
+            "--",
+            gnatprove,
+            "-P",
+            str(gpr_path),
+            f"-XSAFE_STDLIB_OBJECT_DIR={ada_dir / 'stdlib_obj'}",
+            *switches,
+        ]
         if adc_path.exists():
             argv.extend(["-cargs", f"-gnatec={adc_path}"])
         completed = run_command(argv, cwd=COMPILER_ROOT, timeout=command_timeout)

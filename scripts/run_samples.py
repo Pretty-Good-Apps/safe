@@ -13,6 +13,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 COMPILER_ROOT = REPO_ROOT / "compiler_impl"
+STDLIB_GPR = COMPILER_ROOT / "stdlib" / "safe_stdlib.gpr"
 SAMPLES_ROOT = REPO_ROOT / "samples" / "rosetta"
 SAFEC_PATH = COMPILER_ROOT / "bin" / "safec"
 ALR_FALLBACK = Path.home() / "bin" / "alr"
@@ -219,12 +220,9 @@ def expected_stdout(sample: Path) -> str | None:
     }.get(repo_rel(sample))
 
 
-def expects_safe_io(sample: Path) -> bool:
-    return repo_rel(sample) in PRINTING_SAMPLES
-
-
 def project_text(paths: dict[str, Path]) -> str:
     lines = [
+        f'with "{STDLIB_GPR}";',
         "project Build is",
         f'   for Source_Dirs use ("{paths["root"]}", "{paths["ada"]}");',
         f'   for Object_Dir use "{paths["obj"]}";',
@@ -290,15 +288,13 @@ def run_sample(
         return stage_error("emit", str(exc))
 
     support_specs, support_bodies = generated_support_files(paths["ada"])
-    if expects_safe_io(sample):
-        if len(support_specs) != 1 or len(support_bodies) != 1:
-            return stage_error("emit", "missing generated print support files")
-    elif support_specs or support_bodies:
+    if support_specs or support_bodies:
         return stage_error("emit", "unexpected generated print support files")
 
     if not has_emitted_main(paths["ada"]):
         paths["main"].write_text(driver_text(sample, unit_name), encoding="utf-8")
     paths["gpr"].write_text(project_text(paths), encoding="utf-8")
+    (paths["root"] / "stdlib_obj").mkdir(parents=True, exist_ok=True)
 
     alr = find_command("alr", ALR_FALLBACK)
     build_command = [
@@ -308,6 +304,7 @@ def run_sample(
         "gprbuild",
         "-P",
         str(paths["gpr"]),
+        f"-XSAFE_STDLIB_OBJECT_DIR={paths['root'] / 'stdlib_obj'}",
         "main.adb",
     ]
     try:

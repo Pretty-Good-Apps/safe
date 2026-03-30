@@ -15,6 +15,7 @@ from pathlib import Path
 from .harness_common import COMPILER_ROOT, REPO_ROOT, require
 
 
+STDLIB_GPR = COMPILER_ROOT / "stdlib" / "safe_stdlib.gpr"
 ALR_FALLBACK = Path.home() / "bin" / "alr"
 RENODE_ASSETS_ROOT = REPO_ROOT / "tools" / "embedded" / "renode"
 OPENOCD_ASSETS_ROOT = REPO_ROOT / "tools" / "embedded" / "openocd"
@@ -225,6 +226,7 @@ def work_paths(root: Path) -> dict[str, Path]:
         "iface": root / "iface",
         "ada": root / "ada",
         "obj": root / "obj",
+        "stdlib_obj": root / "stdlib_obj",
         "logs": root / "logs",
         "status_spec": root / "safe_embedded_status.ads",
         "driver": root / "embedded_main.adb",
@@ -252,6 +254,7 @@ def ensure_work_dirs(paths: dict[str, Path]) -> None:
     paths["iface"].mkdir(parents=True, exist_ok=True)
     paths["ada"].mkdir(parents=True, exist_ok=True)
     paths["obj"].mkdir(parents=True, exist_ok=True)
+    paths["stdlib_obj"].mkdir(parents=True, exist_ok=True)
     paths["logs"].mkdir(parents=True, exist_ok=True)
 
 
@@ -353,6 +356,7 @@ def project_text(*, has_gnat_adc: bool, gnat_adc_path: Path) -> str:
         ada_switches = ada_switches + f' & ("-gnatec={gnat_adc_path.as_posix()}")'
     return "\n".join(
         [
+            f'with "{STDLIB_GPR}";',
             "project Build is",
             '   for Source_Dirs use (".", "ada");',
             '   for Object_Dir use "obj";',
@@ -546,6 +550,7 @@ def build_embedded_image(
             f"--RTS={runtime}",
             "-P",
             str(paths["gpr"]),
+            f"-XSAFE_STDLIB_OBJECT_DIR={paths['stdlib_obj']}",
             "-cargs:Ada",
             "-gnatws",
         ],

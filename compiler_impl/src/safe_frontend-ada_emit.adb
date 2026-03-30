@@ -1450,25 +1450,50 @@ package body Safe_Frontend.Ada_Emit is
          elsif Has_Text (Item.Free_Proc)
          then FT.To_String (Item.Free_Proc)
          else "Free_" & Sanitized_Helper_Name (FT.To_String (Item.Type_Name)));
+      function Constant_Dispose_Call return String is
+         Name : constant String := FT.To_String (Item.Free_Proc);
+         Marker : constant Natural :=
+           Ada.Strings.Fixed.Index (Name, ".Free", Ada.Strings.Backward);
+      begin
+         if not Has_Text (Item.Free_Proc) or else Marker = 0 then
+            return "";
+         end if;
+         return Name (Name'First .. Marker - 1) & ".Dispose";
+      end Constant_Dispose_Call;
    begin
       case Item.Action is
          when Cleanup_Deallocate =>
             if Item.Is_Constant then
-               Append_Line (Buffer, "declare", Depth);
-               Append_Line
-                 (Buffer,
-                  "Cleanup_Target : "
-                  & FT.To_String (Item.Type_Name)
-                  & " := "
-                  & FT.To_String (Item.Name)
-                  & ";",
-                  Depth + 1);
-               Append_Line (Buffer, "begin", Depth);
-               Append_Line
-                 (Buffer,
-                  Free_Call & " (Cleanup_Target);",
-                  Depth + 1);
-               Append_Line (Buffer, "end;", Depth);
+               declare
+                  Dispose_Call : constant String := Constant_Dispose_Call;
+               begin
+                  if Dispose_Call'Length > 0 then
+                     Append_Line
+                       (Buffer,
+                        Dispose_Call & " (" & FT.To_String (Item.Name) & ");",
+                        Depth);
+                  else
+                     Append_Initialization_Warning_Suppression (Buffer, Depth);
+                     Append_Line (Buffer, "declare", Depth);
+                     Append_Line
+                       (Buffer,
+                        "Cleanup_Target : "
+                        & FT.To_String (Item.Type_Name)
+                        & ";",
+                        Depth + 1);
+                     Append_Line (Buffer, "begin", Depth);
+                     Append_Line
+                       (Buffer,
+                        "Cleanup_Target := " & FT.To_String (Item.Name) & ";",
+                        Depth + 1);
+                     Append_Line
+                       (Buffer,
+                        Free_Call & " (Cleanup_Target);",
+                        Depth + 1);
+                     Append_Line (Buffer, "end;", Depth);
+                     Append_Initialization_Warning_Restore (Buffer, Depth);
+                  end if;
+               end;
             else
                Append_Line
                  (Buffer,
@@ -2845,6 +2870,11 @@ package body Safe_Frontend.Ada_Emit is
    begin
       return "Dispose_" & Sanitized_Helper_Name (FT.To_String (Info.Name));
    end Local_Dispose_Helper_Name;
+
+   function Local_Ownership_Runtime_Name (Info : GM.Type_Descriptor) return String is
+   begin
+      return "Ownership_" & Sanitized_Helper_Name (FT.To_String (Info.Name));
+   end Local_Ownership_Runtime_Name;
 
    function Array_Runtime_Instance_Name (Info : GM.Type_Descriptor) return String is
    begin
@@ -4933,15 +4963,31 @@ package body Safe_Frontend.Ada_Emit is
       Type_Name   : constant String := Render_Type_Name (Type_Item);
       Target_Name : constant String := Ada_Safe_Name (FT.To_String (Type_Item.Target));
       Result_Info : GM.Type_Descriptor := Type_Item;
-      Generic_Free_Name : constant String :=
-        Local_Free_Helper_Name (Type_Item) & "_Access";
+      Runtime_Name : constant String := Local_Ownership_Runtime_Name (Type_Item);
    begin
       if not Is_Owner_Access (Type_Item) or else not Type_Item.Has_Target then
          return;
       end if;
 
       Result_Info.Not_Null := True;
-      State.Needs_Unchecked_Deallocation := True;
+
+      Append_Line
+        (Buffer,
+         "package "
+         & Runtime_Name
+         & " is new Safe_Ownership_RT ("
+         & ASCII.LF
+         & Indentation (2)
+         & "Target_Type => "
+         & Target_Name
+         & ","
+         & ASCII.LF
+         & Indentation (2)
+         & "Access_Type => "
+         & Type_Name
+         & ");",
+         1);
+      Append_Line (Buffer);
 
       Append_Line
         (Buffer,
@@ -4951,13 +4997,10 @@ package body Safe_Frontend.Ada_Emit is
          & Target_Name
          & ") return "
          & Render_Subtype_Indication (Unit, Document, Result_Info)
-         & " with SPARK_Mode => Off is",
+         & " is",
          1);
       Append_Line (Buffer, "begin", 1);
-      Append_Line
-        (Buffer,
-         "return new " & Target_Name & "'(Value);",
-         2);
+      Append_Line (Buffer, "return " & Runtime_Name & ".Allocate (Value);", 2);
       Append_Line
         (Buffer,
          "end " & Local_Allocate_Helper_Name (Type_Item) & ";",
@@ -4970,23 +5013,10 @@ package body Safe_Frontend.Ada_Emit is
          & Local_Free_Helper_Name (Type_Item)
          & " (Value : in out "
          & Type_Name
-         & ") with SPARK_Mode => Off is",
+         & ") is",
          1);
-      Append_Line
-        (Buffer,
-         "procedure "
-         & Generic_Free_Name
-         & " is new Ada.Unchecked_Deallocation ("
-         & Target_Name
-         & ", "
-         & Type_Name
-         & ");",
-         2);
       Append_Line (Buffer, "begin", 1);
-      Append_Line (Buffer, "if Value /= null then", 2);
-      Append_Line (Buffer, Generic_Free_Name & " (Value);", 3);
-      Append_Line (Buffer, "end if;", 2);
-      Append_Line (Buffer, "Value := null;", 2);
+      Append_Line (Buffer, Runtime_Name & ".Free (Value);", 2);
       Append_Line
         (Buffer,
          "end " & Local_Free_Helper_Name (Type_Item) & ";",
@@ -4999,12 +5029,10 @@ package body Safe_Frontend.Ada_Emit is
          & Local_Dispose_Helper_Name (Type_Item)
          & " (Value : "
          & Type_Name
-         & ") return Boolean with SPARK_Mode => Off is",
+         & ") return Boolean is",
          1);
-      Append_Line (Buffer, "Local_Copy : " & Type_Name & " := Value;", 2);
       Append_Line (Buffer, "begin", 1);
-      Append_Line (Buffer, Local_Free_Helper_Name (Type_Item) & " (Local_Copy);", 2);
-      Append_Line (Buffer, "return True;", 2);
+      Append_Line (Buffer, "return " & Runtime_Name & ".Dispose (Value);", 2);
       Append_Line
         (Buffer,
          "end " & Local_Dispose_Helper_Name (Type_Item) & ";",
@@ -5155,7 +5183,9 @@ package body Safe_Frontend.Ada_Emit is
               & Array_Runtime_Default_Element_Name (Type_Item)
               & " return "
               & Render_Type_Name_From_Text (FT.To_String (Type_Item.Component_Type))
-              & ";"
+              & ASCII.LF
+              & Indentation (2)
+              & "with Global => null;"
               & ASCII.LF
               & Indentation (1)
               & "function "
@@ -5164,14 +5194,22 @@ package body Safe_Frontend.Ada_Emit is
               & Render_Type_Name_From_Text (FT.To_String (Type_Item.Component_Type))
               & ") return "
               & Render_Type_Name_From_Text (FT.To_String (Type_Item.Component_Type))
-              & ";"
+              & ASCII.LF
+              & Indentation (2)
+              & "with Global => null;"
               & ASCII.LF
               & Indentation (1)
               & "procedure "
               & Array_Runtime_Free_Element_Name (Type_Item)
               & " (Value : in out "
               & Render_Type_Name_From_Text (FT.To_String (Type_Item.Component_Type))
-              & ");"
+              & ")"
+              & ASCII.LF
+              & Indentation (2)
+              & "with Global => null,"
+              & ASCII.LF
+              & Indentation (3)
+              & "Always_Terminates;"
               & ASCII.LF
               & Indentation (1)
               & "package "
@@ -8477,7 +8515,6 @@ package body Safe_Frontend.Ada_Emit is
    is
       Summary : constant MB.Graph_Summary :=
         Find_Graph_Summary (Bronze, FT.To_String (Subprogram.Name));
-      Uses_Print : constant Boolean := Statements_Use_Print (Subprogram.Statements);
       Uses_Structural_Traversal : constant Boolean :=
         Uses_Structural_Traversal_Lowering (Subprogram);
       Global_Image  : constant String := Render_Global_Aspect (Unit, Summary);
@@ -8816,10 +8853,6 @@ package body Safe_Frontend.Ada_Emit is
          return Variant_From_Statements (Subprogram.Statements);
       end Recursive_Variant_Image;
    begin
-      if Uses_Print then
-         Append_Aspect ("SPARK_Mode => Off");
-      end if;
-
       if Has_Text (Summary.Name) then
          if not Uses_Structural_Traversal then
             declare
@@ -10055,9 +10088,6 @@ package body Safe_Frontend.Ada_Emit is
            (Buffer,
             Render_Object_Decl_Text (Unit, Document, State, Decl, Local_Context => True),
             Depth);
-         if Is_Owner_Access (Decl.Type_Info) then
-            State.Needs_Unchecked_Deallocation := True;
-         end if;
       end loop;
    end Render_Block_Declarations;
 
@@ -10310,8 +10340,7 @@ package body Safe_Frontend.Ada_Emit is
                   State.Needs_Safe_IO := True;
                   Append_Line
                     (Buffer,
-                     Safe_IO_Unit_Name (FT.To_String (Unit.Package_Name))
-                     & ".Put_Line ("
+                     "IO.Put_Line ("
                      & Render_Print_Argument
                          (Unit,
                           Document,
@@ -11483,19 +11512,7 @@ package body Safe_Frontend.Ada_Emit is
             & ") return "
             & Type_Name,
             1);
-         Append_Line (Buffer, "with Global => null,", 2);
-         Append_Line
-           (Buffer,
-            "Depends => ("
-            & Channel_Clone_Helper_Name (Info)
-            & "'Result => Source);",
-            2);
-         Append_Line
-           (Buffer,
-            "pragma Annotate (GNATprove, Skip_Flow_And_Proof, "
-            & Channel_Clone_Helper_Name (Info)
-            & ");",
-            1);
+         Append_Line (Buffer, "with Global => null;", 2);
          Append_Line
            (Buffer,
             "function "
@@ -11563,13 +11580,7 @@ package body Safe_Frontend.Ada_Emit is
             & ")",
             1);
          Append_Line (Buffer, "with Global => null,", 2);
-         Append_Line (Buffer, "Depends => (Value => Value);", 2);
-         Append_Line
-           (Buffer,
-            "pragma Annotate (GNATprove, Skip_Flow_And_Proof, "
-            & Channel_Free_Helper_Name (Info)
-            & ");",
-            1);
+         Append_Line (Buffer, "Always_Terminates;", 2);
          Append_Line
            (Buffer,
             "procedure "
@@ -11618,31 +11629,25 @@ package body Safe_Frontend.Ada_Emit is
          Append_Line (Buffer);
       end Render_Channel_Value_Helpers;
    begin
-      if Heap_Value then
+      if Heap_Value
+        and then not Is_Plain_String_Type (Unit, Document, Channel.Element_Type)
+        and then not Is_Growable_Array_Type (Unit, Document, Channel.Element_Type)
+      then
          Mark_Channel_Runtime_Dependencies (Channel.Element_Type);
          Render_Channel_Value_Helpers (Channel.Element_Type);
 
          Append_Line
            (Buffer,
-            "procedure "
-            & Copy_Helper
-            & " (Target : in out "
-            & Element_Type
-            & "; Source : "
-            & Element_Type
-            & ")",
-            1);
+           "procedure "
+           & Copy_Helper
+           & " (Target : in out "
+           & Element_Type
+           & "; Source : "
+           & Element_Type
+           & ")",
+           1);
          Append_Line (Buffer, "with Global => null,", 2);
-         Append_Line
-           (Buffer,
-            "Depends => (Target => (Target, Source));",
-            2);
-         Append_Line
-           (Buffer,
-            "pragma Annotate (GNATprove, Skip_Flow_And_Proof, "
-            & Copy_Helper
-            & ");",
-            1);
+         Append_Line (Buffer, "Always_Terminates;", 2);
          Append_Line
            (Buffer,
             "procedure "
@@ -11654,33 +11659,16 @@ package body Safe_Frontend.Ada_Emit is
             & ") is",
             1);
          if Is_Plain_String_Type (Unit, Document, Channel.Element_Type) then
-            Append_Line
-              (Buffer,
-               "Snapshot : constant "
-               & Element_Type
-               & " := Safe_String_RT.Clone (Source);",
-               2);
             Append_Line (Buffer, "begin", 1);
-            Append_Line (Buffer, "Safe_String_RT.Free (Target);", 2);
-            Append_Line (Buffer, "Target := Snapshot;", 2);
+            Append_Line (Buffer, "Safe_String_RT.Copy (Target, Source);", 2);
          elsif Is_Growable_Array_Type (Unit, Document, Channel.Element_Type) then
-            Append_Line
-              (Buffer,
-               "Snapshot : constant "
-               & Element_Type
-               & " := "
-               & Array_Runtime_Instance_Name
-                   (Base_Type (Unit, Document, Channel.Element_Type))
-               & ".Clone (Source);",
-               2);
             Append_Line (Buffer, "begin", 1);
             Append_Line
               (Buffer,
-               Array_Runtime_Instance_Name
+              Array_Runtime_Instance_Name
                  (Base_Type (Unit, Document, Channel.Element_Type))
-               & ".Free (Target);",
+               & ".Copy (Target, Source);",
                2);
-            Append_Line (Buffer, "Target := Snapshot;", 2);
          else
             Append_Line
               (Buffer,
@@ -11706,13 +11694,7 @@ package body Safe_Frontend.Ada_Emit is
             & ")",
             1);
          Append_Line (Buffer, "with Global => null,", 2);
-         Append_Line (Buffer, "Depends => (Value => Value);", 2);
-         Append_Line
-           (Buffer,
-            "pragma Annotate (GNATprove, Skip_Flow_And_Proof, "
-            & Free_Helper
-            & ");",
-            1);
+         Append_Line (Buffer, "Always_Terminates;", 2);
          Append_Line
            (Buffer,
             "procedure "
@@ -11748,7 +11730,18 @@ package body Safe_Frontend.Ada_Emit is
          3);
       Append_Line (Buffer, "begin", 2);
       if Heap_Value then
-         Append_Line (Buffer, Copy_Helper & " (Buffer (Tail), Value);", 3);
+         if Is_Plain_String_Type (Unit, Document, Channel.Element_Type) then
+            Append_Line (Buffer, "Safe_String_RT.Copy (Buffer (Tail), Value);", 3);
+         elsif Is_Growable_Array_Type (Unit, Document, Channel.Element_Type) then
+            Append_Line
+              (Buffer,
+               Array_Runtime_Instance_Name
+                 (Base_Type (Unit, Document, Channel.Element_Type))
+               & ".Copy (Buffer (Tail), Value);",
+               3);
+         else
+            Append_Line (Buffer, Copy_Helper & " (Buffer (Tail), Value);", 3);
+         end if;
       else
          Append_Line (Buffer, "Buffer (Tail) := Value;", 3);
       end if;
@@ -11768,8 +11761,26 @@ package body Safe_Frontend.Ada_Emit is
          3);
       Append_Line (Buffer, "begin", 2);
       if Heap_Value then
-         Append_Line (Buffer, Copy_Helper & " (Value, Buffer (Head));", 3);
-         Append_Line (Buffer, Free_Helper & " (Buffer (Head));", 3);
+         if Is_Plain_String_Type (Unit, Document, Channel.Element_Type) then
+            Append_Line (Buffer, "Safe_String_RT.Copy (Value, Buffer (Head));", 3);
+            Append_Line (Buffer, "Safe_String_RT.Free (Buffer (Head));", 3);
+         elsif Is_Growable_Array_Type (Unit, Document, Channel.Element_Type) then
+            Append_Line
+              (Buffer,
+               Array_Runtime_Instance_Name
+                 (Base_Type (Unit, Document, Channel.Element_Type))
+               & ".Copy (Value, Buffer (Head));",
+               3);
+            Append_Line
+              (Buffer,
+               Array_Runtime_Instance_Name
+                 (Base_Type (Unit, Document, Channel.Element_Type))
+               & ".Free (Buffer (Head));",
+               3);
+         else
+            Append_Line (Buffer, Copy_Helper & " (Value, Buffer (Head));", 3);
+            Append_Line (Buffer, Free_Helper & " (Buffer (Head));", 3);
+         end if;
       else
          Append_Line (Buffer, "Value := Buffer (Head);", 3);
          Append_Line (Buffer, "Buffer (Head) := " & Buffer_Default & ";", 3);
@@ -11796,7 +11807,18 @@ package body Safe_Frontend.Ada_Emit is
          & " then",
          3);
       if Heap_Value then
-         Append_Line (Buffer, Copy_Helper & " (Buffer (Tail), Value);", 4);
+         if Is_Plain_String_Type (Unit, Document, Channel.Element_Type) then
+            Append_Line (Buffer, "Safe_String_RT.Copy (Buffer (Tail), Value);", 4);
+         elsif Is_Growable_Array_Type (Unit, Document, Channel.Element_Type) then
+            Append_Line
+              (Buffer,
+               Array_Runtime_Instance_Name
+                 (Base_Type (Unit, Document, Channel.Element_Type))
+               & ".Copy (Buffer (Tail), Value);",
+               4);
+         else
+            Append_Line (Buffer, Copy_Helper & " (Buffer (Tail), Value);", 4);
+         end if;
       else
          Append_Line (Buffer, "Buffer (Tail) := Value;", 4);
       end if;
@@ -11819,8 +11841,26 @@ package body Safe_Frontend.Ada_Emit is
       Append_Line (Buffer, "begin", 2);
       Append_Line (Buffer, "if Count > 0 then", 3);
       if Heap_Value then
-         Append_Line (Buffer, Copy_Helper & " (Value, Buffer (Head));", 4);
-         Append_Line (Buffer, Free_Helper & " (Buffer (Head));", 4);
+         if Is_Plain_String_Type (Unit, Document, Channel.Element_Type) then
+            Append_Line (Buffer, "Safe_String_RT.Copy (Value, Buffer (Head));", 4);
+            Append_Line (Buffer, "Safe_String_RT.Free (Buffer (Head));", 4);
+         elsif Is_Growable_Array_Type (Unit, Document, Channel.Element_Type) then
+            Append_Line
+              (Buffer,
+               Array_Runtime_Instance_Name
+                 (Base_Type (Unit, Document, Channel.Element_Type))
+               & ".Copy (Value, Buffer (Head));",
+               4);
+            Append_Line
+              (Buffer,
+               Array_Runtime_Instance_Name
+                 (Base_Type (Unit, Document, Channel.Element_Type))
+               & ".Free (Buffer (Head));",
+               4);
+         else
+            Append_Line (Buffer, Copy_Helper & " (Value, Buffer (Head));", 4);
+            Append_Line (Buffer, Free_Helper & " (Buffer (Head));", 4);
+         end if;
       else
          Append_Line (Buffer, "Value := Buffer (Head);", 4);
          Append_Line (Buffer, "Buffer (Head) := " & Buffer_Default & ";", 4);
@@ -11871,7 +11911,6 @@ package body Safe_Frontend.Ada_Emit is
         Alias_Declarations (Subprogram.Declarations);
       Structural_Traversal_Lowering : constant Boolean :=
         Uses_Structural_Traversal_Lowering (Subprogram);
-      Uses_Print : constant Boolean := Statements_Use_Print (Subprogram.Statements);
       Previous_Wide_Count : constant Ada.Containers.Count_Type :=
         State.Wide_Local_Names.Length;
 
@@ -12466,7 +12505,6 @@ package body Safe_Frontend.Ada_Emit is
          & FT.To_String (Subprogram.Name)
          & Render_Subprogram_Params (Unit, Document, Subprogram.Params)
          & Render_Subprogram_Return (Unit, Document, Subprogram)
-         & (if Uses_Print then " with SPARK_Mode => Off" else "")
          & " is",
          1);
       if Structural_Traversal_Lowering then
@@ -12490,9 +12528,6 @@ package body Safe_Frontend.Ada_Emit is
             Render_Object_Decl_Text
               (Unit, Document, State, Decl, Local_Context => True),
             2);
-         if Is_Owner_Access (Decl.Type_Info) then
-            State.Needs_Unchecked_Deallocation := True;
-         end if;
       end loop;
       Render_Free_Declarations (Buffer, Outer_Declarations, 2);
       if Suppress_Declaration_Warnings then
@@ -12544,7 +12579,6 @@ package body Safe_Frontend.Ada_Emit is
       Task_Item : CM.Resolved_Task;
       State     : in out Emit_State)
    is
-      Uses_Print : constant Boolean := Statements_Use_Print (Task_Item.Statements);
       Previous_Wide_Count : constant Ada.Containers.Count_Type :=
         State.Wide_Local_Names.Length;
       Previous_Task_Body_Depth : constant Natural := State.Task_Body_Depth;
@@ -12557,7 +12591,6 @@ package body Safe_Frontend.Ada_Emit is
         (Buffer,
          "task body "
          & FT.To_String (Task_Item.Name)
-         & (if Uses_Print then " with SPARK_Mode => Off" else "")
          & " is",
          1);
       if not Task_Item.Declarations.Is_Empty then
@@ -12568,9 +12601,6 @@ package body Safe_Frontend.Ada_Emit is
            (Buffer,
             Render_Object_Decl_Text (Unit, Document, State, Decl, Local_Context => True),
             2);
-         if Is_Owner_Access (Decl.Type_Info) then
-            State.Needs_Unchecked_Deallocation := True;
-         end if;
       end loop;
       Render_Free_Declarations (Buffer, Task_Item.Declarations, 2);
       if not Task_Item.Declarations.Is_Empty then
@@ -12604,69 +12634,12 @@ package body Safe_Frontend.Ada_Emit is
       return Result;
    end Unit_File_Stem;
 
-   function Safe_IO_Unit_Name (Unit_Name : String) return String is
-      Base : String := Unit_Name;
-   begin
-      if Base'Length = 0 then
-         return "generated_safe_io";
-      end if;
-
-      for Index in Base'Range loop
-         if Base (Index) = '.' then
-            Base (Index) := '_';
-         else
-            Base (Index) := Ada.Characters.Handling.To_Lower (Base (Index));
-         end if;
-      end loop;
-      return Base & "_safe_io";
-   end Safe_IO_Unit_Name;
-
-   function Safe_IO_Spec_Text (Unit_Name : String) return String is
-      Support_Name : constant String := Safe_IO_Unit_Name (Unit_Name);
-   begin
-      return
-        Safe_IO_Support_Marker & ASCII.LF
-        & ASCII.LF
-        & "package "
-        & Support_Name
-        & ASCII.LF
-        & "  with SPARK_Mode => Off" & ASCII.LF
-        & "is" & ASCII.LF
-        & "   procedure Put_Line (Text : String);" & ASCII.LF
-        & "end "
-        & Support_Name
-        & ";" & ASCII.LF;
-   end Safe_IO_Spec_Text;
-
-   function Safe_IO_Body_Text (Unit_Name : String) return String is
-      Support_Name : constant String := Safe_IO_Unit_Name (Unit_Name);
-   begin
-      return
-        Safe_IO_Support_Marker & ASCII.LF
-        & ASCII.LF
-        & "with Ada.Text_IO;" & ASCII.LF
-        & ASCII.LF
-        & "package body "
-        & Support_Name
-        & ASCII.LF
-        & "  with SPARK_Mode => Off" & ASCII.LF
-        & "is" & ASCII.LF
-        & "   procedure Put_Line (Text : String) is" & ASCII.LF
-        & "   begin" & ASCII.LF
-        & "      Ada.Text_IO.Put_Line (Text);" & ASCII.LF
-        & "   end Put_Line;" & ASCII.LF
-        & "end "
-        & Support_Name
-        & ";" & ASCII.LF;
-   end Safe_IO_Body_Text;
-
    function Emit
      (Unit     : CM.Resolved_Unit;
       Document : GM.Mir_Document;
       Bronze   : MB.Bronze_Result) return Artifact_Result
    is
       State      : Emit_State;
-      Unit_Uses_Print : constant Boolean := Statements_Use_Print (Unit.Statements);
       Spec_Inner : SU.Unbounded_String;
       Body_Inner : SU.Unbounded_String;
       Spec_Text  : SU.Unbounded_String;
@@ -12780,7 +12753,7 @@ package body Safe_Frontend.Ada_Emit is
         (Body_Inner,
          "package body "
          & FT.To_String (Unit.Package_Name)
-         & (if Unit_Uses_Print then " with SPARK_Mode => Off" else " with SPARK_Mode => On")
+         & " with SPARK_Mode => On"
          & " is");
       Append_Bounded_String_Uses (Body_Inner, State, 1);
       Append_Line (Body_Inner);
@@ -12847,9 +12820,6 @@ package body Safe_Frontend.Ada_Emit is
 
       Append_Line (Body_Inner, "end " & FT.To_String (Unit.Package_Name) & ";");
 
-      if State.Needs_Unchecked_Deallocation then
-         Add_Body_With ("Ada.Unchecked_Deallocation");
-      end if;
       if State.Needs_Ada_Strings_Unbounded then
          Add_Body_With ("Ada.Strings.Unbounded");
       end if;
@@ -12861,7 +12831,7 @@ package body Safe_Frontend.Ada_Emit is
          Add_Body_With ("Interfaces");
       end if;
       if State.Needs_Safe_IO then
-         Add_Body_With (Safe_IO_Unit_Name (FT.To_String (Unit.Package_Name)));
+         Add_Body_With ("IO");
       end if;
       if State.Needs_Safe_Runtime then
          Add_Body_With ("Safe_Runtime");
@@ -12871,6 +12841,9 @@ package body Safe_Frontend.Ada_Emit is
       end if;
       if State.Needs_Safe_Array_RT then
          Add_Body_With ("Safe_Array_RT");
+      end if;
+      if not Owner_Access_Helper_Types.Is_Empty then
+         Add_Body_With ("Safe_Ownership_RT");
       end if;
 
       for Item of Body_Withs loop
@@ -12965,10 +12938,7 @@ package body Safe_Frontend.Ada_Emit is
          Unit_Name          => Unit.Package_Name,
          Spec_Text          => FT.To_UString (SU.To_String (Spec_Text)),
          Body_Text          => FT.To_UString (SU.To_String (Body_Text)),
-         Safe_IO_Unit_Name  =>
-           (if State.Needs_Safe_IO
-            then FT.To_UString (Safe_IO_Unit_Name (FT.To_String (Unit.Package_Name)))
-            else FT.To_UString ("")),
+         Safe_IO_Unit_Name  => FT.To_UString (""),
          Needs_Safe_IO      => State.Needs_Safe_IO,
          Needs_Safe_Runtime => State.Needs_Safe_Runtime,
          Needs_Safe_String_RT => State.Needs_Safe_String_RT,

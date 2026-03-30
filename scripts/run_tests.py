@@ -635,6 +635,16 @@ EMITTED_SHAPE_CASES = [
         REPO_ROOT / "tests" / "build" / "pr118d1_string_case_build.safe",
         ["case word is", "case mark is"],
     ),
+    (
+        "print-no-local-io-suppressions",
+        REPO_ROOT / "tests" / "positive" / "pr118c1_print.safe",
+        ["SPARK_Mode => Off", "Skip_Flow_And_Proof", "_safe_io"],
+    ),
+    (
+        "value-channel-no-local-suppressions",
+        REPO_ROOT / "tests" / "build" / "pr118g_string_channel_build.safe",
+        ["SPARK_Mode => Off", "Skip_Flow_And_Proof", "_safe_io"],
+    ),
 ]
 
 SOURCE_SHAPE_CASES = [
@@ -642,6 +652,11 @@ SOURCE_SHAPE_CASES = [
         "ada-emit-no-skip-proof-fallback",
         REPO_ROOT / "compiler_impl" / "src" / "safe_frontend-ada_emit.adb",
         ["Skip_Proof"],
+    ),
+    (
+        "ada-emit-no-channel-proof-suppression",
+        REPO_ROOT / "compiler_impl" / "src" / "safe_frontend-ada_emit.adb",
+        ["Skip_Flow_And_Proof"],
     ),
 ]
 

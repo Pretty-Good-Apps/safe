@@ -10,6 +10,7 @@ from pathlib import Path
 from .harness_common import REPO_ROOT, require
 from .pr09_emit import COMPILER_ROOT, alr_command, emitted_body_file, require_safec
 
+STDLIB_GPR = COMPILER_ROOT / "stdlib" / "safe_stdlib.gpr"
 
 STARTER_CORPUS = (
     "samples/rosetta/arithmetic/fibonacci.safe",
@@ -78,6 +79,7 @@ def prepare_safe_build_root(source: Path) -> dict[str, Path]:
     paths["iface"].mkdir(parents=True, exist_ok=True)
     paths["ada"].mkdir(parents=True, exist_ok=True)
     paths["obj"].mkdir(parents=True, exist_ok=True)
+    (paths["root"] / "stdlib_obj").mkdir(parents=True, exist_ok=True)
     return paths
 
 
@@ -87,7 +89,7 @@ def emitted_primary_unit(ada_dir: Path) -> str:
         candidates = sorted(
             path
             for path in ada_dir.glob("*.adb")
-            if path.stem != "main" and not path.name.endswith("_safe_io.adb")
+            if path.stem != "main"
         )
         require(candidates, f"safe build: missing primary emitted body in {ada_dir}")
         body = candidates[0]
@@ -113,6 +115,7 @@ def safe_build_project_text(
 ) -> str:
     del platform_name
     lines = [
+        f'with "{STDLIB_GPR}";',
         "project Build is",
         '   for Source_Dirs use (".", "ada");',
         '   for Object_Dir use "obj";',
@@ -155,6 +158,7 @@ def safe_build_command(paths: dict[str, Path]) -> list[str]:
         "-ws",
         "-P",
         str(paths["gpr"]),
+        f"-XSAFE_STDLIB_OBJECT_DIR={paths['root'] / 'stdlib_obj'}",
         "main.adb",
         "-cargs:Ada",
         "-gnatws",

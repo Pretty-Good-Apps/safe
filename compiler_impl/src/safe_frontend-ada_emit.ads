@@ -41,9 +41,6 @@ package Safe_Frontend.Ada_Emit is
    function Safe_Array_RT_Body_Text return String;
    function Safe_Bounded_Strings_Spec_Text return String;
    function Safe_Bounded_Strings_Body_Text return String;
-   function Safe_IO_Unit_Name (Unit_Name : String) return String;
-   function Safe_IO_Spec_Text (Unit_Name : String) return String;
-   function Safe_IO_Body_Text (Unit_Name : String) return String;
    function Gnat_Adc_Text return String;
    function Unit_File_Stem (Unit_Name : String) return String;
 end Safe_Frontend.Ada_Emit;
