@@ -55,7 +55,15 @@ jobs:
         run: |
           set -euo pipefail
           alr install gnat_arm_elf
-          arm_gnatls="$(find "${HOME}/.local/share/alire/toolchains" -path '*gnat_arm_elf*' -type f \( -name 'arm-eabi-gnatls' -o -name 'arm-elf-gnatls' \) | head -n 1)"
+          arm_gnatls=""
+          for alire_home in "${HOME}/.alire" "${HOME}/.local/share/alire"; do
+            if [[ -d "${alire_home}" ]]; then
+              arm_gnatls="$(find "${alire_home}" -path '*gnat_arm_elf*' -type f \( -name 'arm-eabi-gnatls' -o -name 'arm-elf-gnatls' \) | head -n 1)"
+              if [[ -n "${arm_gnatls}" ]]; then
+                break
+              fi
+            fi
+          done
           if [[ -z "${arm_gnatls}" ]]; then
             echo "failed to locate gnat_arm_elf triplet tools" >&2
             exit 1
