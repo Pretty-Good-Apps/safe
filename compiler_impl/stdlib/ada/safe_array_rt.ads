@@ -13,6 +13,7 @@ package Safe_Array_RT is
 
    function From_Array (Value : Element_Array) return Safe_Array
       with Global => null,
+           Post => Length (From_Array'Result) = Value'Length,
            Depends => (From_Array'Result => Value);
    function Clone (Source : Safe_Array) return Safe_Array
       with Global => null,
@@ -34,6 +35,7 @@ package Safe_Array_RT is
            Depends => (Length'Result => Value);
    function Element (Value : Safe_Array; Index : Positive) return Element_Type
       with Global => null,
+           Pre => Index <= Length (Value),
            Depends => (Element'Result => (Value, Index));
    function Slice (Value : Safe_Array; Low, High : Natural) return Safe_Array
       with Global => null,

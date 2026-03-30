@@ -22,7 +22,7 @@ from .harness_common import (
 
 COMPILER_ROOT = REPO_ROOT / "compiler_impl"
 STDLIB_ROOT = COMPILER_ROOT / "stdlib"
-STDLIB_GPR = STDLIB_ROOT / "safe_stdlib.gpr"
+STDLIB_ADA_DIR = STDLIB_ROOT / "ada"
 SAFE_RUNTIME_TEMPLATE = STDLIB_ROOT / "ada" / "safe_runtime.ads"
 GENERATED_SUPPORT_MARKERS = (
     "--  Generated Safe print support",
@@ -175,9 +175,8 @@ def emitted_ada_project_text(
 ) -> str:
     del platform_name
     lines = [
-        f'with "{STDLIB_GPR}";',
         "project Build is",
-        '   for Source_Dirs use (".");',
+        f'   for Source_Dirs use (".", "{STDLIB_ADA_DIR}");',
         '   for Object_Dir use "obj";',
     ]
     if has_gnat_adc:
@@ -271,7 +270,6 @@ def compile_emitted_ada(
     temp_root: Path,
 ) -> dict[str, Any]:
     gpr_path = write_emitted_ada_project(ada_dir)
-    (ada_dir / "stdlib_obj").mkdir(parents=True, exist_ok=True)
     result = run(
         compile_emitted_ada_command(ada_dir=ada_dir, gpr_path=gpr_path),
         cwd=COMPILER_ROOT,
@@ -294,7 +292,6 @@ def compile_emitted_ada_command(*, ada_dir: Path, gpr_path: Path | None = None) 
         "-c",
         "-P",
         str(gpr_path or write_emitted_ada_project(ada_dir)),
-        f"-XSAFE_STDLIB_OBJECT_DIR={ada_dir / 'stdlib_obj'}",
         emitted_body_file(ada_dir).name,
     ]
     if (ada_dir / "gnat.adc").exists():

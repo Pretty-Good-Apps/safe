@@ -1,8 +1,6 @@
 pragma SPARK_Mode (On);
 
-package Safe_Bounded_Strings
-  with Pure
-is
+package Safe_Bounded_Strings is
    generic
       Capacity : Positive;
    package Generic_Bounded_String
@@ -19,9 +17,12 @@ is
 
       function Length (Value : Bounded_String) return Natural;
 
-      function "=" (Left, Right : Bounded_String) return Boolean;
-      function "=" (Left : Bounded_String; Right : String) return Boolean;
-      function "=" (Left : String; Right : Bounded_String) return Boolean;
+      function Element (Value : Bounded_String; Index : Positive) return String
+        with Pre => Index <= Length (Value);
+
+      function Slice (Value : Bounded_String; Low, High : Positive) return String
+        with Pre => Low <= High and then High <= Length (Value),
+             Post => Slice'Result'Length = High - Low + 1;
 
    private
       type Bounded_String is record

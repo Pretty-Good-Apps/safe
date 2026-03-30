@@ -13,7 +13,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 COMPILER_ROOT = REPO_ROOT / "compiler_impl"
-STDLIB_GPR = COMPILER_ROOT / "stdlib" / "safe_stdlib.gpr"
+STDLIB_ADA_DIR = COMPILER_ROOT / "stdlib" / "ada"
 SAMPLES_ROOT = REPO_ROOT / "samples" / "rosetta"
 SAFEC_PATH = COMPILER_ROOT / "bin" / "safec"
 ALR_FALLBACK = Path.home() / "bin" / "alr"
@@ -222,9 +222,8 @@ def expected_stdout(sample: Path) -> str | None:
 
 def project_text(paths: dict[str, Path]) -> str:
     lines = [
-        f'with "{STDLIB_GPR}";',
         "project Build is",
-        f'   for Source_Dirs use ("{paths["root"]}", "{paths["ada"]}");',
+        f'   for Source_Dirs use ("{paths["root"]}", "{paths["ada"]}", "{STDLIB_ADA_DIR}");',
         f'   for Object_Dir use "{paths["obj"]}";',
         f'   for Exec_Dir use "{paths["root"]}";',
         '   for Main use ("main.adb");',
@@ -294,7 +293,6 @@ def run_sample(
     if not has_emitted_main(paths["ada"]):
         paths["main"].write_text(driver_text(sample, unit_name), encoding="utf-8")
     paths["gpr"].write_text(project_text(paths), encoding="utf-8")
-    (paths["root"] / "stdlib_obj").mkdir(parents=True, exist_ok=True)
 
     alr = find_command("alr", ALR_FALLBACK)
     build_command = [
@@ -304,7 +302,6 @@ def run_sample(
         "gprbuild",
         "-P",
         str(paths["gpr"]),
-        f"-XSAFE_STDLIB_OBJECT_DIR={paths['root'] / 'stdlib_obj'}",
         "main.adb",
     ]
     try:

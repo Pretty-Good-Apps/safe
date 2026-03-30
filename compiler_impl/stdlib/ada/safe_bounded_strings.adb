@@ -25,19 +25,17 @@ package body Safe_Bounded_Strings is
          return Value.Length;
       end Length;
 
-      function "=" (Left, Right : Bounded_String) return Boolean is
+      function Element (Value : Bounded_String; Index : Positive) return String is
       begin
-         return To_String (Left) = To_String (Right);
-      end "=";
+         return Value.Data (Index .. Index);
+      end Element;
 
-      function "=" (Left : Bounded_String; Right : String) return Boolean is
+      function Slice (Value : Bounded_String; Low, High : Positive) return String is
       begin
-         return To_String (Left) = Right;
-      end "=";
+         pragma Assert (Low in Value.Data'Range);
+         pragma Assert (High in Value.Data'Range);
+         return Value.Data (Low .. High);
+      end Slice;
 
-      function "=" (Left : String; Right : Bounded_String) return Boolean is
-      begin
-         return Left = To_String (Right);
-      end "=";
    end Generic_Bounded_String;
 end Safe_Bounded_Strings;
