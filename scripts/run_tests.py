@@ -1300,6 +1300,29 @@ def run_emitted_shape_case(
     forbidden_snippets: list[str],
     temp_root: Path,
 ) -> tuple[bool, str]:
+    try:
+        _, emitted_text = emit_case_ada_text(
+            safec,
+            label=label,
+            source=source,
+            temp_root=temp_root,
+        )
+    except RuntimeError as exc:
+        return False, str(exc)
+
+    for snippet in forbidden_snippets:
+        if snippet in emitted_text:
+            return False, f"found forbidden emitted snippet {snippet!r}"
+    return True, ""
+
+
+def emit_case_ada_text(
+    safec: Path,
+    *,
+    label: str,
+    source: Path,
+    temp_root: Path,
+) -> tuple[Path, str]:
     case_root = temp_root / f"{source.stem}-{label}"
     out_dir = case_root / "out"
     iface_dir = case_root / "iface"
@@ -1323,7 +1346,7 @@ def run_emitted_shape_case(
         cwd=REPO_ROOT,
     )
     if emit.returncode != 0:
-        return False, f"emit failed: {first_message(emit)}"
+        raise RuntimeError(f"emit failed: {first_message(emit)}")
 
     emitted_text = ""
     ada_file_found = False
@@ -1333,12 +1356,9 @@ def run_emitted_shape_case(
             emitted_text += path.read_text(encoding="utf-8")
 
     if not ada_file_found:
-        return False, f"emit produced no Ada sources in {ada_dir}"
+        raise RuntimeError(f"emit produced no Ada sources in {ada_dir}")
 
-    for snippet in forbidden_snippets:
-        if snippet in emitted_text:
-            return False, f"found forbidden emitted snippet {snippet!r}"
-    return True, ""
+    return ada_dir, emitted_text
 
 
 def run_emitted_required_shape_case(
@@ -1349,40 +1369,15 @@ def run_emitted_required_shape_case(
     required_snippets: list[str],
     temp_root: Path,
 ) -> tuple[bool, str]:
-    case_root = temp_root / f"{source.stem}-{label}"
-    out_dir = case_root / "out"
-    iface_dir = case_root / "iface"
-    ada_dir = case_root / "ada"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    iface_dir.mkdir(parents=True, exist_ok=True)
-    ada_dir.mkdir(parents=True, exist_ok=True)
-
-    emit = run_command(
-        [
-            str(safec),
-            "emit",
-            repo_rel(source),
-            "--out-dir",
-            str(out_dir),
-            "--interface-dir",
-            str(iface_dir),
-            "--ada-out-dir",
-            str(ada_dir),
-        ],
-        cwd=REPO_ROOT,
-    )
-    if emit.returncode != 0:
-        return False, f"emit failed: {first_message(emit)}"
-
-    emitted_text = ""
-    ada_file_found = False
-    for path in sorted(ada_dir.iterdir()):
-        if path.suffix in {".adb", ".ads"}:
-            ada_file_found = True
-            emitted_text += path.read_text(encoding="utf-8")
-
-    if not ada_file_found:
-        return False, f"emit produced no Ada sources in {ada_dir}"
+    try:
+        _, emitted_text = emit_case_ada_text(
+            safec,
+            label=label,
+            source=source,
+            temp_root=temp_root,
+        )
+    except RuntimeError as exc:
+        return False, str(exc)
 
     for snippet in required_snippets:
         if snippet not in emitted_text:
@@ -1399,30 +1394,15 @@ def run_emitted_protected_body_shape_case(
     forbidden_snippets: list[str],
     temp_root: Path,
 ) -> tuple[bool, str]:
-    case_root = temp_root / f"{source.stem}-{label}"
-    out_dir = case_root / "out"
-    iface_dir = case_root / "iface"
-    ada_dir = case_root / "ada"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    iface_dir.mkdir(parents=True, exist_ok=True)
-    ada_dir.mkdir(parents=True, exist_ok=True)
-
-    emit = run_command(
-        [
-            str(safec),
-            "emit",
-            repo_rel(source),
-            "--out-dir",
-            str(out_dir),
-            "--interface-dir",
-            str(iface_dir),
-            "--ada-out-dir",
-            str(ada_dir),
-        ],
-        cwd=REPO_ROOT,
-    )
-    if emit.returncode != 0:
-        return False, f"emit failed: {first_message(emit)}"
+    try:
+        ada_dir, _ = emit_case_ada_text(
+            safec,
+            label=label,
+            source=source,
+            temp_root=temp_root,
+        )
+    except RuntimeError as exc:
+        return False, str(exc)
 
     body_pattern = re.compile(
         rf"protected body {re.escape(protected_name)} is(.*?)end {re.escape(protected_name)};",
