@@ -18,10 +18,4 @@ package body Safe_Ownership_RT is
       Value := null;
    end Free;
 
-   function Dispose (Value : Access_Type) return Boolean is
-      Local_Copy : Access_Type := Value;
-   begin
-      Free (Local_Copy);
-      return True;
-   end Dispose;
 end Safe_Ownership_RT;

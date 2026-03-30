@@ -4866,11 +4866,11 @@ package body Safe_Frontend.Ada_Emit is
          1);
       Append_Line
         (Buffer,
-         "function "
+         "procedure "
          & Local_Dispose_Helper_Name (Type_Item)
-         & " (Value : "
+         & " (Value : in out "
          & Type_Name
-         & ") return Boolean"
+         & ")"
          & ";",
          1);
       Append_Line (Buffer);
@@ -4949,14 +4949,14 @@ package body Safe_Frontend.Ada_Emit is
 
       Append_Line
         (Buffer,
-         "function "
+         "procedure "
          & Local_Dispose_Helper_Name (Type_Item)
-         & " (Value : "
+         & " (Value : in out "
          & Type_Name
-         & ") return Boolean is",
+         & ") is",
          1);
       Append_Line (Buffer, "begin", 1);
-      Append_Line (Buffer, "return " & Runtime_Name & ".Dispose (Value);", 2);
+      Append_Line (Buffer, Runtime_Name & ".Dispose (Value);", 2);
       Append_Line
         (Buffer,
          "end " & Local_Dispose_Helper_Name (Type_Item) & ";",

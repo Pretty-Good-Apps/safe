@@ -11,5 +11,5 @@ package Safe_Ownership_RT is
      with Always_Terminates,
           Post => Value = null;
 
-   function Dispose (Value : Access_Type) return Boolean;
+   procedure Dispose (Value : in out Access_Type) renames Free;
 end Safe_Ownership_RT;
