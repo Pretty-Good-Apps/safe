@@ -8,17 +8,21 @@ package body Safe_String_RT is
       Result : Safe_String := Empty;
    begin
       if Value'Length > 0 then
-         Result.Data := new String'(Value);
+         Result.Data := new String (1 .. Value'Length);
+         Result.Data.all := Value;
       end if;
       return Result;
    end From_Literal;
 
    function Clone (Source : Safe_String) return Safe_String is
+      Result : Safe_String := Empty;
    begin
       if Source.Data = null then
          return Empty;
       end if;
-      return (Data => new String'(Source.Data.all));
+      Result.Data := new String (1 .. Source.Data'Length);
+      Result.Data.all := Source.Data.all;
+      return Result;
    end Clone;
 
    procedure Copy (Target : in out Safe_String; Source : Safe_String) is
@@ -47,7 +51,12 @@ package body Safe_String_RT is
       if Value.Data = null then
          return "";
       end if;
-      return Value.Data.all;
+      declare
+         Result : String (1 .. Value.Data'Length);
+      begin
+         Result := Value.Data.all;
+         return Result;
+      end;
    end To_String;
 
    function Length (Value : Safe_String) return Natural is
@@ -59,6 +68,8 @@ package body Safe_String_RT is
    end Length;
 
    function Slice (Value : Safe_String; Low, High : Natural) return Safe_String is
+      Slice_Low  : Positive;
+      Slice_High : Positive;
    begin
       if Value.Data = null
         or else Low = 0
@@ -69,7 +80,9 @@ package body Safe_String_RT is
       then
          return Empty;
       end if;
-      return From_Literal (Value.Data (Positive (Low) .. Positive (High)));
+      Slice_Low := Value.Data'First + Positive (Low) - 1;
+      Slice_High := Value.Data'First + Positive (High) - 1;
+      return From_Literal (Value.Data (Slice_Low .. Slice_High));
    end Slice;
 
    function Concat (Left, Right : Safe_String) return Safe_String is

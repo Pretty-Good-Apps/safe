@@ -108,17 +108,21 @@ package body Safe_Frontend.Ada_Emit is
      & "      Result : Safe_String := Empty;" & ASCII.LF
      & "   begin" & ASCII.LF
      & "      if Value'Length > 0 then" & ASCII.LF
-     & "         Result.Data := new String'(Value);" & ASCII.LF
+     & "         Result.Data := new String (1 .. Value'Length);" & ASCII.LF
+     & "         Result.Data.all := Value;" & ASCII.LF
      & "      end if;" & ASCII.LF
      & "      return Result;" & ASCII.LF
      & "   end From_Literal;" & ASCII.LF
      & ASCII.LF
      & "   function Clone (Source : Safe_String) return Safe_String is" & ASCII.LF
+     & "      Result : Safe_String := Empty;" & ASCII.LF
      & "   begin" & ASCII.LF
      & "      if Source.Data = null then" & ASCII.LF
      & "         return Empty;" & ASCII.LF
      & "      end if;" & ASCII.LF
-     & "      return (Data => new String'(Source.Data.all));" & ASCII.LF
+     & "      Result.Data := new String (1 .. Source.Data'Length);" & ASCII.LF
+     & "      Result.Data.all := Source.Data.all;" & ASCII.LF
+     & "      return Result;" & ASCII.LF
      & "   end Clone;" & ASCII.LF
      & ASCII.LF
      & "   procedure Copy (Target : in out Safe_String; Source : Safe_String) is" & ASCII.LF
@@ -141,7 +145,12 @@ package body Safe_Frontend.Ada_Emit is
      & "      if Value.Data = null then" & ASCII.LF
      & "         return """";" & ASCII.LF
      & "      end if;" & ASCII.LF
-     & "      return Value.Data.all;" & ASCII.LF
+     & "      declare" & ASCII.LF
+     & "         Result : String (1 .. Value.Data'Length);" & ASCII.LF
+     & "      begin" & ASCII.LF
+     & "         Result := Value.Data.all;" & ASCII.LF
+     & "         return Result;" & ASCII.LF
+     & "      end;" & ASCII.LF
      & "   end To_String;" & ASCII.LF
      & ASCII.LF
      & "   function Length (Value : Safe_String) return Natural is" & ASCII.LF
@@ -153,6 +162,8 @@ package body Safe_Frontend.Ada_Emit is
      & "   end Length;" & ASCII.LF
      & ASCII.LF
      & "   function Slice (Value : Safe_String; Low, High : Natural) return Safe_String is" & ASCII.LF
+     & "      Slice_Low  : Positive;" & ASCII.LF
+     & "      Slice_High : Positive;" & ASCII.LF
      & "   begin" & ASCII.LF
      & "      if Value.Data = null" & ASCII.LF
      & "        or else Low = 0" & ASCII.LF
@@ -163,7 +174,9 @@ package body Safe_Frontend.Ada_Emit is
      & "      then" & ASCII.LF
      & "         return Empty;" & ASCII.LF
      & "      end if;" & ASCII.LF
-     & "      return From_Literal (Value.Data (Positive (Low) .. Positive (High)));" & ASCII.LF
+     & "      Slice_Low := Value.Data'First + Positive (Low) - 1;" & ASCII.LF
+     & "      Slice_High := Value.Data'First + Positive (High) - 1;" & ASCII.LF
+     & "      return From_Literal (Value.Data (Slice_Low .. Slice_High));" & ASCII.LF
      & "   end Slice;" & ASCII.LF
      & ASCII.LF
      & "   function Concat (Left, Right : Safe_String) return Safe_String is" & ASCII.LF
