@@ -4143,6 +4143,50 @@ package body Safe_Frontend.Ada_Emit is
 
       if Is_Bounded_String_Type (Target_Info) then
          Register_Bounded_String_Type (State, Target_Info);
+         if Expr.Kind = CM.Expr_Resolved_Index and then Expr.Prefix /= null then
+            declare
+               Prefix_Type : constant GM.Type_Descriptor :=
+                 Expr_Type_Info (Unit, Document, Expr.Prefix);
+            begin
+               if Is_Bounded_String_Type (Prefix_Type)
+                 and then Prefix_Type.Length_Bound = Target_Info.Length_Bound
+               then
+                  declare
+                     Low_Image : constant String :=
+                       Render_Expr
+                         (Unit,
+                          Document,
+                          Expr.Args (Expr.Args.First_Index),
+                          State);
+                     High_Image : constant String :=
+                       (if Natural (Expr.Args.Length) = 1
+                        then Low_Image
+                        else
+                          Render_Expr
+                            (Unit,
+                             Document,
+                             Expr.Args (Expr.Args.First_Index + 1),
+                             State));
+                  begin
+                     return
+                       Bounded_String_Instance_Name (Target_Info)
+                       & ".Slice_Bounded ("
+                       & Render_Expr (Unit, Document, Expr.Prefix, State)
+                       & ", "
+                       & Low_Image
+                       & ", "
+                       & High_Image
+                       & ")";
+                  end;
+               end if;
+            end;
+         elsif Has_Expr_Type
+           and then Is_Bounded_String_Type (Source_Type_Info)
+           and then Source_Type_Info.Length_Bound = Target_Info.Length_Bound
+         then
+            return Render_Expr (Unit, Document, Expr, State);
+         end if;
+
          return
            Bounded_String_Instance_Name (Target_Info)
            & ".To_Bounded ("

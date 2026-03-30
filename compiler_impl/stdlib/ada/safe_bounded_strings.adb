@@ -12,30 +12,16 @@ package body Safe_Bounded_Strings is
          return Result;
       end To_Bounded;
 
-      function To_String (Value : Bounded_String) return String is
-      begin
-         if Value.Length = 0 then
-            return "";
-         end if;
-         return Value.Data (1 .. Value.Length);
-      end To_String;
-
-      function Length (Value : Bounded_String) return Natural is
-      begin
-         return Value.Length;
-      end Length;
-
-      function Element (Value : Bounded_String; Index : Positive) return String is
-      begin
-         return Value.Data (Index .. Index);
-      end Element;
-
-      function Slice (Value : Bounded_String; Low, High : Positive) return String is
+      function Slice_Bounded (Value : Bounded_String; Low, High : Positive) return Bounded_String is
+         Result : Bounded_String := Empty;
+         Span   : constant Natural := High - Low + 1;
       begin
          pragma Assert (Low in Value.Data'Range);
          pragma Assert (High in Value.Data'Range);
-         return Value.Data (Low .. High);
-      end Slice;
+         Result.Length := Span;
+         Result.Data (1 .. Span) := Value.Data (Low .. High);
+         return Result;
+      end Slice_Bounded;
 
    end Generic_Bounded_String;
 end Safe_Bounded_Strings;
