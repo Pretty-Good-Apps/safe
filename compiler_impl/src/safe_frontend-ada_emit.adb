@@ -10707,30 +10707,6 @@ package body Safe_Frontend.Ada_Emit is
          return FT.To_String (Channel_Item.Name) & "_Free_Value";
       end Channel_Free_Helper_Name;
 
-      function Channel_Receive_Wrapper_Name
-        (Channel_Item : CM.Resolved_Channel_Decl) return String is
-      begin
-         return FT.To_String (Channel_Item.Name) & "_Receive_Staged";
-      end Channel_Receive_Wrapper_Name;
-
-      function Channel_Send_Wrapper_Name
-        (Channel_Item : CM.Resolved_Channel_Decl) return String is
-      begin
-         return FT.To_String (Channel_Item.Name) & "_Send_Staged";
-      end Channel_Send_Wrapper_Name;
-
-      function Channel_Try_Send_Wrapper_Name
-        (Channel_Item : CM.Resolved_Channel_Decl) return String is
-      begin
-         return FT.To_String (Channel_Item.Name) & "_Try_Send_Staged";
-      end Channel_Try_Send_Wrapper_Name;
-
-      function Channel_Try_Receive_Wrapper_Name
-        (Channel_Item : CM.Resolved_Channel_Decl) return String is
-      begin
-         return FT.To_String (Channel_Item.Name) & "_Try_Receive_Staged";
-      end Channel_Try_Receive_Wrapper_Name;
-
       function Channel_Has_Length_Model
         (Channel_Item : CM.Resolved_Channel_Decl) return Boolean is
       begin
@@ -12311,7 +12287,18 @@ package body Safe_Frontend.Ada_Emit is
                            Append_Task_Channel_Call_Warning_Restore
                              (Buffer, Depth + 1);
                         end if;
-                        if Channel_Has_Length_Model (Declared_Channel) then
+                        if Channel_Has_Scalar_Length_Model (Declared_Channel) then
+                           Append_Line
+                             (Buffer,
+                              "pragma Assume ("
+                              & Channel_Length_Image
+                                  (Declared_Channel,
+                                   Staged_Name)
+                              & " = "
+                              & Length_Name
+                              & ");",
+                              Depth + 1);
+                        elsif Channel_Has_Length_Model (Declared_Channel) then
                            Append_Line
                              (Buffer,
                               Length_Name
@@ -12561,7 +12548,18 @@ package body Safe_Frontend.Ada_Emit is
                           (Buffer,
                            "if " & Success_Image & " then",
                            Depth + 1);
-                        if Channel_Has_Length_Model (Declared_Channel) then
+                        if Channel_Has_Scalar_Length_Model (Declared_Channel) then
+                           Append_Line
+                             (Buffer,
+                              "pragma Assume ("
+                              & Channel_Length_Image
+                                  (Declared_Channel,
+                                   Staged_Name)
+                              & " = "
+                              & Length_Name
+                              & ");",
+                              Depth + 2);
+                        elsif Channel_Has_Length_Model (Declared_Channel) then
                            Append_Line
                              (Buffer,
                               Length_Name
@@ -12735,7 +12733,16 @@ package body Safe_Frontend.Ada_Emit is
                               end if;
                               Append_Line (Buffer, "if Arm_Success then", Depth + 4);
                               Append_Line (Buffer, "Select_Done := True;", Depth + 5);
-                              if Channel_Has_Length_Model (Declared_Channel) then
+                              if Channel_Has_Scalar_Length_Model (Declared_Channel) then
+                                 Append_Line
+                                   (Buffer,
+                                    "pragma Assume ("
+                                    & Channel_Length_Image
+                                        (Declared_Channel,
+                                         FT.To_String (Arm.Channel_Data.Variable_Name))
+                                    & " = Arm_Length);",
+                                    Depth + 5);
+                              elsif Channel_Has_Length_Model (Declared_Channel) then
                                  Append_Line
                                    (Buffer,
                                     "Arm_Length := "
@@ -12861,7 +12868,16 @@ package body Safe_Frontend.Ada_Emit is
                               end if;
                               Append_Line (Buffer, "if Arm_Success then", Depth + 4);
                               Append_Line (Buffer, "Select_Done := True;", Depth + 5);
-                              if Channel_Has_Length_Model (Declared_Channel) then
+                              if Channel_Has_Scalar_Length_Model (Declared_Channel) then
+                                 Append_Line
+                                   (Buffer,
+                                    "pragma Assume ("
+                                    & Channel_Length_Image
+                                        (Declared_Channel,
+                                         FT.To_String (Arm.Channel_Data.Variable_Name))
+                                    & " = Arm_Length);",
+                                    Depth + 5);
+                              elsif Channel_Has_Length_Model (Declared_Channel) then
                                  Append_Line
                                    (Buffer,
                                     "Arm_Length := "
@@ -13712,11 +13728,8 @@ package body Safe_Frontend.Ada_Emit is
       if Single_Slot_Length_Model then
          Append_Line
            (Buffer,
-            "function " & Stored_Length & " return Natural is",
+            "function " & Stored_Length & " return Natural is (Stored_Length_Value);",
             2);
-         Append_Line (Buffer, "begin", 2);
-         Append_Line (Buffer, "return Stored_Length_Value;", 3);
-         Append_Line (Buffer, "end " & Stored_Length & ";", 2);
          Append_Line (Buffer);
       end if;
       Append_Line

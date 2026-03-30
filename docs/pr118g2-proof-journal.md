@@ -240,3 +240,66 @@
 - The real unsolved issue is:
   - making the single-slot numeric send-to-receive length fact proof-visible enough for GNATprove to use it modularly
 - The next step should avoid more wrapper churn unless it directly addresses that modular numeric fact.
+
+### Step 1 result: protected-body expression function is legal and helps
+
+- I verified separately that Ada accepts an expression-function completion in a protected body.
+- I then changed the single-slot helper to:
+  - `function Stored_Length return Natural is (Stored_Length_Value);`
+- Result:
+  - isolated `Send` and `Receive` postconditions now prove
+  - this is a real improvement over the earlier body-defined helper
+- But:
+  - the downstream caller obligation at the final `values_RT.Element (received, 1)` precondition still did not close
+- Conclusion:
+  - the protected-side fact hand-off is better
+  - but the caller is still missing a usable positivity/non-empty fact
+
+### Step 2 result: boolean fallback still hits a tool bug
+
+- I retried the weaker `Stored_Nonempty` approach after the expression-function win.
+- Result:
+  - GNATprove again tripped the same internal failure (`Constraint_Error bad input for 'Value: "0GG"`)
+- Conclusion:
+  - the boolean hand-off remains non-viable on the current toolchain
+
+### Step 3 result: receive-site assumption alone is too weak
+
+- I removed the abandoned wrapper layer again and kept direct protected calls.
+- I added the narrowest receive-side bridge in emitted receive paths:
+  - after direct `Receive` / successful `Try_Receive`
+  - `pragma Assume (actual_length = returned_length)`
+- Result:
+  - the emitted fixture compiles and the direct receive call itself proves
+  - the post-assignment equality assertion also proves
+  - but the final `values_RT.Element (received, 1)` precondition is still unproved
+- Interpretation:
+  - the remaining missing fact is not “actual length equals returned length”
+  - it is “the returned length is positive / matches the previously sent non-empty length”
+
+### Stronger trust-bridge experiments
+
+- I tried the next stronger hand-off in a preserved emitted probe:
+  - capture `data_ch.Stored_Length` before receive
+  - relate returned length to that captured scalar
+- Result:
+  - GNATprove still could not prove either:
+    - returned length equals the captured stored length
+    - captured stored length is positive
+- I then tried a send-side trust bridge in the probe:
+  - assume channel stored length equals the sent length immediately after `Send`
+- Result:
+  - referencing `data_ch.Stored_Length` directly inside a `pragma Assume` fails SPARK flow with:
+    - `call to a volatile function in interfering context is not allowed in SPARK`
+- A follow-up probe that combined the stronger send-side bridge with local debug assertions also triggered the existing GNATprove internal failure:
+  - `Constraint_Error bad input for 'Value: "0GG"`
+
+### Current frontier
+
+- What is now established:
+  - protected-body expression-function transparency is worth keeping
+  - receive-side `actual_length = returned_length` assumptions are legal
+  - those assumptions alone do not close the final caller precondition
+  - send-side trust bridges that mention the protected function directly inside `pragma Assume` are not legal in SPARK
+- So the frontmost blocker is now narrower still:
+  - finding a legal way to carry the previously sent positive length across the single-slot protected channel boundary without reintroducing wrapper churn or hitting the GNATprove bug
