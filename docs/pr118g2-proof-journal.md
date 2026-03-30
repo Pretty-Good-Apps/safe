@@ -138,3 +138,105 @@
   - `tests/build/pr118d_fixed_to_growable_build.safe`
 - It did not reach the heap-backed channel fixtures before being stopped.
 - So after the bounded-string fix, the next proof investigation should shift to the `fixed_to_growable` path before widening again to the full checkpoint.
+
+### `pr118d_fixed_to_growable_build.safe` reclosed
+
+- Shared-array runtime changes that closed the fixture:
+  - `Safe_Array_RT.From_Array` now exposes both:
+    - result length
+    - per-element preservation
+  - `Safe_Array_RT.Clone` now exposes result-length preservation
+  - `Safe_Array_RT.Copy` now exposes target-length preservation
+  - `Safe_Array_RT.Free` now exposes zero length after cleanup
+- Emitter change that mattered:
+  - access-parameter length preconditions are now synthesized for parameter-root indexed/sliced growable arrays, strings, and bounded strings
+- Result:
+  - `tests/build/pr118d_fixed_to_growable_build.safe` proves in isolation under both:
+    - `z3`
+    - the normal `cvc5,z3,altergo` mix
+- Cleanup folded into the same step:
+  - removed the dead tautological runtime drift check from `scripts/_lib/pr09_emit.py`
+
+### `pr118g_growable_channel_build.safe` investigation
+
+- First heap-backed channel blocker after `fixed_to_growable`:
+  - `tests/build/pr118g_growable_channel_build.safe`
+
+- Preserved probe directories:
+  - `/tmp/pr118g_grow_prove4_eJ7Pki/fixture/ada`
+  - `/tmp/pr118g_grow_prove5_aVg6ij/fixture/ada`
+  - `/tmp/pr118g_grow_prove6_Bmf1ki/fixture/ada`
+  - `/tmp/pr118g_grow_check5_ben_k6mw/fixture/ada`
+  - `/tmp/pr118g_grow_check10_mj65dfkp/fixture/ada`
+
+#### Dead end: package-level ghost wrapper model
+
+- Attempt:
+  - add package ghost `*_Model_Length`
+  - route single-slot direct growable/string channels through staged send/receive wrappers
+  - carry send length through wrapper postconditions
+- Result:
+  - first version failed flow because:
+    - the ghost state was missing from `Initializes`
+    - GNATprove emitted `is set by` warnings on the receive wrapper call
+  - after patching those, flow went green
+  - prove still failed inside the wrapper contracts:
+    - could not prove `Value_Length = *_Model_Length`
+    - could not prove `Length (Value) = Value_Length`
+- Conclusion:
+  - the wrapper ghost model moved the problem but did not close it
+
+#### Dead end: direct receive plus recomputed actual length
+
+- Attempt:
+  - remove the receive/send wrappers again
+  - call protected `Send` / `Receive` / `Try_*` directly
+  - recompute the staged value length after receive outside the protected body
+- Result:
+  - flow became clean after a narrow generated `is set by` suppression around the direct receive call
+  - prove improved:
+    - staged-length and target-length assertions both proved
+    - the final `values_RT.Element (received, 1)` precondition was still unproved
+- Interpretation:
+  - recomputing actual length outside the protected body is useful and should likely be kept
+  - but it does not by itself carry the send-side non-empty fact across the channel
+
+#### Dead end: `Stored_Length` over `Count` and `Lengths`
+
+- Attempt:
+  - add a single-slot protected `Stored_Length` helper
+  - add postconditions on protected `Send` / `Receive` using that helper
+- Result:
+  - compiled and flowed cleanly
+  - prove still failed on the `Send` / `Receive` postconditions
+  - GNATprove explicitly suggested either:
+    - a postcondition on `Stored_Length`
+    - or turning it into an expression function
+- Follow-up attempt:
+  - tried to complete `Stored_Length` as an expression function in the protected type private part
+- Result:
+  - Ada rejected that shape because protected components cannot be referenced there before the end of the declaration
+- Conclusion:
+  - the bounded-string-style expression-function trick does not transfer directly to protected components
+
+#### Current in-tree attempt
+
+- Current shape:
+  - keep the direct protected call path
+  - recompute actual received length outside the protected body
+  - add a dedicated single-slot scalar `Stored_Length_Value`
+  - `Stored_Length` now returns that scalar, not `Lengths (Head)`
+  - protected `Send` / `Receive` still carry numeric postconditions via `Stored_Length`
+- Current result:
+  - flow is green for `tests/build/pr118g_growable_channel_build.safe`
+  - prove still fails in the same three places:
+    - final `values_RT.Element (received, 1)` precondition
+    - `Send` postcondition `Stored_Length = Value_Length`
+    - `Receive` postcondition `Value_Length = Stored_Length'Old`
+
+### Current conclusion
+
+- The first heap-backed channel blocker is narrower now, but it is not closed.
+- The real unsolved issue is:
+  - making the single-slot numeric send-to-receive length fact proof-visible enough for GNATprove to use it modularly
+- The next step should avoid more wrapper churn unless it directly addresses that modular numeric fact.

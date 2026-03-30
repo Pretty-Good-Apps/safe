@@ -53,14 +53,6 @@ package body Safe_Array_RT is
       Free (Local_Copy);
    end Dispose;
 
-   function Length (Value : Safe_Array) return Natural is
-   begin
-      if Value.Data = null then
-         return 0;
-      end if;
-      return Value.Data'Length;
-   end Length;
-
    function Element (Value : Safe_Array; Index : Positive) return Element_Type is
    begin
       return Clone_Element (Value.Data (Index));

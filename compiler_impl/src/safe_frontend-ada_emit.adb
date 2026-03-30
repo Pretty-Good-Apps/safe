@@ -7589,7 +7589,6 @@ package body Safe_Frontend.Ada_Emit is
       Document : GM.Mir_Document;
       Bronze   : MB.Bronze_Result) return String
    is
-      pragma Unreferenced (Document);
       Items : FT.UString_Vectors.Vector;
 
       procedure Add_Unique (Name : String) is
@@ -8023,6 +8022,16 @@ package body Safe_Frontend.Ada_Emit is
          return False;
       end Needs_Non_Null_Param_Check;
 
+      function Is_Param_Name (Name : String) return Boolean is
+      begin
+         for Param of Subprogram.Params loop
+            if FT.To_String (Param.Name) = Name then
+               return True;
+            end if;
+         end loop;
+         return False;
+      end Is_Param_Name;
+
       function Expr_Allows_Null
         (Expr       : CM.Expr_Access;
          Param_Name : String) return Boolean
@@ -8086,11 +8095,62 @@ package body Safe_Frontend.Ada_Emit is
          end if;
       end Add_Unique;
 
+      procedure Add_Length_Precondition
+        (Prefix     : CM.Expr_Access;
+         Min_Length : Long_Long_Integer);
+
       procedure Collect_Expr (Expr : CM.Expr_Access);
       procedure Collect
         (Statements : CM.Statement_Access_Vectors.Vector);
 
+      procedure Add_Length_Precondition
+        (Prefix     : CM.Expr_Access;
+         Min_Length : Long_Long_Integer)
+      is
+         Prefix_Root : constant String := Root_Name (Prefix);
+         Prefix_Type : GM.Type_Descriptor := (others => <>);
+      begin
+         if Prefix = null or else Min_Length <= 0 then
+            return;
+         elsif Prefix_Root'Length = 0 or else not Is_Param_Name (Prefix_Root) then
+            return;
+         end if;
+
+         Prefix_Type := Base_Type (Unit, Document, Expr_Type_Info (Unit, Document, Prefix));
+         if Is_Growable_Array_Type (Unit, Document, Prefix_Type) then
+            State.Needs_Safe_Array_RT := True;
+            Add_Unique
+              ("("
+               & Array_Runtime_Instance_Name (Prefix_Type)
+               & ".Length ("
+               & Render_Expr (Unit, Document, Prefix, State)
+               & ") >= "
+               & Trim_Image (Min_Length)
+               & ")");
+         elsif Is_Bounded_String_Type (Prefix_Type) then
+            Register_Bounded_String_Type (State, Prefix_Type);
+            Add_Unique
+              ("("
+               & Bounded_String_Instance_Name (Prefix_Type)
+               & ".Length ("
+               & Render_Expr (Unit, Document, Prefix, State)
+               & ") >= "
+               & Trim_Image (Min_Length)
+               & ")");
+         elsif Is_Plain_String_Type (Unit, Document, Prefix_Type) then
+            State.Needs_Safe_String_RT := True;
+            Add_Unique
+              ("(Safe_String_RT.Length ("
+               & Render_Heap_String_Expr (Unit, Document, Prefix, State)
+               & ") >= "
+               & Trim_Image (Min_Length)
+               & ")");
+         end if;
+      end Add_Length_Precondition;
+
       procedure Collect_Expr (Expr : CM.Expr_Access) is
+         Index_Value : Long_Long_Integer := 0;
+         High_Value  : Long_Long_Integer := 0;
       begin
          if Expr = null then
             return;
@@ -8111,6 +8171,21 @@ package body Safe_Frontend.Ada_Emit is
                         Add_Unique ("(" & Param_Name & " /= null)");
                      end if;
                   end;
+               end if;
+               if Expr.Kind = CM.Expr_Resolved_Index and then Expr.Prefix /= null then
+                  if Natural (Expr.Args.Length) = 1
+                    and then Try_Static_Integer_Value
+                      (Expr.Args (Expr.Args.First_Index),
+                       Index_Value)
+                  then
+                     Add_Length_Precondition (Expr.Prefix, Index_Value);
+                  elsif Natural (Expr.Args.Length) = 2
+                    and then Try_Static_Integer_Value
+                      (Expr.Args (Expr.Args.First_Index + 1),
+                       High_Value)
+                  then
+                     Add_Length_Precondition (Expr.Prefix, High_Value);
+                  end if;
                end if;
             when others =>
                null;
@@ -10632,6 +10707,84 @@ package body Safe_Frontend.Ada_Emit is
          return FT.To_String (Channel_Item.Name) & "_Free_Value";
       end Channel_Free_Helper_Name;
 
+      function Channel_Receive_Wrapper_Name
+        (Channel_Item : CM.Resolved_Channel_Decl) return String is
+      begin
+         return FT.To_String (Channel_Item.Name) & "_Receive_Staged";
+      end Channel_Receive_Wrapper_Name;
+
+      function Channel_Send_Wrapper_Name
+        (Channel_Item : CM.Resolved_Channel_Decl) return String is
+      begin
+         return FT.To_String (Channel_Item.Name) & "_Send_Staged";
+      end Channel_Send_Wrapper_Name;
+
+      function Channel_Try_Send_Wrapper_Name
+        (Channel_Item : CM.Resolved_Channel_Decl) return String is
+      begin
+         return FT.To_String (Channel_Item.Name) & "_Try_Send_Staged";
+      end Channel_Try_Send_Wrapper_Name;
+
+      function Channel_Try_Receive_Wrapper_Name
+        (Channel_Item : CM.Resolved_Channel_Decl) return String is
+      begin
+         return FT.To_String (Channel_Item.Name) & "_Try_Receive_Staged";
+      end Channel_Try_Receive_Wrapper_Name;
+
+      function Channel_Has_Length_Model
+        (Channel_Item : CM.Resolved_Channel_Decl) return Boolean is
+      begin
+         return
+           Is_Plain_String_Type (Unit, Document, Channel_Item.Element_Type)
+           or else
+           Is_Growable_Array_Type (Unit, Document, Channel_Item.Element_Type);
+      end Channel_Has_Length_Model;
+
+      function Channel_Has_Scalar_Length_Model
+        (Channel_Item : CM.Resolved_Channel_Decl) return Boolean is
+      begin
+         return Channel_Has_Length_Model (Channel_Item)
+           and then Channel_Item.Capacity = 1;
+      end Channel_Has_Scalar_Length_Model;
+
+      function Channel_Length_Image
+        (Channel_Item : CM.Resolved_Channel_Decl;
+         Value_Image  : String) return String
+      is
+         Element_Info : constant GM.Type_Descriptor := Channel_Item.Element_Type;
+      begin
+         if Is_Plain_String_Type (Unit, Document, Element_Info) then
+            State.Needs_Safe_String_RT := True;
+            return "Safe_String_RT.Length (" & Value_Image & ")";
+         end if;
+
+         State.Needs_Safe_Array_RT := True;
+         return
+           Array_Runtime_Instance_Name (Base_Type (Unit, Document, Element_Info))
+           & ".Length ("
+           & Value_Image
+           & ")";
+      end Channel_Length_Image;
+
+      procedure Append_Channel_Length_Assert
+        (Channel_Item : CM.Resolved_Channel_Decl;
+         Value_Image  : String;
+         Length_Name  : String;
+         Depth        : Natural)
+      is
+      begin
+         if Channel_Has_Length_Model (Channel_Item) then
+            Append_Line
+              (Buffer,
+               "pragma Assert ("
+               & Channel_Length_Image (Channel_Item, Value_Image)
+               & " = "
+               & Length_Name
+               & ");",
+               Depth);
+         end if;
+      end Append_Channel_Length_Assert;
+
       function Render_Heap_Channel_Copy_Expr
         (Channel_Item : CM.Resolved_Channel_Decl;
          Expr         : CM.Expr_Access) return String
@@ -12007,8 +12160,17 @@ package body Safe_Frontend.Ada_Emit is
                           & Ada.Strings.Fixed.Trim
                               (Natural'Image (Natural (Index)),
                                Ada.Strings.Both);
+                        Length_Name  : constant String :=
+                          "Safe_Channel_Length_"
+                          & Ada.Strings.Fixed.Trim
+                              (Natural'Image (Natural (Index)),
+                               Ada.Strings.Both);
                         Element_Type : constant String :=
                           Render_Type_Name (Declared_Channel.Element_Type);
+                        Source_Image : constant String :=
+                          Render_Heap_Channel_Copy_Expr
+                            (Declared_Channel,
+                             Item.Value);
                      begin
                         Append_Line (Buffer, "declare", Depth);
                         Append_Initialization_Warning_Suppression
@@ -12025,6 +12187,17 @@ package body Safe_Frontend.Ada_Emit is
                                 Declared_Channel.Element_Type)
                            & ";",
                            Depth + 1);
+                        if Channel_Has_Length_Model (Declared_Channel) then
+                           Append_Line
+                             (Buffer,
+                              Length_Name
+                              & " : constant Natural := "
+                              & Channel_Length_Image
+                                  (Declared_Channel,
+                                   Source_Image)
+                              & ";",
+                              Depth + 1);
+                        end if;
                         Append_Initialization_Warning_Restore
                           (Buffer, Depth + 1);
                         Append_Line (Buffer, "begin", Depth);
@@ -12040,6 +12213,9 @@ package body Safe_Frontend.Ada_Emit is
                            Render_Expr (Unit, Document, Item.Channel_Name, State)
                            & ".Send ("
                            & Staged_Name
+                           & (if Channel_Has_Length_Model (Declared_Channel)
+                              then ", " & Length_Name
+                              else "")
                            & ");",
                            Depth + 1);
                         Append_Channel_Staged_Call_Warning_Restore
@@ -12075,6 +12251,11 @@ package body Safe_Frontend.Ada_Emit is
                           & Ada.Strings.Fixed.Trim
                               (Natural'Image (Natural (Index)),
                                Ada.Strings.Both);
+                        Length_Name  : constant String :=
+                          "Safe_Channel_Length_"
+                          & Ada.Strings.Fixed.Trim
+                              (Natural'Image (Natural (Index)),
+                               Ada.Strings.Both);
                         Element_Type : constant String :=
                           Render_Type_Name (Declared_Channel.Element_Type);
                         Target_Image : constant String :=
@@ -12089,12 +12270,18 @@ package body Safe_Frontend.Ada_Emit is
                            & " : "
                            & Element_Type
                            & " := "
-                           & Default_Value_Expr
-                               (Unit,
-                                Document,
-                                Declared_Channel.Element_Type)
-                           & ";",
-                           Depth + 1);
+                                 & Default_Value_Expr
+                                     (Unit,
+                                      Document,
+                                      Declared_Channel.Element_Type)
+                                 & ";",
+                                 Depth + 1);
+                        if Channel_Has_Length_Model (Declared_Channel) then
+                           Append_Line
+                             (Buffer,
+                              Length_Name & " : Natural := 0;",
+                              Depth + 1);
+                        end if;
                         Append_Initialization_Warning_Restore
                           (Buffer, Depth + 1);
                         Append_Line (Buffer, "begin", Depth);
@@ -12102,26 +12289,58 @@ package body Safe_Frontend.Ada_Emit is
                            Append_Task_Channel_Call_Warning_Suppression
                              (Buffer, Depth + 1);
                         end if;
+                        if Channel_Has_Length_Model (Declared_Channel) then
+                           Append_Channel_Staged_Call_Warning_Suppression
+                             (Buffer, Depth + 1);
+                        end if;
                         Append_Line
                           (Buffer,
                            Render_Expr (Unit, Document, Item.Channel_Name, State)
                            & ".Receive ("
                            & Staged_Name
+                           & (if Channel_Has_Length_Model (Declared_Channel)
+                              then ", " & Length_Name
+                              else "")
                            & ");",
                            Depth + 1);
+                        if Channel_Has_Length_Model (Declared_Channel) then
+                           Append_Channel_Staged_Call_Warning_Restore
+                             (Buffer, Depth + 1);
+                        end if;
                         if State.Task_Body_Depth > 0 then
                            Append_Task_Channel_Call_Warning_Restore
                              (Buffer, Depth + 1);
                         end if;
+                        if Channel_Has_Length_Model (Declared_Channel) then
+                           Append_Line
+                             (Buffer,
+                              Length_Name
+                              & " := "
+                              & Channel_Length_Image
+                                  (Declared_Channel,
+                                   Staged_Name)
+                              & ";",
+                              Depth + 1);
+                        end if;
+                        Append_Channel_Length_Assert
+                          (Declared_Channel,
+                           Staged_Name,
+                           Length_Name,
+                           Depth + 1);
                         Append_Local_Warning_Suppression (Buffer, Depth + 1);
                         Append_Heap_Channel_Free
                           (Declared_Channel,
-                           Target_Image,
+                          Target_Image,
                            Depth + 1);
                         Append_Local_Warning_Restore (Buffer, Depth + 1);
                         Append_Line
                           (Buffer,
                            Target_Image & " := " & Staged_Name & ";",
+                           Depth + 1);
+                        Append_Channel_Length_Assert
+                          (Declared_Channel,
+                           Target_Image,
+                           Length_Name,
                            Depth + 1);
                         Append_Line (Buffer, "end;", Depth);
                      end;
@@ -12159,10 +12378,19 @@ package body Safe_Frontend.Ada_Emit is
                           & Ada.Strings.Fixed.Trim
                               (Natural'Image (Natural (Index)),
                                Ada.Strings.Both);
+                        Length_Name  : constant String :=
+                          "Safe_Channel_Length_"
+                          & Ada.Strings.Fixed.Trim
+                              (Natural'Image (Natural (Index)),
+                               Ada.Strings.Both);
                         Element_Type : constant String :=
                           Render_Type_Name (Declared_Channel.Element_Type);
                         Success_Image : constant String :=
                           Render_Expr (Unit, Document, Item.Success_Var, State);
+                        Source_Image : constant String :=
+                          Render_Heap_Channel_Copy_Expr
+                            (Declared_Channel,
+                             Item.Value);
                      begin
                         Append_Line (Buffer, "declare", Depth);
                         Append_Initialization_Warning_Suppression
@@ -12179,6 +12407,17 @@ package body Safe_Frontend.Ada_Emit is
                                 Declared_Channel.Element_Type)
                            & ";",
                            Depth + 1);
+                        if Channel_Has_Length_Model (Declared_Channel) then
+                           Append_Line
+                             (Buffer,
+                              Length_Name
+                              & " : constant Natural := "
+                              & Channel_Length_Image
+                                  (Declared_Channel,
+                                   Source_Image)
+                              & ";",
+                              Depth + 1);
+                        end if;
                         Append_Initialization_Warning_Restore
                           (Buffer, Depth + 1);
                         Append_Line (Buffer, "begin", Depth);
@@ -12194,6 +12433,9 @@ package body Safe_Frontend.Ada_Emit is
                            Render_Expr (Unit, Document, Item.Channel_Name, State)
                            & ".Try_Send ("
                            & Staged_Name
+                           & (if Channel_Has_Length_Model (Declared_Channel)
+                              then ", " & Length_Name
+                              else "")
                            & ", "
                            & Success_Image
                            & ");",
@@ -12250,6 +12492,11 @@ package body Safe_Frontend.Ada_Emit is
                           & Ada.Strings.Fixed.Trim
                               (Natural'Image (Natural (Index)),
                                Ada.Strings.Both);
+                        Length_Name  : constant String :=
+                          "Safe_Channel_Length_"
+                          & Ada.Strings.Fixed.Trim
+                              (Natural'Image (Natural (Index)),
+                               Ada.Strings.Both);
                         Element_Type : constant String :=
                           Render_Type_Name (Declared_Channel.Element_Type);
                         Target_Image : constant String :=
@@ -12266,12 +12513,18 @@ package body Safe_Frontend.Ada_Emit is
                            & " : "
                            & Element_Type
                            & " := "
-                           & Default_Value_Expr
-                               (Unit,
-                                Document,
-                                Declared_Channel.Element_Type)
-                           & ";",
-                           Depth + 1);
+                                 & Default_Value_Expr
+                                     (Unit,
+                                      Document,
+                                      Declared_Channel.Element_Type)
+                                 & ";",
+                                 Depth + 1);
+                        if Channel_Has_Length_Model (Declared_Channel) then
+                           Append_Line
+                             (Buffer,
+                              Length_Name & " : Natural := 0;",
+                              Depth + 1);
+                        end if;
                         Append_Initialization_Warning_Restore
                           (Buffer, Depth + 1);
                         Append_Line (Buffer, "begin", Depth);
@@ -12279,15 +12532,26 @@ package body Safe_Frontend.Ada_Emit is
                            Append_Task_Channel_Call_Warning_Suppression
                              (Buffer, Depth + 1);
                         end if;
+                        if Channel_Has_Length_Model (Declared_Channel) then
+                           Append_Channel_Staged_Call_Warning_Suppression
+                             (Buffer, Depth + 1);
+                        end if;
                         Append_Line
                           (Buffer,
                            Render_Expr (Unit, Document, Item.Channel_Name, State)
                            & ".Try_Receive ("
                            & Staged_Name
+                           & (if Channel_Has_Length_Model (Declared_Channel)
+                              then ", " & Length_Name
+                              else "")
                            & ", "
                            & Success_Image
                            & ");",
                            Depth + 1);
+                        if Channel_Has_Length_Model (Declared_Channel) then
+                           Append_Channel_Staged_Call_Warning_Restore
+                             (Buffer, Depth + 1);
+                        end if;
                         if State.Task_Body_Depth > 0 then
                            Append_Task_Channel_Call_Warning_Restore
                              (Buffer, Depth + 1);
@@ -12297,15 +12561,36 @@ package body Safe_Frontend.Ada_Emit is
                           (Buffer,
                            "if " & Success_Image & " then",
                            Depth + 1);
+                        if Channel_Has_Length_Model (Declared_Channel) then
+                           Append_Line
+                             (Buffer,
+                              Length_Name
+                              & " := "
+                              & Channel_Length_Image
+                                  (Declared_Channel,
+                                   Staged_Name)
+                              & ";",
+                              Depth + 2);
+                        end if;
+                        Append_Channel_Length_Assert
+                          (Declared_Channel,
+                           Staged_Name,
+                           Length_Name,
+                           Depth + 2);
                         Append_Local_Warning_Suppression (Buffer, Depth + 2);
                         Append_Heap_Channel_Free
                           (Declared_Channel,
-                           Target_Image,
+                          Target_Image,
                            Depth + 2);
                         Append_Local_Warning_Restore (Buffer, Depth + 2);
                         Append_Line
                           (Buffer,
                            Target_Image & " := " & Staged_Name & ";",
+                           Depth + 2);
+                        Append_Channel_Length_Assert
+                          (Declared_Channel,
+                           Target_Image,
+                           Length_Name,
                            Depth + 2);
                         Append_Line (Buffer, "end if;", Depth + 1);
                         if State.Task_Body_Depth > 0 then
@@ -12393,59 +12678,93 @@ package body Safe_Frontend.Ada_Emit is
 
                      for Arm of Item.Arms loop
                         if Arm.Kind = CM.Select_Arm_Channel then
-                           Append_Line (Buffer, "if not Select_Done then", Depth + 2);
-                           Append_Line (Buffer, "declare", Depth + 3);
-                           if State.Task_Body_Depth > 0 then
-                              Append_Initialization_Warning_Suppression
-                                (Buffer, Depth + 4);
-                           end if;
-                           Append_Line
-                             (Buffer,
-                              FT.To_String (Arm.Channel_Data.Variable_Name)
-                              & " : "
-                              & Render_Type_Name (Arm.Channel_Data.Type_Info)
-                              & " := "
-                              & Default_Value_Expr (Arm.Channel_Data.Type_Info)
-                              & ";",
-                              Depth + 4);
-                           Append_Line (Buffer, "Arm_Success : Boolean := False;", Depth + 4);
-                           if State.Task_Body_Depth > 0 then
-                              Append_Initialization_Warning_Restore
-                                (Buffer, Depth + 4);
-                           end if;
-                           Append_Line (Buffer, "begin", Depth + 3);
-                           if State.Task_Body_Depth > 0 then
-                              Append_Task_Channel_Call_Warning_Suppression
-                                (Buffer, Depth + 4);
-                           end if;
-                           Append_Line
-                             (Buffer,
-                              Render_Expr (Unit, Document, Arm.Channel_Data.Channel_Name, State)
-                              & ".Try_Receive ("
-                              & FT.To_String (Arm.Channel_Data.Variable_Name)
-                              & ", Arm_Success);",
-                              Depth + 4);
-                           if State.Task_Body_Depth > 0 then
-                              Append_Task_Channel_Call_Warning_Restore
-                                (Buffer, Depth + 4);
-                              Append_Task_If_Warning_Suppression (Buffer, Depth + 4);
-                           end if;
-                           Append_Line (Buffer, "if Arm_Success then", Depth + 4);
-                           Append_Line (Buffer, "Select_Done := True;", Depth + 5);
-                           Render_Required_Statement_Suite
-                             (Buffer,
-                              Unit,
-                              Document,
-                              Arm.Channel_Data.Statements,
-                              State,
-                              Depth + 5,
-                              Return_Type);
-                           Append_Line (Buffer, "end if;", Depth + 4);
-                           if State.Task_Body_Depth > 0 then
-                              Append_Task_If_Warning_Restore (Buffer, Depth + 4);
-                           end if;
-                           Append_Line (Buffer, "end;", Depth + 3);
-                           Append_Line (Buffer, "end if;", Depth + 2);
+                           declare
+                              Declared_Channel : constant CM.Resolved_Channel_Decl :=
+                                Channel_Item (Arm.Channel_Data.Channel_Name);
+                           begin
+                              Append_Line (Buffer, "if not Select_Done then", Depth + 2);
+                              Append_Line (Buffer, "declare", Depth + 3);
+                              if State.Task_Body_Depth > 0 then
+                                 Append_Initialization_Warning_Suppression
+                                   (Buffer, Depth + 4);
+                              end if;
+                              Append_Line
+                                (Buffer,
+                                 FT.To_String (Arm.Channel_Data.Variable_Name)
+                                 & " : "
+                                 & Render_Type_Name (Arm.Channel_Data.Type_Info)
+                                 & " := "
+                                 & Default_Value_Expr (Arm.Channel_Data.Type_Info)
+                                 & ";",
+                                 Depth + 4);
+                              if Channel_Has_Scalar_Length_Model (Declared_Channel) then
+                                 Append_Line (Buffer, "Arm_Length : Natural := 0;", Depth + 4);
+                              end if;
+                              Append_Line (Buffer, "Arm_Success : Boolean := False;", Depth + 4);
+                              if State.Task_Body_Depth > 0 then
+                                 Append_Initialization_Warning_Restore
+                                   (Buffer, Depth + 4);
+                              end if;
+                              Append_Line (Buffer, "begin", Depth + 3);
+                              if State.Task_Body_Depth > 0 then
+                                 Append_Task_Channel_Call_Warning_Suppression
+                                   (Buffer, Depth + 4);
+                              end if;
+                              if Channel_Has_Length_Model (Declared_Channel) then
+                                 Append_Channel_Staged_Call_Warning_Suppression
+                                   (Buffer, Depth + 4);
+                              end if;
+                              Append_Line
+                                (Buffer,
+                                 Render_Expr (Unit, Document, Arm.Channel_Data.Channel_Name, State)
+                                 & ".Try_Receive ("
+                                 & FT.To_String (Arm.Channel_Data.Variable_Name)
+                                 & (if Channel_Has_Length_Model (Declared_Channel)
+                                    then ", Arm_Length"
+                                    else "")
+                                 & ", Arm_Success);",
+                                 Depth + 4);
+                              if Channel_Has_Length_Model (Declared_Channel) then
+                                 Append_Channel_Staged_Call_Warning_Restore
+                                   (Buffer, Depth + 4);
+                              end if;
+                              if State.Task_Body_Depth > 0 then
+                                 Append_Task_Channel_Call_Warning_Restore
+                                   (Buffer, Depth + 4);
+                                 Append_Task_If_Warning_Suppression (Buffer, Depth + 4);
+                              end if;
+                              Append_Line (Buffer, "if Arm_Success then", Depth + 4);
+                              Append_Line (Buffer, "Select_Done := True;", Depth + 5);
+                              if Channel_Has_Length_Model (Declared_Channel) then
+                                 Append_Line
+                                   (Buffer,
+                                    "Arm_Length := "
+                                    & Channel_Length_Image
+                                        (Declared_Channel,
+                                         FT.To_String (Arm.Channel_Data.Variable_Name))
+                                    & ";",
+                                    Depth + 5);
+                              end if;
+                              Append_Channel_Length_Assert
+                                (Declared_Channel,
+                                 FT.To_String (Arm.Channel_Data.Variable_Name),
+                                 "Arm_Length",
+                                 Depth + 5);
+                              Render_Required_Statement_Suite
+                                (Buffer,
+                                 Unit,
+                                 Document,
+                                 Arm.Channel_Data.Statements,
+                                 State,
+                                 Depth + 5,
+                                 Return_Type);
+                              Append_Line (Buffer, "end if;", Depth + 4);
+                              if State.Task_Body_Depth > 0 then
+                                 Append_Task_If_Warning_Restore (Buffer, Depth + 4);
+                              end if;
+                              Append_Line (Buffer, "end;", Depth + 3);
+                              Append_Line (Buffer, "end if;", Depth + 2);
+                           end;
                         elsif Arm.Kind /= CM.Select_Arm_Delay then
                            Raise_Unsupported
                              (State,
@@ -12485,59 +12804,93 @@ package body Safe_Frontend.Ada_Emit is
 
                      for Arm of Item.Arms loop
                         if Arm.Kind = CM.Select_Arm_Channel then
-                           Append_Line (Buffer, "if not Select_Done then", Depth + 2);
-                           Append_Line (Buffer, "declare", Depth + 3);
-                           if State.Task_Body_Depth > 0 then
-                              Append_Initialization_Warning_Suppression
-                                (Buffer, Depth + 4);
-                           end if;
-                           Append_Line
-                             (Buffer,
-                              FT.To_String (Arm.Channel_Data.Variable_Name)
-                              & " : "
-                              & Render_Type_Name (Arm.Channel_Data.Type_Info)
-                              & " := "
-                              & Default_Value_Expr (Arm.Channel_Data.Type_Info)
-                              & ";",
-                              Depth + 4);
-                           Append_Line (Buffer, "Arm_Success : Boolean := False;", Depth + 4);
-                           if State.Task_Body_Depth > 0 then
-                              Append_Initialization_Warning_Restore
-                                (Buffer, Depth + 4);
-                           end if;
-                           Append_Line (Buffer, "begin", Depth + 3);
-                           if State.Task_Body_Depth > 0 then
-                              Append_Task_Channel_Call_Warning_Suppression
-                                (Buffer, Depth + 4);
-                           end if;
-                           Append_Line
-                             (Buffer,
-                              Render_Expr (Unit, Document, Arm.Channel_Data.Channel_Name, State)
-                              & ".Try_Receive ("
-                              & FT.To_String (Arm.Channel_Data.Variable_Name)
-                              & ", Arm_Success);",
-                              Depth + 4);
-                           if State.Task_Body_Depth > 0 then
-                              Append_Task_Channel_Call_Warning_Restore
-                                (Buffer, Depth + 4);
-                              Append_Task_If_Warning_Suppression (Buffer, Depth + 4);
-                           end if;
-                           Append_Line (Buffer, "if Arm_Success then", Depth + 4);
-                           Append_Line (Buffer, "Select_Done := True;", Depth + 5);
-                           Render_Required_Statement_Suite
-                             (Buffer,
-                              Unit,
-                              Document,
-                              Arm.Channel_Data.Statements,
-                              State,
-                              Depth + 5,
-                              Return_Type);
-                           Append_Line (Buffer, "end if;", Depth + 4);
-                           if State.Task_Body_Depth > 0 then
-                              Append_Task_If_Warning_Restore (Buffer, Depth + 4);
-                           end if;
-                           Append_Line (Buffer, "end;", Depth + 3);
-                           Append_Line (Buffer, "end if;", Depth + 2);
+                           declare
+                              Declared_Channel : constant CM.Resolved_Channel_Decl :=
+                                Channel_Item (Arm.Channel_Data.Channel_Name);
+                           begin
+                              Append_Line (Buffer, "if not Select_Done then", Depth + 2);
+                              Append_Line (Buffer, "declare", Depth + 3);
+                              if State.Task_Body_Depth > 0 then
+                                 Append_Initialization_Warning_Suppression
+                                   (Buffer, Depth + 4);
+                              end if;
+                              Append_Line
+                                (Buffer,
+                                 FT.To_String (Arm.Channel_Data.Variable_Name)
+                                 & " : "
+                                 & Render_Type_Name (Arm.Channel_Data.Type_Info)
+                                 & " := "
+                                 & Default_Value_Expr (Arm.Channel_Data.Type_Info)
+                                 & ";",
+                                 Depth + 4);
+                              if Channel_Has_Scalar_Length_Model (Declared_Channel) then
+                                 Append_Line (Buffer, "Arm_Length : Natural := 0;", Depth + 4);
+                              end if;
+                              Append_Line (Buffer, "Arm_Success : Boolean := False;", Depth + 4);
+                              if State.Task_Body_Depth > 0 then
+                                 Append_Initialization_Warning_Restore
+                                   (Buffer, Depth + 4);
+                              end if;
+                              Append_Line (Buffer, "begin", Depth + 3);
+                              if State.Task_Body_Depth > 0 then
+                                 Append_Task_Channel_Call_Warning_Suppression
+                                   (Buffer, Depth + 4);
+                              end if;
+                              if Channel_Has_Length_Model (Declared_Channel) then
+                                 Append_Channel_Staged_Call_Warning_Suppression
+                                   (Buffer, Depth + 4);
+                              end if;
+                              Append_Line
+                                (Buffer,
+                                 Render_Expr (Unit, Document, Arm.Channel_Data.Channel_Name, State)
+                                 & ".Try_Receive ("
+                                 & FT.To_String (Arm.Channel_Data.Variable_Name)
+                                 & (if Channel_Has_Length_Model (Declared_Channel)
+                                    then ", Arm_Length"
+                                    else "")
+                                 & ", Arm_Success);",
+                                 Depth + 4);
+                              if Channel_Has_Length_Model (Declared_Channel) then
+                                 Append_Channel_Staged_Call_Warning_Restore
+                                   (Buffer, Depth + 4);
+                              end if;
+                              if State.Task_Body_Depth > 0 then
+                                 Append_Task_Channel_Call_Warning_Restore
+                                   (Buffer, Depth + 4);
+                                 Append_Task_If_Warning_Suppression (Buffer, Depth + 4);
+                              end if;
+                              Append_Line (Buffer, "if Arm_Success then", Depth + 4);
+                              Append_Line (Buffer, "Select_Done := True;", Depth + 5);
+                              if Channel_Has_Length_Model (Declared_Channel) then
+                                 Append_Line
+                                   (Buffer,
+                                    "Arm_Length := "
+                                    & Channel_Length_Image
+                                        (Declared_Channel,
+                                         FT.To_String (Arm.Channel_Data.Variable_Name))
+                                    & ";",
+                                    Depth + 5);
+                              end if;
+                              Append_Channel_Length_Assert
+                                (Declared_Channel,
+                                 FT.To_String (Arm.Channel_Data.Variable_Name),
+                                 "Arm_Length",
+                                 Depth + 5);
+                              Render_Required_Statement_Suite
+                                (Buffer,
+                                 Unit,
+                                 Document,
+                                 Arm.Channel_Data.Statements,
+                                 State,
+                                 Depth + 5,
+                                 Return_Type);
+                              Append_Line (Buffer, "end if;", Depth + 4);
+                              if State.Task_Body_Depth > 0 then
+                                 Append_Task_If_Warning_Restore (Buffer, Depth + 4);
+                              end if;
+                              Append_Line (Buffer, "end;", Depth + 3);
+                              Append_Line (Buffer, "end if;", Depth + 2);
+                           end;
                         elsif Arm.Kind /= CM.Select_Arm_Delay then
                            Raise_Unsupported
                              (State,
@@ -12598,11 +12951,19 @@ package body Safe_Frontend.Ada_Emit is
       Element_Type  : constant String := Render_Type_Name (Channel.Element_Type);
       Capacity      : constant String := Trim_Image (Channel.Capacity);
       Type_Name     : constant String := Name & "_Channel";
+      Length_Helper : constant String := Name & "_Element_Length";
       Index_Subtype : constant String := Name & "_Index";
       Count_Subtype : constant String := Name & "_Count";
+      Length_Buffer_Type : constant String := Name & "_Length_Buffer";
       Buffer_Type   : constant String := Name & "_Buffer";
+      Stored_Length : constant String := "Stored_Length";
       Heap_Value    : constant Boolean :=
         Has_Heap_Value_Type (Unit, Document, Channel.Element_Type);
+      Has_Length_Model : constant Boolean :=
+        Is_Plain_String_Type (Unit, Document, Channel.Element_Type)
+        or else Is_Growable_Array_Type (Unit, Document, Channel.Element_Type);
+      Single_Slot_Length_Model : constant Boolean :=
+        Has_Length_Model and then Channel.Capacity = 1;
       Send_Mode     : constant String :=
         (if Heap_Value then "in out " else "in ");
       Receive_Mode  : constant String := "out ";
@@ -12627,26 +12988,75 @@ package body Safe_Frontend.Ada_Emit is
         (Buffer,
          "type " & Buffer_Type & " is array (" & Index_Subtype & ") of " & Element_Type & ";",
          1);
+      if Has_Length_Model then
+         Append_Line
+           (Buffer,
+            "type " & Length_Buffer_Type & " is array (" & Index_Subtype & ") of Natural;",
+            1);
+         Append_Line
+           (Buffer,
+            "function "
+            & Length_Helper
+            & " (Value : "
+            & Element_Type
+            & ") return Natural with Global => null;",
+            1);
+      end if;
       Append_Line
         (Buffer,
-         "protected type "
-         & Type_Name
-         & " with Priority => " & Trim_Image (Ceiling)
-         & " is",
-         1);
-      Append_Line (Buffer, "entry Send (Value : " & Send_Mode & Element_Type & ");", 2);
-      Append_Line (Buffer, "entry Receive (Value : " & Receive_Mode & Element_Type & ");", 2);
+        "protected type "
+        & Type_Name
+        & " with Priority => " & Trim_Image (Ceiling)
+        & " is",
+        1);
       Append_Line
         (Buffer,
-         "procedure Try_Send (Value : " & Send_Mode & Element_Type & "; Success : out Boolean);",
+         "entry Send (Value : "
+         & Send_Mode
+         & Element_Type
+         & (if Has_Length_Model then "; Value_Length : in Natural" else "")
+         & ")"
+         & (if Single_Slot_Length_Model
+            then " with Post => " & Stored_Length & " = Value_Length"
+            else "")
+         & ";",
+         2);
+      Append_Line
+        (Buffer,
+         "entry Receive (Value : "
+         & Receive_Mode
+         & Element_Type
+         & (if Has_Length_Model then "; Value_Length : out Natural" else "")
+         & ")"
+         & (if Single_Slot_Length_Model
+            then
+              " with Post => Value_Length = "
+              & Stored_Length
+              & "'Old and then "
+              & Stored_Length
+              & " = 0"
+            else "")
+         & ";",
+         2);
+      Append_Line
+        (Buffer,
+         "procedure Try_Send (Value : "
+         & Send_Mode
+         & Element_Type
+         & (if Has_Length_Model then "; Value_Length : in Natural" else "")
+         & "; Success : out Boolean);",
          2);
       Append_Line
         (Buffer,
          "procedure Try_Receive (Value : "
          & Receive_Mode
          & Element_Type
+         & (if Has_Length_Model then "; Value_Length : out Natural" else "")
          & "; Success : out Boolean);",
          2);
+      if Single_Slot_Length_Model then
+         Append_Line (Buffer, "function " & Stored_Length & " return Natural;", 2);
+      end if;
       Append_Line (Buffer, "private", 1);
       Append_Line
          (Buffer,
@@ -12656,9 +13066,18 @@ package body Safe_Frontend.Ada_Emit is
           & Default_Value_Expr (Unit, Document, Channel.Element_Type)
           & ");",
           2);
+      if Has_Length_Model then
+         Append_Line
+           (Buffer,
+            "Lengths : " & Length_Buffer_Type & " := (others => 0);",
+            2);
+      end if;
       Append_Line (Buffer, "Head   : " & Index_Subtype & " := " & Index_Subtype & "'First;", 2);
       Append_Line (Buffer, "Tail   : " & Index_Subtype & " := " & Index_Subtype & "'First;", 2);
       Append_Line (Buffer, "Count  : " & Count_Subtype & " := 0;", 2);
+      if Single_Slot_Length_Model then
+         Append_Line (Buffer, "Stored_Length_Value : Natural := 0;", 2);
+      end if;
       Append_Line (Buffer, "end " & Type_Name & ";", 1);
       Append_Line (Buffer, Name & " : " & Type_Name & ";", 1);
       Append_Line (Buffer);
@@ -12675,9 +13094,16 @@ package body Safe_Frontend.Ada_Emit is
       Element_Type  : constant String := Render_Type_Name (Channel.Element_Type);
       Capacity      : constant String := Trim_Image (Channel.Capacity);
       Type_Name     : constant String := Name & "_Channel";
+      Length_Helper : constant String := Name & "_Element_Length";
       Index_Subtype : constant String := Name & "_Index";
+      Stored_Length : constant String := "Stored_Length";
       Heap_Value    : constant Boolean :=
         Has_Heap_Value_Type (Unit, Document, Channel.Element_Type);
+      Has_Length_Model : constant Boolean :=
+        Is_Plain_String_Type (Unit, Document, Channel.Element_Type)
+        or else Is_Growable_Array_Type (Unit, Document, Channel.Element_Type);
+      Single_Slot_Length_Model : constant Boolean :=
+        Has_Length_Model and then Channel.Capacity = 1;
       Send_Mode     : constant String :=
         (if Heap_Value then "in out " else "in ");
       Receive_Mode  : constant String := "out ";
@@ -13263,8 +13689,44 @@ package body Safe_Frontend.Ada_Emit is
          Append_Line (Buffer);
       end if;
 
+      if Has_Length_Model then
+         Append_Line
+           (Buffer,
+            "function "
+            & Length_Helper
+            & " (Value : "
+            & Element_Type
+            & ") return Natural is ("
+            & (if Is_Plain_String_Type (Unit, Document, Channel.Element_Type)
+               then "Safe_String_RT.Length (Value)"
+               else
+                 Array_Runtime_Instance_Name
+                   (Base_Type (Unit, Document, Channel.Element_Type))
+                 & ".Length (Value)")
+            & ");",
+            1);
+         Append_Line (Buffer);
+      end if;
+
       Append_Line (Buffer, "protected body " & Type_Name & " is", 1);
-      Append_Line (Buffer, "entry Send (Value : " & Send_Mode & Element_Type & ")", 2);
+      if Single_Slot_Length_Model then
+         Append_Line
+           (Buffer,
+            "function " & Stored_Length & " return Natural is",
+            2);
+         Append_Line (Buffer, "begin", 2);
+         Append_Line (Buffer, "return Stored_Length_Value;", 3);
+         Append_Line (Buffer, "end " & Stored_Length & ";", 2);
+         Append_Line (Buffer);
+      end if;
+      Append_Line
+        (Buffer,
+         "entry Send (Value : "
+         & Send_Mode
+         & Element_Type
+         & (if Has_Length_Model then "; Value_Length : in Natural" else "")
+         & ")",
+         2);
       Append_Line
         (Buffer,
          "when Count < "
@@ -13273,6 +13735,12 @@ package body Safe_Frontend.Ada_Emit is
          3);
       Append_Line (Buffer, "begin", 2);
       Append_Line (Buffer, "Buffer (Tail) := Value;", 3);
+      if Has_Length_Model then
+         Append_Line (Buffer, "Lengths (Tail) := Value_Length;", 3);
+         if Single_Slot_Length_Model then
+            Append_Line (Buffer, "Stored_Length_Value := Value_Length;", 3);
+         end if;
+      end if;
       if Heap_Value then
          Append_Line (Buffer, "Value := " & Buffer_Default & ";", 3);
       end if;
@@ -13284,7 +13752,14 @@ package body Safe_Frontend.Ada_Emit is
       Append_Line (Buffer, "Count := Count + 1;", 3);
       Append_Line (Buffer, "end Send;", 2);
       Append_Line (Buffer);
-      Append_Line (Buffer, "entry Receive (Value : " & Receive_Mode & Element_Type & ")", 2);
+      Append_Line
+        (Buffer,
+         "entry Receive (Value : "
+         & Receive_Mode
+         & Element_Type
+         & (if Has_Length_Model then "; Value_Length : out Natural" else "")
+         & ")",
+         2);
       Append_Line
         (Buffer,
          "when Count > 0"
@@ -13292,7 +13767,20 @@ package body Safe_Frontend.Ada_Emit is
          3);
       Append_Line (Buffer, "begin", 2);
       Append_Line (Buffer, "Value := Buffer (Head);", 3);
+      if Has_Length_Model then
+         if Single_Slot_Length_Model then
+            Append_Line (Buffer, "Value_Length := Stored_Length_Value;", 3);
+         else
+            Append_Line (Buffer, "Value_Length := Lengths (Head);", 3);
+         end if;
+      end if;
       Append_Line (Buffer, "Buffer (Head) := " & Buffer_Default & ";", 3);
+      if Has_Length_Model then
+         Append_Line (Buffer, "Lengths (Head) := 0;", 3);
+         if Single_Slot_Length_Model then
+            Append_Line (Buffer, "Stored_Length_Value := 0;", 3);
+         end if;
+      end if;
       Append_Line (Buffer, "if Head = " & Index_Subtype & "'Last then", 3);
       Append_Line (Buffer, "Head := " & Index_Subtype & "'First;", 4);
       Append_Line (Buffer, "else", 3);
@@ -13305,6 +13793,7 @@ package body Safe_Frontend.Ada_Emit is
         (Buffer,
          "procedure Try_Send (Value : " & Send_Mode
          & Element_Type
+         & (if Has_Length_Model then "; Value_Length : in Natural" else "")
          & "; Success : out Boolean) is",
          2);
       Append_Line (Buffer, "begin", 2);
@@ -13315,6 +13804,12 @@ package body Safe_Frontend.Ada_Emit is
          & " then",
          3);
       Append_Line (Buffer, "Buffer (Tail) := Value;", 4);
+      if Has_Length_Model then
+         Append_Line (Buffer, "Lengths (Tail) := Value_Length;", 4);
+         if Single_Slot_Length_Model then
+            Append_Line (Buffer, "Stored_Length_Value := Value_Length;", 4);
+         end if;
+      end if;
       if Heap_Value then
          Append_Line (Buffer, "Value := " & Buffer_Default & ";", 4);
       end if;
@@ -13335,12 +13830,26 @@ package body Safe_Frontend.Ada_Emit is
          "procedure Try_Receive (Value : "
          & Receive_Mode
          & Element_Type
+         & (if Has_Length_Model then "; Value_Length : out Natural" else "")
          & "; Success : out Boolean) is",
          2);
       Append_Line (Buffer, "begin", 2);
       Append_Line (Buffer, "if Count > 0 then", 3);
       Append_Line (Buffer, "Value := Buffer (Head);", 4);
+      if Has_Length_Model then
+         if Single_Slot_Length_Model then
+            Append_Line (Buffer, "Value_Length := Stored_Length_Value;", 4);
+         else
+            Append_Line (Buffer, "Value_Length := Lengths (Head);", 4);
+         end if;
+      end if;
       Append_Line (Buffer, "Buffer (Head) := " & Buffer_Default & ";", 4);
+      if Has_Length_Model then
+         Append_Line (Buffer, "Lengths (Head) := 0;", 4);
+         if Single_Slot_Length_Model then
+            Append_Line (Buffer, "Stored_Length_Value := 0;", 4);
+         end if;
+      end if;
       Append_Line (Buffer, "if Head = " & Index_Subtype & "'Last then", 4);
       Append_Line (Buffer, "Head := " & Index_Subtype & "'First;", 5);
       Append_Line (Buffer, "else", 4);
@@ -13350,6 +13859,9 @@ package body Safe_Frontend.Ada_Emit is
       Append_Line (Buffer, "Success := True;", 4);
       Append_Line (Buffer, "else", 3);
       Append_Line (Buffer, "Value := " & Buffer_Default & ";", 4);
+      if Has_Length_Model then
+         Append_Line (Buffer, "Value_Length := 0;", 4);
+      end if;
       Append_Line (Buffer, "Success := False;", 4);
       Append_Line (Buffer, "end if;", 3);
       Append_Line (Buffer, "end Try_Receive;", 2);

@@ -23,7 +23,6 @@ from .harness_common import (
 COMPILER_ROOT = REPO_ROOT / "compiler_impl"
 STDLIB_ROOT = COMPILER_ROOT / "stdlib"
 STDLIB_ADA_DIR = STDLIB_ROOT / "ada"
-SAFE_RUNTIME_TEMPLATE = STDLIB_ROOT / "ada" / "safe_runtime.ads"
 GENERATED_SUPPORT_MARKERS = (
     "--  Generated Safe print support",
     "--  Safe Language Runtime Type Definitions",
@@ -249,18 +248,6 @@ def structural_assertions(path: Path, required_fragments: list[str]) -> list[str
     for fragment in required_fragments:
         require(fragment in text, f"{display_path(path)} missing required fragment: {fragment}")
     return required_fragments
-
-
-def safe_runtime_matches_template(ada_dir: Path) -> dict[str, str]:
-    emitted = SAFE_RUNTIME_TEMPLATE
-    require(emitted.exists(), f"missing shared stdlib runtime template {display_path(emitted)}")
-    template_text = SAFE_RUNTIME_TEMPLATE.read_text(encoding="utf-8")
-    emitted_text = emitted.read_text(encoding="utf-8")
-    require(emitted_text == template_text, "shared safe_runtime.ads drifted from template path")
-    return {
-        "emitted": sha256_file(emitted),
-        "template": sha256_file(SAFE_RUNTIME_TEMPLATE),
-    }
 
 
 def compile_emitted_ada(
