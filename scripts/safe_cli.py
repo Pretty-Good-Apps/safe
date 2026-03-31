@@ -29,6 +29,12 @@ from _lib.embedded_eval import (
     write_support_files,
 )
 from _lib.harness_common import ensure_sdkroot, run_capture, run_passthrough
+from _lib.proof_eval import (
+    prepare_proof_toolchain,
+    run_source_proof,
+    safe_prove_root,
+    summary_counts,
+)
 from _lib.pr111_language_eval import (
     COMPILER_ROOT,
     REPO_ROOT,
@@ -46,6 +52,7 @@ from _lib.pr111_language_eval import (
 
 USAGE = """usage:
   safe build <file.safe>
+  safe prove [--verbose] [file.safe]
   safe deploy [--target stm32f4] --board stm32f4-discovery [--simulate] [--watch-symbol NAME --expect-value N] [--timeout SECONDS] <file.safe>
   safe run   <file.safe>
   safe check <safec check args...>
@@ -97,6 +104,24 @@ def reject_multi_file_root(command: str) -> int:
     return 1
 
 
+def prove_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="safe prove",
+        description="Run the emitted GNATprove audit for one or more Safe sources.",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Replay captured failing-stage tool output.",
+    )
+    parser.add_argument(
+        "source",
+        nargs="?",
+        help="Safe source to prove. If omitted, prove all .safe files in the current directory.",
+    )
+    return parser
+
+
 def deploy_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="safe deploy",
@@ -140,6 +165,14 @@ def pass_through(command: str, args: list[str]) -> int:
     env = ensure_sdkroot(os.environ.copy())
     safec = safec_path()
     return run_subprocess([str(safec), command, *args], cwd=Path.cwd(), env=env)
+
+
+def parse_prove_args(args: list[str]) -> argparse.Namespace | int:
+    parser = prove_parser()
+    try:
+        return parser.parse_args(args)
+    except SystemExit as exc:
+        return int(exc.code)
 
 
 def build_single_file(source_arg: str) -> tuple[dict[str, str], Path] | int:
@@ -197,6 +230,78 @@ def safe_run(source_arg: str) -> int:
         return built
     env, executable = built
     return run_subprocess([str(executable)], cwd=executable.parent, env=env)
+
+
+def display_source_for_user(source: Path, *, cwd: Path) -> str:
+    try:
+        return str(source.relative_to(cwd))
+    except ValueError:
+        return repo_rel_or_abs(source)
+
+
+def format_pass_summary(result: object) -> str:
+    flow = summary_counts(getattr(result, "flow_summary", None))
+    prove = summary_counts(getattr(result, "prove_summary", None))
+    return (
+        f"flow total={flow['total']} justified={flow['justified']} unproved={flow['unproved']}; "
+        f"prove total={prove['total']} justified={prove['justified']} unproved={prove['unproved']}"
+    )
+
+
+def replay_failure_logs(result: object) -> None:
+    stage_output = getattr(result, "stage_output", {})
+    stage = getattr(result, "stage", "")
+    captured = stage_output.get(stage, "")
+    if not captured:
+        return
+    print(f"--- {stage} output ---", file=sys.stderr)
+    print(captured, end="" if captured.endswith("\n") else "\n", file=sys.stderr)
+
+
+def selected_prove_sources(source_arg: str | None, *, cwd: Path) -> list[Path]:
+    if source_arg is not None:
+        return [require_source_file(resolve_source_arg(source_arg, cwd=cwd))]
+    candidates = sorted(path.resolve() for path in cwd.glob("*.safe") if path.is_file())
+    return candidates
+
+
+def safe_prove(args: argparse.Namespace) -> int:
+    cwd = Path.cwd().resolve()
+    sources = selected_prove_sources(args.source, cwd=cwd)
+    if not sources:
+        print("safe prove: no .safe files found in the current directory", file=sys.stderr)
+        return 1
+
+    env = ensure_sdkroot(os.environ.copy())
+    try:
+        toolchain = prepare_proof_toolchain(env=env, build_frontend=False)
+    except (FileNotFoundError, RuntimeError) as exc:
+        print(f"safe prove: {exc}", file=sys.stderr)
+        return 1
+
+    passed = 0
+    failed = 0
+    for source in sources:
+        result = run_source_proof(
+            toolchain=toolchain,
+            source=source,
+            proof_root=safe_prove_root(source),
+            run_check=True,
+        )
+        label = display_source_for_user(source, cwd=cwd)
+        if result.passed:
+            passed += 1
+            print(f"PASS {label} ({format_pass_summary(result)})")
+            continue
+        failed += 1
+        print(f"FAIL {label} [{result.stage}] {result.detail}")
+        if args.verbose:
+            replay_failure_logs(result)
+
+    print(f"{passed} passed, {failed} failed")
+    verdict = "PASS" if failed == 0 else "FAIL"
+    print(f"safe prove: {verdict}")
+    return 0 if failed == 0 else 1
 
 
 def parse_deploy_args(args: list[str]) -> argparse.Namespace | int:
@@ -331,6 +436,11 @@ def main(argv: list[str] | None = None) -> int:
         if len(args) != 2:
             return print_usage()
         return safe_build(args[1])
+    if command == "prove":
+        parsed = parse_prove_args(args[1:])
+        if isinstance(parsed, int):
+            return parsed
+        return safe_prove(parsed)
     if command == "deploy":
         parsed = parse_deploy_args(args[1:])
         if isinstance(parsed, int):

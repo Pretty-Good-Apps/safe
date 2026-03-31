@@ -4,19 +4,17 @@
 from __future__ import annotations
 
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
+from _lib.proof_eval import ProofToolchain, prepare_proof_toolchain, run_source_proof
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 COMPILER_ROOT = REPO_ROOT / "compiler_impl"
 STDLIB_ADA_DIR = COMPILER_ROOT / "stdlib" / "ada"
 SAMPLES_ROOT = REPO_ROOT / "samples" / "rosetta"
-SAFEC_PATH = COMPILER_ROOT / "bin" / "safec"
-ALR_FALLBACK = Path.home() / "bin" / "alr"
 RUN_TIMEOUT_SECONDS = 2.0
 PRINT_SAMPLE = "samples/rosetta/text/hello_print.safe"
 PRODUCER_CONSUMER_SAMPLE = "samples/rosetta/concurrency/producer_consumer.safe"
@@ -28,15 +26,6 @@ GENERATED_SUPPORT_MARKERS = (
 
 def repo_rel(path: Path) -> str:
     return str(path.relative_to(REPO_ROOT))
-
-
-def find_command(name: str, fallback: Path | None = None) -> str:
-    resolved = shutil.which(name)
-    if resolved:
-        return resolved
-    if fallback is not None and fallback.exists():
-        return str(fallback)
-    raise FileNotFoundError(f"required command not found: {name}")
 
 
 def run_command(
@@ -65,14 +54,8 @@ def first_message(completed: subprocess.CompletedProcess[str]) -> str:
     return f"exit code {completed.returncode}"
 
 
-def build_compiler() -> Path:
-    alr = find_command("alr", ALR_FALLBACK)
-    completed = run_command([alr, "build"], cwd=COMPILER_ROOT)
-    if completed.returncode != 0:
-        raise RuntimeError(first_message(completed))
-    if not SAFEC_PATH.exists():
-        raise FileNotFoundError(f"missing safec binary at {SAFEC_PATH}")
-    return SAFEC_PATH
+def build_toolchain() -> ProofToolchain:
+    return prepare_proof_toolchain(env=os.environ.copy())
 
 
 def print_summary(*, passed: int, failures: list[tuple[str, str]]) -> None:
@@ -233,14 +216,14 @@ def stage_error(stage: str, detail: str) -> str:
 
 def run_sample(
     *,
-    safec: Path,
+    toolchain: ProofToolchain,
     sample: Path,
     temp_root: Path,
 ) -> str | None:
     sample_label = repo_rel(sample)
 
     try:
-        completed = run_command([str(safec), "check", sample_label], cwd=REPO_ROOT)
+        completed = run_command([str(toolchain.safec), "check", sample_label], cwd=REPO_ROOT)
     except subprocess.TimeoutExpired:
         return stage_error("check", "timed out")
     if completed.returncode != 0:
@@ -250,7 +233,7 @@ def run_sample(
     ensure_build_dirs(paths)
 
     emit_command = [
-        str(safec),
+        str(toolchain.safec),
         "emit",
         sample_label,
         "--out-dir",
@@ -280,9 +263,8 @@ def run_sample(
         paths["main"].write_text(driver_text(sample, unit_name), encoding="utf-8")
     paths["gpr"].write_text(project_text(paths), encoding="utf-8")
 
-    alr = find_command("alr", ALR_FALLBACK)
     build_command = [
-        alr,
+        toolchain.alr,
         "exec",
         "--",
         "gprbuild",
@@ -310,12 +292,21 @@ def run_sample(
     if expected is not None and completed.stdout != expected:
         return stage_error("run", f"unexpected stdout {completed.stdout!r}")
 
+    proof_result = run_source_proof(
+        toolchain=toolchain,
+        source=sample,
+        proof_root=paths["root"] / "prove",
+        run_check=True,
+    )
+    if not proof_result.passed:
+        return stage_error("prove", proof_result.detail)
+
     return None
 
 
 def main() -> int:
     try:
-        safec = build_compiler()
+        toolchain = build_toolchain()
     except (FileNotFoundError, RuntimeError) as exc:
         print(f"run_samples: ERROR: {exc}", file=sys.stderr)
         return 1
@@ -327,7 +318,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="safe-samples-") as temp_dir:
         temp_root = Path(temp_dir)
         for sample in samples:
-            detail = run_sample(safec=safec, sample=sample, temp_root=temp_root)
+            detail = run_sample(toolchain=toolchain, sample=sample, temp_root=temp_root)
             if detail is None:
                 passed += 1
             else:

@@ -9,47 +9,64 @@ type stack is record
 
 function reset (s : mut stack)
 
-   s.size = 0
    for i in slot
-      s.data (i) = 0
+      if i <= s.size
+         s.data (i) = 0
+   s.size = 0
 
 function push (s : mut stack; value : item)
 
-   var next_size : depth = s.size
    if s.size < depth.last
-      next_size = s.size + 1
-      s.size = next_size
-      s.data (slot (next_size)) = value
+      if s.size == 0
+         s.size = 1
+         s.data (1) = value
+      else if s.size == 1
+         s.size = 2
+         s.data (2) = value
+      else if s.size == 2
+         s.size = 3
+         s.data (3) = value
+      else if s.size == 3
+         s.size = 4
+         s.data (4) = value
+      else if s.size == 4
+         s.size = 5
+         s.data (5) = value
+      else if s.size == 5
+         s.size = 6
+         s.data (6) = value
+      else if s.size == 6
+         s.size = 7
+         s.data (7) = value
+      else
+         s.size = 8
+         s.data (8) = value
 
 function pop (s : stack) returns item
-   var result : item = 0
-
    case s.size
       when 1
-         result = s.data (1)
+         return s.data (1)
 
       when 2
-         result = s.data (2)
+         return s.data (2)
 
       when 3
-         result = s.data (3)
+         return s.data (3)
 
       when 4
-         result = s.data (4)
+         return s.data (4)
 
       when 5
-         result = s.data (5)
+         return s.data (5)
 
       when 6
-         result = s.data (6)
+         return s.data (6)
 
       when 7
-         result = s.data (7)
+         return s.data (7)
 
       when 8
-         result = s.data (8)
+         return s.data (8)
 
       when others
-         result = 0
-
-   return result
+         return 0

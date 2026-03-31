@@ -22,6 +22,18 @@ python3 scripts/safe_cli.py build samples/rosetta/text/hello_print.safe
 python3 scripts/safe_cli.py run samples/rosetta/text/hello_print.safe
 ```
 
+The same wrapper now also has a proof-audit path:
+
+```bash
+python3 scripts/safe_cli.py prove samples/rosetta/text/hello_print.safe
+```
+
+`safe prove` runs `safec check`, `safec emit`, compiles the emitted Ada, then
+runs GNATprove `flow` and `prove` with the repo's current emitted-proof policy.
+Unlike `safe build` / `safe run`, it also accepts package roots with leading
+`with` clauses because it proves emitted packages directly instead of
+synthesizing a runnable `main`.
+
 This tutorial still uses the raw `safec emit` path and a handwritten Ada driver
 because it is focused on emitted artifacts and on a tasking example that needs
 an explicit host-side exit.
@@ -244,9 +256,13 @@ end to end on this host:
 - This is a host-local smoke path, not a replacement for
   `scripts/run_tests.py`, `scripts/run_samples.py`, or `scripts/run_proofs.py`.
 - CI now runs the checked-in Rosetta sample sweep in `scripts/run_samples.py`,
-  which checks, emits, builds, and executes the sample corpus. This tutorial is
-  still useful when you want to inspect the emitted artifacts and native driver
-  steps manually on a local host.
+  which checks, emits, proves, builds, and executes the sample corpus. This
+  tutorial is still useful when you want to inspect the emitted artifacts and
+  native driver steps manually on a local host.
+- That "prove as well as run" policy is intentional: when a sample drifts out
+  of the proved subset, we want the failure to appear as a source-level proof
+  gap with a suggested guard or more explicit control-flow shape, not as a
+  latent discrepancy hidden behind a passing runtime smoke test.
 - For a checked-in single-file runnable print example, see
   `samples/rosetta/text/hello_print.safe`, which the sample sweep now emits,
   builds, runs, and checks for exact stdout through the emitted `main.adb`.
@@ -255,6 +271,9 @@ end to end on this host:
 - `safe build` and `safe run` in this repo are still single-file only. Roots
   with leading `with` clauses still use the manual `safec emit` plus
   `gprbuild` flow shown in this tutorial.
+- `safe prove` is intentionally narrower than the full assurance story. It is
+  the emitted-Ada GNATprove audit command only; it does not run the separate
+  embedded/Jorvik evidence lane used for admitted concurrency runtime claims.
 - This tutorial assumes a supported Linux host with the local Alire GNAT
   toolchain available on `PATH`.
 - If you want a minimal emission-only sample instead, use

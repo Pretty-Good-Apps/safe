@@ -1,0 +1,599 @@
+"""Shared helpers for emitted GNATprove evaluation."""
+
+from __future__ import annotations
+
+import os
+import re
+import shutil
+import subprocess
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from .harness_common import COMPILER_ROOT, REPO_ROOT, find_command, require_safec
+from .pr09_emit import emitted_body_file
+from .pr111_language_eval import STDLIB_ADA_DIR
+
+ALR_FALLBACK = Path.home() / "bin" / "alr"
+GNATPROVE_FALLBACK = Path.home() / ".alire" / "bin" / "gnatprove"
+
+FLOW_SWITCHES = [
+    "--mode=flow",
+    "--report=all",
+    "--warnings=error",
+]
+
+PROVE_SWITCHES = [
+    "--mode=prove",
+    "--level=2",
+    "--prover=cvc5,z3,altergo",
+    "--steps=0",
+    "--timeout=120",
+    "--report=all",
+    "--warnings=error",
+    "--checks-as-errors=on",
+]
+
+
+SummaryCell = dict[str, int | str]
+SummaryRow = dict[str, SummaryCell]
+SummaryTable = dict[str, SummaryRow]
+WITH_CLAUSE_RE = re.compile(r"^with\s+(.+);$", re.IGNORECASE)
+
+
+@dataclass(frozen=True)
+class ProofToolchain:
+    safec: Path
+    alr: str
+    gnatprove: str
+    env: dict[str, str]
+
+
+@dataclass
+class ProofRunResult:
+    source: Path
+    proof_root: Path
+    passed: bool
+    stage: str
+    detail: str = ""
+    flow_summary: SummaryRow | None = None
+    prove_summary: SummaryRow | None = None
+    stage_output: dict[str, str] = field(default_factory=dict)
+
+
+def run_command(
+    argv: list[str],
+    *,
+    cwd: Path,
+    env: dict[str, str] | None = None,
+    timeout: int | None = None,
+) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(
+            argv,
+            cwd=cwd,
+            env=os.environ.copy() if env is None else env,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        stdout = exc.stdout or ""
+        stderr = exc.stderr or ""
+        if stderr:
+            stderr += "\n"
+        stderr += f"timed out after {timeout}s"
+        return subprocess.CompletedProcess(argv, 124, stdout, stderr)
+
+
+def first_message(completed: subprocess.CompletedProcess[str]) -> str:
+    for stream in (completed.stderr, completed.stdout):
+        for line in stream.splitlines():
+            stripped = line.strip()
+            if stripped:
+                return stripped
+    return f"exit code {completed.returncode}"
+
+
+def format_completed_output(completed: subprocess.CompletedProcess[str]) -> str:
+    parts: list[str] = []
+    if completed.stdout:
+        parts.append(completed.stdout)
+    if completed.stderr:
+        if parts and not parts[-1].endswith("\n"):
+            parts.append("\n")
+        parts.append(completed.stderr)
+    return "".join(parts)
+
+
+def prepare_proof_toolchain(
+    *,
+    env: dict[str, str] | None = None,
+    build_frontend: bool = True,
+) -> ProofToolchain:
+    tool_env = os.environ.copy() if env is None else env.copy()
+    alr = find_command("alr", ALR_FALLBACK)
+    gnatprove = find_command("gnatprove", GNATPROVE_FALLBACK)
+    if build_frontend:
+        completed = run_command([alr, "build"], cwd=COMPILER_ROOT, env=tool_env)
+        if completed.returncode != 0:
+            raise RuntimeError(first_message(completed))
+    safec = require_safec()
+    return ProofToolchain(safec=safec, alr=alr, gnatprove=gnatprove, env=tool_env)
+
+
+def safe_prove_root(source: Path) -> Path:
+    return source.parent / "obj" / source.stem / "prove"
+
+
+def prepare_proof_root(root: Path) -> dict[str, Path]:
+    shutil.rmtree(root, ignore_errors=True)
+    paths = {
+        "root": root,
+        "out": root / "out",
+        "iface": root / "iface",
+        "ada": root / "ada",
+    }
+    for path in paths.values():
+        path.mkdir(parents=True, exist_ok=True)
+    return paths
+
+
+def leading_with_dependencies(source: Path) -> list[str]:
+    dependencies: list[str] = []
+    with source.open("r", encoding="utf-8") as handle:
+        for raw_line in handle:
+            line = raw_line.strip()
+            if not line or line.startswith("--"):
+                continue
+            match = WITH_CLAUSE_RE.match(line)
+            if match is None:
+                break
+            for item in match.group(1).split(","):
+                dependency = item.strip()
+                if dependency:
+                    dependencies.append(dependency)
+    return dependencies
+
+
+def local_dependency_source(source_dir: Path, package_name: str) -> Path | None:
+    direct = source_dir / f"{package_name}.safe"
+    if direct.exists():
+        return direct.resolve()
+    needle = f"{package_name}.safe".lower()
+    for candidate in source_dir.glob("*.safe"):
+        if candidate.name.lower() == needle:
+            return candidate.resolve()
+    return None
+
+
+def mirror_with_clauses_into_emitted_unit(source: Path, ada_dir: Path) -> None:
+    dependencies = leading_with_dependencies(source)
+    if not dependencies:
+        return
+
+    lower_dependencies = [dependency.lower() for dependency in dependencies]
+    for suffix in (".ads", ".adb"):
+        unit_path = ada_dir / f"{source.stem.lower()}{suffix}"
+        if not unit_path.exists():
+            continue
+        lines = unit_path.read_text(encoding="utf-8").splitlines()
+        insertion = 0
+        existing_withs: set[str] = set()
+        while insertion < len(lines):
+            stripped = lines[insertion].strip()
+            if not stripped:
+                insertion += 1
+                continue
+            if stripped.lower().startswith("with ") and stripped.endswith(";"):
+                existing_withs.add(stripped[5:-1].strip().lower())
+                insertion += 1
+                continue
+            if stripped.lower().startswith("pragma ") and stripped.endswith(";"):
+                insertion += 1
+                continue
+            break
+
+        new_withs = [
+            f"with {dependency};"
+            for dependency, lowered in zip(dependencies, lower_dependencies)
+            if lowered not in existing_withs
+        ]
+        if not new_withs:
+            continue
+        updated = lines[:insertion] + new_withs + lines[insertion:]
+        unit_path.write_text("\n".join(updated) + "\n", encoding="utf-8")
+
+
+def write_emitted_project(ada_dir: Path) -> Path:
+    lines = [
+        "project Build is",
+        f'   for Source_Dirs use (".", "{STDLIB_ADA_DIR}");',
+        '   for Object_Dir use "obj";',
+    ]
+    if (ada_dir / "gnat.adc").exists():
+        lines.extend(
+            [
+                "   package Compiler is",
+                '      for Default_Switches ("Ada") use ("-gnatec=gnat.adc");',
+                "   end Compiler;",
+            ]
+        )
+    lines.append("end Build;")
+
+    gpr_path = ada_dir / "build.gpr"
+    gpr_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return gpr_path
+
+
+def compile_emitted_ada(
+    ada_dir: Path,
+    *,
+    toolchain: ProofToolchain,
+) -> subprocess.CompletedProcess[str]:
+    gpr_path = write_emitted_project(ada_dir)
+    argv = [
+        toolchain.alr,
+        "exec",
+        "--",
+        "gprbuild",
+        "-c",
+        "-P",
+        str(gpr_path),
+        emitted_body_file(ada_dir).name,
+    ]
+    if (ada_dir / "gnat.adc").exists():
+        argv.extend(["-cargs", f"-gnatec={ada_dir / 'gnat.adc'}"])
+    return run_command(argv, cwd=COMPILER_ROOT, env=toolchain.env)
+
+
+def parse_summary_cell(cell: str) -> SummaryCell:
+    stripped = cell.strip()
+    if stripped == ".":
+        return {"count": 0, "detail": ""}
+    match = re.match(r"^(?P<count>\d+)(?: \((?P<detail>.*)\))?$", stripped)
+    if match is None:
+        raise RuntimeError(f"unexpected GNATprove summary cell: {cell!r}")
+    return {
+        "count": int(match.group("count")),
+        "detail": match.group("detail") or "",
+    }
+
+
+def parse_gnatprove_summary(path: Path) -> SummaryTable:
+    if not path.exists():
+        raise FileNotFoundError(f"missing GNATprove summary: {path}")
+    lines = path.read_text(encoding="utf-8").splitlines()
+    expected_header = [
+        "SPARK Analysis results",
+        "Total",
+        "Flow",
+        "Provers",
+        "Justified",
+        "Unproved",
+    ]
+
+    header_index: int | None = None
+    for index, line in enumerate(lines):
+        parts = re.split(r"\s{2,}", line.strip())
+        if parts == expected_header:
+            header_index = index
+            break
+    if header_index is None:
+        raise RuntimeError(f"missing GNATprove summary table header in {path}")
+
+    rows: SummaryTable = {}
+    saw_row = False
+    for line in lines[header_index + 1 :]:
+        stripped = line.strip()
+        if not stripped:
+            if saw_row:
+                break
+            continue
+        if set(stripped) == {"-"}:
+            continue
+        parts = re.split(r"\s{2,}", stripped)
+        if len(parts) != 6:
+            raise RuntimeError(f"malformed GNATprove summary row: {stripped!r}")
+        label, total, flow, provers, justified, unproved = parts
+        rows[label] = {
+            "total": parse_summary_cell(total),
+            "flow": parse_summary_cell(flow),
+            "provers": parse_summary_cell(provers),
+            "justified": parse_summary_cell(justified),
+            "unproved": parse_summary_cell(unproved),
+        }
+        saw_row = True
+
+    if "Total" not in rows:
+        raise RuntimeError(f"GNATprove summary missing Total row in {path}")
+    return rows
+
+
+def emit_source_for_proof(
+    *,
+    toolchain: ProofToolchain,
+    source: Path,
+    paths: dict[str, Path],
+    interface_search_dir: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
+    argv = [
+        str(toolchain.safec),
+        "emit",
+        str(source),
+        "--out-dir",
+        str(paths["out"]),
+        "--interface-dir",
+        str(paths["iface"]),
+        "--ada-out-dir",
+        str(paths["ada"]),
+    ]
+    if interface_search_dir is not None:
+        argv.extend(["--interface-search-dir", str(interface_search_dir)])
+    completed = run_command(
+        argv,
+        cwd=REPO_ROOT,
+        env=toolchain.env,
+    )
+    return completed
+
+
+def ensure_interface_dependencies(
+    *,
+    toolchain: ProofToolchain,
+    source: Path,
+    paths: dict[str, Path],
+    stage_output: dict[str, str],
+    log_stage: str,
+    visited: set[Path] | None = None,
+) -> str | None:
+    seen = set() if visited is None else visited
+    key = source.resolve()
+    if key in seen:
+        return None
+    seen.add(key)
+
+    logs: list[str] = []
+    for dependency_name in leading_with_dependencies(source):
+        dep_source = local_dependency_source(source.parent, dependency_name)
+        if dep_source is None or dep_source == source.resolve():
+            continue
+        safei_path = paths["iface"] / f"{dep_source.stem.lower()}.safei.json"
+        if safei_path.exists():
+            continue
+        error = ensure_interface_dependencies(
+            toolchain=toolchain,
+            source=dep_source,
+            paths=paths,
+            stage_output=stage_output,
+            log_stage=log_stage,
+            visited=seen,
+        )
+        if error is not None:
+            return error
+
+        dep_completed = run_command(
+            [
+                str(toolchain.safec),
+                "emit",
+                str(dep_source),
+                "--out-dir",
+                str(paths["out"]),
+                "--interface-dir",
+                str(paths["iface"]),
+                "--ada-out-dir",
+                str(paths["ada"]),
+                "--interface-search-dir",
+                str(paths["iface"]),
+            ],
+            cwd=REPO_ROOT,
+            env=toolchain.env,
+        )
+        captured = format_completed_output(dep_completed)
+        if captured:
+            logs.append(captured)
+        if dep_completed.returncode != 0:
+            stage_output[log_stage] = "".join(logs)
+            return (
+                f"dependency interface emit failed for {dep_source.name}: "
+                f"{first_message(dep_completed)}"
+            )
+        if not safei_path.exists():
+            stage_output[log_stage] = "".join(logs)
+            return f"dependency interface emit missing {safei_path.name}"
+        mirror_with_clauses_into_emitted_unit(dep_source, paths["ada"])
+
+    if logs:
+        stage_output[log_stage] = stage_output.get(log_stage, "") + "".join(logs)
+    return None
+
+
+def summary_counts(row: SummaryRow | None) -> dict[str, int]:
+    if row is None:
+        return {"total": 0, "justified": 0, "unproved": 0}
+    return {
+        "total": int(row["total"]["count"]),
+        "justified": int(row["justified"]["count"]),
+        "unproved": int(row["unproved"]["count"]),
+    }
+
+
+def run_gnatprove_project(
+    *,
+    project_dir: Path,
+    project_file: str,
+    toolchain: ProofToolchain,
+    prove_switches: list[str] | None = None,
+    command_timeout: int | None = None,
+) -> tuple[bool, str]:
+    summary_path = project_dir / "obj" / "gnatprove" / "gnatprove.out"
+    for mode, switches in (
+        ("flow", FLOW_SWITCHES),
+        ("prove", PROVE_SWITCHES if prove_switches is None else prove_switches),
+    ):
+        completed = run_command(
+            [
+                toolchain.alr,
+                "exec",
+                "--",
+                toolchain.gnatprove,
+                "-P",
+                project_file,
+                *switches,
+            ],
+            cwd=project_dir,
+            env=toolchain.env,
+            timeout=command_timeout,
+        )
+        if completed.returncode != 0:
+            return False, f"{mode} failed: {first_message(completed)}"
+        try:
+            parse_gnatprove_summary(summary_path)
+        except (FileNotFoundError, RuntimeError) as exc:
+            return False, f"{mode} summary error: {exc}"
+    return True, ""
+
+
+def run_source_proof(
+    *,
+    toolchain: ProofToolchain,
+    source: Path,
+    proof_root: Path,
+    run_check: bool,
+    prove_switches: list[str] | None = None,
+    command_timeout: int | None = None,
+) -> ProofRunResult:
+    result = ProofRunResult(
+        source=source,
+        proof_root=proof_root,
+        passed=False,
+        stage="check" if run_check else "emit",
+    )
+
+    paths = prepare_proof_root(proof_root)
+    dependency_error = ensure_interface_dependencies(
+        toolchain=toolchain,
+        source=source,
+        paths=paths,
+        stage_output=result.stage_output,
+        log_stage=result.stage,
+    )
+    if dependency_error is not None:
+        result.detail = dependency_error
+        return result
+
+    interface_search_dir = paths["iface"] if any(paths["iface"].glob("*.safei.json")) else None
+
+    if run_check:
+        check_completed = run_command(
+            [
+                str(toolchain.safec),
+                "check",
+                str(source),
+                *(
+                    ["--interface-search-dir", str(interface_search_dir)]
+                    if interface_search_dir is not None
+                    else []
+                ),
+            ],
+            cwd=REPO_ROOT,
+            env=toolchain.env,
+        )
+        result.stage_output["check"] = result.stage_output.get("check", "") + format_completed_output(
+            check_completed
+        )
+        if check_completed.returncode != 0:
+            result.detail = f"check failed: {first_message(check_completed)}"
+            return result
+
+    emit_completed = emit_source_for_proof(
+        toolchain=toolchain,
+        source=source,
+        paths=paths,
+        interface_search_dir=interface_search_dir,
+    )
+    result.stage = "emit"
+    result.stage_output["emit"] = format_completed_output(emit_completed)
+    if emit_completed.returncode != 0:
+        result.detail = f"emit failed: {first_message(emit_completed)}"
+        return result
+    mirror_with_clauses_into_emitted_unit(source, paths["ada"])
+
+    compile_completed = compile_emitted_ada(paths["ada"], toolchain=toolchain)
+    result.stage = "compile"
+    result.stage_output["compile"] = format_completed_output(compile_completed)
+    if compile_completed.returncode != 0:
+        result.detail = f"compile failed: {first_message(compile_completed)}"
+        return result
+
+    gpr_path = write_emitted_project(paths["ada"])
+    adc_path = paths["ada"] / "gnat.adc"
+    summary_path = paths["ada"] / "obj" / "gnatprove" / "gnatprove.out"
+
+    for mode, switches in (
+        ("flow", FLOW_SWITCHES),
+        ("prove", PROVE_SWITCHES if prove_switches is None else prove_switches),
+    ):
+        argv = [
+            toolchain.alr,
+            "exec",
+            "--",
+            toolchain.gnatprove,
+            "-P",
+            str(gpr_path),
+            *switches,
+        ]
+        if adc_path.exists():
+            argv.extend(["-cargs", f"-gnatec={adc_path}"])
+        completed = run_command(
+            argv,
+            cwd=COMPILER_ROOT,
+            env=toolchain.env,
+            timeout=command_timeout,
+        )
+        result.stage = mode
+        result.stage_output[mode] = format_completed_output(completed)
+        if completed.returncode != 0:
+            result.detail = f"{mode} failed: {first_message(completed)}"
+            return result
+        try:
+            rows = parse_gnatprove_summary(summary_path)
+        except (FileNotFoundError, RuntimeError) as exc:
+            result.detail = f"{mode} summary error: {exc}"
+            return result
+
+        total_row = rows["Total"]
+        if mode == "flow":
+            result.flow_summary = total_row
+        else:
+            result.prove_summary = total_row
+        justified = int(total_row["justified"]["count"])
+        unproved = int(total_row["unproved"]["count"])
+        if justified != 0 or unproved != 0:
+            result.detail = f"{mode} summary has justified={justified}, unproved={unproved}"
+            return result
+
+    result.passed = True
+    result.detail = ""
+    return result
+
+
+__all__ = [
+    "FLOW_SWITCHES",
+    "PROVE_SWITCHES",
+    "ProofRunResult",
+    "ProofToolchain",
+    "compile_emitted_ada",
+    "emit_source_for_proof",
+    "first_message",
+    "format_completed_output",
+    "parse_gnatprove_summary",
+    "prepare_proof_root",
+    "prepare_proof_toolchain",
+    "run_command",
+    "run_gnatprove_project",
+    "run_source_proof",
+    "safe_prove_root",
+    "summary_counts",
+    "write_emitted_project",
+]
