@@ -17013,6 +17013,11 @@ package body Safe_Frontend.Ada_Emit is
       if not Unit.Statements.Is_Empty
         or else not Deferred_Package_Init_Names.Is_Empty
       then
+         Append_Gnatprove_Warning_Suppression
+           (Body_Inner,
+            "has no effect",
+            "generated package elaboration helper is intentional",
+            1);
          Append_Line (Body_Inner, "procedure " & Generated_Elaborate_Name & " is", 1);
          Append_Line (Body_Inner, "begin", 1);
          declare
@@ -17050,6 +17055,10 @@ package body Safe_Frontend.Ada_Emit is
          Render_Required_Statement_Suite
            (Body_Inner, Unit, Document, Unit.Statements, State, 2, "");
          Append_Line (Body_Inner, "end " & Generated_Elaborate_Name & ";", 1);
+         Append_Gnatprove_Warning_Restore
+           (Body_Inner,
+            "has no effect",
+            1);
          Append_Line (Body_Inner);
          Append_Line (Body_Inner, "begin");
          Append_Line (Body_Inner, Generated_Elaborate_Name & ";", 1);
