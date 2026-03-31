@@ -173,6 +173,10 @@ package body Safe_Frontend.Ada_Emit is
    function Has_Active_Cleanup_Items (State : Emit_State) return Boolean;
    function Starts_With (Text : String; Prefix : String) return Boolean;
    function Ada_Safe_Name (Name : String) return String;
+   function Ada_Qualified_Name (Name : String) return String;
+   function Render_Enum_Literal_Name
+     (Literal_Name   : String;
+      Enum_Type_Name : String) return String;
    function Sanitized_Helper_Name (Name : String) return String;
    function Normalize_Aspect_Name
      (Subprogram_Name : String;
@@ -1201,6 +1205,46 @@ package body Safe_Frontend.Ada_Emit is
       end if;
       return Name;
    end Ada_Safe_Name;
+
+   function Ada_Qualified_Name (Name : String) return String is
+      Dot : constant Natural := Ada.Strings.Fixed.Index (Name, ".");
+   begin
+      if Dot = 0 then
+         return Ada_Safe_Name (Name);
+      elsif Dot = Name'First then
+         return Ada_Qualified_Name (Name (Dot + 1 .. Name'Last));
+      elsif Dot = Name'Last then
+         return Ada_Qualified_Name (Name (Name'First .. Dot - 1));
+      end if;
+
+      return
+        Ada_Qualified_Name (Name (Name'First .. Dot - 1))
+        & "."
+        & Ada_Qualified_Name (Name (Dot + 1 .. Name'Last));
+   end Ada_Qualified_Name;
+
+   function Render_Enum_Literal_Name
+     (Literal_Name   : String;
+      Enum_Type_Name : String) return String
+   is
+      Literal_Dot : constant Natural := Ada.Strings.Fixed.Index (Literal_Name, ".");
+      Type_Dot    : constant Natural :=
+        Ada.Strings.Fixed.Index
+          (Enum_Type_Name,
+           ".",
+           Going => Ada.Strings.Backward);
+   begin
+      if Literal_Dot > 0 then
+         return Ada_Qualified_Name (Literal_Name);
+      elsif Type_Dot > 0 then
+         return
+           Ada_Qualified_Name (Enum_Type_Name (Enum_Type_Name'First .. Type_Dot - 1))
+           & "."
+           & Ada_Safe_Name (Literal_Name);
+      end if;
+
+      return Ada_Safe_Name (Literal_Name);
+   end Render_Enum_Literal_Name;
 
    function Normalize_Aspect_Name
      (Subprogram_Name : String;
@@ -3627,6 +3671,10 @@ package body Safe_Frontend.Ada_Emit is
             return (if Value.Bool_Value then "true" else "false");
          when GM.Scalar_Value_Character =>
             return FT.To_String (Value.Text);
+         when GM.Scalar_Value_Enum =>
+            return
+              Render_Enum_Literal_Name
+                (FT.To_String (Value.Text), FT.To_String (Value.Type_Name));
          when others =>
             return "";
       end case;
@@ -5115,6 +5163,19 @@ package body Safe_Frontend.Ada_Emit is
            & " .. "
            & Trim_Image (Type_Item.High)
            & ";";
+      elsif Kind = "enum" then
+         Result := SU.To_Unbounded_String ("type " & Name & " is (");
+         for Index in Type_Item.Enum_Literals.First_Index .. Type_Item.Enum_Literals.Last_Index loop
+            if Index /= Type_Item.Enum_Literals.First_Index then
+               Result := Result & SU.To_Unbounded_String (", ");
+            end if;
+            Result :=
+              Result
+              & SU.To_Unbounded_String
+                  (Ada_Safe_Name (FT.To_String (Type_Item.Enum_Literals (Index))));
+         end loop;
+         Result := Result & SU.To_Unbounded_String (");");
+         return SU.To_String (Result);
       elsif Kind = "binary" then
          return
            "type "
@@ -5813,6 +5874,10 @@ package body Safe_Frontend.Ada_Emit is
             return SU.To_String (Result);
          when CM.Expr_Bool =>
             return (if Expr.Bool_Value then "true" else "false");
+         when CM.Expr_Enum_Literal =>
+            return
+              Render_Enum_Literal_Name
+                (FT.To_String (Expr.Name), FT.To_String (Expr.Type_Name));
          when CM.Expr_Null =>
             return "null";
          when CM.Expr_Ident =>
@@ -6403,6 +6468,13 @@ package body Safe_Frontend.Ada_Emit is
                return Render_String_Expr (Unit, Document, Expr, State);
             elsif Base_Kind = "boolean" or else Base_Name = "boolean" then
                return "(if " & Value_Image & " then ""true"" else ""false"")";
+            elsif Base_Kind = "enum" then
+               return
+                 "Ada.Characters.Handling.To_Lower (Ada.Strings.Fixed.Trim ("
+                 & Render_Type_Name (Unit, Document, FT.To_String (Base_Info.Name))
+                 & "'Image ("
+                 & Value_Image
+                 & "), Ada.Strings.Both))";
             elsif Is_Integer_Type (Unit, Document, Info) then
                return
                  "Ada.Strings.Fixed.Trim (Long_Long_Integer'Image (Long_Long_Integer ("
@@ -15190,6 +15262,10 @@ package body Safe_Frontend.Ada_Emit is
       if Ada.Strings.Fixed.Index (SU.To_String (Body_Inner), "Ada.Strings.Fixed.") > 0 then
          Add_Body_With ("Ada.Strings");
          Add_Body_With ("Ada.Strings.Fixed");
+      end if;
+      if Ada.Strings.Fixed.Index (SU.To_String (Body_Inner), "Ada.Characters.Handling.") > 0 then
+         Add_Body_With ("Ada.Characters");
+         Add_Body_With ("Ada.Characters.Handling");
       end if;
       if Ada.Strings.Fixed.Index (SU.To_String (Body_Inner), "Interfaces.") > 0 then
          Add_Body_With ("Interfaces");

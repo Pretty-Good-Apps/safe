@@ -147,6 +147,18 @@ INTERFACE_CASES = [
         REPO_ROOT / "tests" / "interfaces" / "client_import_entry_rejected.safe",
         1,
     ),
+    (
+        "enum",
+        REPO_ROOT / "tests" / "interfaces" / "provider_enum.safe",
+        REPO_ROOT / "tests" / "interfaces" / "client_enum.safe",
+        0,
+    ),
+    (
+        "enum-unqualified-import-rejected",
+        REPO_ROOT / "tests" / "interfaces" / "provider_enum.safe",
+        REPO_ROOT / "tests" / "interfaces" / "client_enum_unqualified.safe",
+        1,
+    ),
 ]
 
 STATIC_INTERFACE_CASES = [

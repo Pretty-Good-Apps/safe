@@ -1,0 +1,13 @@
+package provider_enum
+
+   public type color is (red, green, blue);
+
+   public function next (value : color) returns color
+
+      case value
+         when red
+            return green;
+         when green
+            return blue;
+         when others
+            return red;
