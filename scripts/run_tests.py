@@ -14,6 +14,7 @@ from pathlib import Path
 
 from _lib.embedded_eval import parse_monitor_value
 from _lib.harness_common import ensure_sdkroot
+from run_proofs import EMITTED_PROOF_FIXTURES
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 COMPILER_ROOT = REPO_ROOT / "compiler_impl"
@@ -26,6 +27,15 @@ EMBEDDED_SMOKE = REPO_ROOT / "scripts" / "run_embedded_smoke.py"
 VALIDATE_OUTPUT_CONTRACTS = REPO_ROOT / "scripts" / "validate_output_contracts.py"
 VSCODE_README = REPO_ROOT / "editors" / "vscode" / "README.md"
 VSCODE_PACKAGE_JSON = REPO_ROOT / "editors" / "vscode" / "package.json"
+
+EMITTED_GNATPROVE_WARNING_RE = re.compile(
+    r"pragma\s+Warnings\s*\(\s*GNATprove\b.*?\);",
+    re.IGNORECASE | re.DOTALL,
+)
+EMITTED_ASSUME_RE = re.compile(
+    r"pragma\s+Assume\s*\(.*?\);",
+    re.IGNORECASE | re.DOTALL,
+)
 
 # These fixtures live in category directories that do not match the
 # compiler's current acceptance boundary, so keep the expectations explicit.
@@ -648,6 +658,32 @@ OUTPUT_CONTRACT_REJECT_CASES = [
         "subprograms[0].return_is_access_def must be a boolean",
     ),
 ]
+
+EMITTED_PRAGMA_ALLOWLIST = {
+    'pragma Assume (Safe_String_RT.Length (Safe_Channel_Staged_3) = Safe_Channel_Length_3);',
+    'pragma Assume (values_RT.Length (Safe_Channel_Staged_3) = Safe_Channel_Length_3);',
+    'pragma Warnings (GNATprove, Off, "implicit aspect Always_Terminates", Reason => "shared runtime cleanup termination is accepted");',
+    'pragma Warnings (GNATprove, Off, "initialization of", Reason => "generated local cleanup is intentional");',
+    'pragma Warnings (GNATprove, Off, "initialization of", Reason => "generated local initialization is intentional");',
+    'pragma Warnings (GNATprove, Off, "is set by", Reason => "channel results are consumed on the success path only");',
+    'pragma Warnings (GNATprove, Off, "is set by", Reason => "for-of loop item cleanup is intentional");',
+    'pragma Warnings (GNATprove, Off, "is set by", Reason => "generated local cleanup is intentional");',
+    'pragma Warnings (GNATprove, Off, "is set by", Reason => "heap-backed channel staging is intentional");',
+    'pragma Warnings (GNATprove, Off, "statement has no effect", Reason => "for-of loop item cleanup is intentional");',
+    'pragma Warnings (GNATprove, Off, "statement has no effect", Reason => "generated local cleanup is intentional");',
+    'pragma Warnings (GNATprove, Off, "statement has no effect", Reason => "task-local branching is intentionally isolated");',
+    'pragma Warnings (GNATprove, Off, "statement has no effect", Reason => "task-local state updates are intentionally isolated");',
+    'pragma Warnings (GNATprove, Off, "unused assignment", Reason => "deferred heap-backed package initialization is intentional");',
+    'pragma Warnings (GNATprove, Off, "unused assignment", Reason => "generated local cleanup is intentional");',
+    'pragma Warnings (GNATprove, Off, "unused assignment", Reason => "task-local state updates are intentionally isolated");',
+    'pragma Warnings (GNATprove, Off, "unused initial value of", Reason => "generated local cleanup is intentional");',
+    'pragma Warnings (GNATprove, On, "implicit aspect Always_Terminates");',
+    'pragma Warnings (GNATprove, On, "initialization of");',
+    'pragma Warnings (GNATprove, On, "is set by");',
+    'pragma Warnings (GNATprove, On, "statement has no effect");',
+    'pragma Warnings (GNATprove, On, "unused assignment");',
+    'pragma Warnings (GNATprove, On, "unused initial value of");',
+}
 
 EMITTED_SHAPE_CASES = [
     (
@@ -1513,6 +1549,56 @@ def emit_case_ada_text(
     return ada_dir, emitted_text
 
 
+def normalize_snippet_whitespace(text: str) -> str:
+    return " ".join(text.split())
+
+
+def emitted_allowlisted_pragmas(ada_dir: Path) -> dict[str, set[str]]:
+    occurrences: dict[str, set[str]] = {}
+
+    for path in sorted(ada_dir.iterdir()):
+        if path.suffix not in {".adb", ".ads"}:
+            continue
+        emitted_text = path.read_text(encoding="utf-8")
+        for match in EMITTED_GNATPROVE_WARNING_RE.findall(emitted_text):
+            snippet = normalize_snippet_whitespace(match)
+            occurrences.setdefault(snippet, set()).add(path.name)
+        for match in EMITTED_ASSUME_RE.findall(emitted_text):
+            snippet = normalize_snippet_whitespace(match)
+            occurrences.setdefault(snippet, set()).add(path.name)
+
+    return occurrences
+
+
+def run_emitted_pragma_allowlist_case(
+    safec: Path,
+    *,
+    label: str,
+    source: Path,
+    temp_root: Path,
+) -> tuple[bool, str]:
+    try:
+        ada_dir, _ = emit_case_ada_text(
+            safec,
+            label=label,
+            source=source,
+            temp_root=temp_root,
+        )
+    except RuntimeError as exc:
+        return False, str(exc)
+
+    occurrences = emitted_allowlisted_pragmas(ada_dir)
+    unexpected = sorted(set(occurrences) - EMITTED_PRAGMA_ALLOWLIST)
+    if not unexpected:
+        return True, ""
+
+    details = []
+    for snippet in unexpected:
+        files = ", ".join(sorted(occurrences[snippet]))
+        details.append(f"{snippet!r} in {files}")
+    return False, "unexpected emitted pragma(s): " + "; ".join(details)
+
+
 def run_emitted_required_shape_case(
     safec: Path,
     *,
@@ -1760,6 +1846,20 @@ def main() -> int:
                 temp_root=temp_root,
             )
             case_label = f"emitted-shape:{label}:{repo_rel(source)}"
+            if ok:
+                passed += 1
+            else:
+                failures.append((case_label, detail))
+
+        for fixture in EMITTED_PROOF_FIXTURES:
+            source = REPO_ROOT / fixture
+            ok, detail = run_emitted_pragma_allowlist_case(
+                safec,
+                label="pragma-allowlist",
+                source=source,
+                temp_root=temp_root,
+            )
+            case_label = f"emitted-pragma-allowlist:{repo_rel(source)}"
             if ok:
                 passed += 1
             else:
