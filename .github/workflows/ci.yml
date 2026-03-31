@@ -39,3 +39,52 @@ jobs:
           python-version: "3.12"
       - uses: ./.github/actions/setup-alire
       - run: python3 scripts/run_proofs.py
+
+  embedded:
+    name: Embedded
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: "3.12"
+      - uses: ./.github/actions/setup-alire
+      - name: Install host gprbuild
+        shell: bash
+        run: |
+          set -euo pipefail
+          host_gprbuild_root="${RUNNER_TEMP}/host_gprbuild"
+          rm -rf "${host_gprbuild_root}"
+          alr install --prefix "${host_gprbuild_root}" gprbuild=25.0.1
+          if [[ ! -x "${host_gprbuild_root}/bin/gprbuild" ]]; then
+            echo "failed to install host gprbuild under ${host_gprbuild_root}" >&2
+            exit 1
+          fi
+          echo "${host_gprbuild_root}/bin" >> "${GITHUB_PATH}"
+      - name: Install ARM cross toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          arm_toolchain_root="${RUNNER_TEMP}/gnat_arm_elf"
+          rm -rf "${arm_toolchain_root}"
+          alr install --prefix "${arm_toolchain_root}" gnat_arm_elf
+          if [[ ! -x "${arm_toolchain_root}/bin/arm-eabi-gnatls" ]]; then
+            echo "failed to install gnat_arm_elf triplet tools under ${arm_toolchain_root}" >&2
+            exit 1
+          fi
+          echo "${arm_toolchain_root}/bin" >> "${GITHUB_PATH}"
+      - name: Install Renode portable
+        shell: bash
+        run: |
+          set -euo pipefail
+          renode_version="1.16.1"
+          renode_sha256="1a532d4b5b82de0dd154970c401e0c7b0e498d17304b2cecc007e306c8f9617c"
+          renode_root="${RUNNER_TEMP}/renode"
+          archive="${RUNNER_TEMP}/renode-${renode_version}.linux-portable.tar.gz"
+          mkdir -p "${renode_root}"
+          curl -fsSL "https://builds.renode.io/renode-${renode_version}.linux-portable.tar.gz" -o "${archive}"
+          printf '%s  %s\n' "${renode_sha256}" "${archive}" | sha256sum -c -
+          tar xf "${archive}" -C "${renode_root}" --strip-components=1
+          echo "${renode_root}" >> "${GITHUB_PATH}"
+      - run: python3 scripts/run_embedded_smoke.py --target stm32f4 --suite concurrency
