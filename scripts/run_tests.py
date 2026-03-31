@@ -605,6 +605,14 @@ DEPLOY_REJECT_ARGV_CASES = [
     ),
 ]
 
+PROVE_SINGLE_SUCCESS_SOURCE = REPO_ROOT / "tests" / "positive" / "emitter_surface_proc.safe"
+PROVE_IMPORTED_SUCCESS_SOURCE = REPO_ROOT / "tests" / "interfaces" / "client_types.safe"
+PROVE_FAILURE_SOURCE = REPO_ROOT / "tests" / "negative" / "neg_rule2_oob.safe"
+PROVE_DIRECTORY_FIXTURES = [
+    REPO_ROOT / "tests" / "positive" / "emitter_surface_proc.safe",
+    REPO_ROOT / "tests" / "positive" / "constant_range_bound.safe",
+]
+
 OUTPUT_CONTRACT_CASES = [
     REPO_ROOT / "tests" / "positive" / "pr118c2_package_print.safe",
     REPO_ROOT / "tests" / "positive" / "pr118c2_entry_print.safe",
@@ -1165,6 +1173,93 @@ def run_safe_run_reject_case(source: Path, expected_message: str) -> tuple[bool,
     return True, ""
 
 
+def run_safe_prove_single_case(source: Path) -> tuple[bool, str]:
+    completed = run_command(
+        [sys.executable, str(SAFE_CLI), "prove", repo_rel(source)],
+        cwd=REPO_ROOT,
+    )
+    if completed.returncode != 0:
+        return False, f"safe prove failed: {first_message(completed)}"
+    line = f"PASS {repo_rel(source)} ("
+    if line not in completed.stdout:
+        return False, f"missing PASS line {line!r}"
+    if "flow total=" not in completed.stdout or "prove total=" not in completed.stdout:
+        return False, f"missing proof summary in stdout {completed.stdout!r}"
+    if "safe prove: PASS" not in completed.stdout:
+        return False, f"missing final PASS verdict in stdout {completed.stdout!r}"
+    if completed.stderr:
+        return False, f"unexpected stderr {completed.stderr!r}"
+    return True, ""
+
+
+def run_safe_prove_directory_case() -> tuple[bool, str]:
+    with tempfile.TemporaryDirectory(prefix="safe-prove-dir-") as temp_root_str:
+        temp_root = Path(temp_root_str)
+        for source in PROVE_DIRECTORY_FIXTURES:
+            shutil.copy2(source, temp_root / source.name)
+        completed = run_command(
+            [sys.executable, str(SAFE_CLI), "prove"],
+            cwd=temp_root,
+        )
+        if completed.returncode != 0:
+            return False, f"safe prove directory failed: {first_message(completed)}"
+        lines = [line for line in completed.stdout.splitlines() if line.startswith("PASS ")]
+        expected = [
+            f"PASS {source.name} ("
+            for source in sorted(PROVE_DIRECTORY_FIXTURES, key=lambda path: path.name)
+        ]
+        if len(lines) != len(expected):
+            return False, f"unexpected PASS lines {lines!r}"
+        for line, prefix in zip(lines, expected):
+            if not line.startswith(prefix):
+                return False, f"unexpected PASS order {lines!r}"
+        if "2 passed, 0 failed" not in completed.stdout:
+            return False, f"missing directory summary in stdout {completed.stdout!r}"
+        if "safe prove: PASS" not in completed.stdout:
+            return False, f"missing final PASS verdict in stdout {completed.stdout!r}"
+        if completed.stderr:
+            return False, f"unexpected stderr {completed.stderr!r}"
+    return True, ""
+
+
+def run_safe_prove_failure_case(*, verbose: bool) -> tuple[bool, str]:
+    argv = [sys.executable, str(SAFE_CLI), "prove"]
+    if verbose:
+        argv.append("--verbose")
+    argv.append(repo_rel(PROVE_FAILURE_SOURCE))
+    completed = run_command(argv, cwd=REPO_ROOT)
+    if completed.returncode == 0:
+        return False, "safe prove unexpectedly succeeded"
+    expected_stage = f"FAIL {repo_rel(PROVE_FAILURE_SOURCE)} [check]"
+    if expected_stage not in completed.stdout:
+        return False, f"missing stage line {expected_stage!r}"
+    if "safe prove: FAIL" not in completed.stdout:
+        return False, f"missing final FAIL verdict in stdout {completed.stdout!r}"
+    if verbose:
+        if "--- check output ---" not in completed.stderr:
+            return False, f"missing verbose failure header in stderr {completed.stderr!r}"
+        if PROVE_FAILURE_SOURCE.name not in completed.stderr:
+            return False, f"missing failing source name in verbose stderr {completed.stderr!r}"
+    elif completed.stderr:
+        return False, f"unexpected stderr {completed.stderr!r}"
+    return True, ""
+
+
+def run_safe_prove_no_sources_case() -> tuple[bool, str]:
+    with tempfile.TemporaryDirectory(prefix="safe-prove-empty-") as temp_root_str:
+        completed = run_command(
+            [sys.executable, str(SAFE_CLI), "prove"],
+            cwd=Path(temp_root_str),
+        )
+        if completed.returncode == 0:
+            return False, "safe prove unexpectedly succeeded without sources"
+        if "safe prove: no .safe files found in the current directory" not in completed.stderr:
+            return False, f"missing empty-directory error in stderr {completed.stderr!r}"
+        if completed.stdout:
+            return False, f"unexpected stdout {completed.stdout!r}"
+    return True, ""
+
+
 def run_safe_cli_help_case(argv: list[str], expected_snippets: list[str]) -> tuple[bool, str]:
     completed = run_command([sys.executable, str(SAFE_CLI), *argv], cwd=REPO_ROOT)
     if completed.returncode != 0:
@@ -1709,7 +1804,7 @@ def main() -> int:
             failures.append((label, detail))
 
     for argv, expected in (
-        (["--help"], ["safe deploy", "safe run"]),
+        (["--help"], ["safe deploy", "safe run", "safe prove"]),
         (["deploy", "--help"], ["--board", "--simulate", "--watch-symbol", "--expect-value"]),
     ):
         ok, detail = run_safe_cli_help_case(argv, expected)
@@ -1726,6 +1821,34 @@ def main() -> int:
             passed += 1
         else:
             failures.append((label, detail))
+
+    for source in (PROVE_SINGLE_SUCCESS_SOURCE, PROVE_IMPORTED_SUCCESS_SOURCE):
+        ok, detail = run_safe_prove_single_case(source)
+        label = f"safe prove {repo_rel(source)}"
+        if ok:
+            passed += 1
+        else:
+            failures.append((label, detail))
+
+    for label, verbose in (
+        ("safe prove current directory", False),
+        ("safe prove failure stage", False),
+        ("safe prove verbose failure", True),
+    ):
+        if label == "safe prove current directory":
+            ok, detail = run_safe_prove_directory_case()
+        else:
+            ok, detail = run_safe_prove_failure_case(verbose=verbose)
+        if ok:
+            passed += 1
+        else:
+            failures.append((label, detail))
+
+    ok, detail = run_safe_prove_no_sources_case()
+    if ok:
+        passed += 1
+    else:
+        failures.append(("safe prove empty directory", detail))
 
     ok, detail = run_ensure_sdkroot_case()
     if ok:

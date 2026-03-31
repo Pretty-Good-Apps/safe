@@ -48,6 +48,12 @@ already write for correctness are the contracts the prover needs.** Safe does
 not ask programmers to learn formal methods. It asks them to write the checks
 they should write anyway, and it proves those checks are sufficient.
 
+The practical corollary is that the repository should not treat "builds and
+runs" as enough for user-facing examples. The checked-in sample sweep now
+proves samples as well as building and executing them, specifically so missing
+guards show up as source-level proof failures with suggested fixes in context.
+That is not extra ceremony; it is the product working as intended.
+
 ### Where guards alone are not enough
 
 Guards-as-contracts cover input validation, bounds checking, capacity checking,
@@ -166,6 +172,7 @@ experience end to end:
 safe check <file.safe>       diagnostics only
 safe build <file.safe>       check, emit, compile to executable
 safe emit  <file.safe>       emit Ada/SPARK output for inspection or interop
+safe prove [file.safe]       emitted GNATprove audit
 safe run   <file.safe>       build and execute
 safe fmt   <file.safe>       format (post-v1.0)
 safe test  <file.safe>       test runner (post-v1.0)
@@ -175,8 +182,10 @@ Internally, `safe build` calls `safec emit` then `gprbuild` on the emitted Ada.
 The current repo-local prototype is intentionally single-file only; roots with
 leading `with` clauses still fall back to manual `safec emit` plus `gprbuild`.
 `safe run` reuses that same single-file build flow, then launches the produced
-binary. The user-facing goal remains a fully integrated `safe build` experience
-with Safe-oriented diagnostics.
+binary. `safe prove` is wider here: it can already audit imported multi-file
+roots because it proves emitted packages directly and does not need a runnable
+`main`. The user-facing goal remains a fully integrated `safe build`
+experience with Safe-oriented diagnostics.
 
 ### What ships, what does not
 
@@ -399,6 +408,18 @@ diagnostic for daily development.
 In the near term (before proof coverage is complete), `safe prove` tells users
 whether their specific program falls inside or outside the proved corpus. Once
 coverage is comprehensive, it becomes an assurance artifact generator.
+
+The current repo-local prototype already implements that emitted-proof audit
+path. It runs `safec check`, `safec emit`, compiles the emitted Ada, then runs
+GNATprove `flow` and `prove` using the repo's current emitted-proof policy. Its
+verdict is intentionally limited to emitted Ada proof; it does not subsume
+separate runtime evidence such as the embedded/Jorvik concurrency lane.
+
+The repository sample sweep now uses that same emitted-proof path. This keeps
+the checked-in examples honest: a sample that still builds and runs but no
+longer proves is treated as a regression, because that is exactly the case
+where the compiler should be teaching the user which guard or control-flow fact
+is missing.
 
 This also means the core `safe` distribution can ship without GNATprove. The
 prove capability is an optional package for users who need independent

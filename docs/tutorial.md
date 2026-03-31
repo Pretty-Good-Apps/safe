@@ -94,6 +94,9 @@ the language:
 - single-file packageless entry roots work
 - roots with leading `with` clauses still use `safec emit` plus manual
   `gprbuild` for now
+- `safe prove` can already audit both single-file roots and package roots with
+  leading `with` clauses, because it proves emitted packages directly rather
+  than synthesizing a runnable `main`
 
 ### 3.1 Opaque Types With `private record`
 
@@ -378,7 +381,9 @@ Also note: Safe draws a sharp line between recoverable and non-recoverable failu
   statement-only `print (expr)` for `integer`, `string`, and `boolean`.
 - No multi-file `safe build` yet. The current wrapper is intentionally
   single-file; roots with `with` clauses still use `safec emit` plus manual
-  `gprbuild`.
+  `gprbuild`. `safe prove` is already wider here: it can audit emitted
+  packages for imported roots, but it is still a proof command rather than a
+  runnable build command.
 - No generics, no tagged types, no overloading: abstraction techniques are intentionally limited.
 - The "Silver by construction" story means you will spend effort on numeric subtype design.
 - Some Ada habits are invalid in Safe (`'` attributes and qualified expressions, exceptions).

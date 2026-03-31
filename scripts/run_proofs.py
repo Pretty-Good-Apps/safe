@@ -4,41 +4,23 @@
 from __future__ import annotations
 
 import os
-import re
-import shutil
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
+from _lib.proof_eval import (
+    FLOW_SWITCHES,
+    PROVE_SWITCHES,
+    first_message,
+    parse_gnatprove_summary,
+    prepare_proof_toolchain,
+    run_command,
+    run_gnatprove_project,
+    run_source_proof,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 COMPILER_ROOT = REPO_ROOT / "compiler_impl"
-STDLIB_ADA_DIR = COMPILER_ROOT / "stdlib" / "ada"
-SAFEC_PATH = COMPILER_ROOT / "bin" / "safec"
-ALR_FALLBACK = Path.home() / "bin" / "alr"
-GNATPROVE_FALLBACK = Path.home() / ".alire" / "bin" / "gnatprove"
-GENERATED_SUPPORT_MARKERS = (
-    "--  Generated Safe print support",
-    "--  Safe Language Runtime Type Definitions",
-)
-
-FLOW_SWITCHES = [
-    "--mode=flow",
-    "--report=all",
-    "--warnings=error",
-]
-
-PROVE_SWITCHES = [
-    "--mode=prove",
-    "--level=2",
-    "--prover=cvc5,z3,altergo",
-    "--steps=0",
-    "--timeout=120",
-    "--report=all",
-    "--warnings=error",
-    "--checks-as-errors=on",
-]
 
 COMPANION_PROJECTS = [
     ("companion/gen", "companion.gpr"),
@@ -199,57 +181,6 @@ def repo_rel(path: Path) -> str:
     return str(path.relative_to(REPO_ROOT))
 
 
-def find_command(name: str, fallback: Path | None = None) -> str:
-    resolved = shutil.which(name)
-    if resolved:
-        return resolved
-    if fallback is not None and fallback.exists():
-        return str(fallback)
-    raise FileNotFoundError(f"required command not found: {name}")
-
-
-def run_command(
-    argv: list[str], *, cwd: Path, timeout: int | None = None
-) -> subprocess.CompletedProcess[str]:
-    try:
-        return subprocess.run(
-            argv,
-            cwd=cwd,
-            env=os.environ.copy(),
-            text=True,
-            capture_output=True,
-            check=False,
-            timeout=timeout,
-        )
-    except subprocess.TimeoutExpired as exc:
-        stdout = exc.stdout or ""
-        stderr = exc.stderr or ""
-        if stderr:
-            stderr += "\n"
-        stderr += f"timed out after {timeout}s"
-        return subprocess.CompletedProcess(argv, 124, stdout, stderr)
-
-
-def first_message(completed: subprocess.CompletedProcess[str]) -> str:
-    for stream in (completed.stderr, completed.stdout):
-        for line in stream.splitlines():
-            stripped = line.strip()
-            if stripped:
-                return stripped
-    return f"exit code {completed.returncode}"
-
-
-def build_compiler() -> tuple[Path, str, str]:
-    alr = find_command("alr", ALR_FALLBACK)
-    gnatprove = find_command("gnatprove", GNATPROVE_FALLBACK)
-    completed = run_command([alr, "build"], cwd=COMPILER_ROOT)
-    if completed.returncode != 0:
-        raise RuntimeError(first_message(completed))
-    if not SAFEC_PATH.exists():
-        raise FileNotFoundError(f"missing safec binary at {SAFEC_PATH}")
-    return SAFEC_PATH, alr, gnatprove
-
-
 def validate_manifest(
     name: str,
     entries: list[str],
@@ -284,232 +215,19 @@ def validate_manifests() -> None:
     validate_manifest("emitted proof regression manifest", EMITTED_PROOF_REGRESSION_FIXTURES)
     validate_manifest("emitted proof manifest", EMITTED_PROOF_FIXTURES)
 
-
-def emitted_body_file(ada_dir: Path) -> Path:
-    candidates = sorted(
-        path
-        for path in ada_dir.glob("*.adb")
-        if not is_generated_support_file(path)
-    )
-    if not candidates:
-        raise FileNotFoundError(f"{ada_dir}: expected emitted .adb file")
-    return candidates[0]
-
-
-def is_generated_support_file(path: Path) -> bool:
-    if not path.is_file():
-        return False
-    try:
-        first_lines = path.read_text(encoding="utf-8").splitlines()[:2]
-    except OSError:
-        return False
-    return any(line in GENERATED_SUPPORT_MARKERS for line in first_lines)
-
-
-def write_emitted_project(ada_dir: Path) -> Path:
-    lines = [
-        "project Build is",
-        f'   for Source_Dirs use (".", "{STDLIB_ADA_DIR}");',
-        '   for Object_Dir use "obj";',
-    ]
-    if (ada_dir / "gnat.adc").exists():
-        lines.extend(
-            [
-                "   package Compiler is",
-                '      for Default_Switches ("Ada") use ("-gnatec=gnat.adc");',
-                "   end Compiler;",
-            ]
-        )
-    lines.append("end Build;")
-
-    gpr_path = ada_dir / "build.gpr"
-    gpr_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    return gpr_path
-
-
-def compile_emitted_ada(ada_dir: Path, *, alr: str) -> subprocess.CompletedProcess[str]:
-    gpr_path = write_emitted_project(ada_dir)
-    argv = [
-        alr,
-        "exec",
-        "--",
-        "gprbuild",
-        "-c",
-        "-P",
-        str(gpr_path),
-        emitted_body_file(ada_dir).name,
-    ]
-    if (ada_dir / "gnat.adc").exists():
-        argv.extend(["-cargs", f"-gnatec={ada_dir / 'gnat.adc'}"])
-    return run_command(argv, cwd=COMPILER_ROOT)
-
-
-def parse_summary_cell(cell: str) -> dict[str, int | str]:
-    stripped = cell.strip()
-    if stripped == ".":
-        return {"count": 0, "detail": ""}
-    match = re.match(r"^(?P<count>\d+)(?: \((?P<detail>.*)\))?$", stripped)
-    if match is None:
-        raise RuntimeError(f"unexpected GNATprove summary cell: {cell!r}")
-    return {
-        "count": int(match.group("count")),
-        "detail": match.group("detail") or "",
-    }
-
-
-def parse_gnatprove_summary(path: Path) -> dict[str, dict[str, dict[str, int | str]]]:
-    if not path.exists():
-        raise FileNotFoundError(f"missing GNATprove summary: {path}")
-    lines = path.read_text(encoding="utf-8").splitlines()
-    expected_header = [
-        "SPARK Analysis results",
-        "Total",
-        "Flow",
-        "Provers",
-        "Justified",
-        "Unproved",
-    ]
-
-    header_index: int | None = None
-    for index, line in enumerate(lines):
-        parts = re.split(r"\s{2,}", line.strip())
-        if parts == expected_header:
-            header_index = index
-            break
-    if header_index is None:
-        raise RuntimeError(f"missing GNATprove summary table header in {path}")
-
-    rows: dict[str, dict[str, dict[str, int | str]]] = {}
-    saw_row = False
-    for line in lines[header_index + 1 :]:
-        stripped = line.strip()
-        if not stripped:
-            if saw_row:
-                break
-            continue
-        if set(stripped) == {"-"}:
-            continue
-        parts = re.split(r"\s{2,}", stripped)
-        if len(parts) != 6:
-            raise RuntimeError(f"malformed GNATprove summary row: {stripped!r}")
-        label, total, flow, provers, justified, unproved = parts
-        rows[label] = {
-            "total": parse_summary_cell(total),
-            "flow": parse_summary_cell(flow),
-            "provers": parse_summary_cell(provers),
-            "justified": parse_summary_cell(justified),
-            "unproved": parse_summary_cell(unproved),
-        }
-        saw_row = True
-
-    if "Total" not in rows:
-        raise RuntimeError(f"GNATprove summary missing Total row in {path}")
-    return rows
-
-
 def run_companion_project(
     *,
     label: str,
     project_dir: Path,
     project_file: str,
-    alr: str,
-    gnatprove: str,
+    toolchain: object,
 ) -> tuple[bool, str]:
-    summary_path = project_dir / "obj" / "gnatprove" / "gnatprove.out"
-    for mode, switches in (("flow", FLOW_SWITCHES), ("prove", PROVE_SWITCHES)):
-        completed = run_command(
-            [alr, "exec", "--", gnatprove, "-P", project_file, *switches],
-            cwd=project_dir,
-        )
-        if completed.returncode != 0:
-            return False, f"{mode} failed: {first_message(completed)}"
-        try:
-            parse_gnatprove_summary(summary_path)
-        except (FileNotFoundError, RuntimeError) as exc:
-            return False, f"{mode} summary error: {exc}"
-    return True, ""
-
-
-def emit_fixture(safec: Path, source: Path, root: Path) -> tuple[Path, Path, Path]:
-    out_dir = root / "out"
-    iface_dir = root / "iface"
-    ada_dir = root / "ada"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    iface_dir.mkdir(parents=True, exist_ok=True)
-    ada_dir.mkdir(parents=True, exist_ok=True)
-
-    completed = run_command(
-        [
-            str(safec),
-            "emit",
-            repo_rel(source),
-            "--out-dir",
-            str(out_dir),
-            "--interface-dir",
-            str(iface_dir),
-            "--ada-out-dir",
-            str(ada_dir),
-        ],
-        cwd=REPO_ROOT,
+    del label
+    return run_gnatprove_project(
+        project_dir=project_dir,
+        project_file=project_file,
+        toolchain=toolchain,
     )
-    if completed.returncode != 0:
-        raise RuntimeError(first_message(completed))
-    return out_dir, iface_dir, ada_dir
-
-
-def run_emitted_fixture(
-    *,
-    safec: Path,
-    source: Path,
-    temp_root: Path,
-    alr: str,
-    gnatprove: str,
-    prove_switches: list[str] | None = None,
-    command_timeout: int | None = None,
-) -> tuple[bool, str]:
-    fixture_root = temp_root / source.stem
-    try:
-        _, _, ada_dir = emit_fixture(safec, source, fixture_root)
-    except RuntimeError as exc:
-        return False, f"emit failed: {exc}"
-
-    compile_result = compile_emitted_ada(ada_dir, alr=alr)
-    if compile_result.returncode != 0:
-        return False, f"compile failed: {first_message(compile_result)}"
-
-    gpr_path = write_emitted_project(ada_dir)
-    adc_path = ada_dir / "gnat.adc"
-    summary_path = ada_dir / "obj" / "gnatprove" / "gnatprove.out"
-
-    prove_args = PROVE_SWITCHES if prove_switches is None else prove_switches
-
-    for mode, switches in (("flow", FLOW_SWITCHES), ("prove", prove_args)):
-        argv = [
-            alr,
-            "exec",
-            "--",
-            gnatprove,
-            "-P",
-            str(gpr_path),
-            *switches,
-        ]
-        if adc_path.exists():
-            argv.extend(["-cargs", f"-gnatec={adc_path}"])
-        completed = run_command(argv, cwd=COMPILER_ROOT, timeout=command_timeout)
-        if completed.returncode != 0:
-            return False, f"{mode} failed: {first_message(completed)}"
-        try:
-            rows = parse_gnatprove_summary(summary_path)
-        except (FileNotFoundError, RuntimeError) as exc:
-            return False, f"{mode} summary error: {exc}"
-
-        total_row = rows["Total"]
-        justified = total_row["justified"]["count"]
-        unproved = total_row["unproved"]["count"]
-        if justified != 0 or unproved != 0:
-            return False, f"{mode} summary has justified={justified}, unproved={unproved}"
-
-    return True, ""
 
 
 def print_summary(
@@ -531,11 +249,9 @@ def print_summary(
 
 def run_fixture_group(
     *,
-    safec: Path,
     fixtures: list[str],
     temp_root: Path,
-    alr: str,
-    gnatprove: str,
+    toolchain: object,
     prove_switches: list[str] | None = None,
     command_timeout: int | None = None,
 ) -> tuple[int, list[tuple[str, str]]]:
@@ -544,19 +260,18 @@ def run_fixture_group(
 
     for fixture_rel in fixtures:
         source = REPO_ROOT / fixture_rel
-        ok, detail = run_emitted_fixture(
-            safec=safec,
+        result = run_source_proof(
+            toolchain=toolchain,
             source=source,
-            temp_root=temp_root,
-            alr=alr,
-            gnatprove=gnatprove,
+            proof_root=temp_root / source.stem,
+            run_check=False,
             prove_switches=prove_switches,
             command_timeout=command_timeout,
         )
-        if ok:
+        if result.passed:
             passed += 1
         else:
-            failures.append((fixture_rel, detail))
+            failures.append((fixture_rel, result.detail))
 
     return passed, failures
 
@@ -564,7 +279,7 @@ def run_fixture_group(
 def main() -> int:
     try:
         validate_manifests()
-        safec, alr, gnatprove = build_compiler()
+        toolchain = prepare_proof_toolchain(env=os.environ.copy())
     except (FileNotFoundError, RuntimeError) as exc:
         print(f"run_proofs: ERROR: {exc}", file=sys.stderr)
         return 1
@@ -592,8 +307,7 @@ def main() -> int:
             label=project_rel,
             project_dir=project_dir,
             project_file=project_file,
-            alr=alr,
-            gnatprove=gnatprove,
+            toolchain=toolchain,
         )
         if ok:
             companion_passed += 1
@@ -603,53 +317,39 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="safe-proofs-") as temp_root_str:
         temp_root = Path(temp_root_str)
         checkpoint_a_passed, checkpoint_a_failures = run_fixture_group(
-            safec=safec,
             fixtures=PR11_8A_CHECKPOINT_FIXTURES,
             temp_root=temp_root,
-            alr=alr,
-            gnatprove=gnatprove,
+            toolchain=toolchain,
         )
         checkpoint_b_passed, checkpoint_b_failures = run_fixture_group(
-            safec=safec,
             fixtures=PR11_8B_CHECKPOINT_FIXTURES,
             temp_root=temp_root,
-            alr=alr,
-            gnatprove=gnatprove,
+            toolchain=toolchain,
         )
         checkpoint_e_passed, checkpoint_e_failures = run_fixture_group(
-            safec=safec,
             fixtures=PR11_8E_CHECKPOINT_FIXTURES,
             temp_root=temp_root,
-            alr=alr,
-            gnatprove=gnatprove,
+            toolchain=toolchain,
         )
         checkpoint_f_passed, checkpoint_f_failures = run_fixture_group(
-            safec=safec,
             fixtures=PR11_8F_CHECKPOINT_FIXTURES,
             temp_root=temp_root,
-            alr=alr,
-            gnatprove=gnatprove,
+            toolchain=toolchain,
         )
         checkpoint_g1_passed, checkpoint_g1_failures = run_fixture_group(
-            safec=safec,
             fixtures=PR11_8G1_CHECKPOINT_FIXTURES,
             temp_root=temp_root,
-            alr=alr,
-            gnatprove=gnatprove,
+            toolchain=toolchain,
         )
         checkpoint_g2_passed, checkpoint_g2_failures = run_fixture_group(
-            safec=safec,
             fixtures=PR11_8G2_CHECKPOINT_FIXTURES,
             temp_root=temp_root,
-            alr=alr,
-            gnatprove=gnatprove,
+            toolchain=toolchain,
         )
         regression_passed, regression_failures = run_fixture_group(
-            safec=safec,
             fixtures=EMITTED_PROOF_REGRESSION_FIXTURES,
             temp_root=temp_root,
-            alr=alr,
-            gnatprove=gnatprove,
+            toolchain=toolchain,
         )
 
     total_passed = (

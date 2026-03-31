@@ -10,9 +10,14 @@ function steps (seed : seed_value) returns step_count
       if value == 1
          return count
 
+      if count == step_count.last
+         return count
+
       if value mod 2 == 0
          value = value / 2
       else
+         if value > 5
+            return count
          value = 3 * value + 1
 
       count = count + 1
