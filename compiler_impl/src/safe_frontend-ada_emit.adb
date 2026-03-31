@@ -41,6 +41,7 @@ package body Safe_Frontend.Ada_Emit is
       Type_Name : FT.UString := FT.To_UString ("");
       Free_Proc : FT.UString := FT.To_UString ("");
       Is_Constant : Boolean := False;
+      Always_Terminates_Suppression_OK : Boolean := False;
    end record;
 
    package Cleanup_Item_Vectors is new Ada.Containers.Indefinite_Vectors
@@ -150,6 +151,7 @@ package body Safe_Frontend.Ada_Emit is
       Type_Name : String;
       Free_Proc : String := "";
       Is_Constant : Boolean := False;
+      Always_Terminates_Suppression_OK : Boolean := False;
       Action    : Cleanup_Action := Cleanup_Deallocate);
    procedure Register_Cleanup_Items
      (State        : in out Emit_State;
@@ -178,6 +180,7 @@ package body Safe_Frontend.Ada_Emit is
      (Literal_Name   : String;
       Enum_Type_Name : String) return String;
    function Sanitized_Helper_Name (Name : String) return String;
+   function Array_Runtime_Instance_Name (Info : GM.Type_Descriptor) return String;
    function Normalize_Aspect_Name
      (Subprogram_Name : String;
       Raw_Name        : String) return String;
@@ -289,6 +292,11 @@ package body Safe_Frontend.Ada_Emit is
      (Unit     : CM.Resolved_Unit;
       Document : GM.Mir_Document;
       Info     : GM.Type_Descriptor) return Boolean;
+   function Constant_Cleanup_Uses_Shared_Runtime_Free
+     (Unit      : CM.Resolved_Unit;
+      Document  : GM.Mir_Document;
+      Info      : GM.Type_Descriptor;
+      Free_Proc : String) return Boolean;
    function Is_Tuple_Type (Info : GM.Type_Descriptor) return Boolean;
    function Is_Result_Builtin (Info : GM.Type_Descriptor) return Boolean;
    function Render_Result_Empty_Aggregate return String;
@@ -983,6 +991,7 @@ package body Safe_Frontend.Ada_Emit is
       Type_Name : String;
       Free_Proc : String := "";
       Is_Constant : Boolean := False;
+      Always_Terminates_Suppression_OK : Boolean := False;
       Action    : Cleanup_Action := Cleanup_Deallocate) is
    begin
       if State.Cleanup_Stack.Is_Empty then
@@ -997,7 +1006,9 @@ package body Safe_Frontend.Ada_Emit is
              Name      => FT.To_UString (Name),
              Type_Name => FT.To_UString (Type_Name),
              Free_Proc => FT.To_UString (Free_Proc),
-             Is_Constant => Is_Constant));
+             Is_Constant => Is_Constant,
+             Always_Terminates_Suppression_OK =>
+               Always_Terminates_Suppression_OK));
          State.Cleanup_Stack.Replace_Element (State.Cleanup_Stack.Last_Index, Frame);
       end;
    end Add_Cleanup_Item;
@@ -1050,6 +1061,13 @@ package body Safe_Frontend.Ada_Emit is
       case Item.Action is
          when Cleanup_Deallocate =>
             if Item.Is_Constant then
+               if not Item.Always_Terminates_Suppression_OK then
+                  Raise_Internal
+                    ("constant cleanup warning suppression requires a shared runtime Free"
+                     & " with Always_Terminates for type "
+                     & FT.To_String (Item.Type_Name)
+                     & " (" & Free_Call & ")");
+               end if;
                Append_Gnatprove_Warning_Suppression
                  (Buffer,
                   "implicit aspect Always_Terminates",
@@ -2591,6 +2609,26 @@ package body Safe_Frontend.Ada_Emit is
       return FT.Lowercase (FT.To_String (Base.Kind)) = "array"
         and then Base.Growable;
    end Is_Growable_Array_Type;
+
+   function Constant_Cleanup_Uses_Shared_Runtime_Free
+     (Unit      : CM.Resolved_Unit;
+      Document  : GM.Mir_Document;
+      Info      : GM.Type_Descriptor;
+      Free_Proc : String) return Boolean
+   is
+      Base : constant GM.Type_Descriptor := Base_Type (Unit, Document, Info);
+   begin
+      if Is_Plain_String_Type (Unit, Document, Info) then
+         return Free_Proc = "Safe_String_RT.Free";
+      end if;
+
+      if Is_Growable_Array_Type (Unit, Document, Info) then
+         return Free_Proc = Array_Runtime_Instance_Name (Info) & ".Free"
+           or else Free_Proc = Array_Runtime_Instance_Name (Base) & ".Free";
+      end if;
+
+      return False;
+   end Constant_Cleanup_Uses_Shared_Runtime_Free;
 
    function Sanitized_Helper_Name (Name : String) return String is
       Result : SU.Unbounded_String;
@@ -10658,7 +10696,8 @@ package body Safe_Frontend.Ada_Emit is
                        Name      => Name,
                        Type_Name => Decl.Type_Info.Name,
                        Free_Proc => FT.To_UString (""),
-                       Is_Constant => False),
+                       Is_Constant => False,
+                       Always_Terminates_Suppression_OK => False),
                       Depth);
                end loop;
             end if;
@@ -10686,7 +10725,8 @@ package body Safe_Frontend.Ada_Emit is
                        Name      => Name,
                        Type_Name => Decl.Type_Info.Name,
                        Free_Proc => FT.To_UString (""),
-                       Is_Constant => False),
+                       Is_Constant => False,
+                       Always_Terminates_Suppression_OK => False),
                       Depth);
                end loop;
             end if;
@@ -11732,7 +11772,13 @@ package body Safe_Frontend.Ada_Emit is
                            Snapshot_Name,
                            Snapshot_Type_Image,
                            Array_Runtime_Instance_Name (Iterable_Info) & ".Free",
-                           Is_Constant => True);
+                           Is_Constant => True,
+                           Always_Terminates_Suppression_OK =>
+                             Constant_Cleanup_Uses_Shared_Runtime_Free
+                               (Unit,
+                                Document,
+                                Iterable_Info,
+                                Array_Runtime_Instance_Name (Iterable_Info) & ".Free"));
                      end if;
 
                      Append_Line (Buffer, "declare", Depth);
