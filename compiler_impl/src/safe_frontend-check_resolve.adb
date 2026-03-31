@@ -5821,6 +5821,7 @@ package body Safe_Frontend.Check_Resolve is
          if Has_Enum_Literal (Const_Env, Name)
            or else Visible_Value_Name_Exists (Name, Value_Env)
            or else Has_Function (Functions, Name)
+           or else Has_Type (Type_Env, Name)
            or else Has_Type (Channel_Env, Name)
          then
             Raise_Diag
@@ -6300,6 +6301,7 @@ package body Safe_Frontend.Check_Resolve is
                   null;
                else
                   declare
+                     Name : constant String := UString_Value (Item.Type_Data.Name);
                      Info : constant GM.Type_Descriptor :=
                        Resolve_Type_Declaration
                          (Item.Type_Data,
@@ -6309,6 +6311,10 @@ package body Safe_Frontend.Check_Resolve is
                           Family_By_Name,
                           Families);
                   begin
+                     Reject_Package_Level_Enum_Collision
+                       (Name,
+                        Item.Type_Data.Span,
+                        UString_Value (Unit.Path));
                      if not Is_Builtin_Name (UString_Value (Info.Name)) then
                         declare
                            Hidden_Target : constant String :=
