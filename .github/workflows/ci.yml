@@ -50,6 +50,18 @@ jobs:
         with:
           python-version: "3.12"
       - uses: ./.github/actions/setup-alire
+      - name: Install host gprbuild
+        shell: bash
+        run: |
+          set -euo pipefail
+          host_gprbuild_root="${RUNNER_TEMP}/host_gprbuild"
+          rm -rf "${host_gprbuild_root}"
+          alr install --prefix "${host_gprbuild_root}" gprbuild=25.0.1
+          if [[ ! -x "${host_gprbuild_root}/bin/gprbuild" ]]; then
+            echo "failed to install host gprbuild under ${host_gprbuild_root}" >&2
+            exit 1
+          fi
+          echo "${host_gprbuild_root}/bin" >> "${GITHUB_PATH}"
       - name: Install ARM cross toolchain
         shell: bash
         run: |
