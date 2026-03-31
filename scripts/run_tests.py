@@ -24,6 +24,8 @@ SAFE_CLI = REPO_ROOT / "scripts" / "safe_cli.py"
 SAFE_REPL = REPO_ROOT / "scripts" / "safe_repl.py"
 EMBEDDED_SMOKE = REPO_ROOT / "scripts" / "run_embedded_smoke.py"
 VALIDATE_OUTPUT_CONTRACTS = REPO_ROOT / "scripts" / "validate_output_contracts.py"
+VSCODE_README = REPO_ROOT / "editors" / "vscode" / "README.md"
+VSCODE_PACKAGE_JSON = REPO_ROOT / "editors" / "vscode" / "package.json"
 
 # These fixtures live in category directories that do not match the
 # compiler's current acceptance boundary, so keep the expectations explicit.
@@ -1283,6 +1285,27 @@ def run_safe_cli_help_case(argv: list[str], expected_snippets: list[str]) -> tup
     return True, ""
 
 
+def run_vscode_surface_docs_case() -> tuple[bool, str]:
+    readme = VSCODE_README.read_text(encoding="utf-8")
+    metadata = json.loads(VSCODE_PACKAGE_JSON.read_text(encoding="utf-8"))
+
+    if "PR11.8c.1 compiler surface" in readme:
+        return False, "VS Code README still advertises the stale PR11.8c.1 surface"
+    if "syntax-only" not in readme:
+        return False, "VS Code README no longer states the syntax-only boundary"
+    if "post-v1.0 language server" not in readme:
+        return False, "VS Code README no longer states the disposable-language-server boundary"
+    if "PR11.8i" not in readme:
+        return False, "VS Code README no longer names the current shipped milestone surface"
+
+    description = str(metadata.get("description", ""))
+    if "PR11.8c.1" in description:
+        return False, "VS Code package.json description still advertises PR11.8c.1"
+    if "PR11.8i" not in description:
+        return False, "VS Code package.json description no longer names the current shipped surface"
+    return True, ""
+
+
 def run_safe_deploy_reject_case(argv: list[str], expected_message: str) -> tuple[bool, str]:
     completed = run_command([sys.executable, str(SAFE_CLI), *argv], cwd=REPO_ROOT)
     if completed.returncode == 0:
@@ -1825,6 +1848,12 @@ def main() -> int:
             passed += 1
         else:
             failures.append((label, detail))
+
+    ok, detail = run_vscode_surface_docs_case()
+    if ok:
+        passed += 1
+    else:
+        failures.append(("vscode surface docs", detail))
 
     for argv, expected_message in DEPLOY_REJECT_ARGV_CASES:
         ok, detail = run_safe_deploy_reject_case(argv, expected_message)
