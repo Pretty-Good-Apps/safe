@@ -274,7 +274,7 @@ def safe_prove(args: argparse.Namespace) -> int:
 
     env = ensure_sdkroot(os.environ.copy())
     try:
-        toolchain = prepare_proof_toolchain(env=env)
+        toolchain = prepare_proof_toolchain(env=env, build_frontend=False)
     except (FileNotFoundError, RuntimeError) as exc:
         print(f"safe prove: {exc}", file=sys.stderr)
         return 1

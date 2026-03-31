@@ -9,12 +9,8 @@ import tempfile
 from pathlib import Path
 
 from _lib.proof_eval import (
-    FLOW_SWITCHES,
-    PROVE_SWITCHES,
-    first_message,
-    parse_gnatprove_summary,
+    ProofToolchain,
     prepare_proof_toolchain,
-    run_command,
     run_gnatprove_project,
     run_source_proof,
 )
@@ -217,12 +213,10 @@ def validate_manifests() -> None:
 
 def run_companion_project(
     *,
-    label: str,
     project_dir: Path,
     project_file: str,
-    toolchain: object,
+    toolchain: ProofToolchain,
 ) -> tuple[bool, str]:
-    del label
     return run_gnatprove_project(
         project_dir=project_dir,
         project_file=project_file,
@@ -251,7 +245,7 @@ def run_fixture_group(
     *,
     fixtures: list[str],
     temp_root: Path,
-    toolchain: object,
+    toolchain: ProofToolchain,
     prove_switches: list[str] | None = None,
     command_timeout: int | None = None,
 ) -> tuple[int, list[tuple[str, str]]]:
@@ -304,7 +298,6 @@ def main() -> int:
     for project_rel, project_file in COMPANION_PROJECTS:
         project_dir = REPO_ROOT / project_rel
         ok, detail = run_companion_project(
-            label=project_rel,
             project_dir=project_dir,
             project_file=project_file,
             toolchain=toolchain,

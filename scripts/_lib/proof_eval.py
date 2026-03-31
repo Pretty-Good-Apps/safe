@@ -344,6 +344,7 @@ def ensure_interface_dependencies(
     source: Path,
     paths: dict[str, Path],
     stage_output: dict[str, str],
+    log_stage: str,
     visited: set[Path] | None = None,
 ) -> str | None:
     seen = set() if visited is None else visited
@@ -365,6 +366,7 @@ def ensure_interface_dependencies(
             source=dep_source,
             paths=paths,
             stage_output=stage_output,
+            log_stage=log_stage,
             visited=seen,
         )
         if error is not None:
@@ -391,18 +393,18 @@ def ensure_interface_dependencies(
         if captured:
             logs.append(captured)
         if dep_completed.returncode != 0:
-            stage_output["check"] = "".join(logs)
+            stage_output[log_stage] = "".join(logs)
             return (
                 f"dependency interface emit failed for {dep_source.name}: "
                 f"{first_message(dep_completed)}"
             )
         if not safei_path.exists():
-            stage_output["check"] = "".join(logs)
+            stage_output[log_stage] = "".join(logs)
             return f"dependency interface emit missing {safei_path.name}"
         mirror_with_clauses_into_emitted_unit(dep_source, paths["ada"])
 
     if logs:
-        stage_output["check"] = stage_output.get("check", "") + "".join(logs)
+        stage_output[log_stage] = stage_output.get(log_stage, "") + "".join(logs)
     return None
 
 
@@ -474,6 +476,7 @@ def run_source_proof(
         source=source,
         paths=paths,
         stage_output=result.stage_output,
+        log_stage=result.stage,
     )
     if dependency_error is not None:
         result.detail = dependency_error
