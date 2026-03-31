@@ -3737,17 +3737,16 @@ package body Safe_Frontend.Check_Resolve is
    end Validate_Static_Binary_Boundaries;
 
    function Is_Assignable_Target
-     (Expr      : CM.Expr_Access;
-      Const_Env : Static_Value_Maps.Map) return Boolean is
+     (Expr : CM.Expr_Access) return Boolean is
    begin
       if Expr = null then
          return False;
       elsif Expr.Kind = CM.Expr_Ident then
-         return not Has_Enum_Literal (Const_Env, Root_Name (Expr));
+         return True;
       elsif Expr.Kind = CM.Expr_Resolved_Index then
-         return not Has_Enum_Literal (Const_Env, Root_Name (Expr));
+         return True;
       elsif Expr.Kind = CM.Expr_Enum_Literal then
-         return False;
+         return True;
       elsif Expr.Kind = CM.Expr_Subtype_Indication then
          return False;
       elsif Expr.Kind = CM.Expr_Conversion then
@@ -3757,15 +3756,13 @@ package body Safe_Frontend.Check_Resolve is
             return False;
          end if;
          for Item of Expr.Elements loop
-            if not Is_Assignable_Target (Item, Const_Env) then
+            if not Is_Assignable_Target (Item) then
                return False;
             end if;
          end loop;
          return True;
       elsif Expr.Kind = CM.Expr_Select then
-         return
-           UString_Value (Expr.Selector) not in "first" | "last" | "length" | "access"
-           and then not Has_Enum_Literal (Const_Env, Flatten_Name (Expr));
+         return UString_Value (Expr.Selector) not in "first" | "last" | "length" | "access";
       end if;
       return False;
    end Is_Assignable_Target;
@@ -4431,7 +4428,7 @@ package body Safe_Frontend.Check_Resolve is
             Result.Target :=
               Normalize_Expr_Checked
                 (Stmt.Target, Var_Types, Functions, Type_Env, Local_Static_Constants, Path);
-            if not Is_Assignable_Target (Result.Target, Local_Static_Constants) then
+            if not Is_Assignable_Target (Result.Target) then
                Raise_Diag
                  (CM.Source_Frontend_Error
                     (Path    => Path,
@@ -4802,7 +4799,7 @@ package body Safe_Frontend.Check_Resolve is
                Result.Success_Var :=
                  Normalize_Expr_Checked
                    (Stmt.Success_Var, Var_Types, Functions, Type_Env, Local_Static_Constants, Path);
-               if not Is_Assignable_Target (Result.Success_Var, Local_Static_Constants) then
+               if not Is_Assignable_Target (Result.Success_Var) then
                   Raise_Diag
                     (CM.Source_Frontend_Error
                        (Path    => Path,
@@ -4833,7 +4830,7 @@ package body Safe_Frontend.Check_Resolve is
             Result.Target :=
               Normalize_Expr_Checked
                 (Stmt.Target, Var_Types, Functions, Type_Env, Local_Static_Constants, Path);
-            if not Is_Assignable_Target (Result.Target, Local_Static_Constants) then
+            if not Is_Assignable_Target (Result.Target) then
                Raise_Diag
                  (CM.Source_Frontend_Error
                     (Path    => Path,
@@ -4860,7 +4857,7 @@ package body Safe_Frontend.Check_Resolve is
                Result.Success_Var :=
                  Normalize_Expr_Checked
                    (Stmt.Success_Var, Var_Types, Functions, Type_Env, Local_Static_Constants, Path);
-               if not Is_Assignable_Target (Result.Success_Var, Local_Static_Constants) then
+               if not Is_Assignable_Target (Result.Success_Var) then
                   Raise_Diag
                     (CM.Source_Frontend_Error
                        (Path    => Path,

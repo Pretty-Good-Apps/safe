@@ -339,6 +339,10 @@ DIAGNOSTIC_GOLDEN_CASES = [
         REPO_ROOT / "tests" / "negative" / "neg_pr118c1_print_unsupported_type.safe",
         REPO_ROOT / "tests" / "diagnostics_golden" / "diag_pr118c1_print_unsupported_type.txt",
     ),
+    (
+        REPO_ROOT / "tests" / "negative" / "neg_pr118i_write_enum_literal.safe",
+        REPO_ROOT / "tests" / "diagnostics_golden" / "diag_pr118i_write_enum_literal.txt",
+    ),
 ]
 
 BUILD_SUCCESS_CASES = [
