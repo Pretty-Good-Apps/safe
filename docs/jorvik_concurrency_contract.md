@@ -31,7 +31,9 @@ It covers the shipped subset only:
   wins.
 - If no channel arm is ready and a delay arm is present, the current
   implementation rechecks readiness through a fixed 1 ms polling loop until a
-  channel arm is observed ready or the delay deadline is reached.
+  channel arm is observed ready or the delay deadline is observed to have
+  expired at a polling check. A `delay 0.0` arm may therefore still wait up to
+  one polling quantum before it is selected.
 - No stronger fairness, wakeup immediacy, or cycle-accurate timing guarantee is
   part of the admitted surface.
 
