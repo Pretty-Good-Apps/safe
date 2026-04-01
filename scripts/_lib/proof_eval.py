@@ -26,6 +26,7 @@ PROVE_SWITCHES = [
     "--mode=prove",
     "--level=2",
     "--prover=cvc5,z3,altergo",
+    "-j4",
     "--steps=0",
     "--timeout=120",
     "--report=all",
@@ -87,12 +88,40 @@ def run_command(
 
 
 def first_message(completed: subprocess.CompletedProcess[str]) -> str:
+    lines: list[str] = []
     for stream in (completed.stderr, completed.stdout):
-        for line in stream.splitlines():
-            stripped = line.strip()
-            if stripped:
-                return stripped
-    return f"exit code {completed.returncode}"
+        lines.extend(line.strip() for line in stream.splitlines() if line.strip())
+
+    if not lines:
+        return f"exit code {completed.returncode}"
+
+    def severity(line: str) -> tuple[int, int]:
+        lowered = line.lower()
+        if ": info:" in lowered:
+            return (7, 0)
+        if ": error:" in lowered or " error:" in lowered or lowered.startswith("error:"):
+            return (0, 0)
+        if ": high:" in lowered:
+            return (1, 0)
+        if ": medium:" in lowered:
+            return (2, 0)
+        if ": low:" in lowered:
+            return (3, 0)
+        if "gnatprove:" in lowered:
+            return (4, 0)
+        if "warning:" in lowered:
+            return (5, 0)
+        return (6, 0)
+
+    ranked = [
+        (severity(line), index, line)
+        for index, line in enumerate(lines)
+        if ": info:" not in line.lower()
+    ]
+    if ranked:
+        return min(ranked)[2]
+
+    return lines[0]
 
 
 def format_completed_output(completed: subprocess.CompletedProcess[str]) -> str:

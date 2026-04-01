@@ -14,7 +14,13 @@ from pathlib import Path
 
 from _lib.embedded_eval import parse_monitor_value
 from _lib.harness_common import ensure_sdkroot
-from run_proofs import EMITTED_PROOF_FIXTURES
+from _lib.proof_eval import first_message as proof_eval_first_message
+from _lib.proof_inventory import (
+    EMITTED_PROOF_COVERED_PATHS,
+    EMITTED_PROOF_EXCLUSIONS,
+    EMITTED_PROOF_FIXTURES,
+    iter_proof_coverage_paths,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 COMPILER_ROOT = REPO_ROOT / "compiler_impl"
@@ -45,9 +51,9 @@ NEGATIVE_SUCCESS_FIXTURES = {
 }
 
 CONCURRENCY_REJECT_FIXTURES = {
-    REPO_ROOT / "tests" / "concurrency" / "channel_access_type.safe",
-    REPO_ROOT / "tests" / "concurrency" / "select_ownership_binding.safe",
-    REPO_ROOT / "tests" / "concurrency" / "try_send_ownership.safe",
+    REPO_ROOT / entry.path
+    for entry in EMITTED_PROOF_EXCLUSIONS
+    if entry.path.startswith("tests/concurrency/")
 }
 
 INTERFACE_CASES = [
@@ -526,6 +532,11 @@ BUILD_SUCCESS_CASES = [
         "41\n",
         False,
     ),
+    (
+        REPO_ROOT / "tests" / "interfaces" / "pr169_safe_elaborate_collision.safe",
+        "41\n",
+        False,
+    ),
 ]
 
 BUILD_REJECT_CASES = [
@@ -664,6 +675,7 @@ OUTPUT_CONTRACT_REJECT_CASES = [
 ]
 
 EMITTED_PRAGMA_ALLOWLIST = {
+    'pragma Assume (Safe_String_RT.Length (Safe_Channel_Staged_1) = Safe_Channel_Length_1);',
     'pragma Assume (Safe_String_RT.Length (Safe_Channel_Staged_3) = Safe_Channel_Length_3);',
     'pragma Assume (values_RT.Length (Safe_Channel_Staged_3) = Safe_Channel_Length_3);',
     'pragma Warnings (GNATprove, Off, "implicit aspect Always_Terminates", Reason => "shared runtime cleanup termination is accepted");',
@@ -673,14 +685,18 @@ EMITTED_PRAGMA_ALLOWLIST = {
     'pragma Warnings (GNATprove, Off, "is set by", Reason => "for-of loop item cleanup is intentional");',
     'pragma Warnings (GNATprove, Off, "is set by", Reason => "generated local cleanup is intentional");',
     'pragma Warnings (GNATprove, Off, "is set by", Reason => "heap-backed channel staging is intentional");',
+    'pragma Warnings (GNATprove, Off, "has no effect", Reason => "generated package elaboration helper is intentional");',
     'pragma Warnings (GNATprove, Off, "statement has no effect", Reason => "for-of loop item cleanup is intentional");',
     'pragma Warnings (GNATprove, Off, "statement has no effect", Reason => "generated local cleanup is intentional");',
     'pragma Warnings (GNATprove, Off, "statement has no effect", Reason => "task-local branching is intentionally isolated");',
     'pragma Warnings (GNATprove, Off, "statement has no effect", Reason => "task-local state updates are intentionally isolated");',
+    'pragma Warnings (GNATprove, Off, "statement has no effect", Reason => "static for-of string unrolling exposes constant conditions");',
     'pragma Warnings (GNATprove, Off, "unused assignment", Reason => "deferred heap-backed package initialization is intentional");',
     'pragma Warnings (GNATprove, Off, "unused assignment", Reason => "generated local cleanup is intentional");',
+    'pragma Warnings (GNATprove, Off, "unused assignment", Reason => "static for-of unrolling preserves intermediate source assignments");',
     'pragma Warnings (GNATprove, Off, "unused assignment", Reason => "task-local state updates are intentionally isolated");',
     'pragma Warnings (GNATprove, Off, "unused initial value of", Reason => "generated local cleanup is intentional");',
+    'pragma Warnings (GNATprove, On, "has no effect");',
     'pragma Warnings (GNATprove, On, "implicit aspect Always_Terminates");',
     'pragma Warnings (GNATprove, On, "initialization of");',
     'pragma Warnings (GNATprove, On, "is set by");',
@@ -716,62 +732,59 @@ EMITTED_SHAPE_CASES = [
         ["SPARK_Mode => Off", "Skip_Flow_And_Proof", "_safe_io"],
     ),
     (
-        "string-channel-direct-scalar-no-length-plumbing",
+        "string-channel-direct-scalar-no-protected-lowering",
         REPO_ROOT / "tests" / "build" / "pr118g_string_channel_build.safe",
-        ["Stored_Length"],
+        ["protected type text_ch_Channel is", "_Model_Has_Value", "pragma Assume ("],
     ),
     (
-        "growable-channel-direct-scalar-no-length-plumbing",
+        "growable-channel-direct-scalar-no-protected-lowering",
         REPO_ROOT / "tests" / "build" / "pr118g_growable_channel_build.safe",
-        ["Stored_Length"],
+        ["protected type data_ch_Channel is", "_Model_Has_Value", "pragma Assume ("],
     ),
     (
-        "try-string-channel-direct-scalar-no-length-plumbing",
+        "try-string-channel-direct-scalar-no-protected-lowering",
         REPO_ROOT / "tests" / "build" / "pr118g_try_string_channel_build.safe",
-        ["Stored_Length"],
+        ["protected type text_ch_Channel is", "_Model_Has_Value", "pragma Assume ("],
     ),
 ]
 
 EMITTED_REQUIRED_SHAPE_CASES = [
     (
-        "string-channel-direct-scalar-ghost-model",
+        "string-channel-direct-scalar-record-lowering",
         REPO_ROOT / "tests" / "build" / "pr118g_string_channel_build.safe",
         [
-            "text_ch_Model_Has_Value : Boolean := False;",
-            "text_ch_Model_Length : Natural := 0;",
+            "type text_ch_Channel is record",
+            "Full : Boolean := False;",
+            "Stored_Length_Value : Natural := 0;",
+            "Pre => text_ch_Well_Formed and then not text_ch.Full",
+            "Pre => text_ch_Well_Formed and then text_ch.Full",
         ],
     ),
     (
-        "growable-channel-direct-scalar-ghost-model",
+        "growable-channel-direct-scalar-record-lowering",
         REPO_ROOT / "tests" / "build" / "pr118g_growable_channel_build.safe",
         [
-            "data_ch_Model_Has_Value : Boolean := False;",
-            "data_ch_Model_Length : Natural := 0;",
+            "type data_ch_Channel is record",
+            "Full : Boolean := False;",
+            "Stored_Length_Value : Natural := 0;",
+            "Pre => data_ch_Well_Formed and then not data_ch.Full",
+            "Pre => data_ch_Well_Formed and then data_ch.Full",
         ],
     ),
     (
-        "try-string-channel-direct-scalar-ghost-model",
+        "try-string-channel-direct-scalar-record-lowering",
         REPO_ROOT / "tests" / "build" / "pr118g_try_string_channel_build.safe",
         [
-            "text_ch_Model_Has_Value : Boolean := False;",
-            "text_ch_Model_Length : Natural := 0;",
+            "type text_ch_Channel is record",
+            "Full : Boolean := False;",
+            "Stored_Length_Value : Natural := 0;",
+            "Pre => text_ch_Well_Formed and then not text_ch.Full",
+            "Pre => text_ch_Well_Formed and then text_ch.Full",
         ],
     ),
 ]
 
 EMITTED_PROTECTED_BODY_SHAPE_CASES = [
-    (
-        "string-channel-protected-body-no-heap-runtime",
-        REPO_ROOT / "tests" / "build" / "pr118g_string_channel_build.safe",
-        "text_ch_Channel",
-        ["Safe_String_RT.Clone", "Safe_String_RT.Copy", "Safe_String_RT.Free"],
-    ),
-    (
-        "growable-channel-protected-body-no-heap-runtime",
-        REPO_ROOT / "tests" / "build" / "pr118g_growable_channel_build.safe",
-        "data_ch_Channel",
-        ["values_RT.Clone", "values_RT.Copy", "values_RT.Free"],
-    ),
     (
         "tuple-channel-protected-body-no-heap-runtime",
         REPO_ROOT / "tests" / "build" / "pr118g_tuple_string_channel_build.safe",
@@ -1234,6 +1247,43 @@ def run_safe_run_reject_case(source: Path, expected_message: str) -> tuple[bool,
     return True, ""
 
 
+def run_safe_run_mutated_iterable_case() -> tuple[bool, str]:
+    source_text = """package mutated_iterable_runtime
+
+   plain : string = "Ada";
+   total : integer = 0;
+
+   function rewrite (value : mut string)
+      value = "Bob";
+
+   rewrite (plain);
+
+   for ch of plain
+      if ch == "B" or ch == "o" or ch == "b"
+         total = total + 1;
+
+   print (total)
+"""
+
+    with tempfile.TemporaryDirectory(prefix="safe-run-mutated-iterable-") as temp_root_str:
+        temp_root = Path(temp_root_str)
+        source = temp_root / "mutated_iterable_runtime.safe"
+        source.write_text(source_text, encoding="utf-8")
+        completed = run_command(
+            [sys.executable, str(SAFE_CLI), "run", source.name],
+            cwd=temp_root,
+        )
+        if completed.returncode != 0:
+            return False, f"safe run failed: {first_message(completed)}"
+        if completed.stdout != "3\n":
+            return False, f"unexpected stdout {completed.stdout!r}"
+        if completed.stderr:
+            return False, f"unexpected stderr {completed.stderr!r}"
+        if "safe build: OK (" in completed.stdout:
+            return False, f"unexpected build banner in stdout {completed.stdout!r}"
+    return True, ""
+
+
 def run_safe_prove_single_case(source: Path) -> tuple[bool, str]:
     completed = run_command(
         [sys.executable, str(SAFE_CLI), "prove", repo_rel(source)],
@@ -1682,6 +1732,35 @@ def run_source_shape_case(
     return True, ""
 
 
+def run_proof_inventory_coverage_case() -> tuple[bool, str]:
+    covered = set(EMITTED_PROOF_COVERED_PATHS)
+    uncovered = [
+        entry
+        for entry in iter_proof_coverage_paths(REPO_ROOT)
+        if entry not in covered
+    ]
+    if uncovered:
+        return (
+            False,
+            "fixtures under proof coverage roots missing from proof inventory: "
+            + ", ".join(uncovered),
+        )
+    return True, ""
+
+
+def run_proof_eval_message_priority_case() -> tuple[bool, str]:
+    completed = subprocess.CompletedProcess(
+        args=["dummy"],
+        returncode=1,
+        stdout="tool: error: real failure\n",
+        stderr="wrapper warning: noisy wrapper prefix\n",
+    )
+    detail = proof_eval_first_message(completed)
+    if detail != "tool: error: real failure":
+        return False, f"unexpected prioritized detail {detail!r}"
+    return True, ""
+
+
 def run_repl_case(
     *,
     label: str,
@@ -1786,6 +1865,18 @@ def main() -> int:
             passed += 1
         else:
             failures.append((repo_rel(fixture), detail))
+
+    ok, detail = run_proof_inventory_coverage_case()
+    if ok:
+        passed += 1
+    else:
+        failures.append(("proof-inventory-coverage", detail))
+
+    ok, detail = run_proof_eval_message_priority_case()
+    if ok:
+        passed += 1
+    else:
+        failures.append(("proof-eval-message-priority", detail))
 
     with tempfile.TemporaryDirectory(prefix="safe-tests-") as temp_root_str:
         temp_root = Path(temp_root_str)
@@ -1948,6 +2039,12 @@ def main() -> int:
             passed += 1
         else:
             failures.append((label, detail))
+
+    ok, detail = run_safe_run_mutated_iterable_case()
+    if ok:
+        passed += 1
+    else:
+        failures.append(("safe run mutated iterable", detail))
 
     for argv, expected in (
         (["--help"], ["safe deploy", "safe run", "safe prove"]),
