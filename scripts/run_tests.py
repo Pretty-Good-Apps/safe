@@ -1332,6 +1332,14 @@ print (value)
         if executable.stat().st_mtime_ns != executable_mtime:
             return False, "cached build rewrote executable"
 
+        cached_text = emitted_client.read_text(encoding="utf-8")
+        emitted_client.write_text("corrupted emitted Ada\n", encoding="utf-8")
+        build_corrupt = run_command([sys.executable, str(SAFE_CLI), "build", client.name], cwd=temp_root)
+        if build_corrupt.returncode != 0:
+            return False, f"artifact-recovery build failed: {first_message(build_corrupt)}"
+        if emitted_client.read_text(encoding="utf-8") != cached_text:
+            return False, "corrupted emitted Ada was not regenerated"
+
         provider.write_text(updated_provider_text, encoding="utf-8")
         build_updated = run_command([sys.executable, str(SAFE_CLI), "build", client.name], cwd=temp_root)
         if build_updated.returncode != 0:
@@ -1389,6 +1397,18 @@ package client_constant
             return False, f"cached prove failed: {first_message(prove_cached)}"
         if summary_path.stat().st_mtime_ns != summary_mtime:
             return False, "cached prove reran GNATprove"
+
+        proof_root = temp_root / "obj" / "client_constant" / "prove"
+        shutil.rmtree(proof_root)
+        prove_missing_artifacts = run_command([sys.executable, str(SAFE_CLI), "prove", client.name], cwd=temp_root)
+        if prove_missing_artifacts.returncode != 0:
+            return False, f"artifact-recovery prove failed: {first_message(prove_missing_artifacts)}"
+        if not summary_path.exists():
+            return False, "proof cache miss did not recreate GNATprove summary"
+        recreated_summary_mtime = summary_path.stat().st_mtime_ns
+        if recreated_summary_mtime == summary_mtime:
+            return False, "missing proof artifacts did not rerun GNATprove"
+        summary_mtime = recreated_summary_mtime
 
         provider.write_text(updated_provider_text, encoding="utf-8")
         prove_updated = run_command([sys.executable, str(SAFE_CLI), "prove", client.name], cwd=temp_root)

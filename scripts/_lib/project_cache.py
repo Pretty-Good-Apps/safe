@@ -371,6 +371,16 @@ def unit_artifacts_present(paths: dict[str, Path], artifact_hashes: dict[str, st
     return all((paths["root"] / relative).exists() for relative in artifact_hashes)
 
 
+def unit_artifact_hashes_match(paths: dict[str, Path], artifact_hashes: dict[str, str]) -> bool:
+    for relative, expected_hash in artifact_hashes.items():
+        artifact_path = paths["root"] / relative
+        if not artifact_path.exists():
+            return False
+        if sha256_file(artifact_path) != expected_hash:
+            return False
+    return True
+
+
 def interface_hash(paths: dict[str, Path], source: Path) -> str:
     safei_path = paths["iface"] / f"{source.stem.lower()}.safei.json"
     if not safei_path.exists():
@@ -438,7 +448,9 @@ def unit_entry_is_current(
     if previous.get("dependency_interfaces") != dependency_interfaces:
         return False
     artifact_hashes = previous.get("artifact_hashes", {})
-    return bool(artifact_hashes) and unit_artifacts_present(paths, artifact_hashes)
+    if not artifact_hashes or not unit_artifacts_present(paths, artifact_hashes):
+        return False
+    return unit_artifact_hashes_match(paths, artifact_hashes)
 
 
 def unit_emit_signature(state: dict, source: Path) -> str:

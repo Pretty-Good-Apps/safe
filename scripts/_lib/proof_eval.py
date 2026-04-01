@@ -572,13 +572,20 @@ def run_cached_source_proof(
         shared_paths=shared_paths,
     )
     cached = state["proofs"].get(source_key(source))
+    cached_project_paths = safe_prove_paths(source)
+    cached_artifacts_present = (
+        cached_project_paths["root"].exists() and cached_project_paths["summary"].exists()
+    )
     if cached and cached.get("fingerprint") == fingerprint and cached.get("passed"):
-        result.stage = "prove"
-        result.passed = True
-        result.flow_summary = cached.get("flow_summary")
-        result.prove_summary = cached.get("prove_summary")
-        result.detail = ""
-        return result
+        if cached_artifacts_present:
+            result.stage = "prove"
+            result.passed = True
+            result.flow_summary = cached.get("flow_summary")
+            result.prove_summary = cached.get("prove_summary")
+            result.detail = ""
+            return result
+        state["proofs"].pop(source_key(source), None)
+        save_project_state(shared_paths, state)
 
     project_paths = ensure_safe_prove_root(source)
     write_safe_prove_project(project_paths, ada_dir=shared_paths["ada"])
