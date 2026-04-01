@@ -854,7 +854,9 @@ EMITTED_REQUIRED_SHAPE_CASES = [
             "Ada.Real_Time.Timing_Events.Set_Handler",
             ".Signal_Delay'Access",
             "Select_Delay_Span : constant Ada.Real_Time.Time_Span :=",
-            "Ada.Real_Time.Time_Last - Select_Delay_Span",
+            "_Compute_Deadline (Start : in Ada.Real_Time.Time; Delay_Span : in Ada.Real_Time.Time_Span)",
+            "Select_Timeout_Observed : Boolean := False;",
+            "if Select_Timeout_Observed then",
         ],
     ),
     (

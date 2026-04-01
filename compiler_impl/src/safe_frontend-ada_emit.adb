@@ -663,6 +663,7 @@ package body Safe_Frontend.Ada_Emit is
       Dispatcher    : String;
       Timer_Name    : String;
       Init_Helper   : String;
+      Deadline_Helper : String;
       Arm_Helper    : String;
       Cancel_Helper : String;
       Depth         : Natural := 1);
@@ -2328,6 +2329,7 @@ package body Safe_Frontend.Ada_Emit is
       Dispatcher    : String;
       Timer_Name    : String;
       Init_Helper   : String;
+      Deadline_Helper : String;
       Arm_Helper    : String;
       Cancel_Helper : String;
       Depth         : Natural := 1)
@@ -2335,16 +2337,23 @@ package body Safe_Frontend.Ada_Emit is
    begin
       Append_Line
         (Buffer,
-         "procedure " & Init_Helper
-         & " (Event : out Ada.Real_Time.Timing_Events.Timing_Event)",
+         "procedure " & Init_Helper,
          Depth);
       Append_Line
         (Buffer,
-         "  with Global => null,"
+         "  with Global => (Output => " & Timer_Name & "),"
          & ASCII.LF
          & Indentation (Depth)
          & "       Always_Terminates;",
          Depth);
+      Append_Line
+        (Buffer,
+         "function " & Deadline_Helper
+         & " (Start : in Ada.Real_Time.Time;"
+         & " Delay_Span : in Ada.Real_Time.Time_Span)"
+         & " return Ada.Real_Time.Time",
+         Depth);
+      Append_Line (Buffer, "  with Global => null;", Depth);
       Append_Line
         (Buffer,
          "procedure " & Arm_Helper & " (Deadline : in Ada.Real_Time.Time)",
@@ -2379,8 +2388,7 @@ package body Safe_Frontend.Ada_Emit is
 
       Append_Line
         (Buffer,
-         "procedure " & Init_Helper
-         & " (Event : out Ada.Real_Time.Timing_Events.Timing_Event)",
+         "procedure " & Init_Helper,
          Depth);
       Append_Line (Buffer, "  with SPARK_Mode => Off", Depth);
       Append_Line (Buffer, "is", Depth);
@@ -2389,9 +2397,36 @@ package body Safe_Frontend.Ada_Emit is
       Append_Line
         (Buffer,
          "Ada.Real_Time.Timing_Events.Cancel_Handler"
-         & " (Event, Cancelled);",
+         & " ("
+         & Timer_Name
+         & ", Cancelled);",
          Depth + 1);
       Append_Line (Buffer, "end " & Init_Helper & ";", Depth);
+      Append_Line (Buffer);
+
+      Append_Line
+        (Buffer,
+         "function " & Deadline_Helper
+         & " (Start : in Ada.Real_Time.Time;"
+         & " Delay_Span : in Ada.Real_Time.Time_Span)"
+         & " return Ada.Real_Time.Time",
+         Depth);
+      Append_Line (Buffer, "  with SPARK_Mode => Off", Depth);
+      Append_Line (Buffer, "is", Depth);
+      Append_Line (Buffer, "begin", Depth);
+      Append_Line
+        (Buffer,
+         "if Ada.Real_Time.""<="" (Delay_Span, Ada.Real_Time.Time_Span_Zero) then",
+         Depth + 1);
+      Append_Line (Buffer, "return Start;", Depth + 2);
+      Append_Line (Buffer, "end if;", Depth + 1);
+      Append_Line (Buffer, "begin", Depth + 1);
+      Append_Line (Buffer, "return Start + Delay_Span;", Depth + 2);
+      Append_Line (Buffer, "exception", Depth + 1);
+      Append_Line (Buffer, "when others =>", Depth + 2);
+      Append_Line (Buffer, "return Ada.Real_Time.Time_Last;", Depth + 3);
+      Append_Line (Buffer, "end;", Depth + 1);
+      Append_Line (Buffer, "end " & Deadline_Helper & ";", Depth);
       Append_Line (Buffer);
 
       Append_Line
@@ -15896,27 +15931,27 @@ package body Safe_Frontend.Ada_Emit is
                        (Buffer,
                         "Select_Delay_Span : constant Ada.Real_Time.Time_Span := "
                         & "Ada.Real_Time.To_Time_Span ("
-                        & Delay_Expr_Image
-                        & ");",
+                       & Delay_Expr_Image
+                       & ");",
                         Depth + 1);
                      Append_Line
                        (Buffer,
                         "Select_Start : constant Ada.Real_Time.Time := "
                         & "Ada.Real_Time.Clock;",
                         Depth + 1);
-                     Append_Line (Buffer, "Select_Deadline : constant Ada.Real_Time.Time :=", Depth + 1);
                      Append_Line
                        (Buffer,
-                        "(if Select_Start > Ada.Real_Time.Time_Last - Select_Delay_Span",
+                        "Select_Deadline : constant Ada.Real_Time.Time :=",
+                        Depth + 1);
+                     Append_Line
+                       (Buffer,
+                        Select_Dispatcher_Name (Item)
+                        & "_Compute_Deadline (Select_Start, Select_Delay_Span);",
                         Depth + 2);
                      Append_Line
                        (Buffer,
-                        " then Ada.Real_Time.Time_Last",
-                        Depth + 2);
-                     Append_Line
-                       (Buffer,
-                        " else Select_Start + Select_Delay_Span);",
-                        Depth + 2);
+                        "Select_Timeout_Observed : Boolean := False;",
+                        Depth + 1);
                      Append_Line (Buffer, "begin", Depth);
                      Append_Line
                        (Buffer,
@@ -15936,14 +15971,18 @@ package body Safe_Frontend.Ada_Emit is
                      Append_Line (Buffer, "loop", Depth + 2);
                      Render_Select_Precheck (Depth + 3);
                      Append_Line (Buffer, "exit when Select_Done;", Depth + 3);
+                     Append_Line (Buffer, "if Select_Timeout_Observed then", Depth + 3);
+                     Render_Delay_Arm_Statements (Depth + 4);
+                     Append_Line (Buffer, "exit;", Depth + 4);
+                     Append_Line (Buffer, "end if;", Depth + 3);
                      Append_Line
                        (Buffer,
                         Dispatcher_Name & ".Await (Select_Timed_Out);",
                         Depth + 3);
-                     Append_Line (Buffer, "if Select_Timed_Out then", Depth + 3);
-                     Render_Delay_Arm_Statements (Depth + 4);
-                     Append_Line (Buffer, "exit;", Depth + 4);
-                     Append_Line (Buffer, "end if;", Depth + 3);
+                     Append_Line
+                       (Buffer,
+                        "Select_Timeout_Observed := Select_Timed_Out;",
+                        Depth + 3);
                      Append_Line (Buffer, "end loop;", Depth + 2);
                      Append_Line (Buffer, "end if;", Depth + 1);
                      Append_Line (Buffer, "end;", Depth);
@@ -18647,6 +18686,7 @@ package body Safe_Frontend.Ada_Emit is
                Dispatcher => Dispatcher_Text,
                Timer_Name => Timer_Text,
                Init_Helper => Dispatcher_Text & "_Initialize_Timer",
+               Deadline_Helper => Dispatcher_Text & "_Compute_Deadline",
                Arm_Helper => Dispatcher_Text & "_Arm_Deadline",
                Cancel_Helper => Dispatcher_Text & "_Cancel_Deadline");
          end;
@@ -18704,7 +18744,7 @@ package body Safe_Frontend.Ada_Emit is
                begin
                   Append_Line
                     (Body_Inner,
-                     Dispatcher_Text & "_Initialize_Timer (" & Timer_Text & ");",
+                     Dispatcher_Text & "_Initialize_Timer;",
                      2);
                end;
             end loop;
