@@ -1,0 +1,15 @@
+package neg_pr118k_try_short_circuit_rhs
+
+   function ready returns boolean
+
+      return true
+
+   function parse returns (result, integer)
+
+      return (ok (), 1)
+
+   function check returns (result, boolean)
+
+      if ready () and then try parse () == 1
+         return (ok (), true)
+      return (ok (), false)

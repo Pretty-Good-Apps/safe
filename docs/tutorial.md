@@ -140,6 +140,9 @@ In the shipped `PR11.8k` surface:
 - `try` works only on `(result, T)` values
 - the enclosing function must also return `(result, U)`
 - `match` is statement-only, not an expression
+- `try` is rejected in the right operand of `and then` / `or else`; supporting
+  that form would require branch-local lowering instead of a simple statement
+  prelude
 - user-defined record-based result shapes are still valid Safe code, but
   `try` / `match` do not target them yet
 
