@@ -39,6 +39,7 @@ package Safe_Frontend.Interfaces is
 
    type Loaded_Interface is record
       Unit_Kind    : FT.UString := FT.To_UString ("package");
+      Target_Bits  : Positive := 64;
       Package_Name : FT.UString := FT.To_UString ("");
       Types        : GM.Type_Descriptor_Vectors.Vector;
       Subtypes     : GM.Type_Descriptor_Vectors.Vector;

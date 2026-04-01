@@ -357,11 +357,21 @@ def validate_ast_payload(ast_payload: Any, *, path: str) -> dict[str, Any]:
     return ast_obj
 
 
+def require_target_bits(value: Any, path: str) -> int:
+    if type(value) is not int:
+        fail(f"{path} must be 32 or 64")
+    bits = value
+    if bits not in {32, 64}:
+        fail(f"{path} must be 32 or 64")
+    return bits
+
+
 def validate_typed_payload(payload: Any, *, path: str, ast_payload: dict[str, Any]) -> dict[str, Any]:
     typed = require_mapping(payload, path)
-    if typed.get("format") != "typed-v3":
-        fail(f"{path}.format must be typed-v3")
+    if typed.get("format") != "typed-v4":
+        fail(f"{path}.format must be typed-v4")
     for field in (
+        "target_bits",
         "unit_kind",
         "package_name",
         "package_end_name",
@@ -373,6 +383,7 @@ def validate_typed_payload(payload: Any, *, path: str, ast_payload: dict[str, An
         if field not in typed:
             fail(f"{path}.{field} is required")
 
+    require_target_bits(typed.get("target_bits"), f"{path}.target_bits")
     unit_kind = require_string(typed.get("unit_kind"), f"{path}.unit_kind")
     if unit_kind not in {"package", "entry"}:
         fail(f"{path}.unit_kind must be `package` or `entry`")
@@ -399,12 +410,13 @@ def validate_typed_payload(payload: Any, *, path: str, ast_payload: dict[str, An
 
 def validate_mir_payload(payload: Any, *, path: str, expected_source_path: str) -> dict[str, Any]:
     mir = require_mapping(payload, path)
-    if mir.get("format") != "mir-v3":
-        fail(f"{path}.format must be mir-v3")
-    for field in ("source_path", "unit_kind", "package_name", "types", "graphs"):
+    if mir.get("format") != "mir-v4":
+        fail(f"{path}.format must be mir-v4")
+    for field in ("target_bits", "source_path", "unit_kind", "package_name", "types", "graphs"):
         if field not in mir:
             fail(f"{path}.{field} is required")
 
+    require_target_bits(mir.get("target_bits"), f"{path}.target_bits")
     source_path = require_string(mir.get("source_path"), f"{path}.source_path")
     if source_path != expected_source_path:
         fail(
@@ -540,9 +552,10 @@ def validate_safei_channel_access_summaries(items: Any, path: str) -> list[dict[
 
 def validate_safei_payload(payload: Any, *, path: str) -> dict[str, Any]:
     safei = require_mapping(payload, path)
-    if safei.get("format") != "safei-v2":
-        fail(f"{path}.format must be safei-v2")
+    if safei.get("format") != "safei-v3":
+        fail(f"{path}.format must be safei-v3")
     for field in (
+        "target_bits",
         "unit_kind",
         "package_name",
         "dependencies",
@@ -559,6 +572,7 @@ def validate_safei_payload(payload: Any, *, path: str) -> dict[str, Any]:
         if field not in safei:
             fail(f"{path}.{field} is required")
 
+    require_target_bits(safei.get("target_bits"), f"{path}.target_bits")
     unit_kind = require_string(safei.get("unit_kind"), f"{path}.unit_kind")
     if unit_kind not in {"package", "entry"}:
         fail(f"{path}.unit_kind must be `package` or `entry`")
@@ -630,6 +644,16 @@ def main() -> int:
         fail(
             f"package_name mismatch: typed={typed_payload['package_name']!r}, "
             f"safei={safei_payload['package_name']!r}"
+        )
+    if typed_payload["target_bits"] != mir_payload["target_bits"]:
+        fail(
+            f"target_bits mismatch: typed={typed_payload['target_bits']!r}, "
+            f"mir={mir_payload['target_bits']!r}"
+        )
+    if typed_payload["target_bits"] != safei_payload["target_bits"]:
+        fail(
+            f"target_bits mismatch: typed={typed_payload['target_bits']!r}, "
+            f"safei={safei_payload['target_bits']!r}"
         )
 
     print(

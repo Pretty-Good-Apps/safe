@@ -8,6 +8,8 @@ package body Safe_Frontend.Mir_Model is
             return "mir-v2";
          when Mir_V3 =>
             return "mir-v3";
+         when Mir_V4 =>
+            return "mir-v4";
       end case;
    end Image;
 

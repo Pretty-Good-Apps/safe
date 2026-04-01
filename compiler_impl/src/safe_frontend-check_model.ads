@@ -568,6 +568,7 @@ package Safe_Frontend.Check_Model is
    type Resolved_Unit is record
       Path         : FT.UString := FT.To_UString ("");
       Kind         : Unit_Kind := Unit_Package;
+      Target_Bits  : Positive := 64;
       Package_Name : FT.UString := FT.To_UString ("");
       Has_End_Name : Boolean := False;
       End_Name     : FT.UString := FT.To_UString ("");

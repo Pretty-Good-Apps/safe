@@ -1147,8 +1147,12 @@ def executable_name() -> str:
     return "main.exe" if os.name == "nt" else "main"
 
 
-def safe_build_executable(source: Path) -> Path:
-    return source.parent / "obj" / source.stem / executable_name()
+def safe_build_executable(source: Path, *, target_bits: int = 64) -> Path:
+    return source.parent / "obj" / source.stem / f"target-{target_bits}" / executable_name()
+
+
+def safe_prove_summary_path(source: Path, *, target_bits: int = 64) -> Path:
+    return source.parent / "obj" / source.stem / f"prove-{target_bits}" / "obj" / "gnatprove" / "gnatprove.out"
 
 
 def run_safe_build_case(
@@ -1339,8 +1343,8 @@ print (value)
         if build.returncode != 0:
             return False, f"initial build failed: {first_message(build)}"
 
-        executable = temp_root / "obj" / "client_answer" / executable_name()
-        emitted_client = temp_root / ".safe-build" / "ada" / "client_answer.adb"
+        executable = temp_root / "obj" / "client_answer" / "target-64" / executable_name()
+        emitted_client = temp_root / ".safe-build" / "target-64" / "ada" / "client_answer.adb"
         if not emitted_client.exists():
             return False, f"missing cached emitted unit {emitted_client}"
         if not executable.exists():
@@ -1386,7 +1390,7 @@ print (value)
         clean_build = run_command([sys.executable, str(SAFE_CLI), "build", "--clean", client.name], cwd=temp_root)
         if clean_build.returncode != 0:
             return False, f"clean build failed: {first_message(clean_build)}"
-        if not (temp_root / ".safe-build" / "state.json").exists():
+        if not (temp_root / ".safe-build" / "target-64" / "state.json").exists():
             return False, "clean build did not recreate project cache"
 
     return True, ""
@@ -1418,7 +1422,7 @@ package client_constant
         if "safe prove: PASS" not in prove.stdout:
             return False, f"missing PASS verdict in initial prove {prove.stdout!r}"
 
-        summary_path = temp_root / "obj" / "client_constant" / "prove" / "obj" / "gnatprove" / "gnatprove.out"
+        summary_path = safe_prove_summary_path(client, target_bits=64)
         if not summary_path.exists():
             return False, f"missing proof summary {summary_path}"
         summary_mtime = summary_path.stat().st_mtime_ns
@@ -1429,7 +1433,7 @@ package client_constant
         if summary_path.stat().st_mtime_ns != summary_mtime:
             return False, "cached prove reran GNATprove"
 
-        proof_root = temp_root / "obj" / "client_constant" / "prove"
+        proof_root = temp_root / "obj" / "client_constant" / "prove-64"
         shutil.rmtree(proof_root)
         prove_missing_artifacts = run_command([sys.executable, str(SAFE_CLI), "prove", client.name], cwd=temp_root)
         if prove_missing_artifacts.returncode != 0:
@@ -1447,6 +1451,317 @@ package client_constant
             return False, f"dependency-invalidated prove failed: {first_message(prove_updated)}"
         if summary_path.stat().st_mtime_ns == summary_mtime:
             return False, "dependency change did not rerun GNATprove"
+
+    return True, ""
+
+
+def run_target_bits_check_case(safec: Path) -> tuple[bool, str]:
+    source_text = """subtype over is integer (0 to 2147483648);
+"""
+
+    with tempfile.TemporaryDirectory(prefix="safe-target-bits-check-") as temp_root_str:
+        temp_root = Path(temp_root_str)
+        source = temp_root / "target_bits_check.safe"
+        source.write_text(source_text, encoding="utf-8")
+
+        check64 = run_command(
+            [str(safec), "check", "--target-bits", "64", source.name],
+            cwd=temp_root,
+        )
+        if check64.returncode != 0:
+            return False, f"64-bit check failed: {first_message(check64)}"
+
+        check32 = run_command(
+            [str(safec), "check", "--target-bits", "32", source.name],
+            cwd=temp_root,
+        )
+        if check32.returncode == 0:
+            return False, "32-bit check unexpectedly succeeded"
+
+    return True, ""
+
+
+def run_target_bits_emit_contract_case(safec: Path) -> tuple[bool, str]:
+    source_text = """package target_bits_emit
+
+   public max_value : constant integer = 2147483647;
+"""
+
+    with tempfile.TemporaryDirectory(prefix="safe-target-bits-emit-") as temp_root_str:
+        temp_root = Path(temp_root_str)
+        source = temp_root / "target_bits_emit.safe"
+        source.write_text(source_text, encoding="utf-8")
+
+        for bits in (32, 64):
+            case_root = temp_root / f"emit-{bits}"
+            out_dir = case_root / "out"
+            iface_dir = case_root / "iface"
+            ada_dir = case_root / "ada"
+            out_dir.mkdir(parents=True, exist_ok=True)
+            iface_dir.mkdir(parents=True, exist_ok=True)
+            ada_dir.mkdir(parents=True, exist_ok=True)
+
+            emit = run_command(
+                [
+                    str(safec),
+                    "emit",
+                    "--target-bits",
+                    str(bits),
+                    source.name,
+                    "--out-dir",
+                    str(out_dir),
+                    "--interface-dir",
+                    str(iface_dir),
+                    "--ada-out-dir",
+                    str(ada_dir),
+                ],
+                cwd=temp_root,
+            )
+            if emit.returncode != 0:
+                return False, f"emit {bits}-bit failed: {first_message(emit)}"
+
+            stem = source.stem.lower()
+            validate = run_command(
+                [
+                    sys.executable,
+                    str(VALIDATE_OUTPUT_CONTRACTS),
+                    "--ast",
+                    str(out_dir / f"{stem}.ast.json"),
+                    "--typed",
+                    str(out_dir / f"{stem}.typed.json"),
+                    "--mir",
+                    str(out_dir / f"{stem}.mir.json"),
+                    "--safei",
+                    str(iface_dir / f"{stem}.safei.json"),
+                    "--source-path",
+                    source.name,
+                ],
+                cwd=REPO_ROOT,
+            )
+            if validate.returncode != 0:
+                return False, f"validate_output_contracts failed for {bits}-bit emit: {first_message(validate)}"
+
+            typed_payload = json.loads((out_dir / f"{stem}.typed.json").read_text(encoding="utf-8"))
+            mir_payload = json.loads((out_dir / f"{stem}.mir.json").read_text(encoding="utf-8"))
+            safei_payload = json.loads((iface_dir / f"{stem}.safei.json").read_text(encoding="utf-8"))
+            if typed_payload.get("target_bits") != bits:
+                return False, f"typed target_bits mismatch for {bits}-bit emit: {typed_payload.get('target_bits')!r}"
+            if mir_payload.get("target_bits") != bits:
+                return False, f"mir target_bits mismatch for {bits}-bit emit: {mir_payload.get('target_bits')!r}"
+            if safei_payload.get("target_bits") != bits:
+                return False, f"safei target_bits mismatch for {bits}-bit emit: {safei_payload.get('target_bits')!r}"
+
+    return True, ""
+
+
+def run_output_contract_target_bits_reject_case(safec: Path) -> tuple[bool, str]:
+    with tempfile.TemporaryDirectory(prefix="safe-target-bits-contract-") as temp_root_str:
+        temp_root = Path(temp_root_str)
+        source = temp_root / "target_bits_contract.safe"
+        source.write_text("print (0)\n", encoding="utf-8")
+        out_dir = temp_root / "out"
+        iface_dir = temp_root / "iface"
+        ada_dir = temp_root / "ada"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        iface_dir.mkdir(parents=True, exist_ok=True)
+        ada_dir.mkdir(parents=True, exist_ok=True)
+
+        emit = run_command(
+            [
+                str(safec),
+                "emit",
+                source.name,
+                "--out-dir",
+                str(out_dir),
+                "--interface-dir",
+                str(iface_dir),
+                "--ada-out-dir",
+                str(ada_dir),
+            ],
+            cwd=temp_root,
+        )
+        if emit.returncode != 0:
+            return False, f"emit failed: {first_message(emit)}"
+
+        stem = source.stem.lower()
+        mir_path = out_dir / f"{stem}.mir.json"
+        mir_payload = json.loads(mir_path.read_text(encoding="utf-8"))
+        mir_payload["target_bits"] = 16
+        mir_path.write_text(json.dumps(mir_payload, indent=2) + "\n", encoding="utf-8")
+
+        validate = run_command(
+            [
+                sys.executable,
+                str(VALIDATE_OUTPUT_CONTRACTS),
+                "--ast",
+                str(out_dir / f"{stem}.ast.json"),
+                "--typed",
+                str(out_dir / f"{stem}.typed.json"),
+                "--mir",
+                str(mir_path),
+                "--safei",
+                str(iface_dir / f"{stem}.safei.json"),
+                "--source-path",
+                source.name,
+            ],
+            cwd=REPO_ROOT,
+        )
+        if validate.returncode == 0:
+            return False, "validate_output_contracts unexpectedly succeeded for invalid target_bits"
+        output = validate.stderr or validate.stdout
+        if "mir.json.target_bits must be 32 or 64" not in output:
+            return False, f"missing target_bits validation message in {output!r}"
+
+    return True, ""
+
+
+def run_interface_target_bits_case(safec: Path) -> tuple[bool, str]:
+    provider = REPO_ROOT / "tests" / "interfaces" / "provider_types.safe"
+    client = REPO_ROOT / "tests" / "interfaces" / "client_types.safe"
+    legacy_safei = REPO_ROOT / "tests" / "interfaces" / "provider_transitive_channel.safei.json"
+    legacy_client = REPO_ROOT / "tests" / "interfaces" / "client_transitive_channel_receive_only.safe"
+
+    with tempfile.TemporaryDirectory(prefix="safe-interface-target-bits-") as temp_root_str:
+        temp_root = Path(temp_root_str)
+
+        mismatch_root = temp_root / "mismatch"
+        out_dir = mismatch_root / "out"
+        iface_dir = mismatch_root / "iface"
+        ada_dir = mismatch_root / "ada"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        iface_dir.mkdir(parents=True, exist_ok=True)
+        ada_dir.mkdir(parents=True, exist_ok=True)
+
+        emit = run_command(
+            [
+                str(safec),
+                "emit",
+                "--target-bits",
+                "64",
+                repo_rel(provider),
+                "--out-dir",
+                str(out_dir),
+                "--interface-dir",
+                str(iface_dir),
+                "--ada-out-dir",
+                str(ada_dir),
+            ],
+            cwd=REPO_ROOT,
+        )
+        if emit.returncode != 0:
+            return False, f"64-bit provider emit failed: {first_message(emit)}"
+
+        mismatch = run_command(
+            [
+                str(safec),
+                "check",
+                "--target-bits",
+                "32",
+                repo_rel(client),
+                "--interface-search-dir",
+                str(iface_dir),
+            ],
+            cwd=REPO_ROOT,
+        )
+        if mismatch.returncode != DIAGNOSTIC_EXIT_CODE:
+            return False, f"32-bit imported-interface mismatch unexpectedly returned {mismatch.returncode}: {first_message(mismatch)}"
+        mismatch_output = mismatch.stderr or mismatch.stdout
+        expected = "imported interface `provider_types` target_bits 64 does not match current target_bits 32"
+        if expected not in mismatch_output:
+            return False, f"missing target_bits mismatch diagnostic in {mismatch_output!r}"
+
+        legacy_root = temp_root / "legacy"
+        legacy_iface_dir = legacy_root / "iface"
+        legacy_iface_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(legacy_safei, legacy_iface_dir / legacy_safei.name)
+
+        legacy = run_command(
+            [
+                str(safec),
+                "check",
+                "--target-bits",
+                "32",
+                repo_rel(legacy_client),
+                "--interface-search-dir",
+                str(legacy_iface_dir),
+            ],
+            cwd=REPO_ROOT,
+        )
+        if legacy.returncode != DIAGNOSTIC_EXIT_CODE:
+            return False, f"32-bit legacy interface unexpectedly returned {legacy.returncode}: {first_message(legacy)}"
+        legacy_output = legacy.stderr or legacy.stdout
+        expected_legacy = "imported interface `provider_transitive_channel` target_bits 64 does not match current target_bits 32"
+        if expected_legacy not in legacy_output:
+            return False, f"missing legacy target_bits mismatch diagnostic in {legacy_output!r}"
+
+    return True, ""
+
+
+def run_safe_build_target_bits_case() -> tuple[bool, str]:
+    source_text = """value : integer = 7;
+print (value)
+"""
+
+    with tempfile.TemporaryDirectory(prefix="safe-build-target-bits-") as temp_root_str:
+        temp_root = Path(temp_root_str)
+        source = temp_root / "target_bits_build.safe"
+        source.write_text(source_text, encoding="utf-8")
+
+        for bits in (32, 64):
+            build = run_command(
+                [sys.executable, str(SAFE_CLI), "build", "--target-bits", str(bits), source.name],
+                cwd=temp_root,
+            )
+            if build.returncode != 0:
+                return False, f"{bits}-bit build failed: {first_message(build)}"
+            executable = safe_build_executable(source, target_bits=bits)
+            if not executable.exists():
+                return False, f"missing {bits}-bit executable {executable}"
+            run = run_command([str(executable)], cwd=executable.parent)
+            if run.returncode != 0:
+                return False, f"{bits}-bit executable failed: {first_message(run)}"
+            if run.stdout != "7\n":
+                return False, f"unexpected {bits}-bit stdout {run.stdout!r}"
+            state_path = temp_root / ".safe-build" / f"target-{bits}" / "state.json"
+            if not state_path.exists():
+                return False, f"missing {bits}-bit project cache state {state_path}"
+
+    return True, ""
+
+
+def run_safe_prove_target_bits_case() -> tuple[bool, str]:
+    source_text = """package target_bits_prove
+
+   subtype count is integer (0 to 2147483647);
+   value : constant count = 2147483647;
+"""
+
+    with tempfile.TemporaryDirectory(prefix="safe-prove-target-bits-") as temp_root_str:
+        temp_root = Path(temp_root_str)
+        source = temp_root / "target_bits_prove.safe"
+        source.write_text(source_text, encoding="utf-8")
+
+        for bits in (32, 64):
+            prove = run_command(
+                [sys.executable, str(SAFE_CLI), "prove", "--target-bits", str(bits), source.name],
+                cwd=temp_root,
+            )
+            if prove.returncode != 0:
+                return False, f"{bits}-bit prove failed: {first_message(prove)}"
+            summary_path = safe_prove_summary_path(source, target_bits=bits)
+            if not summary_path.exists():
+                return False, f"missing {bits}-bit proof summary {summary_path}"
+
+        summary32 = safe_prove_summary_path(source, target_bits=32)
+        mtime32 = summary32.stat().st_mtime_ns
+        prove_cached = run_command(
+            [sys.executable, str(SAFE_CLI), "prove", "--target-bits", "32", source.name],
+            cwd=temp_root,
+        )
+        if prove_cached.returncode != 0:
+            return False, f"cached 32-bit prove failed: {first_message(prove_cached)}"
+        if summary32.stat().st_mtime_ns != mtime32:
+            return False, "cached 32-bit prove reran GNATprove"
 
     return True, ""
 
@@ -2154,6 +2469,24 @@ def main() -> int:
             else:
                 failures.append((case_label, detail))
 
+        ok, detail = run_output_contract_target_bits_reject_case(safec)
+        if ok:
+            passed += 1
+        else:
+            failures.append(("contracts-reject:target-bits", detail))
+
+        ok, detail = run_target_bits_emit_contract_case(safec)
+        if ok:
+            passed += 1
+        else:
+            failures.append(("target-bits emit contract", detail))
+
+        ok, detail = run_target_bits_check_case(safec)
+        if ok:
+            passed += 1
+        else:
+            failures.append(("target-bits check", detail))
+
         for label, source, forbidden_snippets in EMITTED_SHAPE_CASES:
             ok, detail = run_emitted_shape_case(
                 safec,
@@ -2274,8 +2607,20 @@ def main() -> int:
     else:
         failures.append(("safe build incremental", detail))
 
+    ok, detail = run_interface_target_bits_case(safec)
+    if ok:
+        passed += 1
+    else:
+        failures.append(("interface target_bits", detail))
+
+    ok, detail = run_safe_build_target_bits_case()
+    if ok:
+        passed += 1
+    else:
+        failures.append(("safe build target bits", detail))
+
     for argv, expected in (
-        (["--help"], ["safe build [--clean]", "safe deploy", "safe run", "safe prove"]),
+        (["--help"], ["safe build [--clean]", "--target-bits", "safe deploy", "safe run", "safe prove"]),
         (["deploy", "--help"], ["--board", "--simulate", "--watch-symbol", "--expect-value"]),
     ):
         ok, detail = run_safe_cli_help_case(argv, expected)
@@ -2312,6 +2657,12 @@ def main() -> int:
         passed += 1
     else:
         failures.append(("safe prove incremental", detail))
+
+    ok, detail = run_safe_prove_target_bits_case()
+    if ok:
+        passed += 1
+    else:
+        failures.append(("safe prove target bits", detail))
 
     for label, verbose in (
         ("safe prove current directory", False),

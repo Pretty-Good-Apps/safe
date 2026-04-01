@@ -795,6 +795,9 @@ package body Safe_Frontend.Mir_Write is
         & """format"":"
         & JS.Quote (GM.Image (Document.Format))
         & ","
+        & """target_bits"":"
+        & Positive'Image (Document.Target_Bits)
+        & ","
         & """source_path"":"
         & (if Document.Has_Source_Path then JS.Quote (Document.Source_Path) else "null")
         & ","

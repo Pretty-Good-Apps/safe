@@ -250,7 +250,7 @@ package body Safe_Frontend.Mir_Analyze is
    function Has_Text (Value : FT.UString) return Boolean;
    function Lower (Value : String) return String renames FT.Lowercase;
 
-   procedure Add_Builtins (Type_Env : in out Type_Maps.Map);
+   procedure Add_Builtins (Type_Env : in out Type_Maps.Map; Target_Bits : Positive);
    function Resolve_Type
      (Name     : String;
       Type_Env : Type_Maps.Map) return GM.Type_Descriptor;
@@ -844,9 +844,9 @@ package body Safe_Frontend.Mir_Analyze is
       end;
    end Parsed_Wide_Integer;
 
-   procedure Add_Builtins (Type_Env : in out Type_Maps.Map) is
+   procedure Add_Builtins (Type_Env : in out Type_Maps.Map; Target_Bits : Positive) is
    begin
-      Type_Env.Include ("integer", BT.Integer_Type);
+      Type_Env.Include ("integer", BT.Integer_Type (Target_Bits));
       Type_Env.Include ("boolean", BT.Boolean_Type);
       Type_Env.Include ("string", BT.String_Type);
       Type_Env.Include ("result", BT.Result_Type);
@@ -5931,7 +5931,7 @@ package body Safe_Frontend.Mir_Analyze is
    is
       Result : Type_Maps.Map;
    begin
-      Add_Builtins (Result);
+      Add_Builtins (Result, Document.Target_Bits);
       for Item of Document.Types loop
          Result.Include (UString_Value (Item.Name), Item);
       end loop;
@@ -6231,8 +6231,8 @@ package body Safe_Frontend.Mir_Analyze is
         (if Document.Has_Source_Path then UString_Value (Document.Source_Path) else UString_Value (Document.Path));
       Basename    : constant String := Ada.Directories.Simple_Name (Path_String);
    begin
-      if Document.Format not in GM.Mir_V2 | GM.Mir_V3 then
-         return Error (UString_Value (Document.Path) & ": analyze-mir requires mir-v2 or mir-v3 input");
+      if Document.Format not in GM.Mir_V2 | GM.Mir_V3 | GM.Mir_V4 then
+         return Error (UString_Value (Document.Path) & ": analyze-mir requires mir-v2, mir-v3, or mir-v4 input");
       end if;
 
       Bronze := MB.Summarize (Document, Tasks, Path_String);
@@ -6298,8 +6298,8 @@ package body Safe_Frontend.Mir_Analyze is
       begin
          if not Validation.Success then
             return Error (Path & ": " & UString_Value (Validation.Message));
-         elsif Loaded.Document.Format not in GM.Mir_V2 | GM.Mir_V3 then
-            return Error (Path & ": analyze-mir requires mir-v2 or mir-v3 input");
+         elsif Loaded.Document.Format not in GM.Mir_V2 | GM.Mir_V3 | GM.Mir_V4 then
+            return Error (Path & ": analyze-mir requires mir-v2, mir-v3, or mir-v4 input");
          end if;
       end;
 

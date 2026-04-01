@@ -10,6 +10,7 @@ package body Safe_Frontend.Check_Lower is
 
    INT64_LOW  : constant Long_Long_Integer := -(2 ** 63);
    INT64_HIGH : constant Long_Long_Integer := (2 ** 63) - 1;
+   Current_Target_Bits : Positive := 64;
 
    use type Ada.Containers.Count_Type;
    use type CM.Discrete_Range_Kind;
@@ -69,6 +70,11 @@ package body Safe_Frontend.Check_Lower is
       return Has_Text (Value);
    end Has_Block;
 
+   function Default_Integer_Type return GM.Type_Descriptor is
+   begin
+      return BT.Integer_Type (Current_Target_Bits);
+   end Default_Integer_Type;
+
    function Empty_Block_Id return FT.UString is
    begin
       return FT.To_UString ("");
@@ -76,7 +82,7 @@ package body Safe_Frontend.Check_Lower is
 
    procedure Add_Builtins (Type_Env : in out Type_Maps.Map) is
    begin
-      Type_Env.Include ("integer", BT.Integer_Type);
+      Type_Env.Include ("integer", Default_Integer_Type);
       Type_Env.Include ("boolean", BT.Boolean_Type);
       Type_Env.Include ("string", BT.String_Type);
       Type_Env.Include ("result", BT.Result_Type);
@@ -107,19 +113,19 @@ package body Safe_Frontend.Check_Lower is
       if Name'Length < Prefix'Length
         or else Name (Name'First .. Name'First + Prefix'Length - 1) /= Prefix
       then
-         return BT.Integer_Type;
+         return Default_Integer_Type;
       end if;
 
       declare
          Bound_Text : constant String := Name (Name'First + Prefix'Length .. Name'Last);
       begin
          if Bound_Text'Length = 0 then
-            return BT.Integer_Type;
+            return Default_Integer_Type;
          end if;
 
          for Ch of Bound_Text loop
             if Ch not in '0' .. '9' then
-               return BT.Integer_Type;
+               return Default_Integer_Type;
             end if;
          end loop;
 
@@ -127,7 +133,7 @@ package body Safe_Frontend.Check_Lower is
          return Bounded_String_Type (Natural'Value (Bound_Text));
       exception
          when Constraint_Error =>
-            return BT.Integer_Type;
+            return Default_Integer_Type;
       end;
    end Synthetic_Bounded_String_Type;
 
@@ -137,7 +143,7 @@ package body Safe_Frontend.Check_Lower is
       Found : Boolean := False;
    begin
       if Name = "" then
-         return BT.Integer_Type;
+         return Default_Integer_Type;
       elsif Type_Env.Contains (Name) then
          return Type_Env.Element (Name);
       else
@@ -150,7 +156,7 @@ package body Safe_Frontend.Check_Lower is
             end if;
          end;
       end if;
-      return BT.Integer_Type;
+      return Default_Integer_Type;
    end Resolve_Type;
 
    function Resolve_Type
@@ -235,14 +241,14 @@ package body Safe_Frontend.Check_Lower is
         (if Expr /= null then UString_Value (Expr.Type_Name) else "");
    begin
       if Expr = null then
-         return BT.Integer_Type;
+         return Default_Integer_Type;
       elsif Expr.Kind = CM.Expr_String then
          return Resolve_Type ("string", Type_Env);
       elsif Expr.Kind = CM.Expr_Enum_Literal then
          if Name'Length > 0 and then Type_Env.Contains (Name) then
             return Type_Env.Element (Name);
          end if;
-         return BT.Integer_Type;
+         return Default_Integer_Type;
       elsif Expr.Kind = CM.Expr_Array_Literal then
          if Name'Length > 0 and then Type_Env.Contains (Name) then
             return Type_Env.Element (Name);
@@ -254,7 +260,7 @@ package body Safe_Frontend.Check_Lower is
                     Var_Types,
                     Type_Env));
          end if;
-         return Make_Growable_Array_Type (BT.Integer_Type);
+         return Make_Growable_Array_Type (Default_Integer_Type);
       elsif Expr.Kind = CM.Expr_Real then
          if Name'Length > 0 and then Type_Env.Contains (Name) then
             return Type_Env.Element (Name);
@@ -269,7 +275,7 @@ package body Safe_Frontend.Check_Lower is
       elsif Name'Length > 0 then
          return Resolve_Type (Name, Type_Env);
       end if;
-      return BT.Integer_Type;
+      return Default_Integer_Type;
    end Expr_Type;
 
    function Mir_Kind (Expr : CM.Expr_Access) return GM.Expr_Kind is
@@ -844,7 +850,7 @@ package body Safe_Frontend.Check_Lower is
          return Result;
       end if;
 
-      return BT.Integer_Type;
+      return Default_Integer_Type;
    end Static_Loop_Type;
 
    procedure Static_Loop_Bounds
@@ -1143,9 +1149,9 @@ package body Safe_Frontend.Check_Lower is
                        "__safe_for_of_index_" & Trimmed (Natural (Locals.Length) + 1);
                      Index_Type    : constant GM.Type_Descriptor :=
                        (if FT.Lowercase (UString_Value (Iterable_Type.Kind)) = "string"
-                        then BT.Integer_Type
+                        then Default_Integer_Type
                         elsif Iterable_Type.Growable
-                        then BT.Integer_Type
+                        then Default_Integer_Type
                         else Resolve_Type
                                (UString_Value (Iterable_Type.Index_Types (Iterable_Type.Index_Types.First_Index)),
                                 Visible));
@@ -1999,9 +2005,9 @@ package body Safe_Frontend.Check_Lower is
                        Base_Type (Expr_Type (Stmt.Loop_Iterable, Visible_Types, Type_Env), Type_Env);
                      Index_Type    : constant GM.Type_Descriptor :=
                        (if FT.Lowercase (UString_Value (Iterable_Type.Kind)) = "string"
-                        then BT.Integer_Type
+                        then Default_Integer_Type
                         elsif Iterable_Type.Growable
-                        then BT.Integer_Type
+                        then Default_Integer_Type
                         else Resolve_Type
                                (UString_Value (Iterable_Type.Index_Types (Iterable_Type.Index_Types.First_Index)),
                                 Type_Env));
@@ -2998,6 +3004,7 @@ package body Safe_Frontend.Check_Lower is
       Result   : GM.Mir_Document;
       Type_Env : Type_Maps.Map;
    begin
+      Current_Target_Bits := Unit.Target_Bits;
       Add_Builtins (Type_Env);
       for Item of Unit.Types loop
          Type_Env.Include (UString_Value (Item.Name), Item);
@@ -3009,7 +3016,8 @@ package body Safe_Frontend.Check_Lower is
       end loop;
 
       Result.Path := Unit.Path;
-      Result.Format := GM.Mir_V3;
+      Result.Format := GM.Mir_V4;
+      Result.Target_Bits := Unit.Target_Bits;
       Result.Has_Source_Path := True;
       Result.Source_Path := Unit.Path;
       Result.Unit_Kind := FT.To_UString ((if Unit.Kind = CM.Unit_Entry then "entry" else "package"));

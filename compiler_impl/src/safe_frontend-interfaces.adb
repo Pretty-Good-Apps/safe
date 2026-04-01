@@ -844,6 +844,7 @@ package body Safe_Frontend.Interfaces is
       Result      : Loaded_Interface;
       Types       : JSON_Array;
       Is_Safei_V2 : Boolean := False;
+      Is_Safei_V3 : Boolean := False;
    begin
       if not Parsed.Success then
          raise Constraint_Error with
@@ -857,14 +858,31 @@ package body Safe_Frontend.Interfaces is
       declare
          Format : constant String := Require_String (Root, "format", File_Path);
       begin
-         if Format /= "safei-v1" and then Format /= "safei-v2" then
-            raise Constraint_Error with File_Path & ": format must be safei-v1 or safei-v2";
+         if Format /= "safei-v1" and then Format /= "safei-v2" and then Format /= "safei-v3" then
+            raise Constraint_Error with File_Path & ": format must be safei-v1, safei-v2, or safei-v3";
          end if;
-         Is_Safei_V2 := Format = "safei-v2";
+         Is_Safei_V2 := Format in "safei-v2" | "safei-v3";
+         Is_Safei_V3 := Format = "safei-v3";
       end;
 
       if Is_Safei_V2 and then not Has_Field (Root, "unit_kind") then
-         raise Constraint_Error with File_Path & ": unit_kind is required for safei-v2";
+         raise Constraint_Error with File_Path & ": unit_kind is required for safei-v2/safei-v3";
+      end if;
+      if Is_Safei_V3 then
+         if not Has_Field (Root, "target_bits") then
+            raise Constraint_Error with File_Path & ": target_bits is required for safei-v3";
+         elsif Get (Root, "target_bits").Kind /= JSON_Int_Type then
+            raise Constraint_Error with File_Path & ": target_bits must be 32 or 64";
+         else
+            declare
+               Bits : constant Long_Long_Integer := Get (Get (Root, "target_bits"));
+            begin
+               if Bits not in 32 | 64 then
+                  raise Constraint_Error with File_Path & ": target_bits must be 32 or 64";
+               end if;
+               Result.Target_Bits := Positive (Bits);
+            end;
+         end if;
       end if;
 
       if Has_Field (Root, "unit_kind") then

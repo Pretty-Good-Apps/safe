@@ -7,6 +7,7 @@ package Safe_Frontend.Check_Resolve is
 
    function Resolve
      (Unit        : CM.Parsed_Unit;
-      Search_Dirs : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector)
+      Search_Dirs : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector;
+      Target_Bits : Positive := 64)
       return CM.Resolve_Result;
 end Safe_Frontend.Check_Resolve;
