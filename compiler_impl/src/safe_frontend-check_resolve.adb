@@ -7242,9 +7242,46 @@ package body Safe_Frontend.Check_Resolve is
          end;
       end Analyze_Recursive_Type_Families;
 
+      function With_Clause_Image (Clause : CM.With_Clause) return String is
+         Result : FT.UString := FT.To_UString ("");
+      begin
+         if not Clause.Names.Is_Empty then
+            for Index in Clause.Names.First_Index .. Clause.Names.Last_Index loop
+               if Index > Clause.Names.First_Index then
+                  Result := Result & FT.To_UString (".");
+               end if;
+               Result := Result & Clause.Names (Index);
+            end loop;
+         end if;
+         return UString_Value (Result);
+      end With_Clause_Image;
+
+      function Imported_Interface_Span (Package_Name : String) return FT.Source_Span is
+      begin
+         for Clause of Unit.Withs loop
+            if With_Clause_Image (Clause) = Package_Name then
+               return Clause.Span;
+            end if;
+         end loop;
+         return FT.Null_Span;
+      end Imported_Interface_Span;
+
       procedure Add_Imported_Interface (Item : SI.Loaded_Interface) is
          Package_Name : constant String := UString_Value (Item.Package_Name);
       begin
+         if Item.Target_Bits /= Normalized_Target_Bits then
+            Raise_Diag
+              (CM.Source_Frontend_Error
+                 (Path    => UString_Value (Unit.Path),
+                  Span    => Imported_Interface_Span (Package_Name),
+                  Message =>
+                    "imported interface `"
+                    & Package_Name
+                    & "` target_bits "
+                    & Ada.Strings.Fixed.Trim (Positive'Image (Item.Target_Bits), Ada.Strings.Both)
+                    & " does not match current target_bits "
+                    & Ada.Strings.Fixed.Trim (Positive'Image (Normalized_Target_Bits), Ada.Strings.Both)));
+         end if;
          for Type_Item of Item.Types loop
             declare
                Info : constant GM.Type_Descriptor :=

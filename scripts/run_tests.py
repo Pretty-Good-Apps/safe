@@ -1615,6 +1615,88 @@ def run_output_contract_target_bits_reject_case(safec: Path) -> tuple[bool, str]
     return True, ""
 
 
+def run_interface_target_bits_case(safec: Path) -> tuple[bool, str]:
+    provider = REPO_ROOT / "tests" / "interfaces" / "provider_types.safe"
+    client = REPO_ROOT / "tests" / "interfaces" / "client_types.safe"
+    legacy_safei = REPO_ROOT / "tests" / "interfaces" / "provider_transitive_channel.safei.json"
+    legacy_client = REPO_ROOT / "tests" / "interfaces" / "client_transitive_channel_receive_only.safe"
+
+    with tempfile.TemporaryDirectory(prefix="safe-interface-target-bits-") as temp_root_str:
+        temp_root = Path(temp_root_str)
+
+        mismatch_root = temp_root / "mismatch"
+        out_dir = mismatch_root / "out"
+        iface_dir = mismatch_root / "iface"
+        ada_dir = mismatch_root / "ada"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        iface_dir.mkdir(parents=True, exist_ok=True)
+        ada_dir.mkdir(parents=True, exist_ok=True)
+
+        emit = run_command(
+            [
+                str(safec),
+                "emit",
+                "--target-bits",
+                "64",
+                repo_rel(provider),
+                "--out-dir",
+                str(out_dir),
+                "--interface-dir",
+                str(iface_dir),
+                "--ada-out-dir",
+                str(ada_dir),
+            ],
+            cwd=REPO_ROOT,
+        )
+        if emit.returncode != 0:
+            return False, f"64-bit provider emit failed: {first_message(emit)}"
+
+        mismatch = run_command(
+            [
+                str(safec),
+                "check",
+                "--target-bits",
+                "32",
+                repo_rel(client),
+                "--interface-search-dir",
+                str(iface_dir),
+            ],
+            cwd=REPO_ROOT,
+        )
+        if mismatch.returncode != DIAGNOSTIC_EXIT_CODE:
+            return False, f"32-bit imported-interface mismatch unexpectedly returned {mismatch.returncode}: {first_message(mismatch)}"
+        mismatch_output = mismatch.stderr or mismatch.stdout
+        expected = "imported interface `provider_types` target_bits 64 does not match current target_bits 32"
+        if expected not in mismatch_output:
+            return False, f"missing target_bits mismatch diagnostic in {mismatch_output!r}"
+
+        legacy_root = temp_root / "legacy"
+        legacy_iface_dir = legacy_root / "iface"
+        legacy_iface_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(legacy_safei, legacy_iface_dir / legacy_safei.name)
+
+        legacy = run_command(
+            [
+                str(safec),
+                "check",
+                "--target-bits",
+                "32",
+                repo_rel(legacy_client),
+                "--interface-search-dir",
+                str(legacy_iface_dir),
+            ],
+            cwd=REPO_ROOT,
+        )
+        if legacy.returncode != DIAGNOSTIC_EXIT_CODE:
+            return False, f"32-bit legacy interface unexpectedly returned {legacy.returncode}: {first_message(legacy)}"
+        legacy_output = legacy.stderr or legacy.stdout
+        expected_legacy = "imported interface `provider_transitive_channel` target_bits 64 does not match current target_bits 32"
+        if expected_legacy not in legacy_output:
+            return False, f"missing legacy target_bits mismatch diagnostic in {legacy_output!r}"
+
+    return True, ""
+
+
 def run_safe_build_target_bits_case() -> tuple[bool, str]:
     source_text = """value : integer = 7;
 print (value)
@@ -2524,6 +2606,12 @@ def main() -> int:
         passed += 1
     else:
         failures.append(("safe build incremental", detail))
+
+    ok, detail = run_interface_target_bits_case(safec)
+    if ok:
+        passed += 1
+    else:
+        failures.append(("interface target_bits", detail))
 
     ok, detail = run_safe_build_target_bits_case()
     if ok:

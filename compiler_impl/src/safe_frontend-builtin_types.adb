@@ -50,7 +50,7 @@ package body Safe_Frontend.Builtin_Types is
       return Result;
    end Make_Float_Type;
 
-   function Integer_Type (Target_Bits : Positive := 64) return GM.Type_Descriptor is
+   function Integer_Type (Target_Bits : Target_Bits_Type := 64) return GM.Type_Descriptor is
       Bits : constant Positive := (if Is_Valid_Target_Bits (Target_Bits) then Target_Bits else 64);
    begin
       if Bits = 32 then
