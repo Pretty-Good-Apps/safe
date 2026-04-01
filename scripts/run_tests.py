@@ -34,6 +34,7 @@ SAFE_CLI = REPO_ROOT / "scripts" / "safe_cli.py"
 SAFE_REPL = REPO_ROOT / "scripts" / "safe_repl.py"
 EMBEDDED_SMOKE = REPO_ROOT / "scripts" / "run_embedded_smoke.py"
 VALIDATE_OUTPUT_CONTRACTS = REPO_ROOT / "scripts" / "validate_output_contracts.py"
+VALIDATE_AST_OUTPUT = REPO_ROOT / "scripts" / "validate_ast_output.py"
 VSCODE_README = REPO_ROOT / "editors" / "vscode" / "README.md"
 VSCODE_PACKAGE_JSON = REPO_ROOT / "editors" / "vscode" / "package.json"
 
@@ -213,6 +214,12 @@ STATIC_INTERFACE_CASES = [
         REPO_ROOT / "tests" / "interfaces" / "client_missing_unit_kind.safe",
         1,
     ),
+]
+
+
+AST_CONTRACT_CASES = [
+    REPO_ROOT / "tests" / "positive" / "pr118k_try_propagation.safe",
+    REPO_ROOT / "tests" / "positive" / "pr118k_match.safe",
 ]
 
 DIAGNOSTIC_GOLDEN_CASES = [
@@ -1573,6 +1580,27 @@ def run_safe_deploy_reject_case(argv: list[str], expected_message: str) -> tuple
     return True, ""
 
 
+def run_ast_contract_case(
+    safec: Path,
+    source: Path,
+    *,
+    temp_root: Path,
+) -> tuple[bool, str]:
+    case_root = temp_root / f"ast-{source.stem}"
+    case_root.mkdir(parents=True, exist_ok=True)
+    ast_path = case_root / f"{source.stem.lower()}.ast.json"
+
+    ast = run_command([str(safec), "ast", repo_rel(source)], cwd=REPO_ROOT)
+    if ast.returncode != 0:
+        return False, f"ast failed: {first_message(ast)}"
+    ast_path.write_text(ast.stdout, encoding="utf-8")
+
+    validate = run_command([sys.executable, str(VALIDATE_AST_OUTPUT), str(ast_path)], cwd=REPO_ROOT)
+    if validate.returncode != 0:
+        return False, first_message(validate)
+    return True, ""
+
+
 def run_output_contract_case(
     safec: Path,
     source: Path,
@@ -2094,6 +2122,15 @@ def main() -> int:
                 passed += 1
             else:
                 failures.append((pair_label, detail))
+
+
+        for source in AST_CONTRACT_CASES:
+            ok, detail = run_ast_contract_case(safec, source, temp_root=temp_root)
+            label = f"ast-contract:{repo_rel(source)}"
+            if ok:
+                passed += 1
+            else:
+                failures.append((label, detail))
 
         for source in OUTPUT_CONTRACT_CASES:
             ok, detail = run_output_contract_case(safec, source, temp_root=temp_root)

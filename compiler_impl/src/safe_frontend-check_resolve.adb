@@ -4666,7 +4666,7 @@ package body Safe_Frontend.Check_Resolve is
                      Message => "`try` requires an enclosing function returning `(result, T)`"));
             end if;
 
-            Temp_Name := FT.To_UString (Next_Synthetic_Name ("safe_try_tmp"));
+            Temp_Name := FT.To_UString (Next_Synthetic_Name ("Safe_Try_Tmp"));
             Result.Preludes.Append
               (Synthetic_Object_Decl_Stmt (UString_Value (Temp_Name), Carrier_Type, Child.Expr, Expr.Span));
             Then_Stmts.Append
@@ -6018,7 +6018,7 @@ package body Safe_Frontend.Check_Resolve is
                if Is_Name_Expr (Desugared.Expr) then
                   Match_Value := Desugared.Expr;
                else
-                  Match_Name := FT.To_UString (Next_Synthetic_Name ("safe_match_tmp"));
+                  Match_Name := FT.To_UString (Next_Synthetic_Name ("Safe_Match_Tmp"));
                   Expanded.Append
                     (Synthetic_Object_Decl_Stmt
                        (UString_Value (Match_Name),
