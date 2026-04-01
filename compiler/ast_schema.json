@@ -346,6 +346,15 @@
       ]
     },
     {
+      "node_type": "TupleTypeSpec",
+      "production": "tuple_type_spec",
+      "source_section": "8.4",
+      "fields": [
+        { "name": "elements", "type": "NonEmptyList<SubtypeIndication | GrowableArrayTypeSpec | TupleTypeSpec>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
       "node_type": "RecordTypeDefinition",
       "production": "record_type_definition",
       "source_section": "8.4",
@@ -746,8 +755,17 @@
       "production": "primary",
       "source_section": "8.6",
       "fields": [
-        { "name": "kind", "type": "PrimaryKind", "optional": false, "note": "NumericLiteral, StringLiteral, CharacterLiteral, BracketAggregate, Null, Name, Allocator, Aggregate, ParenExpr, AnnotatedExpr, ConditionalExpr, DeclareExpr" },
-        { "name": "value", "type": "NodeRef<Literal | Name | Allocator | Aggregate | BracketAggregate | Expression | AnnotatedExpression | ConditionalExpression | DeclareExpression>", "optional": false },
+        { "name": "kind", "type": "PrimaryKind", "optional": false, "note": "Literal, BracketAggregate, Name, Allocator, Aggregate, Tuple, ParenExpr, AnnotatedExpr, TryExpr, ConditionalExpr, DeclareExpr" },
+        { "name": "value", "type": "NodeRef<Literal | Name | Allocator | Aggregate | TupleAggregate | BracketAggregate | Expression | AnnotatedExpression | TryExpression | ConditionalExpression | DeclareExpression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "TupleAggregate",
+      "production": "tuple_aggregate",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "elements", "type": "List<Expression>", "optional": false },
         { "name": "span", "type": "Span", "optional": false }
       ]
     },
@@ -770,6 +788,15 @@
       "fields": [
         { "name": "expression", "type": "NodeRef<Expression>", "optional": false },
         { "name": "subtype_mark", "type": "NodeRef<Name | BinaryTypeDefinition>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "TryExpression",
+      "production": "try_expression",
+      "source_section": "8.6",
+      "fields": [
+        { "name": "expression", "type": "NodeRef<Expression>", "optional": false },
         { "name": "span", "type": "Span", "optional": false }
       ]
     },
@@ -1011,6 +1038,28 @@
       "clause_ids": ["SAFE@468cf72:spec/02-restrictions.md#2.1.8.p60:75dc85e6"],
       "fields": [
         { "name": "expression", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "MatchStatement",
+      "production": "match_statement",
+      "source_section": "8.7",
+      "fields": [
+        { "name": "expression", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "ok_arm", "type": "NodeRef<MatchArm>", "optional": false },
+        { "name": "fail_arm", "type": "NodeRef<MatchArm>", "optional": false },
+        { "name": "span", "type": "Span", "optional": false }
+      ]
+    },
+    {
+      "node_type": "MatchArm",
+      "production": "match_arm",
+      "source_section": "8.7",
+      "fields": [
+        { "name": "kind", "type": "MatchArmKind", "optional": false },
+        { "name": "binder", "type": "Identifier", "optional": false },
+        { "name": "statements", "type": "NodeRef<SequenceOfStatements>", "optional": false },
         { "name": "span", "type": "Span", "optional": false }
       ]
     },
@@ -1439,7 +1488,7 @@
       "production": "string_literal",
       "source_section": "8.14",
       "fields": [
-        { "name": "value", "type": "String", "optional": false },
+        { "name": "text", "type": "String", "optional": false },
         { "name": "span", "type": "Span", "optional": false }
       ]
     },
@@ -1501,7 +1550,7 @@
     },
     {
       "name": "PrimaryKind",
-      "values": ["NumericLiteral", "StringLiteral", "CharacterLiteral", "BracketAggregate", "Null", "Name", "Allocator", "Aggregate", "ParenExpr", "AnnotatedExpr", "ConditionalExpr", "DeclareExpr"]
+      "values": ["Literal", "BracketAggregate", "Name", "Allocator", "Aggregate", "Tuple", "ParenExpr", "AnnotatedExpr", "TryExpr", "ConditionalExpr", "DeclareExpr"]
     },
     {
       "name": "ParameterMode",
@@ -1513,11 +1562,15 @@
     },
     {
       "name": "StatementKind",
-      "values": ["Null", "Assignment", "ProcedureCall", "SimpleReturn", "ExtendedReturn", "Exit", "Goto", "Delay", "Send", "Receive", "TrySend", "TryReceive", "If", "Case", "Loop", "Block", "Select", "Pragma"]
+      "values": ["Null", "Assignment", "ProcedureCall", "SimpleReturn", "ExtendedReturn", "Exit", "Goto", "Delay", "Send", "Receive", "TrySend", "TryReceive", "If", "Case", "Match", "Loop", "Block", "Select", "Pragma"]
     },
     {
       "name": "SelectArmKind",
       "values": ["Channel", "Delay"]
+    },
+    {
+      "name": "MatchArmKind",
+      "values": ["ok", "fail"]
     },
     {
       "name": "SelectedComponentKind",

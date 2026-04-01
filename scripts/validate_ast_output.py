@@ -88,6 +88,7 @@ ABSTRACT_TARGETS = {
         "LoopStatement",
         "BlockStatement",
         "SelectStatement",
+        "MatchStatement",
     },
     "Statement": {
         "NullStatement",
@@ -104,6 +105,7 @@ ABSTRACT_TARGETS = {
         "LoopStatement",
         "BlockStatement",
         "SelectStatement",
+        "MatchStatement",
     },
 }
 
