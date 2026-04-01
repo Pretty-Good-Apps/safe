@@ -110,6 +110,8 @@ package body Safe_Frontend.Check_Resolve is
    Raised_Diag     : CM.MD.Diagnostic;
    Documented_Default_Task_Priority : constant Long_Long_Integer := 31;
 
+   Current_Target_Bits : Positive := 64;
+
    function UString_Value (Value : FT.UString) return String is
    begin
       return FT.To_String (Value);
@@ -362,7 +364,7 @@ package body Safe_Frontend.Check_Resolve is
 
    procedure Add_Builtins (Type_Env : in out Type_Maps.Map) is
    begin
-      Put_Type (Type_Env, "integer", BT.Integer_Type);
+      Put_Type (Type_Env, "integer", BT.Integer_Type (Current_Target_Bits));
       Put_Type (Type_Env, "boolean", BT.Boolean_Type);
       Put_Type (Type_Env, "string", BT.String_Type);
       Put_Type (Type_Env, "result", BT.Result_Type);
@@ -417,7 +419,7 @@ package body Safe_Frontend.Check_Resolve is
 
    function Default_Integer return GM.Type_Descriptor is
    begin
-      return BT.Integer_Type;
+      return BT.Integer_Type (Current_Target_Bits);
    end Default_Integer;
 
    function Default_Boolean return GM.Type_Descriptor is
@@ -6927,9 +6929,11 @@ package body Safe_Frontend.Check_Resolve is
 
    function Resolve
      (Unit        : CM.Parsed_Unit;
-      Search_Dirs : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector)
+      Search_Dirs : FT.UString_Vectors.Vector := FT.UString_Vectors.Empty_Vector;
+      Target_Bits : Positive := 64)
       return CM.Resolve_Result
    is
+      Normalized_Target_Bits : constant Positive := (if BT.Is_Valid_Target_Bits (Target_Bits) then Target_Bits else 64);
       Type_Env         : Type_Maps.Map;
       Functions        : Function_Maps.Map;
       Package_Vars     : Type_Maps.Map;
@@ -7368,7 +7372,9 @@ package body Safe_Frontend.Check_Resolve is
          end loop;
       end Add_Imported_Interface;
    begin
+      Current_Target_Bits := Normalized_Target_Bits;
       Add_Builtins (Type_Env);
+      Result.Target_Bits := Normalized_Target_Bits;
       Add_Builtin_Functions (Functions);
       Result.Path := Unit.Path;
       Result.Kind := Unit.Kind;

@@ -561,10 +561,11 @@ def run_cached_source_proof(
     run_check: bool,
     prove_switches: list[str] | None = None,
     command_timeout: int | None = None,
+    target_bits: int = 64,
 ) -> ProofRunResult:
     result = ProofRunResult(
         source=source,
-        proof_root=safe_prove_paths(source)["root"],
+        proof_root=safe_prove_paths(source, target_bits=target_bits)["root"],
         passed=False,
         stage="check" if run_check else "emit",
     )
@@ -577,6 +578,7 @@ def run_cached_source_proof(
             run_check=run_check,
             stage_output=result.stage_output,
             log_stage=result.stage,
+            target_bits=target_bits,
         )
     except ProjectEmitError as exc:
         result.stage = exc.stage
@@ -599,9 +601,10 @@ def run_cached_source_proof(
         prove_switches=PROVE_SWITCHES if prove_switches is None else prove_switches,
         project_text=project_text,
         shared_paths=shared_paths,
+        target_bits=target_bits,
     )
     cached = state["proofs"].get(source_key(source))
-    cached_project_paths = safe_prove_paths(source)
+    cached_project_paths = safe_prove_paths(source, target_bits=target_bits)
     cached_artifacts_present = (
         cached_project_paths["root"].exists() and cached_project_paths["summary"].exists()
     )
@@ -616,7 +619,7 @@ def run_cached_source_proof(
         state["proofs"].pop(source_key(source), None)
         save_project_state(shared_paths, state)
 
-    project_paths = ensure_safe_prove_root(source)
+    project_paths = ensure_safe_prove_root(source, target_bits=target_bits)
     write_safe_prove_project(project_paths, ada_dir=shared_paths["ada"])
 
     compile_completed = compile_cached_proof_project(

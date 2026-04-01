@@ -15,11 +15,11 @@ procedure Safec is
       Ada.Text_IO.Put_Line ("  safec validate-mir <file.mir.json>");
       Ada.Text_IO.Put_Line ("  safec analyze-mir <file.mir.json>");
       Ada.Text_IO.Put_Line ("  safec analyze-mir --diag-json <file.mir.json>");
-      Ada.Text_IO.Put_Line ("  safec ast <file.safe> [--interface-search-dir <dir>]...");
-      Ada.Text_IO.Put_Line ("  safec check <file.safe> [--interface-search-dir <dir>]...");
-      Ada.Text_IO.Put_Line ("  safec check --diag-json <file.safe> [--interface-search-dir <dir>]...");
+      Ada.Text_IO.Put_Line ("  safec ast [--target-bits 32|64] <file.safe> [--interface-search-dir <dir>]...");
+      Ada.Text_IO.Put_Line ("  safec check [--target-bits 32|64] <file.safe> [--interface-search-dir <dir>]...");
+      Ada.Text_IO.Put_Line ("  safec check --diag-json [--target-bits 32|64] <file.safe> [--interface-search-dir <dir>]...");
       Ada.Text_IO.Put_Line
-        ("  safec emit <file.safe> --out-dir <dir> --interface-dir <dir> [--ada-out-dir <dir>] [--interface-search-dir <dir>]...");
+        ("  safec emit [--target-bits 32|64] <file.safe> --out-dir <dir> --interface-dir <dir> [--ada-out-dir <dir>] [--interface-search-dir <dir>]...");
       return Safe_Frontend.Exit_Usage;
    end Usage;
 
@@ -53,6 +53,7 @@ procedure Safec is
       Interface_Dir : out FT.UString;
       Ada_Out_Dir  : out FT.UString;
       Search_Dirs  : out FT.UString_Vectors.Vector;
+      Target_Bits  : out Positive;
       Ok           : out Boolean)
    is
       Index : Natural := Start_Index;
@@ -63,6 +64,7 @@ procedure Safec is
       Interface_Dir := FT.To_UString ("");
       Ada_Out_Dir := FT.To_UString ("");
       Search_Dirs.Clear;
+      Target_Bits := 64;
       Ok := True;
 
       while Index <= Ada.Command_Line.Argument_Count loop
@@ -76,6 +78,24 @@ procedure Safec is
                end if;
                Diag_Json := True;
                Index := Index + 1;
+            elsif Item = "--target-bits" then
+               if Index = Ada.Command_Line.Argument_Count then
+                  Ok := False;
+                  return;
+               end if;
+               declare
+                  Value : constant String := Argument (Positive (Index + 1));
+               begin
+                  if Value = "32" then
+                     Target_Bits := 32;
+                  elsif Value = "64" then
+                     Target_Bits := 64;
+                  else
+                     Ok := False;
+                     return;
+                  end if;
+               end;
+               Index := Index + 2;
             elsif Item = "--interface-search-dir" then
                if Index = Ada.Command_Line.Argument_Count then
                   Ok := False;
@@ -164,6 +184,7 @@ begin
             Interface_Dir : FT.UString;
             Ada_Out_Dir  : FT.UString;
             Search_Dirs  : FT.UString_Vectors.Vector;
+            Target_Bits  : Positive;
             Ok           : Boolean;
          begin
             Parse_Source_Args
@@ -176,6 +197,7 @@ begin
                Interface_Dir => Interface_Dir,
                Ada_Out_Dir   => Ada_Out_Dir,
                Search_Dirs   => Search_Dirs,
+               Target_Bits   => Target_Bits,
                Ok            => Ok);
             pragma Unreferenced (Diag_Json, Out_Dir, Interface_Dir, Ada_Out_Dir);
             if not Ok then
@@ -184,7 +206,8 @@ begin
                Exit_Code :=
                  Safe_Frontend.Driver.Run_Ast
                    (Path        => FT.To_String (Path),
-                    Search_Dirs => Search_Dirs);
+                    Search_Dirs => Search_Dirs,
+                    Target_Bits => Target_Bits);
             end if;
          end;
       elsif Command = "check" then
@@ -195,6 +218,7 @@ begin
             Interface_Dir : FT.UString;
             Ada_Out_Dir  : FT.UString;
             Search_Dirs  : FT.UString_Vectors.Vector;
+            Target_Bits  : Positive;
             Ok           : Boolean;
          begin
             Parse_Source_Args
@@ -207,6 +231,7 @@ begin
                Interface_Dir => Interface_Dir,
                Ada_Out_Dir   => Ada_Out_Dir,
                Search_Dirs   => Search_Dirs,
+               Target_Bits   => Target_Bits,
                Ok            => Ok);
             pragma Unreferenced (Out_Dir, Interface_Dir, Ada_Out_Dir);
             if not Ok then
@@ -216,7 +241,8 @@ begin
                  Safe_Frontend.Driver.Run_Check
                    (Path        => FT.To_String (Path),
                     Diag_Json   => Diag_Json,
-                    Search_Dirs => Search_Dirs);
+                    Search_Dirs => Search_Dirs,
+                    Target_Bits => Target_Bits);
             end if;
          end;
       elsif Command = "emit" then
@@ -227,6 +253,7 @@ begin
             Interface_Dir : FT.UString;
             Ada_Out_Dir  : FT.UString;
             Search_Dirs  : FT.UString_Vectors.Vector;
+            Target_Bits  : Positive;
             Ok           : Boolean;
          begin
             Parse_Source_Args
@@ -239,6 +266,7 @@ begin
                Interface_Dir => Interface_Dir,
                Ada_Out_Dir   => Ada_Out_Dir,
                Search_Dirs   => Search_Dirs,
+               Target_Bits   => Target_Bits,
                Ok            => Ok);
             pragma Unreferenced (Diag_Json);
             if not Ok then
@@ -250,7 +278,8 @@ begin
                     Out_Dir       => FT.To_String (Out_Dir),
                     Interface_Dir => FT.To_String (Interface_Dir),
                     Ada_Out_Dir   => FT.To_String (Ada_Out_Dir),
-                    Search_Dirs   => Search_Dirs);
+                    Search_Dirs   => Search_Dirs,
+                    Target_Bits   => Target_Bits);
             end if;
          end;
       else

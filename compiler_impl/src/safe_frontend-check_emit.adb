@@ -3063,7 +3063,8 @@ package body Safe_Frontend.Check_Emit is
    begin
       return
         "{"
-        & """format"":""typed-v3"","
+        & """format"":""typed-v4"","
+        & """target_bits"":" & Positive'Image (Resolved.Target_Bits) & ","
         & """unit_kind"":"
         & JS.Quote ((if Parsed.Kind = CM.Unit_Entry then "entry" else "package"))
         & ","
@@ -3101,7 +3102,8 @@ package body Safe_Frontend.Check_Emit is
    begin
       return
         "{"
-        & """format"":""safei-v2"","
+        & """format"":""safei-v3"","
+        & """target_bits"":" & Positive'Image (Resolved.Target_Bits) & ","
         & """unit_kind"":"
         & JS.Quote ((if Parsed.Kind = CM.Unit_Entry then "entry" else "package"))
         & ","

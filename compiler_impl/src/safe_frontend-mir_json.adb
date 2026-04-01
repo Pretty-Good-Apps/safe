@@ -2,6 +2,7 @@ with GNATCOLL.JSON;
 
 package body Safe_Frontend.Mir_Json is
    package GM renames Safe_Frontend.Mir_Model;
+   use type GM.Mir_Format_Kind;
    use type GM.Scalar_Value_Kind;
 
    function Field_Or_Null
@@ -1320,7 +1321,7 @@ package body Safe_Frontend.Mir_Json is
          return
            (Success => False,
             Message =>
-              FT.To_UString (Path & ": expected format mir-v1, mir-v2, or mir-v3"));
+              FT.To_UString (Path & ": expected format mir-v1, mir-v2, mir-v3, or mir-v4"));
       end if;
 
       Format := Get (Root, "format");
@@ -1328,7 +1329,7 @@ package body Safe_Frontend.Mir_Json is
          return
            (Success => False,
             Message =>
-              FT.To_UString (Path & ": expected format mir-v1, mir-v2, or mir-v3"));
+              FT.To_UString (Path & ": expected format mir-v1, mir-v2, mir-v3, or mir-v4"));
       end if;
 
       declare
@@ -1340,16 +1341,51 @@ package body Safe_Frontend.Mir_Json is
             Kind := GM.Mir_V2;
          elsif Value = "mir-v3" then
             Kind := GM.Mir_V3;
+         elsif Value = "mir-v4" then
+            Kind := GM.Mir_V4;
          else
             return
               (Success => False,
                Message =>
-                 FT.To_UString (Path & ": expected format mir-v1, mir-v2, or mir-v3"));
+                 FT.To_UString (Path & ": expected format mir-v1, mir-v2, mir-v3, or mir-v4"));
          end if;
       end;
 
       Result.Path := FT.To_UString (Path);
       Result.Format := Kind;
+      if Kind = GM.Mir_V4 then
+         if not Has_Field (Root, "target_bits") then
+            return
+              (Success => False,
+               Message =>
+                 FT.To_UString (Path & ": target_bits is required for mir-v4"));
+         elsif Get (Root, "target_bits").Kind /= JSON_Int_Type then
+            return
+              (Success => False,
+               Message =>
+                 FT.To_UString (Path & ": target_bits must be 32 or 64"));
+         else
+            declare
+               Bits : constant Long_Long_Integer := Get (Get (Root, "target_bits"));
+            begin
+               if Bits not in 32 | 64 then
+                  return
+                    (Success => False,
+                     Message =>
+                       FT.To_UString (Path & ": target_bits must be 32 or 64"));
+               end if;
+               Result.Target_Bits := Positive (Bits);
+            end;
+         end if;
+      elsif Has_Field (Root, "target_bits") and then Get (Root, "target_bits").Kind = JSON_Int_Type then
+         declare
+            Bits : constant Long_Long_Integer := Get (Get (Root, "target_bits"));
+         begin
+            if Bits in 32 | 64 then
+               Result.Target_Bits := Positive (Bits);
+            end if;
+         end;
+      end if;
       Result.Root := Root;
       if Has_Field (Root, "package_name")
         and then Get (Root, "package_name").Kind = JSON_String_Type

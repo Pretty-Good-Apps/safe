@@ -5,7 +5,7 @@ with Safe_Frontend.Types;
 package Safe_Frontend.Mir_Model is
    package FT renames Safe_Frontend.Types;
 
-   type Mir_Format_Kind is (Mir_V1, Mir_V2, Mir_V3);
+   type Mir_Format_Kind is (Mir_V1, Mir_V2, Mir_V3, Mir_V4);
    function Image (Item : Mir_Format_Kind) return String;
 
    type Ownership_Effect_Kind is
@@ -397,6 +397,7 @@ package Safe_Frontend.Mir_Model is
    type Mir_Document is record
       Path            : FT.UString := FT.To_UString ("");
       Format          : Mir_Format_Kind := Mir_V1;
+      Target_Bits     : Positive := 64;
       Has_Source_Path : Boolean := False;
       Source_Path     : FT.UString := FT.To_UString ("");
       Unit_Kind       : FT.UString := FT.To_UString ("package");

@@ -3,6 +3,11 @@ with Safe_Frontend.Types;
 package body Safe_Frontend.Builtin_Types is
    package FT renames Safe_Frontend.Types;
 
+   function Is_Valid_Target_Bits (Value : Positive) return Boolean is
+   begin
+      return Value in 32 | 64;
+   end Is_Valid_Target_Bits;
+
    function Binary_Internal_Name (Bit_Width : Positive) return String is
       Width_Image : constant String := Positive'Image (Bit_Width);
    begin
@@ -45,9 +50,20 @@ package body Safe_Frontend.Builtin_Types is
       return Result;
    end Make_Float_Type;
 
-   function Integer_Type return GM.Type_Descriptor is
+   function Integer_Type (Target_Bits : Positive := 64) return GM.Type_Descriptor is
+      Bits : constant Positive := (if Is_Valid_Target_Bits (Target_Bits) then Target_Bits else 64);
    begin
-      return Make_Integer_Range_Type ("integer", -(2 ** 63), (2 ** 63) - 1);
+      if Bits = 32 then
+         return Make_Integer_Range_Type
+           ("integer",
+            -(2 ** 31),
+            (2 ** 31) - 1);
+      end if;
+
+      return Make_Integer_Range_Type
+        ("integer",
+         Long_Long_Integer'First,
+         Long_Long_Integer'Last);
    end Integer_Type;
 
    function Boolean_Type return GM.Type_Descriptor is

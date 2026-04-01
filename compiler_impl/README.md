@@ -60,30 +60,32 @@ artifacts belong under `compiler_impl/obj/` and `compiler_impl/bin/`.
 The current repo-local compiler commands are:
 
 - `safec lex <file.safe>`
-- `safec ast <file.safe> [--interface-search-dir <dir>]...`
-- `safec check <file.safe> [--interface-search-dir <dir>]...`
-- `safec check --diag-json <file.safe> [--interface-search-dir <dir>]...`
-- `safec emit <file.safe> --out-dir <dir> --interface-dir <dir> [--ada-out-dir <dir>] [--interface-search-dir <dir>]...`
+- `safec ast [--target-bits 32|64] <file.safe> [--interface-search-dir <dir>]...`
+- `safec check [--target-bits 32|64] <file.safe> [--interface-search-dir <dir>]...`
+- `safec check --diag-json [--target-bits 32|64] <file.safe> [--interface-search-dir <dir>]...`
+- `safec emit [--target-bits 32|64] <file.safe> --out-dir <dir> --interface-dir <dir> [--ada-out-dir <dir>] [--interface-search-dir <dir>]...`
 - `safec validate-mir <file.mir.json>`
 - `safec analyze-mir <file.mir.json>`
 - `safec analyze-mir --diag-json <file.mir.json>`
 
 The repo also keeps a small wrapper CLI at `../scripts/safe_cli.py`:
 
-- `python3 ../scripts/safe_cli.py build <file.safe>`
+- `python3 ../scripts/safe_cli.py build [--clean] [--target-bits 32|64] <file.safe>`
 - `python3 ../scripts/safe_cli.py deploy --board stm32f4-discovery [--simulate] <file.safe>`
-- `python3 ../scripts/safe_cli.py run <file.safe>`
+- `python3 ../scripts/safe_cli.py run [--target-bits 32|64] <file.safe>`
+- `python3 ../scripts/safe_cli.py prove [--target-bits 32|64] [file.safe]`
 - `python3 ../scripts/safe_cli.py check ...`
 - `python3 ../scripts/safe_cli.py emit ...`
 
-`safe build`, `safe run`, and `safe deploy` are still single-file wrappers in
+`safe build`, `safe run`, and `safe prove` are still root-file wrappers in
 this branch. They support:
 
 - explicit-package roots, including local imported roots with leading `with`
   clauses when sibling dependency sources are present
 - packageless entry roots through the generated driver path
 - a shared per-directory incremental cache under `PROJECT/.safe-build/`
-  for both `safe build`/`safe run` and `safe prove`
+  partitioned by `target-32` / `target-64` for both `safe build`/`safe run`
+  and `safe prove`
 
 The current model is still root-file based, not workspace mode. `safe deploy`
 remains narrower: it is currently limited to `stm32f4-discovery`, and roots
@@ -97,16 +99,17 @@ The repo also now includes a prototype single-file REPL:
 
 ## Compiler Outputs
 
-`safec emit` always writes four machine-readable artifacts:
+`safec emit` always writes four machine-readable artifacts. The normative
+contract is documented in [`../docs/artifact_contract.md`](../docs/artifact_contract.md):
 
 - `<stem>.ast.json`
   The parser AST, shaped to [`../compiler/ast_schema.json`](../compiler/ast_schema.json).
 - `<stem>.typed.json`
-  The typed frontend snapshot (`typed-v3`).
+  The typed frontend snapshot (`typed-v4`).
 - `<stem>.mir.json`
-  The lowered MIR document (`mir-v3`).
+  The lowered MIR document (`mir-v4`).
 - `<stem>.safei.json`
-  The dependency interface contract (`safei-v2`).
+  The dependency interface contract (`safei-v3`).
 
 When `--ada-out-dir <dir>` is provided, `safec emit` also writes emitted
 Ada/SPARK artifacts:
@@ -188,7 +191,7 @@ run the unit.
 
 - Python remains repo glue and orchestration only. The compiler itself is the
   Ada-native `safec` binary.
-- Cross-unit resolution uses emitted `safei-v2` interfaces plus
+- Cross-unit resolution uses emitted `safei-v3` interfaces plus
   `--interface-search-dir`.
 - [`../docs/emitted_output_verification_matrix.md`](../docs/emitted_output_verification_matrix.md)
   is the current statement of what is compile-only versus `flow` / `prove`

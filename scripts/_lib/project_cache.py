@@ -13,7 +13,7 @@ from .harness_common import REPO_ROOT, sha256_file, sha256_text
 from .pr09_emit import emitted_body_file
 from .pr111_language_eval import executable_name, safe_build_main_text
 
-CACHE_VERSION = 1
+CACHE_VERSION = 2
 STDLIB_ADA_DIR = REPO_ROOT / "compiler_impl" / "stdlib" / "ada"
 WITH_CLAUSE_RE = re.compile(r"^with\s+(.+);$", re.IGNORECASE)
 
@@ -68,11 +68,14 @@ def emit_source(
     paths: dict[str, Path],
     env: dict[str, str],
     interface_dir: Path | None,
+    target_bits: int = 64,
 ) -> subprocess.CompletedProcess[str]:
     argv = [
         str(safec),
         "emit",
         str(source),
+        "--target-bits",
+        str(target_bits),
         "--out-dir",
         str(paths["out"]),
         "--interface-dir",
@@ -93,8 +96,9 @@ def ensure_project_emitted(
     run_check: bool,
     stage_output: dict[str, str] | None = None,
     log_stage: str = "check",
+    target_bits: int = 64,
 ) -> tuple[dict[str, Path], dict, list[Path]]:
-    paths, state = prepare_project_cache(source)
+    paths, state = prepare_project_cache(source, target_bits=target_bits)
     sources = resolve_project_sources(source)
     logs: list[str] = []
     captured_output = stage_output if stage_output is not None else {}
@@ -130,6 +134,8 @@ def ensure_project_emitted(
                 [
                     str(safec),
                     "check",
+                    "--target-bits",
+                    str(target_bits),
                     str(source),
                     *(
                         ["--interface-search-dir", str(interface_dir)]
@@ -153,6 +159,7 @@ def ensure_project_emitted(
             paths=paths,
             env=env,
             interface_dir=interface_dir,
+            target_bits=target_bits,
         )
         emit_output = format_output(emit_completed)
         if unit == source:
@@ -201,8 +208,8 @@ def project_cache_root(source: Path) -> Path:
     return source.parent / ".safe-build"
 
 
-def project_cache_paths(source: Path) -> dict[str, Path]:
-    root = project_cache_root(source)
+def project_cache_paths(source: Path, *, target_bits: int = 64) -> dict[str, Path]:
+    root = project_cache_root(source) / f"target-{target_bits}"
     return {
         "root": root,
         "state": root / "state.json",
@@ -216,8 +223,8 @@ def reset_project_cache(source: Path) -> None:
     shutil.rmtree(project_cache_root(source), ignore_errors=True)
 
 
-def prepare_project_cache(source: Path) -> tuple[dict[str, Path], dict]:
-    paths = project_cache_paths(source)
+def prepare_project_cache(source: Path, *, target_bits: int = 64) -> tuple[dict[str, Path], dict]:
+    paths = project_cache_paths(source, target_bits=target_bits)
     payload: dict | None = None
     if paths["state"].exists():
         try:
@@ -476,8 +483,8 @@ def shared_support_hashes(paths: dict[str, Path], sources: list[Path]) -> dict[s
     return hashes
 
 
-def safe_build_paths(source: Path) -> dict[str, Path]:
-    root = source.parent / "obj" / source.stem
+def safe_build_paths(source: Path, *, target_bits: int = 64) -> dict[str, Path]:
+    root = source.parent / "obj" / source.stem / f"target-{target_bits}"
     return {
         "root": root,
         "obj": root / "obj",
@@ -487,15 +494,15 @@ def safe_build_paths(source: Path) -> dict[str, Path]:
     }
 
 
-def ensure_safe_build_root(source: Path) -> dict[str, Path]:
-    paths = safe_build_paths(source)
+def ensure_safe_build_root(source: Path, *, target_bits: int = 64) -> dict[str, Path]:
+    paths = safe_build_paths(source, target_bits=target_bits)
     paths["root"].mkdir(parents=True, exist_ok=True)
     paths["obj"].mkdir(parents=True, exist_ok=True)
     return paths
 
 
-def safe_prove_paths(source: Path) -> dict[str, Path]:
-    root = source.parent / "obj" / source.stem / "prove"
+def safe_prove_paths(source: Path, *, target_bits: int = 64) -> dict[str, Path]:
+    root = source.parent / "obj" / source.stem / f"prove-{target_bits}"
     return {
         "root": root,
         "obj": root / "obj",
@@ -504,8 +511,8 @@ def safe_prove_paths(source: Path) -> dict[str, Path]:
     }
 
 
-def ensure_safe_prove_root(source: Path) -> dict[str, Path]:
-    paths = safe_prove_paths(source)
+def ensure_safe_prove_root(source: Path, *, target_bits: int = 64) -> dict[str, Path]:
+    paths = safe_prove_paths(source, target_bits=target_bits)
     shutil.rmtree(paths["root"], ignore_errors=True)
     paths["root"].mkdir(parents=True, exist_ok=True)
     paths["obj"].mkdir(parents=True, exist_ok=True)
@@ -600,6 +607,7 @@ def build_fingerprint(
     main_text: str,
     project_text: str,
     shared_paths: dict[str, Path],
+    target_bits: int = 64,
 ) -> str:
     return sha256_text(
         json.dumps(
@@ -607,6 +615,7 @@ def build_fingerprint(
                 "kind": "build",
                 "version": CACHE_VERSION,
                 "source": source_key(source),
+                "target_bits": target_bits,
                 "safec_hash": safec_hash,
                 "units": [unit_emit_signature(state, item) for item in sources],
                 "shared_support": shared_support_hashes(shared_paths, sources),
@@ -629,6 +638,7 @@ def proof_fingerprint(
     prove_switches: list[str],
     project_text: str,
     shared_paths: dict[str, Path],
+    target_bits: int = 64,
 ) -> str:
     return sha256_text(
         json.dumps(
@@ -636,6 +646,7 @@ def proof_fingerprint(
                 "kind": "prove",
                 "version": CACHE_VERSION,
                 "source": source_key(source),
+                "target_bits": target_bits,
                 "safec_hash": safec_hash,
                 "gnatprove_id": gnatprove_id,
                 "flow_switches": flow_switches,

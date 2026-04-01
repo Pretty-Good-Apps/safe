@@ -30,10 +30,14 @@ python3 scripts/safe_cli.py prove samples/rosetta/text/hello_print.safe
 
 `safe prove` runs `safec check`, `safec emit`, compiles the emitted Ada, then
 runs GNATprove `flow` and `prove` with the repo's current emitted-proof policy.
+All three commands also accept `--target-bits 32|64` and partition their
+shared `.safe-build/` cache by target width.
 `safe build`, `safe run`, and `safe prove` now all accept local imported roots
 with leading `with` clauses when the sibling dependency sources are present.
 They share a per-directory `.safe-build/` cache, but the model is still
-`safe <command> <root.safe>`, not workspace-mode discovery.
+`safe <command> <root.safe>`, not workspace-mode discovery. The emitted
+machine-interface contract is now frozen at `typed-v4`, `mir-v4`, and
+`safei-v3`; see [artifact_contract.md](./artifact_contract.md).
 
 This tutorial still uses the raw `safec emit` path and a handwritten Ada driver
 because it is focused on emitted artifacts and on a tasking example that needs

@@ -45,7 +45,7 @@ package body Safe_Frontend.Mir_Validate is
 
    function Has_V2_Features (Format : GM.Mir_Format_Kind) return Boolean is
    begin
-      return Format in GM.Mir_V2 | GM.Mir_V3;
+      return Format in GM.Mir_V2 | GM.Mir_V3 | GM.Mir_V4;
    end Has_V2_Features;
 
    function Contains
@@ -154,6 +154,13 @@ package body Safe_Frontend.Mir_Validate is
      (Value       : GM.Graph_Entry;
       Graph_Index : Positive;
       Format      : GM.Mir_Format_Kind);
+
+   procedure Validate_Target_Bits
+     (Value : Positive;
+      Where : String) is
+   begin
+      Require (Value in 32 | 64, Where & ": target_bits must be 32 or 64");
+   end Validate_Target_Bits;
 
    procedure Validate_Type_Descriptor
      (Value : GM.Type_Descriptor;
@@ -815,10 +822,14 @@ package body Safe_Frontend.Mir_Validate is
         (not Document.Graphs.Is_Empty,
          "root: graphs must be a non-empty list");
 
+      if Document.Format = GM.Mir_V4 then
+         Validate_Target_Bits (Document.Target_Bits, "root");
+      end if;
+
       if Has_V2_Features (Document.Format) then
          Require
            (Document.Has_Source_Path and then Has_Text (Document.Source_Path),
-            "root: mir-v2/v3 payloads must include source_path");
+            "root: mir-v2/v3/v4 payloads must include source_path");
       end if;
 
       if not Document.Types.Is_Empty then

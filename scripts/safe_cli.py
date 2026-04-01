@@ -59,10 +59,10 @@ from _lib.pr111_language_eval import (
 
 
 USAGE = """usage:
-  safe build [--clean] <file.safe>
-  safe prove [--verbose] [file.safe]
+  safe build [--clean] [--target-bits 32|64] <file.safe>
+  safe prove [--verbose] [--target-bits 32|64] [file.safe]
   safe deploy [--target stm32f4] --board stm32f4-discovery [--simulate] [--watch-symbol NAME --expect-value N] [--timeout SECONDS] <file.safe>
-  safe run   <file.safe>
+  safe run   [--target-bits 32|64] <file.safe>
   safe check <safec check args...>
   safe emit  <safec emit args...>
 """
@@ -112,6 +112,16 @@ def reject_multi_file_root(command: str) -> int:
     return 1
 
 
+def add_target_bits_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--target-bits",
+        type=int,
+        choices=(32, 64),
+        default=64,
+        help="Target integer width for the compiler pipeline (default: 64).",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="safe build",
@@ -122,6 +132,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Clear the local build cache for this project before rebuilding.",
     )
+    add_target_bits_argument(parser)
     parser.add_argument("source", help="Safe source to build.")
     return parser
 
@@ -136,11 +147,22 @@ def prove_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Replay captured failing-stage tool output.",
     )
+    add_target_bits_argument(parser)
     parser.add_argument(
         "source",
         nargs="?",
         help="Safe source to prove. If omitted, prove all .safe files in the current directory.",
     )
+    return parser
+
+
+def run_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="safe run",
+        description="Build and run a Safe source as a native executable.",
+    )
+    add_target_bits_argument(parser)
+    parser.add_argument("source", help="Safe source to run.")
     return parser
 
 
@@ -205,7 +227,15 @@ def parse_prove_args(args: list[str]) -> argparse.Namespace | int:
         return int(exc.code)
 
 
-def build_source(source_arg: str, *, clean: bool) -> tuple[dict[str, str], Path] | int:
+def parse_run_args(args: list[str]) -> argparse.Namespace | int:
+    parser = run_parser()
+    try:
+        return parser.parse_args(args)
+    except SystemExit as exc:
+        return int(exc.code)
+
+
+def build_source(source_arg: str, *, clean: bool, target_bits: int) -> tuple[dict[str, str], Path] | int:
     env = ensure_sdkroot(os.environ.copy())
     safec = safec_path()
     source = require_source_file(resolve_source_arg(source_arg))
@@ -220,6 +250,7 @@ def build_source(source_arg: str, *, clean: bool) -> tuple[dict[str, str], Path]
             source=source,
             env=env,
             run_check=True,
+            target_bits=target_bits,
         )
     except ProjectEmitError as exc:
         if exc.output:
@@ -231,7 +262,7 @@ def build_source(source_arg: str, *, clean: bool) -> tuple[dict[str, str], Path]
         print(f"safe build: {exc}", file=sys.stderr)
         return 1
 
-    paths = ensure_safe_build_root(source)
+    paths = ensure_safe_build_root(source, target_bits=target_bits)
     main_text, project_text = write_safe_build_support_files(paths, ada_dir=shared_paths["ada"], source=source)
     fingerprint = build_fingerprint(
         source=source,
@@ -241,6 +272,7 @@ def build_source(source_arg: str, *, clean: bool) -> tuple[dict[str, str], Path]
         main_text=main_text,
         project_text=project_text,
         shared_paths=shared_paths,
+        target_bits=target_bits,
     )
     cached = state["builds"].get(source_key(source))
     if cached and cached.get("fingerprint") == fingerprint and paths["exe"].exists():
@@ -262,7 +294,7 @@ def build_source(source_arg: str, *, clean: bool) -> tuple[dict[str, str], Path]
 
 
 def safe_build(args: argparse.Namespace) -> int:
-    built = build_source(args.source, clean=args.clean)
+    built = build_source(args.source, clean=args.clean, target_bits=args.target_bits)
     if isinstance(built, int):
         return built
     _, executable = built
@@ -270,8 +302,8 @@ def safe_build(args: argparse.Namespace) -> int:
     return 0
 
 
-def safe_run(source_arg: str) -> int:
-    built = build_source(source_arg, clean=False)
+def safe_run(args: argparse.Namespace) -> int:
+    built = build_source(args.source, clean=False, target_bits=args.target_bits)
     if isinstance(built, int):
         return built
     env, executable = built
@@ -332,6 +364,7 @@ def safe_prove(args: argparse.Namespace) -> int:
             toolchain=toolchain,
             source=source,
             run_check=True,
+            target_bits=args.target_bits,
         )
         label = display_source_for_user(source, cwd=cwd)
         if result.passed:
@@ -493,9 +526,10 @@ def main(argv: list[str] | None = None) -> int:
             return parsed
         return safe_deploy(parsed)
     if command == "run":
-        if len(args) != 2:
-            return print_usage()
-        return safe_run(args[1])
+        parsed = parse_run_args(args[1:])
+        if isinstance(parsed, int):
+            return parsed
+        return safe_run(parsed)
     if command in {"check", "emit"}:
         if len(args) < 2:
             return print_usage()
