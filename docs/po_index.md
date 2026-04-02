@@ -122,7 +122,7 @@
 | 20 | `spec/02-restrictions.md#2.3.8.p111a:a858bdfc` | Function shall not return .Access of local object | flow_contract_check | stubbed |
 | 21 | `spec/02-restrictions.md#2.3.8.p111b:2921e9d2` | .Access of local shall not be assigned to enclosing scope variable | flow_contract_check | stubbed |
 | 22 | `spec/02-restrictions.md#2.3.8.p111c:819cc398` | .Access of local object shall not be sent through channel | flow_contract_check | stubbed |
-| 23 | `spec/04-tasks-and-channels.md#4.3.p27a:8ed3c1d4` | send never transfers ownership through a channel; enqueue is copy-only | translation_validation | stubbed |
+| 23 | `spec/04-tasks-and-channels.md#4.3.p27a:8ed3c1d4` | Legacy `try_send` spelling is rejected; only `send ch, value, success` is accepted | translation_validation | stubbed |
 | 24 | `spec/04-tasks-and-channels.md#4.3.p28a:4cb19779` | receive never transfers ownership through a channel; dequeue is copy-only | translation_validation | stubbed |
 | 25 | `spec/04-tasks-and-channels.md#4.3.p29a:8d3f2225` | send is copy-only-on-success; success does not transfer ownership | translation_validation | stubbed |
 | 26 | `spec/04-tasks-and-channels.md#4.3.p29b:7121ccd7` | send evaluates before the fullness check and never transfers ownership | runtime_wrapper_check | stubbed |
@@ -141,7 +141,7 @@
 | 6 | `spec/04-tasks-and-channels.md#4.1.p10:92a67777` | Tasks begin execution after all package-level initialisation | runtime_wrapper_check | stubbed |
 | 7 | `spec/04-tasks-and-channels.md#4.2.p21:c6a92460` | Channel ceiling priority at least max of accessing task priorities | runtime_wrapper_check | stubbed |
 | 8 | `spec/04-tasks-and-channels.md#4.2.p21a:16ec46cb` | Cross-package channel ceiling priority computation via interface summaries | flow_contract_check | stubbed |
-| 9 | `spec/04-tasks-and-channels.md#4.3.p27:ef0ce6bd` | send blocks if channel full; value evaluated before enqueue | runtime_wrapper_check | stubbed |
+| 9 | `spec/04-tasks-and-channels.md#4.3.p27:ef0ce6bd` | Legacy two-argument send is rejected | runtime_wrapper_check | stubbed |
 | 10 | `spec/04-tasks-and-channels.md#4.3.p28:ea6bd13c` | receive blocks if channel empty; dequeues front element | runtime_wrapper_check | stubbed |
 | 11 | `spec/04-tasks-and-channels.md#4.3.p29:f792d704` | send: atomic non-blocking enqueue attempt | runtime_wrapper_check | stubbed |
 | 12 | `spec/04-tasks-and-channels.md#4.3.p31:a7297e97` | Channel operations atomic with respect to same-channel operations | runtime_wrapper_check | stubbed |

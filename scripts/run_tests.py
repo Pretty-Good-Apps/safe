@@ -1275,8 +1275,12 @@ def run_diagnostic_golden(safec: Path, source: Path, golden: Path) -> tuple[bool
     return True, ""
 
 
-def print_summary(*, passed: int, failures: list[tuple[str, str]]) -> None:
-    print(f"{passed} passed, {len(failures)} failed")
+def print_summary(*, passed: int, skipped: int, failures: list[tuple[str, str]]) -> None:
+    summary = f"{passed} passed"
+    if skipped:
+        summary += f", {skipped} skipped"
+    summary += f", {len(failures)} failed"
+    print(summary)
     if failures:
         print("Failures:")
         for label, detail in failures:
@@ -2509,6 +2513,7 @@ def main() -> int:
         return 1
 
     passed = 0
+    skipped = 0
     failures: list[tuple[str, str]] = []
 
     positive_fixtures = sorted((REPO_ROOT / "tests" / "positive").glob("*.safe"))
@@ -2524,7 +2529,7 @@ def main() -> int:
 
     for fixture in negative_fixtures:
         if fixture in NEGATIVE_SKIPPED_FIXTURES:
-            passed += 1
+            skipped += 1
             continue
         expected_returncode = DIAGNOSTIC_EXIT_CODE
         ok, detail = check_fixture(safec, fixture, expected_returncode=expected_returncode)
@@ -2907,7 +2912,7 @@ def main() -> int:
     else:
         failures.append(("embedded monitor parsing", detail))
 
-    print_summary(passed=passed, failures=failures)
+    print_summary(passed=passed, skipped=skipped, failures=failures)
     return 0 if not failures else 1
 
 

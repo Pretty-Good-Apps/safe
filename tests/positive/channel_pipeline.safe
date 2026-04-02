@@ -24,10 +24,7 @@ package pipeline
 
       loop
          send raw_ch, 8, sent;
-         if sent
-            delay 0.001;
-         else
-            delay 0.001;
+         delay 0.001;
 
    --  Filter: background task used to keep multiple task bodies in the proof corpus.
    task filter with priority = 10

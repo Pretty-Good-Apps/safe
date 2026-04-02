@@ -24,10 +24,7 @@ package channel_pipeline_compute
 
       loop
          send raw_ch, seed, sent;
-         if sent
-            delay 0.001;
-         else
-            delay 0.001;
+         delay 0.001;
 
    task filter with priority = 10
       input  : sample;
