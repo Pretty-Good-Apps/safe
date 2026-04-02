@@ -45,12 +45,12 @@ fi
 
 # Extract assumption IDs and severities from baseline YAML
 BASELINE_IDS=$(grep -E "^- id:" "${BASELINE}" | sed 's/^- id: *//' | sort)
-BASELINE_COUNT=$(echo "${BASELINE_IDS}" | grep -c '.' || echo "0")
-OPEN_COUNT=$(grep -c "^  status: open$" "${BASELINE}" || echo "0")
-RESOLVED_COUNT=$(grep -c "^  status: resolved$" "${BASELINE}" || echo "0")
-CRITICAL_COUNT=$(grep -c "^  severity: critical$" "${BASELINE}" || echo "0")
-MAJOR_COUNT=$(grep -c "^  severity: major$" "${BASELINE}" || echo "0")
-MINOR_COUNT=$(grep -c "^  severity: minor$" "${BASELINE}" || echo "0")
+BASELINE_COUNT=$(echo "${BASELINE_IDS}" | grep -c '.' || true)
+OPEN_COUNT=$(grep -c "^  status: open$" "${BASELINE}" || true)
+RESOLVED_COUNT=$(grep -c "^  status: resolved$" "${BASELINE}" || true)
+CRITICAL_COUNT=$(grep -c "^  severity: critical$" "${BASELINE}" || true)
+MAJOR_COUNT=$(grep -c "^  severity: major$" "${BASELINE}" || true)
+MINOR_COUNT=$(grep -c "^  severity: minor$" "${BASELINE}" || true)
 OPEN_CRITICAL_COUNT=$(python3 - <<'PY' "${BASELINE}"
 from pathlib import Path
 import sys
@@ -137,8 +137,8 @@ fi
 # -----------------------------------------------------------------------
 
 if [[ -f "${EXTRACTED}" ]]; then
-    CLAIM_COUNT=$(grep -c "^  claim:" "${EXTRACTED}" 2>/dev/null || echo "0")
-    ASSUME_COUNT=$(grep -c "^    assumes:" "${EXTRACTED}" 2>/dev/null || echo "0")
+    CLAIM_COUNT=$(grep -c "^  claim:" "${EXTRACTED}" 2>/dev/null || true)
+    ASSUME_COUNT=$(grep -c "^    assumes:" "${EXTRACTED}" 2>/dev/null || true)
 
     echo "Extracted from GNATprove output:"
     echo "  Claims:      ${CLAIM_COUNT}"
