@@ -1,5 +1,5 @@
 -- Test: neg_try_send_use_after_move
--- Description: Access-typed channel elements are rejected before try_send ownership checks run.
+-- Description: Access-typed channel elements are rejected before nonblocking send ownership checks run.
 -- Expected: REJECT source_frontend_error
 
 package neg_try_send_use_after_move
@@ -17,4 +17,3 @@ package neg_try_send_use_after_move
 
       send data_ch, source, success;
       source.all.value = 2;
-

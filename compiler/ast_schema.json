@@ -1347,6 +1347,7 @@
         "SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29a:8d3f2225",
         "SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29b:7121ccd7"
       ],
+      "note": "Admitted source form: 'send ch, expr, success'. The success_var field is optional only because the parser still retains the legacy two-argument send shape long enough to emit targeted migration diagnostics; accepted source always includes success_var.",
       "fields": [
         { "name": "channel_name", "type": "NodeRef<Name>", "optional": false },
         { "name": "expression", "type": "NodeRef<Expression>", "optional": false },
@@ -1372,6 +1373,7 @@
       "node_type": "TrySendStatement",
       "production": "try_send_statement",
       "source_section": "8.12",
+      "note": "Legacy parser-only node retained so the frontend can issue the targeted rename diagnostic for 'try_send'. It is not part of the admitted PR11.9d source surface.",
       "clause_ids": [
         "SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29:f792d704",
         "SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29a:8d3f2225"

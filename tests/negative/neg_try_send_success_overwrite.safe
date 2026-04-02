@@ -1,5 +1,5 @@
 -- Test: neg_try_send_success_overwrite
--- Description: Access-typed channel elements are rejected before try_send success-refinement checks run.
+-- Description: Access-typed channel elements are rejected before nonblocking send success-refinement checks run.
 -- Expected: REJECT source_frontend_error
 
 package neg_try_send_success_overwrite
@@ -18,4 +18,3 @@ package neg_try_send_success_overwrite
       send data_ch, source, success;
       success = false;
       source = new ((value = 2) as payload);
-

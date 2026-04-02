@@ -305,31 +305,35 @@ subtype Buffer_Count is Natural range 0 .. 16;
 
 This ensures that `Head`, `Tail`, and `Count` are provably in-range. The wraparound modulo step `(Natural(Tail) + 1) mod 16` is wrapped in a `Buffer_Index(...)` conversion to produce a value in the tight subtype range. GNATprove can verify this conversion is always valid since `(x + 1) mod N` is always in `0 .. N-1`.
 
-### 4.5 Ownership Transfer through Channels
+### 4.5 Channel Send Semantics
 
-**Clause:** SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p27a-29b
+**Clause:** SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p27-29b
 
-When the channel element type is an owning access type, the `Send` entry performs a move. The emitter must:
+The admitted source form is the nonblocking three-argument send:
 
-1. Evaluate the expression.
-2. Enqueue the value.
-3. Set the source variable to `null` after the send.
-
-For the admitted three-argument `send`, the source is set to `null` only when `Success = True`.
-
-```ada
--- Emitted Ada for: send Ch, Ptr, Ok;
-declare
-   Tmp : Element_Type := Ptr;
-begin
-   Ch.Try_Send(Tmp, Ok);
-   if Ok then
-      Ptr := null;
-   end if;
-end;
+```safe
+send ch, expr, success;
 ```
 
-**Atomicity guarantee:** The admitted `send` emission uses a temporary variable `Tmp` to capture the value before the fullness check. The protected object's mutual exclusion provides the atomicity required by SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29b: the evaluation of the fullness condition and the enqueue decision occur within the protected procedure call, which is atomic with respect to other channel operations. The source variable is nulled only after the protected call confirms success.
+Channel element types are value-only. Access-bearing channel element types are
+rejected by the frontend before emit, so admitted channel send is copy-only and
+does not transfer ownership through the channel.
+
+The emitter must:
+
+1. Evaluate the expression before the fullness check.
+2. Call the emitted nonblocking channel `Try_Send` path.
+3. Write the success flag with the enqueue result.
+
+```ada
+-- Emitted Ada for: send Ch, Value, Ok;
+Ch.Try_Send (Value, Ok);
+```
+
+**Atomicity guarantee:** The emitted `Try_Send` call performs the fullness check
+and enqueue decision inside the channel's protected operation, which is atomic
+with respect to other operations on the same channel. This is the shipped
+realization of SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29b.
 
 ---
 
