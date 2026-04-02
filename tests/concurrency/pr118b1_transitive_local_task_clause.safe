@@ -5,14 +5,25 @@
 package pr118b1_transitive_local_task_clause
 
    subtype message is integer (0 to 10);
+   subtype send_state is integer (0 to 1);
 
    channel data_ch : message capacity 1;
 
-   function push_data
+   function push_data (status : mut send_state)
+      sent : boolean = false
+      previous_status : send_state = status
 
-      send data_ch, 1
+      send data_ch, 1, sent
+      if sent
+         status = 1
+      else
+         status = previous_status
 
    task producer with priority = 10, sends data_ch
+      status : send_state = 0;
 
       loop
-         push_data
+         status = 0
+         push_data (status)
+         if status == 0
+            delay 0.001

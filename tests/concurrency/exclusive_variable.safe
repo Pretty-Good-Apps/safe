@@ -16,14 +16,16 @@ package exclusive_variable
    --  Task_A: owns Counter_A exclusively. Sends result via channel.
    task task_a with priority = 10
       counter_a : counter = 0;
+      sent : boolean = false;
 
       loop
          if counter_a < 999
             counter_a = counter_a + 1;
          else
             counter_a = 1_000;
-            send sync_ch, counter_a;
-            counter_a = 0;
+            send sync_ch, counter_a, sent;
+            if sent
+               counter_a = 0;
 
    --  Task_B: owns Counter_B exclusively. Receives via channel.
    task task_b with priority = 10

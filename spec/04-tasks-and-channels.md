@@ -5,7 +5,7 @@
 This section specifies Safe's concurrency model. Safe provides concurrency
 through static tasks and typed channels as first-class language constructs.
 Tasks are declared at unit scope and create exactly one task each. Channels are
-typed, bounded-capacity, blocking FIFO queues. Tasks communicate exclusively
+typed, bounded-capacity FIFO queues. Tasks communicate exclusively
 through channels — no shared mutable state between tasks.
 
 ---
@@ -56,7 +56,7 @@ entities internal to the enclosing compilation unit.
 
 7b. Within a single direction (`sends` or `receives`), a channel shall be listed at most once. A conforming implementation shall reject duplicate channels within the same direction. The same channel may appear in both `sends` and `receives`.
 
-7c. If a task declaration includes a `sends` clause, every `send` and `try_send` operation reachable from that task body, whether direct or through transitive subprogram calls, shall target a channel listed in that `sends` clause. If no `sends` clause is present, send-like operations are unrestricted.
+7c. If a task declaration includes a `sends` clause, every `send` operation reachable from that task body, whether direct or through transitive subprogram calls, shall target a channel listed in that `sends` clause. If no `sends` clause is present, send-like operations are unrestricted.
 
 7d. If a task declaration includes a `receives` clause, every `receive`, `try_receive`, and `select` channel arm reachable from that task body, whether direct or through transitive subprogram calls, shall target a channel listed in that `receives` clause. If no `receives` clause is present, receive-like operations are unrestricted.
 
@@ -140,7 +140,7 @@ compilation units are not deallocated).
 
 ```
 send_statement ::=
-    'send' channel_name ',' expression ';'
+    'send' channel_name ',' expression ',' name ';'
 
 receive_statement ::=
     'receive' channel_name ',' receive_target ';'
@@ -148,41 +148,40 @@ receive_statement ::=
 receive_target ::=
     name | defining_identifier ':' subtype_indication
 
-try_send_statement ::=
-    'try_send' channel_name ',' expression ',' name ';'
-
 try_receive_statement ::=
     'try_receive' channel_name ',' receive_target ',' name ';'
 ```
 
 ### Legality Rules
 
-23. The expression in a `send` or `try_send` shall be of the channel's element type or a subtype thereof.
+22a. The legacy spelling `try_send channel_name, expression, name;` is reserved for migration only. A conforming implementation shall reject it and direct the programmer to `send channel_name, expression, name;`.
+
+23. The expression in a `send` shall be of the channel's element type or a subtype thereof.
 
 24. The `name` in a `receive` or `try_receive` shall denote a variable of the channel's element type or a subtype thereof.
 
 24a. In the `defining_identifier ':' subtype_indication` form of `receive` or `try_receive`, the subtype indication shall match the channel element type or a subtype thereof. The defining identifier declares a new variable scoped to the remainder of the enclosing statement sequence, exactly as if an equivalent local variable declaration had appeared immediately before the channel operation. Normal shadowing and redeclaration rules apply.
 
-25. The final `name` in `try_send` and `try_receive` shall denote a variable of type `boolean`.
+25. The final `name` in `send` and `try_receive` shall denote a variable of type `boolean`.
 
 26. Channel operations may appear in subprogram bodies, task bodies, unit-scope
 statement suites, and other statement contexts.
 
 ### Dynamic Semantics
 
-27. **`send Ch, Value;`** — Enqueue `Value` into channel `Ch`. If `Ch` is full (number of elements equals capacity), the current task blocks until space becomes available. The blocking is on the current task only, not the entire program. The expression `Value` is evaluated before the enqueue (and before blocking, if the channel is full). Once space becomes available, the evaluated value is enqueued.
+27. **Legacy blocking send.** The two-argument form `send Ch, Value;` is not part of admitted Safe source. A conforming implementation shall reject it and direct the programmer to `send Ch, Value, Success;`.
 
-27a. **Copy-only enqueue.** Because channel element types exclude access types and composite types containing access-type subcomponents (Section 4, §4.2, paragraph 14), `send` never transfers ownership of a designated object through the channel. The value enqueued is a copy of the evaluated payload.
+27a. **Legacy `try_send` spelling.** The spelling `try_send Ch, Value, Success;` is not part of admitted Safe source. A conforming implementation shall reject it and direct the programmer to `send Ch, Value, Success;`.
 
 28. **`receive Ch, Variable;`** — Dequeue the front element of channel `Ch` into `Variable`. If `Ch` is empty, the current task blocks until an element becomes available. In the scoped-binding form `receive Ch, Name : T;`, the implementation first declares `Name` and then performs the receive into that new variable.
 
 28a. **Copy-only dequeue.** Because channel element types exclude access types and composite types containing access-type subcomponents (Section 4, §4.2, paragraph 14), `receive` never transfers ownership of a designated object through the channel. The dequeued element is copied into `Variable`.
 
-29. **`try_send ch, value, success;`** — Attempt to enqueue `value` into channel `ch` without blocking. The operation is performed atomically: the implementation acquires the channel, evaluates the channel's fullness, and if not full, enqueues `value` and sets `success` to `true`. If `ch` is full, no element is enqueued and `success` is set to `false`.
+29. **`send ch, value, success;`** — Attempt to enqueue `value` into channel `ch` without blocking. The operation is performed atomically: the implementation acquires the channel, evaluates the channel's fullness, and if not full, enqueues `value` and sets `success` to `true`. If `ch` is full, no element is enqueued and `success` is set to `false`.
 
-29a. **Copy-only-on-success.** Because channel element types exclude access-bearing elements (Section 4, §4.2, paragraph 14), `try_send` never conditionally transfers ownership. When `success` is `true`, a copy of `value` is enqueued. When `success` is `false`, no element is enqueued and the source expression's ownership state is unchanged.
+29a. **Copy-only-on-success.** Because channel element types exclude access-bearing elements (Section 4, §4.2, paragraph 14), `send` never conditionally transfers ownership. When `success` is `true`, a copy of `value` is enqueued. When `success` is `false`, no element is enqueued and the source expression's ownership state is unchanged.
 
-29b. **Evaluation order for `try_send`.** The expression `value` is evaluated before the atomic fullness check. If the channel is not full, the already-evaluated value is enqueued. If the channel is full, the evaluated value is discarded. No ownership transfer occurs because access-bearing channel element types are illegal.
+29b. **Evaluation order for `send`.** The expression `value` is evaluated before the atomic fullness check. If the channel is not full, the already-evaluated value is enqueued. If the channel is full, the evaluated value is discarded. No ownership transfer occurs because access-bearing channel element types are illegal.
 
 30. **`try_receive ch, variable, success;`** — Attempt to dequeue the front element of channel `ch` without blocking. If `ch` is not empty, the element is dequeued into `variable` and `success` is set to `true`. If `ch` is empty, `variable` is unchanged and `success` is set to `false`. In the scoped-binding form `try_receive ch, name : T, success;`, the implementation first declares `name` and default-initializes it as a value of type `T`; if the receive fails, that default value remains in place. Because channel element types exclude access-bearing values (Section 4, §4.2, paragraph 14), `try_receive` never transfers ownership through the channel.
 
@@ -351,7 +350,9 @@ package pipeline
 
         loop
             sample : measurement = read_sensor;
-            send raw_data, sample;
+            send raw_data, sample, ok;
+            if not ok
+                delay 0.01;
             delay 0.01;
 
     task consumer with priority = 5
@@ -360,7 +361,7 @@ package pipeline
             m : measurement;
             receive raw_data, m;
             result : measurement = process (m);
-            send processed, result;
+            send processed, result, ok;
             -- D27 proof: all types match; no runtime errors
 
     function read_sensor returns measurement is separate;
@@ -408,9 +409,9 @@ package router
             j : job = (id = count, data = integer (count) * 10);
             -- D27 proof: count * 10 fits within signed 64-bit integer range
             ok : boolean;
-            try_send jobs_a, j, ok;
+            send jobs_a, j, ok;
             if not ok
-                send jobs_b, j;
+                send jobs_b, j, ok;
             count = (if count == job_id.last then job_id.first else count + 1);
 
     task worker_a with priority = 5
@@ -418,7 +419,7 @@ package router
         loop
             j : job;
             receive jobs_a, j;
-            send results, (id = j.id, value = j.data + 1);
+            send results, (id = j.id, value = j.data + 1), ok;
             -- D27 proof: j.data + 1 is rejected unless it is provably within signed 64-bit integer range
 
     task worker_b with priority = 5
@@ -426,7 +427,7 @@ package router
         loop
             j : job;
             receive jobs_b, j;
-            send results, (id = j.id, value = j.data + 2);
+            send results, (id = j.id, value = j.data + 2), ok;
 
 ```
 
@@ -456,16 +457,16 @@ package controller
                     case cmd
                         when start
                             current_state = running;
-                            send responses, running;
+                            send responses, running, ok;
                         when stop
                             current_state = stopped;
-                            send responses, stopped;
+                            send responses, stopped, ok;
                         when reset
                             current_state = stopped;
-                            send responses, stopped;
+                            send responses, stopped, ok;
                 or
                     delay 5.0
-                        send heartbeats, true;
+                        send heartbeats, true, ok;
 
     public function get_status returns status
 

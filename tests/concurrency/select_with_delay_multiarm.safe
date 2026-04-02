@@ -17,11 +17,16 @@ package select_with_delay_multiarm
    channel low_ch  : message capacity 2;
 
    task producer with priority = 10
+      high_sent : boolean = false;
+      low_sent  : boolean = false;
 
       loop
-         send high_ch, 1;
-         send low_ch, 2;
-         delay 0.01;
+         send high_ch, 1, high_sent;
+         send low_ch, 2, low_sent;
+         if high_sent and low_sent
+            delay 0.01;
+         else
+            delay 0.001;
 
    task poller with priority = 10
       seen : counter = 0;
@@ -49,4 +54,3 @@ package select_with_delay_multiarm
             seen = 0;
          else
             delay 0.001;
-

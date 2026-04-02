@@ -13,7 +13,7 @@ package neg_send_use_after_move
 
    function run
       source : payload_ptr = new ((value = 1) as payload);
+      success : boolean = false;
 
-      send data_ch, source;
+      send data_ch, source, success;
       source.all.value = 2;
-

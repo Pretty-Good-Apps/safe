@@ -1,13 +1,11 @@
 -- Test: neg_chan_full_send
--- Description: Sending to a channel that is provably full.
---   Two consecutive sends to a capacity-1 channel without any
---   intervening receive. The second send will deadlock because
---   the single-task sender is also the only entity that could
---   drain the channel. A conforming implementation shall reject
---   this as a provable deadlock.
+-- Description: Legacy blocking send syntax is rejected.
+--   PR11.9d removes the two-argument blocking send form from accepted
+--   source. Any remaining `send ch, value;` spellings are rejected with
+--   a migration diagnostic directing the programmer to `send ch, value, ok;`.
 -- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p27:ef0ce6bd
 -- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.2.p15:b5b29b0e
--- Expected: REJECT channel_deadlock
+-- Expected: REJECT source_frontend_error
 
 package full_send_test
 
@@ -15,11 +13,9 @@ package full_send_test
 
    channel ch : msg capacity 1;
 
-   --  Sender_Task: sends twice to a capacity-1 channel without receiving.
-   --  The second send will block forever (deadlock in single task).
+   --  Sender_Task: legacy blocking send syntax.
    task sender_task
 
       loop
          send ch, 1;
-         send ch, 2;  -- ERROR: channel is full, no receiver to drain it
-
+         send ch, 2;

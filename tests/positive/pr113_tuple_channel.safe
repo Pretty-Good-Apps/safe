@@ -7,10 +7,14 @@ package pr113_tuple_channel
    channel pair_ch : (boolean, integer) capacity 1;
 
    task producer with priority = 10
+      sent : boolean = false;
 
       loop
-         send pair_ch, (true, 41);
-         delay 0.05;
+         send pair_ch, (true, 41), sent;
+         if sent
+            delay 0.05;
+         else
+            delay 0.01;
 
    task consumer with priority = 10
       payload : (boolean, integer);

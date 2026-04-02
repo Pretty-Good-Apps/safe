@@ -11,12 +11,21 @@ package producer_consumer_result
    public channel result_ch : result_value capacity 1;
 
    task producer with priority = 10, sends data_ch
+      sent : boolean = false;
       loop
-         send data_ch, 41
-         delay 0.05
+         send data_ch, 41, sent
+         if sent
+            delay 0.05
+         else
+            delay 0.01
 
    task consumer with priority = 10, receives data_ch, sends result_ch
+      sent : boolean = false;
       loop
          receive data_ch, input : message
-         send result_ch, result_value (input + 1)
+         loop
+            send result_ch, result_value (input + 1), sent
+            if sent
+               exit
+            delay 0.01
          delay 0.05

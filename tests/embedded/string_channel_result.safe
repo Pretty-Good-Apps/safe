@@ -9,8 +9,10 @@ package string_channel_result
    public result : result_value = 0;
    source : string = "Ada";
    received : string;
+   sent : boolean = false;
 
-   send text_ch, source
-   source = "B"
-   receive text_ch, received
-   result = received.length
+   send text_ch, source, sent
+   if sent
+      source = "B"
+      receive text_ch, received
+      result = received.length

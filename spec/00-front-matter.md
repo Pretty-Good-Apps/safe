@@ -84,7 +84,7 @@
 
 18. **Effect summary.** A conservative interprocedural summary of the package-level variables read and written by a subprogram, including transitive callees. See Section 3, §3.3.1(d).
 
-18a. **Channel-access summary.** A conservative interprocedural summary of the channels accessed (by send, receive, try_send, or try_receive) by a subprogram, including transitive callees. See Section 3, §3.3.1(i).
+18a. **Channel-access summary.** A conservative interprocedural summary of the channels accessed (by send, receive, or try_receive) by a subprogram, including transitive callees. See Section 3, §3.3.1(i).
 
 ---
 

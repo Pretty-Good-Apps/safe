@@ -6,9 +6,10 @@ package pr118g_try_string_channel_build
    sent : boolean = false;
    got : boolean = false;
 
-   try_send text_ch, source, sent
-   source = "Bob"
-   try_receive text_ch, received, got
+   send text_ch, source, sent
+   if sent
+      source = "Bob"
+      try_receive text_ch, received, got
 
    if sent
       print (1)

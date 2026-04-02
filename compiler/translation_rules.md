@@ -61,10 +61,9 @@ The following table maps each Safe construct to its Ada/SPARK emission pattern. 
 | `task T ...` | Ada task type + single instance | SAFE@468cf72:spec/04-tasks-and-channels.md#4.1.p1 | AST: `TaskDeclaration`. See Section 6 |
 | `task T ..., sends C1, receives C2` | Same Ada task type + instance; direction clauses affect legality and interface summaries only | SAFE@468cf72:spec/04-tasks-and-channels.md#4.1.p7c | Source-only constraint; no direct Ada syntax |
 | `channel C : T capacity N;` | Protected object with bounded buffer | SAFE@468cf72:spec/04-tasks-and-channels.md#4.2.p12 | AST: `ChannelDeclaration`. See Section 4 |
-| `send C, Expr;` | `C.Send(Expr);` (entry call) | SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p27 | AST: `SendStatement`. Blocking entry call |
+| `send C, Expr, Ok;` | `C.Try_Send(Expr, Ok);` (procedure call) | SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29 | AST: `SendStatement`. Non-blocking procedure |
 | `receive C, Var;` | `C.Receive(Var);` (entry call) | SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p28 | AST: `ReceiveStatement`. Blocking entry call |
 | `receive C, Var : T;` | `declare Var : T; begin C.Receive(Var); ... end;` | SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p28 | Lowered before AST / MIR emission to declaration + receive |
-| `try_send C, Expr, Ok;` | `C.Try_Send(Expr, Ok);` (procedure call) | SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29 | AST: `TrySendStatement`. Non-blocking procedure |
 | `try_receive C, Var, Ok;` | `C.Try_Receive(Var, Ok);` (procedure call) | SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p30 | AST: `TryReceiveStatement`. Non-blocking procedure |
 | `try_receive C, Var : T, Ok;` | `declare Var : T := <default>; begin C.Try_Receive(Var, Ok); ... end;` | SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p30 | Lowered before AST / MIR emission to declaration + try_receive |
 | `X << Y` / `X >> Y` on `binary (N)` | `Interfaces.Shift_Left/Shift_Right (...)` | SAFE@468cf72:spec/08-syntax-summary.md#8.6 | `>>` lowers as logical zero-fill right shift |
@@ -316,14 +315,10 @@ When the channel element type is an owning access type, the `Send` entry perform
 2. Enqueue the value.
 3. Set the source variable to `null` after the send.
 
-For `try_send`, the source is set to `null` only when `Success = True`.
+For the admitted three-argument `send`, the source is set to `null` only when `Success = True`.
 
 ```ada
--- Emitted Ada for: send Ch, Ptr;
-Ch.Send(Ptr);
-Ptr := null;  -- move semantics: source becomes null
-
--- Emitted Ada for: try_send Ch, Ptr, Ok;
+-- Emitted Ada for: send Ch, Ptr, Ok;
 declare
    Tmp : Element_Type := Ptr;
 begin
@@ -334,7 +329,7 @@ begin
 end;
 ```
 
-**Atomicity guarantee:** The `try_send` emission uses a temporary variable `Tmp` to capture the value before the fullness check. The protected object's mutual exclusion provides the atomicity required by SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29b: the evaluation of the fullness condition and the enqueue decision occur within the protected procedure call, which is atomic with respect to other channel operations. The source variable is nulled only after the protected call confirms success.
+**Atomicity guarantee:** The admitted `send` emission uses a temporary variable `Tmp` to capture the value before the fullness check. The protected object's mutual exclusion provides the atomicity required by SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29b: the evaluation of the fullness condition and the enqueue decision occur within the protected procedure call, which is atomic with respect to other channel operations. The source variable is nulled only after the protected call confirms success.
 
 ---
 
@@ -834,7 +829,7 @@ The retained `safei-v1` shape carries three channel-summary views per exported
 subprogram:
 
 - `channels`: the conservative transitive union of all reachable channel uses
-- `sends`: the conservative transitive subset used by `send` / `try_send`
+- `sends`: the conservative transitive subset used by `send`
 - `receives`: the conservative transitive subset used by `receive`,
   `try_receive`, and `select` channel arms
 
@@ -1064,7 +1059,9 @@ the following table lists semantics that are underspecified or implementation-de
 
 Safe introduces reserved words not reserved in Ada: `public`, `channel`,
 `send`, `receive`, `try_send`, `try_receive`, `capacity`, and `from`. These do
-not appear directly in emitted Ada; they are consumed by the compiler.
+not appear directly in emitted Ada; they are consumed by the compiler. The
+legacy `try_send` spelling remains reserved only so the frontend can issue a
+targeted migration diagnostic.
 
 ### 14.2 Lowercase Source Rule
 
@@ -1100,9 +1097,8 @@ identifiers and attributes during emission.
 |---|---|---|---|
 | channel `ch` | protected object `ch` | same name | `ChannelDeclaration` |
 | task `t` | task type `t_task_type`, instance `t` | suffix `_task_type` | `TaskDeclaration` |
-| channel send entry | `ch.send` | fixed name | `SendStatement` |
+| channel send procedure | `ch.try_send` | fixed name | `SendStatement` |
 | channel receive entry | `ch.receive` | fixed name | `ReceiveStatement` |
-| channel try_send procedure | `ch.try_send` | fixed name | `TrySendStatement` |
 | channel try_receive procedure | `ch.try_receive` | fixed name | `TryReceiveStatement` |
 | wide integer type | `safe_runtime.wide_integer` | in support package | `Expression` nodes |
 | deallocation procedure | `free_<typename>` | prefix `free_` | generated for each access type |
@@ -1216,7 +1212,7 @@ package pipeline
 
       loop
          sample : measurement = read_sensor;
-         send raw_data, sample;
+         send raw_data, sample, ok;
          delay 0.01;
 
    task consumer with priority = 5
@@ -1225,7 +1221,7 @@ package pipeline
          m : measurement;
          receive raw_data, m;
          result : measurement = measurement ((m + 1) / 2);
-         send processed, result;
+         send processed, result, ok;
 
    function read_sensor returns measurement is separate;
 ```

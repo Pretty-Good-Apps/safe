@@ -16,8 +16,7 @@ package neg_try_send_compound_else_use
       success : boolean = false;
       ready   : boolean = false;
 
-      try_send data_ch, source, success;
+      send data_ch, source, success;
       if success and then ready
       else
-         send data_ch, source;
-
+         send data_ch, source, success;

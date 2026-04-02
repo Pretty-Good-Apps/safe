@@ -1343,12 +1343,14 @@
       "production": "send_statement",
       "source_section": "8.12",
       "clause_ids": [
-        "SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p27:ef0ce6bd",
-        "SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p27a:8ed3c1d4"
+        "SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29:f792d704",
+        "SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29a:8d3f2225",
+        "SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p29b:7121ccd7"
       ],
       "fields": [
         { "name": "channel_name", "type": "NodeRef<Name>", "optional": false },
         { "name": "expression", "type": "NodeRef<Expression>", "optional": false },
+        { "name": "success_var", "type": "NodeRef<Name>", "optional": true },
         { "name": "span", "type": "Span", "optional": false }
       ]
     },

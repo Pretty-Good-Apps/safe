@@ -18,24 +18,28 @@ package multi_task_channel
    --  Producer_A: sends low-range event codes.
    task producer_a with priority = 10
       seq : event_code = 0;
+      sent : boolean = false;
 
       loop
-         send event_ch, seq;
-         if seq < 4_999
-            seq = seq + 1;
-         else
-            seq = 0;
+         send event_ch, seq, sent;
+         if sent
+            if seq < 4_999
+               seq = seq + 1;
+            else
+               seq = 0;
 
    --  Producer_B: sends high-range event codes.
    task producer_b with priority = 10
       seq : event_code = 5_000;
+      sent : boolean = false;
 
       loop
-         send event_ch, seq;
-         if seq < 10_000
-            seq = seq + 1;
-         else
-            seq = 5_000;
+         send event_ch, seq, sent;
+         if sent
+            if seq < 10_000
+               seq = seq + 1;
+            else
+               seq = 5_000;
 
    --  Consumer: receives events from both producers.
    --  Channel atomicity guarantees each code is received intact.

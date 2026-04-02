@@ -556,7 +556,6 @@ simple_statement ::=
   | delay_statement
   | send_statement
   | receive_statement
-  | try_send_statement
   | try_receive_statement
   | pragma
 
@@ -719,16 +718,13 @@ channel_declaration ::=
         'capacity' static_expression ';'
 
 send_statement ::=
-    'send' channel_name ',' expression statement_terminator
+    'send' channel_name ',' expression ',' name statement_terminator
 
 receive_statement ::=
     'receive' channel_name ',' receive_target statement_terminator
 
 receive_target ::=
     name | defining_identifier ':' subtype_indication
-
-try_send_statement ::=
-    'try_send' channel_name ',' expression ',' name statement_terminator
 
 try_receive_statement ::=
     'try_receive' channel_name ',' receive_target ',' name statement_terminator

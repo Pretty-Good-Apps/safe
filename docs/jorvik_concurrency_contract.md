@@ -7,8 +7,8 @@ It covers the shipped subset only:
 
 - static unit-scope tasks
 - bounded FIFO channels
-- blocking `send` / `receive`
-- non-blocking `try_send` / `try_receive`
+- non-blocking `send`
+- blocking `receive` and non-blocking `try_receive`
 - `select` with one or more channel arms and at most one delay arm
 - the admitted value-only channel element surface, including the named
   heap-backed string / growable-channel fixtures already carried by the proof
@@ -21,7 +21,7 @@ It covers the shipped subset only:
 - Equal-priority task ordering remains implementation-defined.
 - Channels are bounded FIFO queues, and channel operations are atomic with
   respect to other operations on the same channel.
-- Blocking is confined to the calling task.
+- Blocking is confined to blocking `receive` / `select` waits in the calling task.
 - The emitted channel lowering still computes task-based ceilings, but it also
   raises the ceiling conservatively to `System.Any_Priority'Last` for channels
   touched from package-level code or exposed as public channels, so the

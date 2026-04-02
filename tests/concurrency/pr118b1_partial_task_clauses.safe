@@ -5,17 +5,28 @@
 package pr118b1_partial_task_clauses
 
    subtype message is integer (0 to 10);
+   subtype send_state is integer (0 to 1);
 
    channel input_ch : message capacity 1;
    channel output_ch : message capacity 1;
 
-   function push_output
+   function push_output (status : mut send_state)
+      sent : boolean = false
+      previous_status : send_state = status
 
-      send output_ch, 1
+      send output_ch, 1, sent
+      if sent
+         status = 1
+      else
+         status = previous_status
 
    task relay with priority = 10, sends output_ch
+      status : send_state = 0;
 
       loop
          var incoming : message = 0
          receive input_ch, incoming
-         push_output
+         status = 0
+         push_output (status)
+         if status == 0
+            delay 0.001

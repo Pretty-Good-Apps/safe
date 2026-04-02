@@ -15,6 +15,6 @@ package neg_try_send_use_after_move
       source  : payload_ptr = new ((value = 1) as payload);
       success : boolean = false;
 
-      try_send data_ch, source, success;
+      send data_ch, source, success;
       source.all.value = 2;
 

@@ -1,5 +1,5 @@
 -- Test: try_ops
--- Description: Non-owning try_send and try_receive operations.
+-- Description: Non-owning send and try_receive operations.
 --   Producer and consumer tasks use the non-blocking channel forms with a
 --   Boolean success variable and relative delays on the retry path.
 -- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p25:961abe5a
@@ -19,7 +19,7 @@ package try_ops
       sent : boolean;
 
       loop
-         try_send data_ch, next, sent;
+         send data_ch, next, sent;
          if sent
             if next < 100
                next = next + 1;

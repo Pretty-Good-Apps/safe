@@ -4,12 +4,15 @@ package pr119a_select_prebuffered
 
    channel msg_ch : message capacity 1;
    total : integer = 0;
+   sent : boolean = false;
 
-   send msg_ch, 3;
+   send msg_ch, 3, sent;
 
-   select
-      when item : message from msg_ch
-         total = item;
+   if sent
+      select
+         when item : message from msg_ch
+            total = item;
+   else
+      total = 9;
 
    print (total)
-

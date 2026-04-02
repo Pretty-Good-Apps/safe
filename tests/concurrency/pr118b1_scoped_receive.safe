@@ -9,9 +9,12 @@ package pr118b1_scoped_receive
    channel data_ch : message capacity 1;
 
    task producer with priority = 10, sends data_ch
+      sent : boolean = false;
 
       loop
-         send data_ch, 4
+         send data_ch, 4, sent
+         if not sent
+            delay 0.01
 
    task consumer with priority = 10, receives data_ch
       result : message = 0;

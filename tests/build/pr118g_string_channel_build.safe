@@ -3,10 +3,15 @@ package pr118g_string_channel_build
    channel text_ch : string capacity 1;
    source : string = "Ada";
    received : string;
+   sent : boolean = false;
 
-   send text_ch, source
-   source = "Bob"
-   receive text_ch, received
+   send text_ch, source, sent
+   if sent
+      source = "Bob"
+      receive text_ch, received
 
-   print (received)
-   print (source)
+      print (received)
+      print (source)
+   else
+      print ("send failed")
+      print (source)

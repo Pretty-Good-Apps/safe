@@ -13,23 +13,29 @@ package select_timeout_cursor_result
    public channel result_ch : result_value capacity 1;
 
    result : result_value = 0;
+   high_sent : boolean = false;
+   low_sent  : boolean = false;
+   result_sent : boolean = false;
 
    for round in round_index
       if round == 2
-         send high_ch, 1
-         send low_ch, 2
+         send high_ch, 1, high_sent
+         send low_ch, 2, low_sent
 
-      select
-         when high_item : message from high_ch
-            result = result_value (high_item)
-      or
-         when low_item : message from low_ch
-            result = 10 + result_value (low_item)
-      or
-         delay 0.0
-            if round == 1
-               result = 0
-            else
-               result = 90
+      if round == 1 or (high_sent and low_sent)
+         select
+            when high_item : message from high_ch
+               result = result_value (high_item)
+         or
+            when low_item : message from low_ch
+               result = 10 + result_value (low_item)
+         or
+            delay 0.0
+               if round == 1
+                  result = 0
+               else
+                  result = 90
+      else
+         result = 99
 
-   send result_ch, result
+   send result_ch, result, result_sent

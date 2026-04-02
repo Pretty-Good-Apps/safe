@@ -10,10 +10,10 @@ package provider_transitive_channel
          receive data_ch, item;
 
    function push_internal
+      sent : boolean = false;
 
-      send data_ch, 1;
+      send data_ch, 1, sent;
 
    public function push
 
       push_internal;
-

@@ -3,11 +3,11 @@ Source: tests/negative/neg_pr118b1_send_contract.safe
 
 Expected diagnostic output:
 ------------------------------------------------------------------------
-neg_pr118b1_send_contract.safe:15:10: error: task 'worker' reaches send on channel 'data_ch' outside its `sends` contract
+neg_pr118b1_send_contract.safe:16:10: error: task 'worker' reaches send on channel 'data_ch' outside its `sends` contract
   |
-  | 15 |          send data_ch, 1
-  |    |          ^~~~~~~~~~~~~~~
+  | 16 |          send data_ch, 1, sent
+  |    |          ^~~~~~~~~~~~~~~~~~~~~
   |
   note: allowed `sends` channels: allowed_ch
-  note: earliest local use at 15:10
+  note: earliest local use at 16:10
 ------------------------------------------------------------------------
