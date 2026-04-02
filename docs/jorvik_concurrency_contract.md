@@ -31,15 +31,17 @@ It covers the shipped subset only:
   full source surface: select arms must target same-unit non-public channels,
   and emitted select statements are admitted only from direct task bodies and
   unit-scope statements.
-- `select` channel arms are checked in source order, and the first ready arm
-  wins.
+- Plain `select` is fair by default on that admitted subset: each select site
+  keeps a persistent channel-arm cursor, probes ready arms in circular order
+  starting at that cursor, and advances the cursor after a successful
+  channel-arm receive.
 - If no channel arm is ready and a delay arm is present, the current
   implementation establishes one absolute deadline at select entry, then blocks
   on a package-scope dispatcher that is signaled by same-unit channel sends or
   by a package-scope timing event when the deadline expires. After each wake,
-  the same source-order readiness precheck runs again.
-- No stronger fairness, wakeup immediacy, or cycle-accurate timing guarantee is
-  part of the admitted surface.
+  the same circular readiness precheck runs again from the unchanged cursor.
+- No stronger fairness, wakeup immediacy, or cycle-accurate timing guarantee
+  is part of the admitted surface.
 
 ## Assurance Basis
 
@@ -65,9 +67,9 @@ That embedded lane must stay green for:
 
 These claims are not part of the admitted surface:
 
-- fairness guarantees beyond source-order select priority
-- stronger latency or round-robin fairness guarantees beyond the admitted
-  blocking dispatcher contract plus ordinary runtime scheduling jitter
+- scheduler-level starvation freedom or fairness across different select sites
+- stronger latency or fairness guarantees beyond the admitted blocking
+  round-robin dispatcher contract plus ordinary runtime scheduling jitter
 - cycle-accurate or peripheral-level timing claims
 - targets or runtimes beyond the documented STM32F4 / `light-tasking-stm32f4`
   evidence lane

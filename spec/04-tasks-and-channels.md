@@ -238,17 +238,17 @@ delay_arm ::=
 
 ### Dynamic Semantics
 
-39. **Arm selection semantics.** When the `select` statement is evaluated, the implementation tests each channel arm in declaration order (top to bottom). If one or more channel arms are ready at that check, the first ready channel arm is selected. If no channel arm is ready and a delay arm is present, the implementation establishes a single delay deadline at `select` entry and then blocks awaiting either a readiness notification from one of the referenced channels or expiry of that deadline. After each wake, the implementation repeats the same ordered readiness check and still selects the first ready channel arm.
+39. **Arm selection semantics.** Each `select` statement has a persistent channel-arm rotation cursor initially designating its first channel arm. When the `select` statement is evaluated, the implementation tests each channel arm exactly once in circular order starting at that cursor. If one or more channel arms are ready at that check, the first ready channel arm in that circular order is selected. If no channel arm is ready and a delay arm is present, the implementation establishes a single delay deadline at `select` entry and then blocks awaiting either a readiness notification from one of the referenced channels or expiry of that deadline. After each wake, the implementation repeats the same circular readiness check from the unchanged cursor.
 
-40. If the delay deadline expires before any channel arm is selected, the delay arm is selected. Delay expiry is not quantized to a fixed polling interval: the implementation is allowed ordinary runtime scheduling jitter, but it is not specified in terms of an implementation-defined sleep quantum.
+40. If the delay deadline expires before any channel arm is selected, the delay arm is selected. Delay expiry is not quantized to a fixed polling interval: the implementation is allowed ordinary runtime scheduling jitter, but it is not specified in terms of an implementation-defined sleep quantum. Selecting the delay arm does not advance the channel-arm rotation cursor.
 
-41. If multiple channels are ready at the same readiness check, the first listed channel arm is selected. This is deterministic — arm ordering in source code determines priority. There is no random selection.
+41. If multiple channels are ready at the same readiness check, the winner is the first ready channel arm encountered in the circular order starting at the current cursor. This is deterministic. After a channel arm is selected, the rotation cursor advances to the successor of that channel arm for the next execution of the same `select` statement.
 
-42. If no channel arm is ready and no delay arm is present, the `select` blocks until one or more channel arms become ready, then repeats the same ordered readiness check and selects the first ready arm.
+42. If no channel arm is ready and no delay arm is present, the `select` blocks until one or more channel arms become ready, then repeats the same circular readiness check from the unchanged cursor and selects the first ready arm encountered there.
 
 43. Once an arm is selected, its `sequence_of_statements` is executed. For a channel arm, the received value is bound to the `defining_identifier` before the statements execute. Channel-arm binding copies the dequeued element; it does not establish ownership of a designated object through the channel.
 
-44. **Starvation.** A channel whose arm is listed later in a `select` may be starved if earlier arms are always ready. This is by design — it gives the programmer explicit priority control via declaration order.
+44. **Fairness boundary.** The round-robin cursor prevents fixed source-order starvation among the channel arms of one admitted `select` site, but it does not imply scheduler-level starvation freedom, equal wall-clock service, or fairness across different `select` statements.
 
 ---
 

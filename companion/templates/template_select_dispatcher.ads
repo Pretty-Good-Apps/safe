@@ -7,8 +7,9 @@
 --  Reference: compiler/translation_rules.md Section 5
 --
 --  Demonstrates the compiler emission pattern for select statement lowering:
---    1. Each channel arm becomes a Try_Receive call in declaration order
---    2. Arms are tested in priority order (declaration order per spec)
+--    1. Each channel arm becomes a Try_Receive call in circular order
+--       starting at the persistent Next_Arm cursor
+--    2. After a successful receive, Next_Arm advances to the successor arm
 --    3. A package-scope readiness dispatcher is modeled as a latch with
 --       Reset/Signal/Signal_Delay/Await operations
 --    4. A bounded wake schedule abstracts the finite environment trace
@@ -43,6 +44,7 @@ is
    subtype Capacity_Range is Positive range 1 .. Max_Capacity;
    subtype Count_Range is Natural range 0 .. Max_Capacity;
    subtype Index_Range is Positive range 1 .. Max_Capacity;
+   subtype Arm_Index is Positive range 1 .. 2;
    subtype Wake_Range is
      Positive range 1 .. Max_Wake_Iterations;
 
@@ -116,7 +118,7 @@ is
                               Ch.Count = Ch.Count'Old);
 
    --  Two-arm select with delay arm under the dispatcher lowering.
-   --  Arms tested in declaration order: Ch_A (Arm 1), Ch_B (Arm 2).
+   --  Arms are tested in circular order starting at Next_Arm.
    --  When no arm is ready, the dispatcher is awaited. Channel wakes
    --  represent successful sends; delay wakes represent the one absolute
    --  deadline handler firing.
@@ -124,6 +126,7 @@ is
      (Ch_A      : in out Channel;
       Ch_B      : in out Channel;
       Wakeups   : Delay_Wake_Schedule;
+      Next_Arm  : in out Arm_Index;
       Result    : out Element_Type;
       Timed_Out : out Boolean)
      with Pre  => Is_Valid (Ch_A) and then Is_Valid (Ch_B),
@@ -136,38 +139,78 @@ is
                  and then Ch_B.Count'Old = 0
                  and then Ch_A.Count = Ch_A.Count'Old
                  and then Ch_B.Count = Ch_B.Count'Old
-               elsif Ch_A.Count'Old > 0 then
+                 and then Next_Arm = Next_Arm'Old
+               elsif Next_Arm'Old = 1 and then Ch_A.Count'Old > 0 then
                  Ch_A.Count = Ch_A.Count'Old - 1
                  and then Ch_B.Count = Ch_B.Count'Old
-               elsif Ch_A.Count'Old = 0 and then Ch_B.Count'Old > 0 then
+                 and then Next_Arm = 2
+               elsif Next_Arm'Old = 1
+                 and then Ch_A.Count'Old = 0
+                 and then Ch_B.Count'Old > 0
+               then
                  Ch_A.Count = Ch_A.Count'Old
+                 and then Ch_B.Count = Ch_B.Count'Old - 1
+                 and then Next_Arm = 1
+               elsif Next_Arm'Old = 2 and then Ch_B.Count'Old > 0 then
+                 Ch_A.Count = Ch_A.Count'Old
+                 and then Ch_B.Count = Ch_B.Count'Old - 1
+                 and then Next_Arm = 1
+               elsif Next_Arm'Old = 2
+                 and then Ch_B.Count'Old = 0
+                 and then Ch_A.Count'Old > 0
+               then
+                 Ch_A.Count = Ch_A.Count'Old - 1
+                 and then Ch_B.Count = Ch_B.Count'Old
+                 and then Next_Arm = 2
                else
                  Ch_A.Count = Ch_A.Count'Old
-                 and then Ch_B.Count = Ch_B.Count'Old);
+                 and then Ch_B.Count = Ch_B.Count'Old
+                 and then Next_Arm = Next_Arm'Old);
 
    --  Two-arm select without delay arm under the dispatcher lowering.
-   --  Arms are tested in declaration order: Ch_A (Arm 1), Ch_B (Arm 2).
+   --  Arms are tested in circular order starting at Next_Arm.
    --  Found = True iff an item was successfully received from either channel.
    procedure Select_No_Delay
      (Ch_A   : in out Channel;
       Ch_B   : in out Channel;
       Wakeups : Channel_Wake_Schedule;
+      Next_Arm : in out Arm_Index;
       Result : out Element_Type;
       Found  : out Boolean)
      with Pre  => Is_Valid (Ch_A) and then Is_Valid (Ch_B),
           Post =>
             Is_Valid (Ch_A) and then Is_Valid (Ch_B)
             and then
-              (if Ch_A.Count'Old > 0 then
+              (if Next_Arm'Old = 1 and then Ch_A.Count'Old > 0 then
                  Found
                  and then Ch_A.Count = Ch_A.Count'Old - 1
                  and then Ch_B.Count = Ch_B.Count'Old
-               elsif Ch_A.Count'Old = 0 and then Ch_B.Count'Old > 0 then
+                 and then Next_Arm = 2
+               elsif Next_Arm'Old = 1
+                 and then Ch_A.Count'Old = 0
+                 and then Ch_B.Count'Old > 0
+               then
                  Found
                  and then Ch_A.Count = Ch_A.Count'Old
+                 and then Ch_B.Count = Ch_B.Count'Old - 1
+                 and then Next_Arm = 1
+               elsif Next_Arm'Old = 2 and then Ch_B.Count'Old > 0 then
+                 Found
+                 and then Ch_A.Count = Ch_A.Count'Old
+                 and then Ch_B.Count = Ch_B.Count'Old - 1
+                 and then Next_Arm = 1
+               elsif Next_Arm'Old = 2
+                 and then Ch_B.Count'Old = 0
+                 and then Ch_A.Count'Old > 0
+               then
+                 Found
+                 and then Ch_A.Count = Ch_A.Count'Old - 1
+                 and then Ch_B.Count = Ch_B.Count'Old
+                 and then Next_Arm = 2
                else
                  not Found
                  and then Ch_A.Count = Ch_A.Count'Old
-                 and then Ch_B.Count = Ch_B.Count'Old);
+                 and then Ch_B.Count = Ch_B.Count'Old
+                 and then Next_Arm = Next_Arm'Old);
 
 end Template_Select_Dispatcher;

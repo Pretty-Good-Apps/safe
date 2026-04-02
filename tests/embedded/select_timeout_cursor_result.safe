@@ -1,0 +1,35 @@
+-- Test: select_timeout_cursor_result
+-- Description: Delay timeout leaves the per-site select cursor unchanged.
+-- Expected embedded result: 1
+
+package select_timeout_cursor_result
+
+   subtype message is integer (0 to 10);
+   subtype round_index is integer (1 to 2);
+   public subtype result_value is integer (0 to 99);
+
+   channel high_ch : message capacity 2;
+   channel low_ch  : message capacity 2;
+   public channel result_ch : result_value capacity 1;
+
+   result : result_value = 0;
+
+   for round in round_index
+      if round == 2
+         send high_ch, 1
+         send low_ch, 2
+
+      select
+         when high_item : message from high_ch
+            result = result_value (high_item)
+      or
+         when low_item : message from low_ch
+            result = 10 + result_value (low_item)
+      or
+         delay 0.0
+            if round == 1
+               result = 0
+            else
+               result = 90
+
+   send result_ch, result

@@ -1,0 +1,39 @@
+-- Test: select_single_ready_result
+-- Description: A fair select still chooses the only ready arm regardless of cursor position.
+-- Expected embedded result: 13
+
+package select_single_ready_result
+
+   subtype message is integer (0 to 10);
+   subtype round_index is integer (1 to 2);
+   public subtype result_value is integer (0 to 99);
+
+   channel high_ch : message capacity 2;
+   channel low_ch  : message capacity 2;
+   public channel result_ch : result_value capacity 1;
+
+   result : result_value = 0;
+   drained : message = 0;
+
+   send high_ch, 1
+   send low_ch, 2
+
+   for round in round_index
+      select
+         when high_item : message from high_ch
+            if round == 1
+               result = 0
+               receive low_ch, drained
+               send high_ch, 3
+            else
+               result = 10 + result_value (high_item)
+      or
+         when low_item : message from low_ch
+            if round == 1
+               result = 0
+               receive high_ch, drained
+               send low_ch, 4
+            else
+               result = 20 + result_value (low_item)
+
+   send result_ch, result

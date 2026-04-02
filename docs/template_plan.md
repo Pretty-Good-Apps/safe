@@ -170,12 +170,13 @@ Alire dependencies are required.
   Result: 24 VCs (7 flow, 17 proof) — all proved.
 - `template_select_dispatcher.ads/.adb` — Demonstrates the dispatcher-based
   select lowering pattern. Models two-arm selects (with and without delay
-  arm) using source-order prechecks plus an abstract readiness dispatcher
-  latch. A bounded wake schedule models the finite proof trace for channel
-  wakes and the one-shot delay wake without introducing a polling-quantum
-  assumption.
+  arm) using circular prechecks from a persistent `Next_Arm` cursor plus an
+  abstract readiness dispatcher latch. A bounded wake schedule models the
+  finite proof trace for channel wakes and the one-shot delay wake without
+  introducing a polling-quantum assumption.
   Hooks: `Check_Channel_Not_Empty` (at each Try_Receive point).
-  Clauses: 4.4.p33-p42 (select semantics, arm ordering, determinism).
+  Clauses: 4.4.p33-p42 (select semantics, round-robin arm ordering,
+  determinism).
   Result: 46 VCs (14 flow, 32 proof) — all proved.
 - M1-M5 templates verified: full regression passes (305 VCs, 0 unproved)
 - `prove_golden.txt` baseline updated (215 → 305 VCs)
