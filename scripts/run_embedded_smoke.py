@@ -82,6 +82,18 @@ CASES = {
     "select_priority_result": EmbeddedCase(
         name="select_priority_result",
         source=EMBEDDED_TESTS_ROOT / "select_priority_result.safe",
+        expected_result=12,
+        driver_mode="channel",
+    ),
+    "select_single_ready_result": EmbeddedCase(
+        name="select_single_ready_result",
+        source=EMBEDDED_TESTS_ROOT / "select_single_ready_result.safe",
+        expected_result=13,
+        driver_mode="channel",
+    ),
+    "select_timeout_cursor_result": EmbeddedCase(
+        name="select_timeout_cursor_result",
+        source=EMBEDDED_TESTS_ROOT / "select_timeout_cursor_result.safe",
         expected_result=1,
         driver_mode="channel",
     ),
@@ -100,6 +112,8 @@ SUITES = {
         "producer_consumer_result",
         "scoped_receive_result",
         "select_priority_result",
+        "select_single_ready_result",
+        "select_timeout_cursor_result",
         "string_channel_result",
     ],
 }

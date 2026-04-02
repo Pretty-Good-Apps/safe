@@ -631,6 +631,8 @@ package body Safe_Frontend.Ada_Emit is
       In_Loop    : Boolean := False);
    function Select_Dispatcher_Name
      (Stmt : CM.Statement_Access) return String;
+   function Select_Rotation_State_Name
+     (Stmt : CM.Statement_Access) return String;
    function Select_Dispatcher_Timer_Name
      (Stmt : CM.Statement_Access) return String;
    function Select_Dispatcher_Arm_Helper_Name
@@ -645,6 +647,10 @@ package body Safe_Frontend.Ada_Emit is
    procedure Collect_Select_Dispatcher_Names
      (Statements : CM.Statement_Access_Vectors.Vector;
       Names      : in out FT.UString_Vectors.Vector);
+   procedure Collect_Select_Rotation_State
+     (Statements : CM.Statement_Access_Vectors.Vector;
+      Names      : in out FT.UString_Vectors.Vector;
+      Counts     : in out FT.UString_Vectors.Vector);
    procedure Collect_Select_Delay_Timer_Names
      (Statements : CM.Statement_Access_Vectors.Vector;
       Names      : in out FT.UString_Vectors.Vector);
@@ -1993,6 +1999,13 @@ package body Safe_Frontend.Ada_Emit is
         & Trim_Image (Long_Long_Integer (Stmt.Span.Start_Pos.Column));
    end Select_Dispatcher_Name;
 
+   function Select_Rotation_State_Name
+     (Stmt : CM.Statement_Access) return String
+   is
+   begin
+      return Select_Dispatcher_Name (Stmt) & "_Next_Arm";
+   end Select_Rotation_State_Name;
+
    function Select_Dispatcher_Type_Name (Name : String) return String is
    begin
       return Name & "_Type";
@@ -2115,6 +2128,81 @@ package body Safe_Frontend.Ada_Emit is
    begin
       Collect_From (Statements);
    end Collect_Select_Dispatcher_Names;
+
+   procedure Collect_Select_Rotation_State
+     (Statements : CM.Statement_Access_Vectors.Vector;
+      Names      : in out FT.UString_Vectors.Vector;
+      Counts     : in out FT.UString_Vectors.Vector)
+   is
+      procedure Collect_From
+        (Nested_Statements : CM.Statement_Access_Vectors.Vector);
+
+      procedure Maybe_Add (Stmt : CM.Statement_Access) is
+         Name_Text         : constant String := Select_Rotation_State_Name (Stmt);
+         Channel_Arm_Count : Natural := 0;
+      begin
+         if Stmt = null or else Stmt.Kind /= CM.Stmt_Select then
+            return;
+         end if;
+
+         for Arm of Stmt.Arms loop
+            if Arm.Kind = CM.Select_Arm_Channel then
+               Channel_Arm_Count := Channel_Arm_Count + 1;
+            end if;
+         end loop;
+
+         if Channel_Arm_Count = 0 or else Contains_Name (Names, Name_Text) then
+            return;
+         end if;
+
+         Names.Append (FT.To_UString (Name_Text));
+         Counts.Append (FT.To_UString (Trim_Image (Long_Long_Integer (Channel_Arm_Count))));
+      end Maybe_Add;
+
+      procedure Collect_From
+        (Nested_Statements : CM.Statement_Access_Vectors.Vector)
+      is
+      begin
+         for Item of Nested_Statements loop
+            if Item = null then
+               null;
+            else
+               case Item.Kind is
+                  when CM.Stmt_If =>
+                     Collect_From (Item.Then_Stmts);
+                     for Part of Item.Elsifs loop
+                        Collect_From (Part.Statements);
+                     end loop;
+                     if Item.Has_Else then
+                        Collect_From (Item.Else_Stmts);
+                     end if;
+                  when CM.Stmt_Case =>
+                     for Arm of Item.Case_Arms loop
+                        Collect_From (Arm.Statements);
+                     end loop;
+                  when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
+                     Collect_From (Item.Body_Stmts);
+                  when CM.Stmt_Select =>
+                     Maybe_Add (Item);
+                     for Arm of Item.Arms loop
+                        case Arm.Kind is
+                           when CM.Select_Arm_Channel =>
+                              Collect_From (Arm.Channel_Data.Statements);
+                           when CM.Select_Arm_Delay =>
+                              Collect_From (Arm.Delay_Data.Statements);
+                           when others =>
+                              null;
+                        end case;
+                     end loop;
+                  when others =>
+                     null;
+               end case;
+            end if;
+         end loop;
+      end Collect_From;
+   begin
+      Collect_From (Statements);
+   end Collect_Select_Rotation_State;
 
    procedure Collect_Select_Delay_Timer_Names
      (Statements : CM.Statement_Access_Vectors.Vector;
@@ -9794,6 +9882,7 @@ package body Safe_Frontend.Ada_Emit is
            (Task_Item.Statements,
             Timer_Names);
       end loop;
+
       for Decl of Unit.Objects loop
          if not Decl.Is_Constant then
             for Name of Decl.Names loop
@@ -15664,6 +15753,8 @@ package body Safe_Frontend.Ada_Emit is
                   Delay_Arm_Count   : Natural := 0;
                   Dispatcher_Name   : constant String :=
                     Select_Dispatcher_Name (Item);
+                  Next_Arm_Name     : constant String :=
+                    Select_Rotation_State_Name (Item);
 
                   function Delay_Expr_Image return String is
                   begin
@@ -15683,6 +15774,7 @@ package body Safe_Frontend.Ada_Emit is
 
                   procedure Render_Channel_Precheck
                     (Arm          : CM.Select_Arm;
+                     Arm_Ordinal  : Positive;
                      Select_Depth : Natural)
                   is
                      Declared_Channel : constant CM.Resolved_Channel_Decl :=
@@ -15728,6 +15820,10 @@ package body Safe_Frontend.Ada_Emit is
                                 Declared_Channel.Element_Type))
                           & ".Free"
                         else Channel_Free_Helper_Name (Declared_Channel));
+                     Next_Arm_Ordinal : constant Positive :=
+                       (if Arm_Ordinal = Channel_Arm_Count
+                        then 1
+                        else Arm_Ordinal + 1);
                   begin
                      if Arm_Has_Heap_Value then
                         Push_Cleanup_Frame (State);
@@ -15790,6 +15886,13 @@ package body Safe_Frontend.Ada_Emit is
                      end if;
                      Append_Line (Buffer, "if Arm_Success then", Select_Depth + 2);
                      Append_Line (Buffer, "Select_Done := True;", Select_Depth + 3);
+                     Append_Line
+                       (Buffer,
+                        Next_Arm_Name
+                        & " := "
+                        & Trim_Image (Long_Long_Integer (Next_Arm_Ordinal))
+                        & ";",
+                        Select_Depth + 3);
                      if Delay_Arm_Count > 0 then
                         Append_Line
                           (Buffer,
@@ -15863,12 +15966,22 @@ package body Safe_Frontend.Ada_Emit is
                      end if;
                   end Render_Channel_Precheck;
 
-                  procedure Render_Select_Precheck
-                    (Select_Depth : Natural) is
+                  procedure Render_Channel_Precheck_At_Ordinal
+                    (Arm_Ordinal  : Positive;
+                     Select_Depth : Natural)
+                  is
+                     Current_Ordinal : Natural := 0;
                   begin
                      for Arm of Item.Arms loop
                         if Arm.Kind = CM.Select_Arm_Channel then
-                           Render_Channel_Precheck (Arm, Select_Depth);
+                           Current_Ordinal := Current_Ordinal + 1;
+                           if Current_Ordinal = Arm_Ordinal then
+                              Render_Channel_Precheck
+                                (Arm,
+                                 Arm_Ordinal,
+                                 Select_Depth);
+                              return;
+                           end if;
                         elsif Arm.Kind /= CM.Select_Arm_Delay then
                            Raise_Unsupported
                              (State,
@@ -15876,6 +15989,42 @@ package body Safe_Frontend.Ada_Emit is
                               "unsupported select arm in Ada emission");
                         end if;
                      end loop;
+
+                     Raise_Unsupported
+                       (State,
+                        Item.Span,
+                        "missing select channel arm in Ada emission");
+                  end Render_Channel_Precheck_At_Ordinal;
+
+                  procedure Render_Select_Precheck
+                    (Select_Depth : Natural) is
+                     Rotated_Ordinal : Positive;
+                  begin
+                     if Channel_Arm_Count = 1 then
+                        Render_Channel_Precheck_At_Ordinal (1, Select_Depth);
+                        return;
+                     end if;
+
+                     Append_Line
+                       (Buffer,
+                        "case " & Next_Arm_Name & " is",
+                        Select_Depth);
+                     for Start_Arm in 1 .. Channel_Arm_Count loop
+                        Append_Line
+                          (Buffer,
+                           "when "
+                           & Trim_Image (Long_Long_Integer (Start_Arm))
+                           & " =>",
+                           Select_Depth + 1);
+                        for Offset in 0 .. Channel_Arm_Count - 1 loop
+                           Rotated_Ordinal :=
+                             Positive (((Start_Arm - 1 + Offset) mod Channel_Arm_Count) + 1);
+                           Render_Channel_Precheck_At_Ordinal
+                             (Rotated_Ordinal,
+                              Select_Depth + 2);
+                        end loop;
+                     end loop;
+                     Append_Line (Buffer, "end case;", Select_Depth);
                   end Render_Select_Precheck;
 
                   procedure Render_Delay_Arm_Statements
@@ -18413,6 +18562,8 @@ package body Safe_Frontend.Ada_Emit is
 
       Package_Dispatcher_Names : FT.UString_Vectors.Vector;
       Package_Dispatcher_Timer_Names : FT.UString_Vectors.Vector;
+      Package_Select_Rotation_Names : FT.UString_Vectors.Vector;
+      Package_Select_Rotation_Counts : FT.UString_Vectors.Vector;
       Package_Select_Abstract_State_Name : constant String :=
         "Safe_Select_Internal_State";
       Generated_Elaborate_Name : constant String :=
@@ -18425,6 +18576,9 @@ package body Safe_Frontend.Ada_Emit is
             Constituents.Append (Name);
          end loop;
          for Name of Package_Dispatcher_Timer_Names loop
+            Constituents.Append (Name);
+         end loop;
+         for Name of Package_Select_Rotation_Names loop
             Constituents.Append (Name);
          end loop;
          return Join_Names (Constituents);
@@ -18441,6 +18595,10 @@ package body Safe_Frontend.Ada_Emit is
       Collect_Select_Delay_Timer_Names
         (Unit.Statements,
          Package_Dispatcher_Timer_Names);
+      Collect_Select_Rotation_State
+        (Unit.Statements,
+         Package_Select_Rotation_Names,
+         Package_Select_Rotation_Counts);
       for Task_Item of Unit.Tasks loop
          Collect_Select_Dispatcher_Names
            (Task_Item.Statements,
@@ -18448,6 +18606,10 @@ package body Safe_Frontend.Ada_Emit is
          Collect_Select_Delay_Timer_Names
            (Task_Item.Statements,
             Package_Dispatcher_Timer_Names);
+         Collect_Select_Rotation_State
+           (Task_Item.Statements,
+            Package_Select_Rotation_Names,
+            Package_Select_Rotation_Counts);
       end loop;
 
       Append_Line (Spec_Inner, "pragma SPARK_Mode (On);");
@@ -18462,6 +18624,7 @@ package body Safe_Frontend.Ada_Emit is
          & ASCII.LF
          & (if not Package_Dispatcher_Names.Is_Empty
                or else not Package_Dispatcher_Timer_Names.Is_Empty
+               or else not Package_Select_Rotation_Names.Is_Empty
             then
                Indentation (1)
                & "     Abstract_State => ("
@@ -18608,6 +18771,7 @@ package body Safe_Frontend.Ada_Emit is
 
       if not Package_Dispatcher_Names.Is_Empty
         or else not Package_Dispatcher_Timer_Names.Is_Empty
+        or else not Package_Select_Rotation_Names.Is_Empty
       then
          Append_Line (Spec_Inner, "private", 1);
          for Name of Package_Dispatcher_Names loop
@@ -18628,6 +18792,22 @@ package body Safe_Frontend.Ada_Emit is
                & "  with Part_Of => Safe_Select_Internal_State;",
                1);
          end loop;
+         if not Package_Select_Rotation_Names.Is_Empty then
+            for Index in Package_Select_Rotation_Names.First_Index
+              .. Package_Select_Rotation_Names.Last_Index
+            loop
+               Append_Line
+                 (Spec_Inner,
+                  FT.To_String (Package_Select_Rotation_Names (Index))
+                  & " : Positive range 1 .. "
+                  & FT.To_String (Package_Select_Rotation_Counts (Index))
+                  & " := 1"
+                  & ASCII.LF
+                  & Indentation (1)
+                  & "  with Part_Of => Safe_Select_Internal_State;",
+                  1);
+            end loop;
+         end if;
          Append_Line (Spec_Inner);
       end if;
 
@@ -18640,6 +18820,7 @@ package body Safe_Frontend.Ada_Emit is
          & " with SPARK_Mode => On"
          & (if not Package_Dispatcher_Names.Is_Empty
                or else not Package_Dispatcher_Timer_Names.Is_Empty
+               or else not Package_Select_Rotation_Names.Is_Empty
             then
                "," & ASCII.LF
                & Indentation (1)

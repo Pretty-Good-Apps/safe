@@ -68,7 +68,7 @@ The following table maps each Safe construct to its Ada/SPARK emission pattern. 
 | `try_receive C, Var, Ok;` | `C.Try_Receive(Var, Ok);` (procedure call) | SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p30 | AST: `TryReceiveStatement`. Non-blocking procedure |
 | `try_receive C, Var : T, Ok;` | `declare Var : T := <default>; begin C.Try_Receive(Var, Ok); ... end;` | SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p30 | Lowered before AST / MIR emission to declaration + try_receive |
 | `X << Y` / `X >> Y` on `binary (N)` | `Interfaces.Shift_Left/Shift_Right (...)` | SAFE@468cf72:spec/08-syntax-summary.md#8.6 | `>>` lowers as logical zero-fill right shift |
-| `select ... end select;` | Polling loop with `Try_Receive` calls | SAFE@468cf72:spec/04-tasks-and-channels.md#4.4.p39 | AST: `SelectStatement`. See Section 5 |
+| `select ... end select;` | Dispatcher-based loop with circular `Try_Receive` precheck | SAFE@468cf72:spec/04-tasks-and-channels.md#4.4.p39 | AST: `SelectStatement`. See Section 5 |
 | `delay Expr;` | `delay Duration(Expr);` | SAFE@468cf72:spec/02-restrictions.md#2.1.8.p60 | AST: `DelayStatement`. Direct pass-through if Duration typed |
 | `pragma Assert(Cond);` | `pragma Assert(Cond);` | SAFE@468cf72:spec/02-restrictions.md#2.1.10.p68 | AST: `Pragma`. Direct pass-through |
 | Scope exit of owning access var | `Free(Var);` (generated Unchecked_Deallocation) | SAFE@468cf72:spec/02-restrictions.md#2.3.5.p104 | See Section 9 |
@@ -374,6 +374,8 @@ private
    Delay_Expired : Boolean := False;
 end Safe_Select_Dispatcher_L23_C10;
 
+Safe_Select_Dispatcher_L23_C10_Next_Arm : Positive range 1 .. 2 := 1;
+
 Safe_Select_Dispatcher_L23_C10_Timer :
   Ada.Real_Time.Timing_Events.Timing_Event;
 
@@ -391,39 +393,14 @@ begin
       Safe_Select_Dispatcher_L23_C10.Signal_Delay'Access);
 
    loop
-      -- Arm 1: Commands (higher priority by source order)
-      declare
-         Msg : Command;
-         Got_Msg : Boolean;
-      begin
-         Commands.Try_Receive(Msg, Got_Msg);
-         if Got_Msg then
-            Select_Done := True;
-            Ada.Real_Time.Timing_Events.Cancel_Handler (
-               Safe_Select_Dispatcher_L23_C10_Timer,
-               Select_Handler_Cancelled);
-            Safe_Select_Dispatcher_L23_C10.Reset;
-            Handle(Msg);
-         end if;
-      end;
-
-      if not Select_Done then
-         -- Arm 2: Data_Ch
-         declare
-            Data : Integer;
-            Got_Data : Boolean;
-         begin
-            Data_Ch.Try_Receive(Data, Got_Data);
-            if Got_Data then
-               Select_Done := True;
-               Ada.Real_Time.Timing_Events.Cancel_Handler (
-                  Safe_Select_Dispatcher_L23_C10_Timer,
-                  Select_Handler_Cancelled);
-               Safe_Select_Dispatcher_L23_C10.Reset;
-               Process(Data);
-            end if;
-         end;
-      end if;
+      case Safe_Select_Dispatcher_L23_C10_Next_Arm is
+         when 1 =>
+            -- Probe Commands, then Data_Ch.
+            null;
+         when 2 =>
+            -- Probe Data_Ch, then Commands.
+            null;
+      end case;
 
       if not Select_Done then
          Safe_Select_Dispatcher_L23_C10.Await (Select_Timed_Out);
@@ -439,20 +416,21 @@ end;
 
 ### 5.2 select without delay arm
 
-if no delay arm is present, the emitter still performs the same source-order precheck, but the fallback wait is a blocking dispatcher `Await` call with no deadline. there is no emitted fixed sleep quantum.
+if no delay arm is present, the emitter still performs the same circular readiness precheck starting at the persistent `Next_Arm` cursor, but the fallback wait is a blocking dispatcher `Await` call with no deadline. there is no emitted fixed sleep quantum.
 
-### 5.3 arm priority
+### 5.3 arm rotation
 
-arms are tested in declaration order (top to bottom). the first ready arm is selected (safe@468cf72:spec/04-tasks-and-channels.md#4.4.p41). the emission preserves this ordering with sequential precheck blocks guarded by `if not Select_Done then`.
+arms are tested exactly once in circular order starting at the per-select `Next_Arm` cursor. the first ready arm in that circular order is selected, and `Next_Arm` advances to the successor of the winning channel arm. if the select times out or wakes without selecting an arm, `Next_Arm` stays unchanged.
 
 ### 5.4 admitted lowering boundary
 
-the admitted dispatcher lowering in `PR11.9a` is intentionally narrower than the full language surface:
+the admitted dispatcher lowering in `PR11.9a`/`PR11.9b` is intentionally narrower than the full language surface:
 
 - select channel arms must target same-unit, non-public channels
 - select statements are emitted only from unit-scope statements and direct task bodies
 - the dispatcher is readiness-only; payload transfer still happens through the existing `Try_Receive` path
 - delay arms use one absolute deadline established at `select` entry and a package-scope timing event to wake the dispatcher when that deadline expires
+- plain `select` is fair by default on this admitted subset; there is no separate priority-ordered form
 
 ### 5.5 ownership in select arms
 
@@ -1059,7 +1037,7 @@ the following table lists semantics that are underspecified or implementation-de
 | task activation order | order among tasks starting execution | undefined; rely on ada runtime scheduling | no way to control this portably; spec allows implementation-defined | safe@468cf72:spec/04-tasks-and-channels.md#4.7.p58 |
 | channel allocation strategy | static vs. heap-allocated buffer | static array in protected object (deterministic, no allocation failure) | avoids heap allocation; bounded memory; provable | SAFE@468cf72:spec/04-tasks-and-channels.md#4.2.p18 |
 | channel ceiling priority (no task accesses) | ceiling when no task references channel | `system.any_priority'Last` (safe upper bound) | Prevents priority inversion for any future accessor | SAFE@468cf72:spec/04-tasks-and-channels.md#4.2.p21 |
-| Select wake mechanism | How blocked `select` resumes after no arm is initially ready | Package-scope dispatcher latch signaled by successful sends and awaited by the select site | Preserves source-order precheck semantics without polling or a fixed sleep quantum | SAFE@468cf72:spec/04-tasks-and-channels.md#4.4.p39 |
+| Select wake mechanism | How blocked `select` resumes after no arm is initially ready | Package-scope dispatcher latch signaled by successful sends and awaited by the select site | Preserves fair circular precheck semantics without polling or a fixed sleep quantum | SAFE@468cf72:spec/04-tasks-and-channels.md#4.4.p39 |
 | Select timing mechanism | How to measure delay arm expiry | `Safe_Runtime.Elapsed_Since` using monotonic Duration tracking | Ada.Real_Time is excluded from Safe source but the emitter can use it internally; Duration-based fallback available | SAFE@468cf72:spec/02-restrictions.md#2.1.8.p60 |
 | Depends over-approximation | Granularity of data-flow tracking | Include all potentially-contributing inputs (superset); refine later | Sound for Bronze verification; spec permits over-approximation | SAFE@468cf72:spec/05-assurance.md#5.2.3.p10 |
 | Global over-approximation | Granularity of variable tracking | Include all package-level vars referenced in any code path (superset) | Sound for Bronze verification; spec permits over-approximation | SAFE@468cf72:spec/05-assurance.md#5.2.2.p6 |

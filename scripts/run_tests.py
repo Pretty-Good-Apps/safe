@@ -807,7 +807,7 @@ EMITTED_SHAPE_CASES = [
     ),
     (
         "select-no-delay-no-polling-lowering",
-        REPO_ROOT / "tests" / "concurrency" / "select_priority.safe",
+        REPO_ROOT / "tests" / "embedded" / "select_single_ready_result.safe",
         ["Select_Polls", "Select_Iter", "delay 0.001;"],
     ),
 ]
@@ -880,9 +880,14 @@ EMITTED_REQUIRED_SHAPE_CASES = [
     ),
     (
         "select-no-delay-dispatcher-await",
-        REPO_ROOT / "tests" / "concurrency" / "select_priority.safe",
+        REPO_ROOT / "tests" / "embedded" / "select_single_ready_result.safe",
         [
             "protected type Safe_Select_Dispatcher_",
+            "_Next_Arm : Positive range 1 .. 2 := 1",
+            "case Safe_Select_Dispatcher_",
+            "_Next_Arm is",
+            "_Next_Arm := 2;",
+            "_Next_Arm := 1;",
             ".Signal;",
             ".Await (Select_Timed_Out);",
         ],
@@ -988,6 +993,8 @@ EMBEDDED_SMOKE_CASES = [
     "producer_consumer_result",
     "scoped_receive_result",
     "select_priority_result",
+    "select_single_ready_result",
+    "select_timeout_cursor_result",
     "string_channel_result",
 ]
 
@@ -996,6 +1003,8 @@ EMBEDDED_SMOKE_CONCURRENCY_CASES = [
     "producer_consumer_result",
     "scoped_receive_result",
     "select_priority_result",
+    "select_single_ready_result",
+    "select_timeout_cursor_result",
     "string_channel_result",
 ]
 

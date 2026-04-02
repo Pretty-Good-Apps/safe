@@ -1,7 +1,6 @@
 -- Test: select_priority
--- Description: Select statement arm priority test.
---   When multiple channels have data available, the first arm in
---   declaration order is selected. This test verifies that behavior.
+-- Description: Re-entering the same select site under fair lowering still
+--   compiles and proves cleanly in the admitted task-body subset.
 -- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.4.p39:1012f4db
 -- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.4.p33:7a94ab51
 -- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.4.p35:2ad6e64f
@@ -10,54 +9,31 @@
 package select_priority
 
    subtype command is integer (0 to 10);
-   subtype status is integer (0 to 255);
-   subtype processed_count is integer (0 to 1_000_000);
+   subtype round_index is integer (1 to 2);
 
    channel high_ch : command capacity 2;
-   channel low_ch  : status capacity 2;
+   channel low_ch  : command capacity 2;
 
-   --  Feeder_High: sends commands on the high-priority channel.
-   task feeder_high with priority = 10
-      cmd : command = 1;
-
-      loop
-         send high_ch, cmd;
-         if cmd < 10
-            cmd = cmd + 1;
-         else
-            cmd = 1;
-
-   --  Feeder_Low: sends status on the low-priority channel.
-   task feeder_low with priority = 10
-      s : status = 0;
+   task chooser with priority = 10
+      saw_high : boolean = false;
+      saw_low  : boolean = false;
+      sent     : boolean = false;
 
       loop
-         send low_ch, s;
-         if s < 255
-            s = s + 1;
-         else
-            s = 0;
+         if not sent
+            for round in round_index
+               send high_ch, command (round * 2 - 1);
+               send low_ch, command (round * 2);
 
-   --  Dispatcher: uses select to receive from multiple channels.
-   --  High_Ch arm appears first, so it has priority when both are ready.
-   task dispatcher with priority = 10
-      processed : processed_count = 0;
-      last_high : command = 0;
-      last_low  : status = 0;
-      loop
-         select
-            when cmd : command from high_ch
-               --  High-priority command received.
-               last_high = cmd;
-               if processed < 1_000_000
-                  processed = processed + 1;
-               else
-                  processed = 0;
-         or
-            when s : status from low_ch
-               --  Low-priority status received.
-               last_low = s;
-               if processed < 1_000_000
-                  processed = processed + 1;
-               else
-                  processed = 0;
+               select
+                  when high_item : command from high_ch
+                     if high_item >= 0
+                        saw_high = true;
+               or
+                  when low_item : command from low_ch
+                     if low_item >= 0
+                        saw_low = true;
+
+            sent = saw_high and saw_low;
+
+         delay 1.0
