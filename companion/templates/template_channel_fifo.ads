@@ -31,9 +31,13 @@
 pragma SPARK_Mode (On);
 pragma Assertion_Policy (Check);
 
+with Safe_Model;
+
 package Template_Channel_FIFO
   with SPARK_Mode => On
 is
+
+   use type Safe_Model.Channel_State;
 
    Max_Capacity : constant := 16;
 
@@ -53,12 +57,21 @@ is
       Count  : Count_Range;
    end record;
 
-   --  Structural invariant: Head and Tail within 1..Capacity,
-   --  Count does not exceed Capacity.
+   function Offset_Index
+     (Head   : Index_Range;
+      Offset : Count_Range;
+      Cap    : Capacity_Range) return Index_Range
+   is (Index_Range (((Head - 1 + Offset) mod Cap) + 1))
+     with Pre => Head <= Cap and then Offset <= Cap;
+
+   --  Structural invariant: Head and Tail remain within 1..Capacity,
+   --  Count does not exceed Capacity, and Tail is exactly the slot after
+   --  the logical FIFO prefix rooted at Head.
    function Is_Valid (Ch : Channel) return Boolean is
      (Ch.Head <= Ch.Capacity
       and then Ch.Tail <= Ch.Capacity
-      and then Ch.Count <= Ch.Capacity);
+      and then Ch.Count <= Ch.Capacity
+      and then Ch.Tail = Offset_Index (Ch.Head, Ch.Count, Ch.Capacity));
 
    --  Circular index advancement helper (ghost).
    function Next_Index
@@ -83,6 +96,28 @@ is
 
    function Length (Ch : Channel) return Count_Range is
      (Ch.Count);
+
+   function Logical_Index
+     (Ch  : Channel;
+      Pos : Positive) return Index_Range
+   is (Offset_Index (Ch.Head, Count_Range (Pos - 1), Ch.Capacity))
+     with Ghost,
+          Pre => Is_Valid (Ch) and then Pos <= Ch.Count;
+
+   function Model_Of (Ch : Channel) return Safe_Model.Channel_State
+     with Ghost,
+          Pre => Is_Valid (Ch),
+          Post =>
+            Safe_Model.Is_Valid_Channel (Model_Of'Result)
+            and then Safe_Model.Cap (Model_Of'Result) = Ch.Capacity
+            and then Safe_Model.Len (Model_Of'Result) = Ch.Count
+            and then
+              (if Ch.Count = 0 then
+                  True
+               else
+                  (for all Pos in 1 .. Ch.Count =>
+                     Safe_Model.Element_At (Model_Of'Result, Pos) =
+                       Ch.Buffer (Logical_Index (Ch, Pos))));
 
    --  Send: enqueue an element (requires valid + not full).
    --
@@ -109,7 +144,9 @@ is
             and then (for all I in Index_Range =>
                         (if I /= Ch.Tail'Old then
                            Ch.Buffer (I) =
-                             Ch.Buffer'Old (I)));
+                             Ch.Buffer'Old (I)))
+            and then Model_Of (Ch) =
+              Safe_Model.After_Append (Model_Of (Ch'Old), Item);
 
    --  Receive: dequeue an element (requires valid + not empty).
    --
@@ -133,6 +170,9 @@ is
             and then Ch.Head =
               Next_Index (Ch.Head'Old, Ch.Capacity)
             --  Frame: buffer contents fully preserved.
-            and then Ch.Buffer = Ch.Buffer'Old;
+            and then Ch.Buffer = Ch.Buffer'Old
+            and then Item = Safe_Model.Front (Model_Of (Ch'Old))
+            and then Model_Of (Ch) =
+              Safe_Model.After_Remove (Model_Of (Ch'Old));
 
 end Template_Channel_FIFO;

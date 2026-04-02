@@ -14,6 +14,67 @@ pragma Assertion_Policy (Check);
 package body Safe_Model is
 
    ---------------------------------------------------------------------------
+   --  Channel FIFO ghost model bodies
+   ---------------------------------------------------------------------------
+
+   function Make_Channel (Cap_Val : Positive) return Channel_State is
+   begin
+      return Channel_State'
+        (Capacity => Cap_Val,
+         Length   => 0,
+         Elements => [others => 0]);
+   end Make_Channel;
+
+   function After_Append
+     (S    : Channel_State;
+      Item : Channel_Element) return Channel_State
+   is
+      Result : Channel_State (S.Capacity) := S;
+   begin
+      Result.Length := S.Length + 1;
+      Result.Elements (Result.Length) := Item;
+      return Result;
+   end After_Append;
+
+   function After_Remove (S : Channel_State) return Channel_State is
+      Result : Channel_State (S.Capacity) := Make_Channel (S.Capacity);
+   begin
+      Result.Length := S.Length - 1;
+
+      if S.Length > 1 then
+         for Pos in 1 .. S.Length - 1 loop
+            pragma Loop_Invariant (Is_Valid_Channel (Result));
+            pragma Loop_Invariant (Result.Length = S.Length - 1);
+            pragma Loop_Invariant
+              ((if Pos = 1 then
+                   True
+                else
+                   (for all I in 1 .. Pos - 1 =>
+                      Result.Elements (I) = S.Elements (I + 1))));
+            Result.Elements (Pos) := S.Elements (Pos + 1);
+         end loop;
+      end if;
+
+      return Result;
+   end After_Remove;
+
+   procedure Prove_Same_Channel_State
+     (Left, Right : Channel_State)
+   is
+   begin
+      pragma Assert (Cap (Left) = Cap (Right));
+      pragma Assert (Len (Left) = Len (Right));
+      pragma Assert
+        (for all Pos in 1 .. Cap (Left) =>
+           (if Pos <= Len (Left) then
+               Left.Elements (Pos) = Right.Elements (Pos)
+            else
+               Left.Elements (Pos) = 0 and then Right.Elements (Pos) = 0));
+      pragma Assert (Left.Elements = Right.Elements);
+      pragma Assert (Left = Right);
+   end Prove_Same_Channel_State;
+
+   ---------------------------------------------------------------------------
    --  Assign_Owner body
    --
    --  Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.5.p45:8bdd0c99

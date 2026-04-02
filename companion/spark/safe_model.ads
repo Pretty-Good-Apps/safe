@@ -108,22 +108,27 @@ is
    --  Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p31:a7297e97
    ---------------------------------------------------------------------------
 
-   --  We model a bounded FIFO queue abstractly using a length and capacity.
-   --  In a full ghost model, we would track the sequence of elements; here
-   --  we capture the essential capacity invariant for proof obligations.
-   --
-   --  Note: SPARK disallows generics. We model the queue state abstractly
-   --  with Natural counters, parameterised by capacity at construction.
+   --  We model a bounded FIFO queue abstractly in logical dequeue order.
+   --  Active queue contents occupy Elements (1 .. Length); the inactive
+   --  suffix is zero-filled so the full ghost state has a deterministic
+   --  value and can participate in exact refinement proofs.
 
-   type Channel_State is record
+   subtype Channel_Element is Integer;
+   type Channel_Elements is array (Positive range <>) of Channel_Element;
+
+   type Channel_State (Capacity : Positive) is record
       Length   : Natural;
-      Capacity : Natural;
+      Elements : Channel_Elements (1 .. Capacity);
    end record;
-   --  Ghost model of a bounded FIFO channel.
-   --  Invariant: Length <= Capacity and Capacity >= 1.
+   --  Ghost model of a bounded FIFO channel in logical dequeue order.
+
+   function Has_Clear_Suffix (S : Channel_State) return Boolean is
+     ((for all Pos in 1 .. S.Capacity =>
+         (if Pos > S.Length then S.Elements (Pos) = 0)))
+   with Ghost;
 
    function Is_Valid_Channel (S : Channel_State) return Boolean is
-     (S.Capacity >= 1 and then S.Length <= S.Capacity)
+     (S.Length <= S.Capacity and then Has_Clear_Suffix (S))
    with Ghost;
 
    function Len (S : Channel_State) return Natural is
@@ -141,35 +146,77 @@ is
    with Ghost,
         Pre => Is_Valid_Channel (S);
 
-   function Cap (S : Channel_State) return Natural is
+   function Cap (S : Channel_State) return Positive is
      (S.Capacity)
    with Ghost,
         Pre => Is_Valid_Channel (S);
 
-   function After_Append (S : Channel_State) return Channel_State is
-     (Channel_State'(Length   => S.Length + 1,
-                     Capacity => S.Capacity))
+   function Element_At
+     (S   : Channel_State;
+      Pos : Positive) return Channel_Element is
+     (S.Elements (Pos))
+   with Ghost,
+        Pre => Is_Valid_Channel (S) and then Pos <= Len (S);
+
+   function Front (S : Channel_State) return Channel_Element is
+     (Element_At (S, 1))
+   with Ghost,
+        Pre => Is_Valid_Channel (S) and then not Is_Empty (S);
+
+   function After_Append
+     (S    : Channel_State;
+      Item : Channel_Element) return Channel_State
    with Ghost,
         Pre => Is_Valid_Channel (S) and then not Is_Full (S),
         Post => Is_Valid_Channel (After_Append'Result)
-                and then Len (After_Append'Result) = Len (S) + 1;
+                and then Cap (After_Append'Result) = Cap (S)
+                and then Len (After_Append'Result) = Len (S) + 1
+                and then
+                  (if Len (S) = 0 then
+                      True
+                   else
+                      (for all Pos in 1 .. Len (S) =>
+                         Element_At (After_Append'Result, Pos) =
+                           Element_At (S, Pos)))
+                and then Element_At (After_Append'Result, Len (S) + 1) = Item;
    --  Ghost model of state after enqueueing one element.
 
-   function After_Remove (S : Channel_State) return Channel_State is
-     (Channel_State'(Length   => S.Length - 1,
-                     Capacity => S.Capacity))
+   function After_Remove (S : Channel_State) return Channel_State
    with Ghost,
         Pre => Is_Valid_Channel (S) and then not Is_Empty (S),
         Post => Is_Valid_Channel (After_Remove'Result)
-                and then Len (After_Remove'Result) = Len (S) - 1;
+                and then Cap (After_Remove'Result) = Cap (S)
+                and then Len (After_Remove'Result) = Len (S) - 1
+                and then
+                  (if Len (After_Remove'Result) = 0 then
+                      True
+                   else
+                      (for all Pos in 1 .. Len (After_Remove'Result) =>
+                         Element_At (After_Remove'Result, Pos) =
+                           Element_At (S, Pos + 1)));
    --  Ghost model of state after dequeueing one element.
 
-   function Make_Channel (Cap_Val : Positive) return Channel_State is
-     (Channel_State'(Length => 0, Capacity => Cap_Val))
+   function Make_Channel (Cap_Val : Positive) return Channel_State
    with Ghost,
         Post => Is_Valid_Channel (Make_Channel'Result)
-                and then Is_Empty (Make_Channel'Result);
+                and then Is_Empty (Make_Channel'Result)
+                and then Cap (Make_Channel'Result) = Cap_Val;
    --  Create a fresh empty channel with given capacity.
+
+   procedure Prove_Same_Channel_State
+     (Left, Right : Channel_State)
+   with Ghost,
+        Pre => Is_Valid_Channel (Left)
+               and then Is_Valid_Channel (Right)
+               and then Cap (Left) = Cap (Right)
+               and then Len (Left) = Len (Right)
+               and then
+                 (if Len (Left) = 0 then
+                     True
+                  else
+                     (for all Pos in 1 .. Len (Left) =>
+                        Element_At (Left, Pos) = Element_At (Right, Pos))),
+        Post => Left = Right;
 
    ---------------------------------------------------------------------------
    --  Part 3: Ownership State Model (Section 2.3)

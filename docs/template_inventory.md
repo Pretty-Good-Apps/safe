@@ -1,56 +1,65 @@
 # Verified Emission Templates — Inventory
 
 **Status:** Complete
-**Updated:** 2026-04-01
+**Updated:** 2026-04-02
 
 ## Template Summary
 
-| # | Template                    | Milestone | PO Hooks                                          | VCs\* | Status   |
-|---|-----------------------------|-----------|----------------------------------------------------|-------|----------|
-| 1 | `template_wide_arithmetic`  | M1        | `Narrow_Return`, `Narrow_Assignment`               | 16  | Proved   |
-| 2 | `template_division_nonzero` | M1        | `Nonzero`, `Safe_Div`, `Safe_Mod`, `Safe_Rem`      | 17  | Proved   |
-| 3 | `template_ownership_move`   | M2        | `Check_Owned_For_Move`, `Check_Not_Moved`           | 3   | Proved   |
-| 4 | `template_scope_dealloc`    | M2        | `Check_Owned_For_Move`, `Check_Not_Moved`           | 13  | Proved   |
-| 5 | `template_not_null_deref`   | M2        | `Not_Null_Ptr`, `Safe_Deref`                        | 7   | Proved   |
-| 6 | `template_channel_fifo`     | M3        | `Check_Channel_Not_Full/Empty/Capacity_Positive`    | 13  | Proved   |
-| 7 | `template_task_decl`        | M3        | `Check_Exclusive_Ownership`                          | 12  | Proved   |
-| 8 | `template_index_safety`     | M4        | `Safe_Index`, `Narrow_Indexing`                      | 14  | Proved   |
-| 9 | `template_effect_summary`   | M5        | (none -- flow-analysis template)                     | 3   | Proved   |
-| 10| `template_package_structure` | M5       | `Narrow_Parameter`                                   | 6   | Proved   |
-| 11| `template_borrow_observe`   | M6       | `Check_Borrow_Exclusive`, `Check_Observe_Shared`     | 13  | Proved   |
-| 12| `template_fp_safety`        | M6       | `FP_Not_NaN`, `FP_Not_Infinity`, `FP_Safe_Div`       | 17  | Proved   |
-| 13| `template_select_dispatcher`| M6       | `Check_Channel_Not_Empty`                             | 32  | Proved   |
-| 14| `template_narrow_conversion`| M7       | `Narrow_Conversion`                                   | 17  | Proved   |
+| # | Template                     | Milestone | PO Hooks                                       | Checks\* | Status |
+|---|------------------------------|-----------|------------------------------------------------|----------|--------|
+| 1 | `template_wide_arithmetic`   | M1        | `Narrow_Return`, `Narrow_Assignment`           | 14       | Proved |
+| 2 | `template_division_nonzero`  | M1        | `Nonzero`, `Safe_Div`, `Safe_Mod`, `Safe_Rem`  | 17       | Proved |
+| 3 | `template_ownership_move`    | M2        | `Check_Owned_For_Move`, `Check_Not_Moved`      | 3        | Proved |
+| 4 | `template_scope_dealloc`     | M2        | `Check_Owned_For_Move`, `Check_Not_Moved`      | 13       | Proved |
+| 5 | `template_not_null_deref`    | M2        | `Not_Null_Ptr`, `Safe_Deref`                   | 7        | Proved |
+| 6 | `template_channel_fifo`      | M3        | `Check_Channel_Not_Full/Empty/Capacity_Positive` | 79     | Proved |
+| 7 | `template_task_decl`         | M3        | `Check_Exclusive_Ownership`                    | 12       | Proved |
+| 8 | `template_index_safety`      | M4        | `Safe_Index`, `Narrow_Indexing`                | 14       | Proved |
+| 9 | `template_effect_summary`    | M5        | (none -- flow-analysis template)               | 3        | Proved |
+| 10| `template_package_structure` | M5        | `Narrow_Parameter`                             | 6        | Proved |
+| 11| `template_borrow_observe`    | M6        | `Check_Borrow_Exclusive`, `Check_Observe_Shared` | 13     | Proved |
+| 12| `template_fp_safety`         | M6        | `FP_Not_NaN`, `FP_Not_Infinity`, `FP_Safe_Div` | 17       | Proved |
+| 13| `template_select_polling`    | M6        | `Check_Channel_Not_Empty`                      | 32       | Proved |
+| 14| `template_select_dispatcher` | M6        | `Check_Channel_Not_Empty`                      | 56       | Proved |
+| 15| `template_narrow_conversion` | M7        | `Narrow_Conversion`                            | 14       | Proved |
+| 16| `template_discriminant_result` | M7      | discriminated result lowering                  | 15       | Proved |
 
-\* VCs = proof checks discharged by SMT provers (Silver level); flow
-checks (Bronze level) are reported separately in the Proof Summary below.
+\* Checks = proved obligations reported in the current per-unit GNATprove
+summary for each template package.
 
-**Total template proof VCs: 183** (all proved)
+**Total template checks: 315** (all proved)
 
 ## Proof Summary
 
-325 total VCs across 17 units (Safe_Model, Safe_PO, Safe_Runtime, 14 templates):
-- Flow (Bronze): 107 checks (33%) — all passed
-- Proof (Silver): 217 proved + 1 justified (67%) (CVC5 99%, Trivial 1%)
+553 total VCs across 20 units (Safe_Bounded_Strings, Safe_Model, Safe_PO,
+Safe_Runtime, 16 templates):
+- Flow (Bronze): 138 checks (25%) — all passed
+- Proof (Silver): 414 proved + 1 justified (75%) (CVC5 98%, Trivial 2%)
 - Justified: 1 (FP_Safe_Div float overflow, see A-05)
 - Unproved: 0
 
-| Template                    | Flow | Proof | Total | Provers |
-|-----------------------------|------|-------|-------|---------|
-| `template_wide_arithmetic`  | 2    | 16    | 18    | CVC5    |
-| `template_division_nonzero` | 4    | 17    | 21    | CVC5    |
-| `template_ownership_move`   | 2    | 3     | 5     | CVC5    |
-| `template_scope_dealloc`    | 2    | 13    | 15    | CVC5    |
-| `template_not_null_deref`   | 2    | 7     | 9     | CVC5    |
-| `template_channel_fifo`     | 7    | 13    | 20    | CVC5    |
-| `template_task_decl`        | 2    | 12    | 14    | CVC5    |
-| `template_index_safety`     | 4    | 14    | 18    | CVC5    |
-| `template_effect_summary`   | 19   | 3     | 22    | CVC5    |
-| `template_package_structure` | 3   | 6     | 9     | CVC5    |
-| `template_borrow_observe`   | 7    | 13    | 20    | CVC5    |
-| `template_fp_safety`        | 7    | 17    | 24    | CVC5    |
-| `template_select_dispatcher`| 14   | 32    | 46    | CVC5    |
-| `template_narrow_conversion`| 3    | 17    | 20    | CVC5    |
+| Unit                         | Checks | Notes |
+|------------------------------|--------|-------|
+| `safe_bounded_strings`       | 0      | support package |
+| `safe_model`                 | 79     | ordered FIFO ghost model included |
+| `safe_po`                    | 20     | shared PO hooks |
+| `safe_runtime`               | 0      | support package |
+| `template_wide_arithmetic`   | 14     | proved |
+| `template_division_nonzero`  | 17     | proved |
+| `template_ownership_move`    | 3      | proved |
+| `template_scope_dealloc`     | 13     | proved |
+| `template_not_null_deref`    | 7      | proved |
+| `template_channel_fifo`      | 79     | proved; FIFO refinement to `Safe_Model` |
+| `template_task_decl`         | 12     | proved |
+| `template_index_safety`      | 14     | proved |
+| `template_effect_summary`    | 3      | proved |
+| `template_package_structure` | 6      | proved |
+| `template_borrow_observe`    | 13     | proved |
+| `template_fp_safety`         | 17     | proved |
+| `template_select_polling`    | 32     | proved |
+| `template_select_dispatcher` | 56     | proved |
+| `template_narrow_conversion` | 14     | proved |
+| `template_discriminant_result` | 15   | proved |
 
 ## Max Steps
 
@@ -58,8 +67,9 @@ Max steps used for successful proof: 2 (well within budget).
 
 ## Assumption Ledger (Template-specific)
 
-No template-specific assumptions are currently tracked. The dispatcher-based
-select template proves under the baseline companion assumptions in
+No template-specific assumptions remain open. The ordered FIFO closure in
+`template_channel_fifo` resolves assumption `B-02`; the remaining open
+assumptions live in the shared companion ledger at
 `companion/assumptions.yaml`.
 
 ## Coverage Boundary (M0–M7 Complete)

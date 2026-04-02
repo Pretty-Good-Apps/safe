@@ -4,10 +4,40 @@
 pragma SPARK_Mode (On);
 
 with Safe_PO; use Safe_PO;
+with Safe_Model;
 
 package body Template_Channel_FIFO
   with SPARK_Mode => On
 is
+
+   use type Safe_Model.Channel_State;
+
+   function Model_Of (Ch : Channel) return Safe_Model.Channel_State is
+      Result : Safe_Model.Channel_State (Ch.Capacity) :=
+        Safe_Model.Make_Channel (Ch.Capacity);
+   begin
+      if Ch.Count > 0 then
+         for Pos in 1 .. Ch.Count loop
+            pragma Loop_Invariant (Safe_Model.Is_Valid_Channel (Result));
+            pragma Loop_Invariant
+              (Safe_Model.Cap (Result) = Ch.Capacity);
+            pragma Loop_Invariant (Result.Length = Pos - 1);
+            pragma Loop_Invariant
+              ((if Pos = 1 then
+                   True
+                else
+                   (for all I in 1 .. Pos - 1 =>
+                      Safe_Model.Element_At (Result, I) =
+                        Ch.Buffer (Logical_Index (Ch, I)))));
+            Result :=
+              Safe_Model.After_Append
+                (Result,
+                 Ch.Buffer (Logical_Index (Ch, Pos)));
+         end loop;
+      end if;
+
+      return Result;
+   end Model_Of;
 
    -------------------------------------------------------------------
    --  Construction: create an empty channel
@@ -40,6 +70,8 @@ is
      (Ch   : in out Channel;
       Item : Element_Type)
    is
+      Old_Model : constant Safe_Model.Channel_State := Model_Of (Ch)
+        with Ghost;
    begin
       --  PO hook: verify channel is not full.
       Check_Channel_Not_Full (Ch.Count, Ch.Capacity);
@@ -52,6 +84,23 @@ is
          Ch.Tail := Ch.Tail + 1;
       end if;
       Ch.Count := Ch.Count + 1;
+
+      declare
+         New_Model : constant Safe_Model.Channel_State := Model_Of (Ch)
+           with Ghost;
+         Expected  : constant Safe_Model.Channel_State :=
+           Safe_Model.After_Append (Old_Model, Item)
+           with Ghost;
+      begin
+         pragma Assert (Safe_Model.Cap (New_Model) = Safe_Model.Cap (Expected));
+         pragma Assert (Safe_Model.Len (New_Model) = Safe_Model.Len (Expected));
+         pragma Assert
+           (for all Pos in 1 .. Safe_Model.Len (Expected) =>
+              Safe_Model.Element_At (New_Model, Pos) =
+                Safe_Model.Element_At (Expected, Pos));
+         Safe_Model.Prove_Same_Channel_State (New_Model, Expected);
+         pragma Assert (New_Model = Expected);
+      end;
    end Send;
 
    -------------------------------------------------------------------
@@ -65,6 +114,8 @@ is
      (Ch   : in out Channel;
       Item : out Element_Type)
    is
+      Old_Model : constant Safe_Model.Channel_State := Model_Of (Ch)
+        with Ghost;
    begin
       --  PO hook: verify channel is not empty.
       Check_Channel_Not_Empty (Ch.Count);
@@ -77,6 +128,28 @@ is
          Ch.Head := Ch.Head + 1;
       end if;
       Ch.Count := Ch.Count - 1;
+
+      pragma Assert (Item = Safe_Model.Front (Old_Model));
+
+      declare
+         New_Model : constant Safe_Model.Channel_State := Model_Of (Ch)
+           with Ghost;
+         Expected  : constant Safe_Model.Channel_State :=
+           Safe_Model.After_Remove (Old_Model)
+           with Ghost;
+      begin
+         pragma Assert (Safe_Model.Cap (New_Model) = Safe_Model.Cap (Expected));
+         pragma Assert (Safe_Model.Len (New_Model) = Safe_Model.Len (Expected));
+         pragma Assert
+           ((if Safe_Model.Len (Expected) = 0 then
+                True
+             else
+                (for all Pos in 1 .. Safe_Model.Len (Expected) =>
+                   Safe_Model.Element_At (New_Model, Pos) =
+                     Safe_Model.Element_At (Expected, Pos))));
+         Safe_Model.Prove_Same_Channel_State (New_Model, Expected);
+         pragma Assert (New_Model = Expected);
+      end;
    end Receive;
 
 end Template_Channel_FIFO;

@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary
 
-The Safe Language Annotated SPARK Companion has completed all 13 tasks (T0-T12) of its implementation plan. The companion extracts 205 normative clauses from the Safe specification, maps each to a proof obligation entry, encodes 23 PO procedures and 25 ghost functions in SPARK 2022, and verifies all artifacts through a 5-step CI pipeline. The proof baseline shows 64 total checks with 0 unproved. The assumption budget of 14 (4 critical) is within defined limits. This report provides the quantitative status for the M4 release audit.
+The Safe Language Annotated SPARK Companion has completed all 13 tasks (T0-T12) of its implementation plan. The companion extracts 205 normative clauses from the Safe specification, maps each to a proof obligation entry, encodes the core `Safe_Model` and `Safe_PO` companion artifacts in SPARK 2022, and verifies them through a 5-step CI pipeline. The current companion baseline shows 132 total checks with 0 unproved. The assumption budget tracks 12 entries, of which 11 remain open and 1 (`B-02`) is resolved. This report provides the quantitative status for the release audit.
 
 ---
 
@@ -20,12 +20,12 @@ The Safe Language Annotated SPARK Companion has completed all 13 tasks (T0-T12) 
 | T0 | Repository setup & frozen commit | `meta/commit.txt`, `.gitignore`, directory structure | COMPLETE | SHA: `468cf72` |
 | T1 | Clause extraction | `clauses/clauses.yaml` | COMPLETE | 205 clauses from 10 spec files |
 | T2 | PO mapping | `clauses/po_map.yaml` | COMPLETE | 205 PO entries, 7 target categories |
-| T3 | Ghost model (Safe_Model) | `companion/spark/safe_model.ads`, `safe_model.adb` | COMPLETE | 25 ghost functions, 374 lines |
+| T3 | Ghost model (Safe_Model) | `companion/spark/safe_model.ads`, `safe_model.adb` | COMPLETE | Includes ordered FIFO channel model and equality lemma |
 | T4 | PO procedures (Safe_PO) | `companion/spark/safe_po.ads`, `safe_po.adb` | COMPLETE | 23 procedures, 705 lines |
 | T5 | GNAT project file | `companion/gen/companion.gpr` | COMPLETE | Ada 2022 mode, prove config |
-| T6 | Bronze gate (flow analysis) | Flow analysis results | COMPLETE | 29/29 flow checks, 0 errors |
-| T7 | Silver gate (proof) | `companion/gen/prove_golden.txt` | COMPLETE | 64 checks, 34 proved, 1 justified, 0 unproved |
-| T8 | Assumption registry | `companion/assumptions.yaml` | COMPLETE | 14 assumptions (4 critical, 4 major, 6 minor) |
+| T6 | Bronze gate (flow analysis) | Flow analysis results | COMPLETE | 32/32 flow checks, 0 errors |
+| T7 | Silver gate (proof) | `companion/gen/prove_golden.txt` | COMPLETE | 132 checks, 99 proved, 1 justified, 0 unproved |
+| T8 | Assumption registry | `companion/assumptions.yaml` | COMPLETE | 12 tracked assumptions (11 open, 1 resolved) |
 | T9 | Test suite | `tests/` (79 files across 5 dirs) | COMPLETE | 31 positive, 35 negative, 3 golden, 5 concurrency, 5 diagnostics |
 | T10 | Documentation | `docs/` (4 files) | COMPLETE | Traceability, GNATprove profile |
 | T11 | CI pipeline | `scripts/` (13 files) | COMPLETE | Execution guard, frontend smoke, and 5-step SPARK pipeline |
@@ -45,7 +45,7 @@ gnatprove --mode=flow --report=all --warnings=error
 |---------------|-------|--------|
 | Initialization | 4 | Proved |
 | Termination | 25 | Proved |
-| **Total flow checks** | **29** | **29/29 proved** |
+| **Total flow checks** | **32** | **32/32 proved** |
 | Errors | 0 | |
 | Warnings | 0 | |
 
@@ -58,17 +58,18 @@ gnatprove --mode=prove --level=2 --prover=cvc5,z3,altergo --steps=0 --timeout=12
 | SPARK Analysis Results | Total | Flow | Provers | Justified | Unproved |
 |----------------------|-------|------|---------|-----------|----------|
 | Initialization | 4 | 4 | . | . | . |
-| Run-time Checks | 15 | . | 14 (CVC5) | 1 | . |
-| Functional Contracts | 20 | . | 20 (CVC5 96%, Trivial 4%) | . | . |
-| Termination | 25 | 25 | . | . | . |
-| **Total** | **64** | **29 (45%)** | **34 (53%)** | **1 (2%)** | **0** |
+| Run-time Checks | 36 | . | 35 (CVC5 99%, Trivial 1%) | 1 | . |
+| Assertions | 11 | . | 11 (CVC5 88%, Trivial 12%) | . | . |
+| Functional Contracts | 53 | . | 53 (CVC5 97%, Trivial 3%) | . | . |
+| Termination | 28 | 28 | . | . | . |
+| **Total** | **132** | **32 (24%)** | **99 (75%)** | **1 (1%)** | **0** |
 
 ### 3.3 Assumption Budget
 
 | Metric | Limit | Actual | Status |
 |--------|-------|--------|--------|
-| Total assumptions | ≤ 15 | 14 | WITHIN LIMITS |
-| Critical assumptions | ≤ 4 | 4 | AT LIMIT |
+| Open assumptions | ≤ 15 | 11 | WITHIN LIMITS |
+| Open critical assumptions | ≤ 4 | 4 | AT LIMIT |
 
 ---
 
@@ -219,14 +220,14 @@ gnatprove --mode=prove --level=2 --prover=cvc5,z3,altergo --steps=0 --timeout=12
 | A-04 | Channel implementation correctly serializes access | Critical | Implementation | Open |
 | A-05 | FP division result is finite when operands are finite | Major | Specification | Open |
 | B-01 | Ownership state enumeration is complete | Major | Modeling | Open |
-| B-02 | Channel FIFO ordering preserved by implementation | Major | Modeling | Open |
+| B-02 | Channel FIFO ordering preserved by implementation | Major | Modeling | Resolved |
 | B-03 | Task-variable map covers all shared variables | Major | Modeling | Open |
 | B-04 | Not_Null_Ptr and Safe_Deref model Boolean null flag | Minor | Modeling | Open |
 | C-01 | Flow analysis (Bronze gate) is sufficient for data-dependency proofs | Minor | Proof-Mode | Open |
 | C-02 | Proof-only (Ghost) procedures have no runtime effect | Minor | Proof-Mode | Open |
 | D-02 | Frozen spec commit is authoritative | Minor | Specification | Open |
 
-**Budget status:** 12 total (limit: 15), 4 critical (limit: 4) -- WITHIN LIMITS.
+**Budget status:** 12 tracked, 11 open, 1 resolved; 4 open critical (limit: 4) -- WITHIN LIMITS.
 
 ---
 
@@ -266,11 +267,11 @@ These process-level recommendations have been addressed in the CI workflow.
 | 4 | All tracked SHA references across README, release docs, and CI are consistent (`468cf72...`) | PASS |
 | 5 | No phantom file references in CSV or po_map.yaml | PASS |
 | 6 | Traceability matrix is complete: 205 clauses, no orphans | PASS |
-| 7 | Assumption budget: 14 total ≤ 15, 4 critical ≤ 4 | PASS |
-| 8 | Proof golden: 64 checks, 0 unproved | PASS |
+| 7 | Assumption budget: 11 open ≤ 15, 4 open critical ≤ 4 | PASS |
+| 8 | Proof golden: 132 checks, 0 unproved | PASS |
 | 9 | All 79 test files exist on disk | PASS |
 | 10 | All 23 PO procedures referenced in po_index.md | PASS |
-| 11 | All 14 assumptions cross-referenced in traceability matrix | PASS |
+| 11 | All 12 tracked assumptions cross-referenced in traceability matrix | PASS |
 
 ---
 

@@ -46,15 +46,39 @@ fi
 # Extract assumption IDs and severities from baseline YAML
 BASELINE_IDS=$(grep -E "^- id:" "${BASELINE}" | sed 's/^- id: *//' | sort)
 BASELINE_COUNT=$(echo "${BASELINE_IDS}" | grep -c '.' || echo "0")
-CRITICAL_COUNT=$(grep -c "severity: critical" "${BASELINE}" || echo "0")
-MAJOR_COUNT=$(grep -c "severity: major" "${BASELINE}" || echo "0")
-MINOR_COUNT=$(grep -c "severity: minor" "${BASELINE}" || echo "0")
+OPEN_COUNT=$(grep -c "^  status: open$" "${BASELINE}" || echo "0")
+RESOLVED_COUNT=$(grep -c "^  status: resolved$" "${BASELINE}" || echo "0")
+CRITICAL_COUNT=$(grep -c "^  severity: critical$" "${BASELINE}" || echo "0")
+MAJOR_COUNT=$(grep -c "^  severity: major$" "${BASELINE}" || echo "0")
+MINOR_COUNT=$(grep -c "^  severity: minor$" "${BASELINE}" || echo "0")
+OPEN_CRITICAL_COUNT=$(python3 - <<'PY' "${BASELINE}"
+from pathlib import Path
+import sys
+
+count = 0
+severity = None
+status = None
+for line in Path(sys.argv[1]).read_text().splitlines():
+    if line.startswith("- id:"):
+        severity = None
+        status = None
+    elif line.strip().startswith("severity:"):
+        severity = line.split(":", 1)[1].strip()
+    elif line.strip().startswith("status:"):
+        status = line.split(":", 1)[1].strip()
+        if severity == "critical" and status == "open":
+            count += 1
+print(count)
+PY
+)
 
 echo "Tracked assumptions in companion/assumptions.yaml:"
-echo "  Total:    ${BASELINE_COUNT}"
-echo "  Critical: ${CRITICAL_COUNT}"
-echo "  Major:    ${MAJOR_COUNT}"
-echo "  Minor:    ${MINOR_COUNT}"
+echo "  Tracked total: ${BASELINE_COUNT}"
+echo "  Open:          ${OPEN_COUNT}"
+echo "  Resolved:      ${RESOLVED_COUNT}"
+echo "  Critical:      ${CRITICAL_COUNT}"
+echo "  Major:         ${MAJOR_COUNT}"
+echo "  Minor:         ${MINOR_COUNT}"
 echo ""
 
 echo "Assumption IDs:"
@@ -126,18 +150,20 @@ fi
 # Part D: Budget policy enforcement
 # -----------------------------------------------------------------------
 
-# Enforce assumption budget limits from gnatprove_profile.md Section 6.5
+# Enforce assumption budget limits from gnatprove_profile.md Section 6.5.
+# Resolved assumptions stay in YAML for audit history; only open assumptions
+# consume the active budget.
 TOTAL_LIMIT=15
 CRITICAL_LIMIT=4
 
-if [[ ${BASELINE_COUNT} -gt ${TOTAL_LIMIT} ]]; then
-    echo "WARNING: Assumption count (${BASELINE_COUNT}) exceeds budget limit (${TOTAL_LIMIT})."
+if [[ ${OPEN_COUNT} -gt ${TOTAL_LIMIT} ]]; then
+    echo "WARNING: Open assumption count (${OPEN_COUNT}) exceeds budget limit (${TOTAL_LIMIT})."
     echo "         A formal budget review is required per gnatprove_profile.md Section 6.5."
     DRIFT_DETECTED=1
 fi
 
-if [[ ${CRITICAL_COUNT} -gt ${CRITICAL_LIMIT} ]]; then
-    echo "WARNING: Critical assumption count (${CRITICAL_COUNT}) exceeds limit (${CRITICAL_LIMIT})."
+if [[ ${OPEN_CRITICAL_COUNT} -gt ${CRITICAL_LIMIT} ]]; then
+    echo "WARNING: Open critical assumption count (${OPEN_CRITICAL_COUNT}) exceeds limit (${CRITICAL_LIMIT})."
     echo "         Escalation required per gnatprove_profile.md Section 6.5."
     DRIFT_DETECTED=1
 fi
@@ -156,9 +182,11 @@ fi
 
 echo "================================================================"
 echo "  ASSUMPTION DIFF: OK"
-echo "  Baseline: ${BASELINE_COUNT} assumptions (${CRITICAL_COUNT} critical,"
-echo "            ${MAJOR_COUNT} major, ${MINOR_COUNT} minor)"
+echo "  Baseline: ${BASELINE_COUNT} tracked (${OPEN_COUNT} open,"
+echo "            ${RESOLVED_COUNT} resolved)"
+echo "  Severity: ${CRITICAL_COUNT} critical, ${MAJOR_COUNT} major,"
+echo "            ${MINOR_COUNT} minor"
 echo "  Proof summary: matches golden"
-echo "  Budget: within limits"
+echo "  Budget: within limits (${OPEN_COUNT} open, ${OPEN_CRITICAL_COUNT} open critical)"
 echo "================================================================"
 exit 0
