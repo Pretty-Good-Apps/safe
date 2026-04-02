@@ -6,13 +6,19 @@ package pr118g_tuple_string_channel
 
    channel pair_ch : (boolean, string) capacity 1;
    seed : (boolean, string);
+   initial_sent : boolean = false;
 
    task worker with priority = 10, sends pair_ch, receives pair_ch
+      sent : boolean = false;
       loop
          receive pair_ch, value : (boolean, string)
-         send pair_ch, value
+         loop
+            send pair_ch, value, sent
+            if sent
+               exit
+            delay 0.01
          delay 0.05
 
    seed.1 = true
    seed.2 = "Ada"
-   send pair_ch, seed
+   send pair_ch, seed, initial_sent

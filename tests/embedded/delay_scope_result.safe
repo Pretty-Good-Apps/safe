@@ -12,14 +12,23 @@ package delay_scope_result
    public channel result_ch : result_value capacity 1;
 
    task worker with priority = 10, sends result_ch
+      sent : boolean = false;
       loop
          select
             when item : message from data_ch
-               send result_ch, 0
+               loop
+                  send result_ch, 0, sent
+                  if sent
+                     exit
+                  delay 0.01
                delay 0.05
          or
             delay 0.01
                temp : integer = 1;
                temp = temp + 1;
-               send result_ch, total_count (temp)
+               loop
+                  send result_ch, total_count (temp), sent
+                  if sent
+                     exit
+                  delay 0.01
                delay 0.05

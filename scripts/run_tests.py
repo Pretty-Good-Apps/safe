@@ -47,11 +47,10 @@ EMITTED_ASSUME_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
-# These fixtures live in category directories that do not match the
-# compiler's current acceptance boundary, so keep the expectations explicit.
-NEGATIVE_SUCCESS_FIXTURES = {
+# These fixtures describe future deadlock-analysis work rather than the
+# current accepted PR11.9d boundary, so keep them explicit.
+NEGATIVE_SKIPPED_FIXTURES = {
     REPO_ROOT / "tests" / "negative" / "neg_chan_empty_recv.safe",
-    REPO_ROOT / "tests" / "negative" / "neg_chan_full_send.safe",
 }
 
 CONCURRENCY_REJECT_FIXTURES = {
@@ -554,6 +553,11 @@ BUILD_SUCCESS_CASES = [
         False,
     ),
     (
+        REPO_ROOT / "tests" / "build" / "pr119d_send_single_eval_build.safe",
+        "Ada\n",
+        False,
+    ),
+    (
         REPO_ROOT / "tests" / "build" / "pr118e1_mutual_family_build.safe",
         "41\n",
         False,
@@ -796,6 +800,11 @@ EMITTED_SHAPE_CASES = [
         ["protected type text_ch_Channel is", "_Model_Has_Value", "pragma Assume ("],
     ),
     (
+        "heap-send-length-no-source-rerender",
+        REPO_ROOT / "tests" / "build" / "pr119d_send_single_eval_build.safe",
+        ["Safe_String_RT.Length (next_text)"],
+    ),
+    (
         "select-delay-no-polling-lowering",
         REPO_ROOT / "tests" / "concurrency" / "select_with_delay.safe",
         [
@@ -844,6 +853,14 @@ EMITTED_REQUIRED_SHAPE_CASES = [
             "Stored_Length_Value : Natural := 0;",
             "Pre => text_ch_Well_Formed and then not text_ch.Full",
             "Pre => text_ch_Well_Formed and then text_ch.Full",
+        ],
+    ),
+    (
+        "heap-send-stages-before-length-model",
+        REPO_ROOT / "tests" / "build" / "pr119d_send_single_eval_build.safe",
+        [
+            "Safe_Channel_Staged_1 := Safe_String_RT.Clone (next_text);",
+            "Safe_Channel_Length_1 := Safe_String_RT.Length (Safe_Channel_Staged_1);",
         ],
     ),
     (
@@ -1276,8 +1293,12 @@ def run_diagnostic_golden(safec: Path, source: Path, golden: Path) -> tuple[bool
     return True, ""
 
 
-def print_summary(*, passed: int, failures: list[tuple[str, str]]) -> None:
-    print(f"{passed} passed, {len(failures)} failed")
+def print_summary(*, passed: int, skipped: int, failures: list[tuple[str, str]]) -> None:
+    summary = f"{passed} passed"
+    if skipped:
+        summary += f", {skipped} skipped"
+    summary += f", {len(failures)} failed"
+    print(summary)
     if failures:
         print("Failures:")
         for label, detail in failures:
@@ -2510,6 +2531,7 @@ def main() -> int:
         return 1
 
     passed = 0
+    skipped = 0
     failures: list[tuple[str, str]] = []
 
     positive_fixtures = sorted((REPO_ROOT / "tests" / "positive").glob("*.safe"))
@@ -2524,7 +2546,10 @@ def main() -> int:
             failures.append((repo_rel(fixture), detail))
 
     for fixture in negative_fixtures:
-        expected_returncode = 0 if fixture in NEGATIVE_SUCCESS_FIXTURES else DIAGNOSTIC_EXIT_CODE
+        if fixture in NEGATIVE_SKIPPED_FIXTURES:
+            skipped += 1
+            continue
+        expected_returncode = DIAGNOSTIC_EXIT_CODE
         ok, detail = check_fixture(safec, fixture, expected_returncode=expected_returncode)
         if ok:
             passed += 1
@@ -2905,7 +2930,7 @@ def main() -> int:
     else:
         failures.append(("embedded monitor parsing", detail))
 
-    print_summary(passed=passed, failures=failures)
+    print_summary(passed=passed, skipped=skipped, failures=failures)
     return 0 if not failures else 1
 
 

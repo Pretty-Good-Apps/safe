@@ -4,14 +4,18 @@ package pr119a_select_delay_receive
 
    channel msg_ch : message capacity 1;
    result : integer = 0;
+   sent : boolean = false;
 
-   send msg_ch, 7;
+   send msg_ch, 7, sent;
 
-   select
-      when item : message from msg_ch
-         result = item;
-   or
-      delay 0.05
-         result = 9;
+   if sent
+      select
+         when item : message from msg_ch
+            result = item;
+      or
+         delay 0.05
+            result = 9;
+   else
+      result = 8;
 
    print (result)

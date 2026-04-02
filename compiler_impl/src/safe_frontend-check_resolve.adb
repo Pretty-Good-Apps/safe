@@ -5716,6 +5716,14 @@ package body Safe_Frontend.Check_Resolve is
             end;
 
          when CM.Stmt_Send | CM.Stmt_Try_Send =>
+            if Stmt.Kind = CM.Stmt_Try_Send then
+               Raise_Diag
+                 (CM.Source_Frontend_Error
+                    (Path    => Path,
+                     Span    => Stmt.Span,
+                     Message =>
+                       "try_send was renamed to 'send ch, value, success'"));
+            end if;
             Result.Channel_Name :=
               Normalize_Expr_Checked
                 (Stmt.Channel_Name, Var_Types, Functions, Type_Env, Local_Static_Constants, Path);
@@ -5752,32 +5760,38 @@ package body Safe_Frontend.Check_Resolve is
                      Span    => Result.Value.Span,
                      Message => "channel send expression type does not match channel element type"));
             end if;
-            if Stmt.Kind = CM.Stmt_Try_Send then
-               Result.Success_Var :=
-                 Normalize_Expr_Checked
-                   (Stmt.Success_Var, Var_Types, Functions, Type_Env, Local_Static_Constants, Path);
-               if not Is_Assignable_Target (Result.Success_Var) then
-                  Raise_Diag
-                    (CM.Source_Frontend_Error
-                       (Path    => Path,
-                        Span    => Result.Success_Var.Span,
-                        Message => "try_send success variable must be a writable name"));
-               end if;
-               Ensure_Writable_Target
-                 (Result.Success_Var,
-                  Imported_Objects,
-                  Local_Constants,
-                  Local_Static_Constants,
-                  Path,
-                  "assignment to imported package-qualified objects is outside the current PR08.3 interface subset");
-               Success_Type := Expr_Type (Result.Success_Var, Var_Types, Functions, Type_Env);
-               if not Is_Boolean_Type (Success_Type, Type_Env) then
-                  Raise_Diag
-                    (CM.Source_Frontend_Error
-                       (Path    => Path,
-                        Span    => Result.Success_Var.Span,
-                        Message => "try_send success variable must have type Boolean"));
-               end if;
+            if Stmt.Success_Var = null then
+               Raise_Diag
+                 (CM.Source_Frontend_Error
+                    (Path    => Path,
+                     Span    => Stmt.Span,
+                     Message =>
+                       "blocking two-argument send was removed; use 'send ch, value, success'"));
+            end if;
+            Result.Success_Var :=
+              Normalize_Expr_Checked
+                (Stmt.Success_Var, Var_Types, Functions, Type_Env, Local_Static_Constants, Path);
+            if not Is_Assignable_Target (Result.Success_Var) then
+               Raise_Diag
+                 (CM.Source_Frontend_Error
+                    (Path    => Path,
+                     Span    => Result.Success_Var.Span,
+                     Message => "send success variable must be a writable name"));
+            end if;
+            Ensure_Writable_Target
+              (Result.Success_Var,
+               Imported_Objects,
+               Local_Constants,
+               Local_Static_Constants,
+               Path,
+               "assignment to imported package-qualified objects is outside the current PR08.3 interface subset");
+            Success_Type := Expr_Type (Result.Success_Var, Var_Types, Functions, Type_Env);
+            if not Is_Boolean_Type (Success_Type, Type_Env) then
+               Raise_Diag
+                 (CM.Source_Frontend_Error
+                    (Path    => Path,
+                     Span    => Result.Success_Var.Span,
+                     Message => "send success variable must have type Boolean"));
             end if;
 
          when CM.Stmt_Receive | CM.Stmt_Try_Receive =>

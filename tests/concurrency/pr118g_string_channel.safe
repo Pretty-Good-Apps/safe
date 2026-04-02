@@ -6,11 +6,17 @@ package pr118g_string_channel
 
    channel text_ch : string capacity 1;
    seed : string = "Ada";
+   initial_sent : boolean = false;
 
    task worker with priority = 10, sends text_ch, receives text_ch
+      sent : boolean = false;
       loop
          receive text_ch, value : string
-         send text_ch, value
+         loop
+            send text_ch, value, sent
+            if sent
+               exit
+            delay 0.01
          delay 0.05
 
-   send text_ch, seed
+   send text_ch, seed, initial_sent

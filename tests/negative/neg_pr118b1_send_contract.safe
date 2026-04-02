@@ -10,6 +10,7 @@ package neg_pr118b1_send_contract
    channel allowed_ch : message capacity 1;
 
    task worker with priority = 10, sends allowed_ch
+      sent : boolean = false;
 
       loop
-         send data_ch, 1
+         send data_ch, 1, sent

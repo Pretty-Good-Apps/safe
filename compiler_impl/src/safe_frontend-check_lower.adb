@@ -2309,10 +2309,18 @@ package body Safe_Frontend.Check_Lower is
 
          when CM.Stmt_Send =>
             Call_Op := (others => <>);
-            Call_Op.Kind := GM.Op_Channel_Send;
+            if Stmt.Success_Var /= null then
+               Call_Op.Kind := GM.Op_Channel_Try_Send;
+            else
+               Call_Op.Kind := GM.Op_Channel_Send;
+            end if;
             Call_Op.Span := Stmt.Span;
             Call_Op.Channel := Lower_Expr (Stmt.Channel_Name, Visible_Types, Type_Env);
             Call_Op.Value := Lower_Expr (Stmt.Value, Visible_Types, Type_Env);
+            if Stmt.Success_Var /= null then
+               Call_Op.Success_Target :=
+                 Lower_Target (Stmt.Success_Var, Visible_Types, Type_Env);
+            end if;
             Call_Op.Type_Name := Expr_Type (Stmt.Value, Visible_Types, Type_Env).Name;
             Call_Op.Ownership_Effect := GM.Ownership_None;
             Add_Op (Work, UString_Value (Current_Id), Call_Op);

@@ -17,13 +17,15 @@ package fifo_ordering
    --  Producer: sends 0, 1, 2, ..., 999, 0, 1, ... in order.
    task producer with priority = 10
       n : sequence_number = 0;
+      sent : boolean = false;
 
       loop
-         send seq_ch, n;
-         if n < 999
-            n = n + 1;
-         else
-            n = 0;
+         send seq_ch, n, sent;
+         if sent
+            if n < 999
+               n = n + 1;
+            else
+               n = 0;
 
    --  Consumer: receives values and verifies ordering.
    --  Each received value should equal the expected next sequence number.

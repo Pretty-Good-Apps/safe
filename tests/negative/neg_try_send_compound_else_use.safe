@@ -1,5 +1,5 @@
 -- Test: neg_try_send_compound_else_use
--- Description: Access-typed channel elements are rejected before try_send path-sensitivity checks run.
+-- Description: Access-typed channel elements are rejected before nonblocking send path-sensitivity checks run.
 -- Expected: REJECT source_frontend_error
 
 package neg_try_send_compound_else_use
@@ -16,8 +16,7 @@ package neg_try_send_compound_else_use
       success : boolean = false;
       ready   : boolean = false;
 
-      try_send data_ch, source, success;
+      send data_ch, source, success;
       if success and then ready
       else
-         send data_ch, source;
-
+         send data_ch, source, success;

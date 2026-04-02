@@ -254,8 +254,11 @@ def write_jorvik_probe_source(path: Path) -> None:
            public channel result_ch : result_value capacity 1;
 
            task worker with priority = 10, sends result_ch
+              sent : boolean = false;
               loop
-                 send result_ch, 1
+                 send result_ch, 1, sent
+                 if not sent
+                    delay 0.001
                  delay 0.05
         """,
     )

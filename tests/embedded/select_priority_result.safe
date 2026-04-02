@@ -13,16 +13,22 @@ package select_priority_result
    public channel result_ch : result_value capacity 1;
 
    total : result_value = 0;
+   high_sent : boolean = false;
+   low_sent  : boolean = false;
+   result_sent : boolean = false;
 
    for round in round_index
-      send high_ch, message (round * 2 - 1)
-      send low_ch, message (round * 2)
+      send high_ch, message (round * 2 - 1), high_sent
+      send low_ch, message (round * 2), low_sent
 
-      select
-         when high_item : message from high_ch
-            total = total * 10 + result_value (high_item)
-      or
-         when low_item : message from low_ch
-            total = total * 10 + result_value (low_item)
+      if high_sent and low_sent
+         select
+            when high_item : message from high_ch
+               total = total * 10 + result_value (high_item)
+         or
+            when low_item : message from low_ch
+               total = total * 10 + result_value (low_item)
+      else
+         total = 99
 
-   send result_ch, total
+   send result_ch, total, result_sent

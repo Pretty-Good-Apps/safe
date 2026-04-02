@@ -7,7 +7,7 @@ with provider_channel;
 package unknown_imported_member_test
 
    task sender
+      sent : boolean = false;
 
       loop
-         send provider_channel.unknown_ch, 1;
-
+         send provider_channel.unknown_ch, 1, sent;

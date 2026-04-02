@@ -20,19 +20,28 @@ package channel_pipeline_compute
 
    task producer with priority = 10
       seed : sample = 8;
+      sent : boolean = false;
 
       loop
-         send raw_ch, seed;
-         delay 0.001;
+         send raw_ch, seed, sent;
+         if sent
+            delay 0.001;
+         else
+            delay 0.002;
 
    task filter with priority = 10
       input  : sample;
       output : sample;
+      sent   : boolean = false;
 
       loop
          receive raw_ch, input;
          output = input / 2 + 1;
-         send filtered_ch, output;
+         loop
+            send filtered_ch, output, sent;
+            if sent
+               exit
+            delay 0.001;
 
    task consumer with priority = 10
       data     : sample;
@@ -45,4 +54,3 @@ package channel_pipeline_compute
             delay 0.001;
          else
             delay 0.002;
-

@@ -1,7 +1,7 @@
 -- Test: neg_chan_empty_recv
--- Description: Receiving from a channel that is provably empty.
---   A task immediately receives from a channel that has no sender.
---   This is a provable deadlock (no task can ever send to the channel).
+-- Description: Placeholder for future receive-only deadlock analysis.
+--   PR11.9d intentionally does not add a real deadlock analyzer, so this
+--   fixture is kept only as deferred coverage for later work.
 -- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p28:ea6bd13c
 -- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.2.p15:b5b29b0e
 -- Expected: REJECT channel_deadlock
@@ -20,4 +20,3 @@ package empty_recv_test
 
       loop
          receive no_sender_ch, v;  -- ERROR: no sender exists for this channel
-

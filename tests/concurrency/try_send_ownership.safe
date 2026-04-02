@@ -1,6 +1,6 @@
 -- Test: try_send_ownership
 -- Description: Ownership-through-channels is excluded from the language.
---   Access-typed channel declarations are rejected before try_send semantics
+--   Access-typed channel declarations are rejected before send semantics
 --   are analyzed.
 -- Expected: REJECT source_frontend_error
 
@@ -21,11 +21,11 @@ package try_send_ownership
 
       loop
          p = new ((id = counter, value = counter * 10) as payload);
-         try_send data_ch, p, success;
+         send data_ch, p, success;
          if success
          else
             p.all.value = p.all.value + 1;
-            send data_ch, p;
+            send data_ch, p, success;
 
          counter = counter + 1;
          if counter > 1_000_000
@@ -38,4 +38,3 @@ package try_send_ownership
          receive data_ch, item;
          if item != null
             item.all.value = 0;
-

@@ -14,7 +14,7 @@ This section enumerates every feature of ISO/IEC 8652:2023 (Ada 2022) that Safe 
 
 2. **Reserved words (§2.9).** All reserved words defined in 8652:2023 §2.9 remain reserved in Safe, regardless of whether the corresponding language feature is excluded. A conforming implementation shall reject any program that uses a reserved word as an identifier.
 
-3. **Additional reserved words.** Safe adds the following reserved words: `public`, `channel`, `send`, `receive`, `try_send`, `try_receive`, `capacity`, `from`. These identifiers shall not be used as user-defined names in Safe programs.
+3. **Additional reserved words.** Safe adds the following reserved words: `public`, `channel`, `send`, `receive`, `try_send`, `try_receive`, `capacity`, `from`. These identifiers shall not be used as user-defined names in Safe programs. `try_send` remains reserved as a legacy migration spelling even though it is no longer admitted source syntax.
 
 4. **Tick notation (§2.2, §4.1.4).** The tick character (`'`) is used only for single-character string literals (`'A'`). All attribute references use dot notation (see §2.4). Qualified expressions using tick (`T'(Expr)`) are replaced by type annotation syntax (see §2.4.2). A conforming implementation shall reject any use of tick for attribute references or qualified expressions.
 
@@ -1158,7 +1158,7 @@ if R.OK then
 end if;
 ```
 
-149. **Coexistence with status-code parameters.** Safe's channel operations (`try_send`, `try_receive`) use Boolean out-parameters to report success or failure (Section 4, §4.3). This form is appropriate for statement-level primitives where the operation has side effects and the result is not a computed value.
+149. **Coexistence with status-code parameters.** Safe's nonblocking channel operations (`send`, `try_receive`) use Boolean out-parameters to report success or failure (Section 4, §4.3). This form is appropriate for statement-level primitives where the operation has side effects and the result is not a computed value.
 
 The discriminated result convention, the status-code convention, and result-typed channels serve different contexts:
 
@@ -1210,7 +1210,7 @@ On restart, all task-local state is reset: local declarations within the task bo
 
 151e. **Channel state on task failure.** The existing channel and ownership semantics constrain the options:
 
-   (a) **Pending sends.** A task blocked in `send` has already evaluated the payload, but channel payloads are copy-only because channel element types exclude access-bearing values (Section 4, §4.2, paragraph 14). The pending send shall commit: the runtime enqueues the already-evaluated payload when capacity becomes available, even though the sending task has been terminated. No ownership transfer question arises.
+   (a) **No blocked sends.** `send` is nonblocking in admitted Safe source. If a channel is full, the operation simply reports `success = false` and leaves channel state unchanged. There is therefore no runtime notion of a task terminated while blocked in send.
 
    (b) **Completed receives.** A message removed from a channel by `receive` is not re-delivered if the receiver then crashes. Any task-local owned objects in the crashed task's scope are reclaimed by automatic deallocation (paragraph 104–105), preserving memory safety.
 

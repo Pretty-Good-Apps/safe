@@ -5,10 +5,14 @@ package producer_consumer
    channel data_ch : message capacity 1;
 
    task producer with priority = 10, sends data_ch
+      sent : boolean = false;
 
       loop
-         send data_ch, 41
-         delay 0.05
+         send data_ch, 41, sent
+         if sent
+            delay 0.05
+         else
+            delay 0.01
 
    task consumer with priority = 10, receives data_ch
       printed : boolean = false;

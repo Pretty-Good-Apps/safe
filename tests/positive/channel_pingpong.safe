@@ -20,9 +20,14 @@ package ping_pong
    --  Ping_Task: background task used to keep task emission in the proof corpus.
    task ping_task with priority = 10
       reply : message;
+      sent  : boolean = false;
 
       loop
-         send ping_ch, 7;
+         loop
+            send ping_ch, 7, sent;
+            if sent
+               exit
+            delay 0.001;
          receive pong_ch, reply;
          if reply > 0
             delay 0.001;
@@ -34,9 +39,13 @@ package ping_pong
    --  Pong_Task: background task used to keep multiple task bodies in the proof corpus.
    task pong_task with priority = 10
       received : message;
+      sent     : boolean = false;
 
       loop
          receive ping_ch, received;
-         send pong_ch, received;
+         loop
+            send pong_ch, received, sent;
+            if sent
+               exit
+            delay 0.001;
          delay 0.001;
-

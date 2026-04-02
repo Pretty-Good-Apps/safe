@@ -122,10 +122,10 @@
 | 20 | `spec/02-restrictions.md#2.3.8.p111a:a858bdfc` | Function shall not return .Access of local object | flow_contract_check | stubbed |
 | 21 | `spec/02-restrictions.md#2.3.8.p111b:2921e9d2` | .Access of local shall not be assigned to enclosing scope variable | flow_contract_check | stubbed |
 | 22 | `spec/02-restrictions.md#2.3.8.p111c:819cc398` | .Access of local object shall not be sent through channel | flow_contract_check | stubbed |
-| 23 | `spec/04-tasks-and-channels.md#4.3.p27a:8ed3c1d4` | send never transfers ownership through a channel; enqueue is copy-only | translation_validation | stubbed |
+| 23 | `spec/04-tasks-and-channels.md#4.3.p27a:8ed3c1d4` | Legacy `try_send` spelling is rejected; only `send ch, value, success` is accepted | translation_validation | stubbed |
 | 24 | `spec/04-tasks-and-channels.md#4.3.p28a:4cb19779` | receive never transfers ownership through a channel; dequeue is copy-only | translation_validation | stubbed |
-| 25 | `spec/04-tasks-and-channels.md#4.3.p29a:8d3f2225` | try_send is copy-only; success does not transfer ownership | translation_validation | stubbed |
-| 26 | `spec/04-tasks-and-channels.md#4.3.p29b:7121ccd7` | try_send evaluates before the fullness check and never transfers ownership | runtime_wrapper_check | stubbed |
+| 25 | `spec/04-tasks-and-channels.md#4.3.p29a:8d3f2225` | send is copy-only-on-success; success does not transfer ownership | translation_validation | stubbed |
+| 26 | `spec/04-tasks-and-channels.md#4.3.p29b:7121ccd7` | send evaluates before the fullness check and never transfers ownership | runtime_wrapper_check | stubbed |
 | 27 | `spec/04-tasks-and-channels.md#4.3.p30:62619161` | try_receive is copy-only and leaves Variable unchanged on failure | runtime_wrapper_check | stubbed |
 | 28 | `spec/04-tasks-and-channels.md#4.3.p31a:a621d08c` | Queued channel elements never own designated objects | translation_validation | stubbed |
 
@@ -141,9 +141,9 @@
 | 6 | `spec/04-tasks-and-channels.md#4.1.p10:92a67777` | Tasks begin execution after all package-level initialisation | runtime_wrapper_check | stubbed |
 | 7 | `spec/04-tasks-and-channels.md#4.2.p21:c6a92460` | Channel ceiling priority at least max of accessing task priorities | runtime_wrapper_check | stubbed |
 | 8 | `spec/04-tasks-and-channels.md#4.2.p21a:16ec46cb` | Cross-package channel ceiling priority computation via interface summaries | flow_contract_check | stubbed |
-| 9 | `spec/04-tasks-and-channels.md#4.3.p27:ef0ce6bd` | send blocks if channel full; value evaluated before enqueue | runtime_wrapper_check | stubbed |
+| 9 | `spec/04-tasks-and-channels.md#4.3.p27:ef0ce6bd` | Legacy two-argument send is rejected | runtime_wrapper_check | stubbed |
 | 10 | `spec/04-tasks-and-channels.md#4.3.p28:ea6bd13c` | receive blocks if channel empty; dequeues front element | runtime_wrapper_check | stubbed |
-| 11 | `spec/04-tasks-and-channels.md#4.3.p29:f792d704` | try_send: atomic non-blocking enqueue attempt | runtime_wrapper_check | stubbed |
+| 11 | `spec/04-tasks-and-channels.md#4.3.p29:f792d704` | send: atomic non-blocking enqueue attempt | runtime_wrapper_check | stubbed |
 | 12 | `spec/04-tasks-and-channels.md#4.3.p31:a7297e97` | Channel operations atomic with respect to same-channel operations | runtime_wrapper_check | stubbed |
 | 13 | `spec/04-tasks-and-channels.md#4.4.p42:dce8ac38` | Select blocks if no arm ready and no delay arm present | runtime_wrapper_check | stubbed |
 | 14 | `spec/04-tasks-and-channels.md#4.5.p45:8bdd0c99` | Each package-level variable accessed by at most one task | flow_contract_check | stubbed |
@@ -261,9 +261,9 @@
 | 77 | `spec/04-tasks-and-channels.md#4.2.p13:4f888b03` | Channel declarations only at package top level | translation_validation | stubbed |
 | 78 | `spec/04-tasks-and-channels.md#4.2.p14:a35bd0fa` | Channel element type must be definite and shall not be access-bearing | translation_validation | stubbed |
 | 79 | `spec/04-tasks-and-channels.md#4.2.p15:b5b29b0e` | Channel capacity must be positive integer | translation_validation | stubbed |
-| 80 | `spec/04-tasks-and-channels.md#4.3.p23:197d9a49` | Send/try_send expression type matches channel element type | translation_validation | stubbed |
+| 80 | `spec/04-tasks-and-channels.md#4.3.p23:197d9a49` | send expression type matches channel element type | translation_validation | stubbed |
 | 81 | `spec/04-tasks-and-channels.md#4.3.p24:9e47ed4c` | Receive/try_receive variable type matches channel element type | translation_validation | stubbed |
-| 82 | `spec/04-tasks-and-channels.md#4.3.p25:961abe5a` | try_send/try_receive success variable must be Boolean | translation_validation | stubbed |
+| 82 | `spec/04-tasks-and-channels.md#4.3.p25:961abe5a` | send/try_receive success variable must be Boolean | translation_validation | stubbed |
 | 83 | `spec/04-tasks-and-channels.md#4.3.p26:3a9449c1` | Channel operations shall not appear at package level | translation_validation | stubbed |
 | 84 | `spec/04-tasks-and-channels.md#4.4.p33:7a94ab51` | Select must contain at least one channel arm | translation_validation | stubbed |
 | 85 | `spec/04-tasks-and-channels.md#4.4.p34:f0f83b83` | At most one delay arm in select statement | translation_validation | stubbed |
@@ -504,17 +504,17 @@ This table maps specification design decisions (D-rules) to their corresponding 
 | `spec/04-tasks-and-channels.md#4.2.p20:8aa1a21e` | Channel is FIFO: elements dequeued in enqueue order | Determinism |
 | `spec/04-tasks-and-channels.md#4.2.p21:c6a92460` | Channel ceiling priority at least max of accessing task priorities | Race-freedom |
 | `spec/04-tasks-and-channels.md#4.2.p21a:16ec46cb` | Cross-package channel ceiling priority computation via interface summa | Race-freedom |
-| `spec/04-tasks-and-channels.md#4.3.p23:197d9a49` | Send/try_send expression type matches channel element type | Conformance |
+| `spec/04-tasks-and-channels.md#4.3.p23:197d9a49` | send expression type matches channel element type | Conformance |
 | `spec/04-tasks-and-channels.md#4.3.p24:9e47ed4c` | Receive/try_receive variable type matches channel element type | Conformance |
-| `spec/04-tasks-and-channels.md#4.3.p25:961abe5a` | try_send/try_receive success variable must be Boolean | Conformance |
+| `spec/04-tasks-and-channels.md#4.3.p25:961abe5a` | send/try_receive success variable must be Boolean | Conformance |
 | `spec/04-tasks-and-channels.md#4.3.p26:3a9449c1` | Channel operations shall not appear at package level | Conformance |
-| `spec/04-tasks-and-channels.md#4.3.p27:ef0ce6bd` | send blocks if channel full; value evaluated before enqueue | Race-freedom |
-| `spec/04-tasks-and-channels.md#4.3.p27a:8ed3c1d4` | send never transfers ownership through a channel; enqueue is copy-only | Memory-safety |
+| `spec/04-tasks-and-channels.md#4.3.p27:ef0ce6bd` | Legacy two-argument send is rejected; nonblocking send requires success | Conformance |
+| `spec/04-tasks-and-channels.md#4.3.p27a:8ed3c1d4` | Legacy try_send spelling is rejected with a rename diagnostic | Conformance |
 | `spec/04-tasks-and-channels.md#4.3.p28:ea6bd13c` | receive blocks if channel empty; dequeues front element | Race-freedom |
 | `spec/04-tasks-and-channels.md#4.3.p28a:4cb19779` | receive never transfers ownership through a channel; dequeue is copy-o | Memory-safety |
-| `spec/04-tasks-and-channels.md#4.3.p29:f792d704` | try_send: atomic non-blocking enqueue attempt | Race-freedom |
-| `spec/04-tasks-and-channels.md#4.3.p29a:8d3f2225` | try_send is copy-only; success does not transfer ownership | Memory-safety |
-| `spec/04-tasks-and-channels.md#4.3.p29b:7121ccd7` | try_send evaluates before the fullness check and never transfers owner | Memory-safety |
+| `spec/04-tasks-and-channels.md#4.3.p29:f792d704` | send: atomic non-blocking enqueue attempt | Race-freedom |
+| `spec/04-tasks-and-channels.md#4.3.p29a:8d3f2225` | send is copy-only-on-success; success does not transfer ownership | Memory-safety |
+| `spec/04-tasks-and-channels.md#4.3.p29b:7121ccd7` | send evaluates before the fullness check and never transfers owner | Memory-safety |
 | `spec/04-tasks-and-channels.md#4.3.p30:62619161` | try_receive is copy-only and leaves Variable unchanged on failure | Memory-safety |
 | `spec/04-tasks-and-channels.md#4.3.p31:a7297e97` | Channel operations atomic with respect to same-channel operations | Race-freedom |
 | `spec/04-tasks-and-channels.md#4.3.p31a:a621d08c` | Queued channel elements never own designated objects | Memory-safety |

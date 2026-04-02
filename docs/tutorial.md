@@ -341,7 +341,7 @@ Safe replaces most of Ada's tasking surface features with:
 - typed bounded FIFO channels,
 - value-only channel elements, including `string`, growable arrays, and
   definite tuples/records/fixed arrays that contain them transitively,
-- `send`, `receive`, and non-blocking `try_send` / `try_receive`,
+- non-blocking `send`, blocking `receive`, and non-blocking `try_receive`,
 - scoped-binding `receive` / `try_receive` forms such as
   `receive raw, msg : measurement`,
 - a `select` statement for multiplexing receives (with optional delay arms).
@@ -356,15 +356,19 @@ package pipeline
    channel out : measurement capacity 8;
 
    task producer with priority = 10, sends raw
+      ok : boolean = false
       loop
          var m : measurement = read_sensor
-         send raw, m
+         send raw, m, ok
+         if not ok
+            delay 0.01
          delay 0.01
 
    task consumer with priority = 5, receives raw, sends out
+      ok : boolean = false
       loop
          receive raw, m : measurement
-         send out, process(m)
+         send out, process(m), ok
 ```
 
 Example sketch (`select`):

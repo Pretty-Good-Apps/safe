@@ -153,7 +153,7 @@ This section defines what constitutes a conforming implementation and a conformi
 
    (a) Task creation and scheduling according to the priority rules.
 
-   (b) Channel operations with blocking semantics.
+   (b) Channel operations with nonblocking send semantics plus blocking receive/select semantics.
 
    (c) The relative `delay` statement.
 

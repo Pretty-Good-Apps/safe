@@ -209,9 +209,9 @@ and for concurrent tasks the relative ordering of printed lines is unspecified.
 
 ### 5.4.3 Deadlock Freedom — Not Guaranteed
 
-35. Application-level deadlock freedom is NOT guaranteed by the language rules for arbitrary blocking channel programs.
+35. Application-level deadlock freedom is NOT guaranteed by the language rules for arbitrary channel programs that block on receive operations or form circular wait patterns through higher-level protocols.
 
-36. Deadlock can occur when tasks form a circular chain of blocking dependencies. For example: task A blocks on `send` to a full channel read by task B, while task B blocks on `send` to a full channel read by task A.
+36. Deadlock can still occur when tasks form a circular chain of blocking dependencies through `receive`, `select`, or protocol-level waiting. For example: task A blocks on `receive` from a channel only task B can send on, while task B blocks on `receive` from a channel only task A can send on.
 
 37. Deadlock freedom is a program-level property dependent on the communication topology — specifically, on the absence of circular blocking dependencies between tasks and channels. The language does not currently specify restrictions sufficient to guarantee deadlock freedom statically.
 
@@ -219,7 +219,7 @@ and for concurrent tasks the relative ordering of printed lines is unspecified.
 
 ```ada
 -- INFORMATIVE: Example of a topology that CAN deadlock
--- This is NOT a conforming program example — it illustrates a hazard.
+-- This is NOT a conforming program guarantee — it illustrates a hazard.
 
 channel A_to_B : Integer capacity 1;
 channel B_to_A : Integer capacity 1;
@@ -227,24 +227,25 @@ channel B_to_A : Integer capacity 1;
 task T_A with Priority = 5 is
 begin
     loop
-        send A_to_B, 1;      -- blocks if A_to_B full
         X : Integer;
         receive B_to_A, X;   -- blocks if B_to_A empty
+        Sent_A : Boolean = False;
+        send A_to_B, X, Sent_A;
     end loop;
 end T_A;
 
 task T_B with Priority = 5 is
 begin
     loop
-        send B_to_A, 2;      -- blocks if B_to_A full
         Y : Integer;
         receive A_to_B, Y;   -- blocks if A_to_B empty
+        Sent_B : Boolean = False;
+        send B_to_A, Y, Sent_B;
     end loop;
 end T_B;
 
--- With capacity 1: T_A sends to A_to_B (succeeds), T_B sends to B_to_A
--- (succeeds), then both receive (succeeds). But with different timing:
--- both could fill their channels before either receives, causing deadlock.
+-- If neither channel is seeded before task start, both tasks can block on
+-- their initial receive forever. This is the remaining deadlock-analysis gap.
 ```
 
 39. This is noted as a potential area for future specification work (see TBD register in §00).
@@ -551,7 +552,11 @@ package Monitor is
     begin
         loop
             R : Sensors.Reading = Sensors.Get_Reading(0);
-            send Readings, R;
+            Sent : Boolean = False;
+            send Readings, R, Sent;
+            if not Sent then
+                delay 0.001;
+            end if;
             delay 0.1;
         end loop;
     end Sampler;
@@ -565,10 +570,18 @@ package Monitor is
             R : Sensors.Reading;
             receive Readings, R;
             if R > Threshold then
-                send Alarms, Critical;
+                Sent : Boolean = False;
+                send Alarms, Critical, Sent;
+                if not Sent then
+                    delay 0.001;
+                end if;
             elsif R > Threshold / 2 then
                 -- D27 Rule 3(b): literal 2 is static nonzero
-                send Alarms, Warning;
+                Sent : Boolean = False;
+                send Alarms, Warning, Sent;
+                if not Sent then
+                    delay 0.001;
+                end if;
             end if;
         end loop;
     end Evaluator;

@@ -1,5 +1,5 @@
 -- Test: neg_try_send_reassign_without_check
--- Description: Access-typed channel elements are rejected before try_send reassignment checks run.
+-- Description: Access-typed channel elements are rejected before send reassignment checks run.
 -- Expected: REJECT source_frontend_error
 
 package neg_try_send_reassign_without_check
@@ -15,6 +15,5 @@ package neg_try_send_reassign_without_check
       source  : payload_ptr = new ((value = 1) as payload);
       success : boolean = false;
 
-      try_send data_ch, source, success;
+      send data_ch, source, success;
       source = new ((value = 2) as payload);
-

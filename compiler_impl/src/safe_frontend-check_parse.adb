@@ -2099,6 +2099,10 @@ package body Safe_Frontend.Check_Parse is
       Result.Channel_Name := Parse_Name_Expression (State);
       Require (State, ",");
       Result.Value := Parse_Expression (State);
+      if Current (State).Lexeme = FT.To_UString (",") then
+         Require (State, ",");
+         Result.Success_Var := Parse_Name_Expression (State);
+      end if;
       Semi := Expect_Statement_Terminator (State);
       Result.Span := CM.Join (Start.Span, Semi);
       return Result;

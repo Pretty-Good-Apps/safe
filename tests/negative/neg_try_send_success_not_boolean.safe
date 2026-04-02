@@ -1,5 +1,5 @@
 -- Test: neg_try_send_success_not_boolean
--- Description: try_send success variables must have type Boolean.
+-- Description: send success variables must have type Boolean.
 -- Clause: SAFE@468cf72:spec/04-tasks-and-channels.md#4.3.p25:961abe5a
 -- Expected: REJECT source_frontend_error
 
@@ -14,5 +14,4 @@ package try_send_success_not_boolean_test
       success : integer = 0;
 
       loop
-         try_send data_ch, value, success;
-
+         send data_ch, value, success;

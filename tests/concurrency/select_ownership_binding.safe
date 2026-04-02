@@ -14,10 +14,11 @@ package select_ownership_binding
 
    task sender
       counter : integer = 0;
+      sent : boolean = false;
 
       loop
          item : payload_ptr = new ((value = counter) as payload);
-         send data_ch, item;
+         send data_ch, item, sent;
          counter = counter + 1;
 
    task receiver
@@ -28,4 +29,3 @@ package select_ownership_binding
                item.all.value = item.all.value + 1;
          or
             delay 1.0
-

@@ -14,26 +14,36 @@ package select_single_ready_result
 
    result : result_value = 0;
    drained : message = 0;
+   high_sent : boolean = false;
+   low_sent  : boolean = false;
+   result_sent : boolean = false;
 
-   send high_ch, 1
-   send low_ch, 2
+   send high_ch, 1, high_sent
+   send low_ch, 2, low_sent
 
-   for round in round_index
-      select
-         when high_item : message from high_ch
-            if round == 1
-               result = 0
-               receive low_ch, drained
-               send high_ch, 3
-            else
-               result = 10 + result_value (high_item)
-      or
-         when low_item : message from low_ch
-            if round == 1
-               result = 0
-               receive high_ch, drained
-               send low_ch, 4
-            else
-               result = 20 + result_value (low_item)
+   if high_sent and low_sent
+      for round in round_index
+         select
+            when high_item : message from high_ch
+               if round == 1
+                  result = 0
+                  receive low_ch, drained
+                  send high_ch, 3, high_sent
+                  if not high_sent
+                     result = 99
+               else
+                  result = 10 + result_value (high_item)
+         or
+            when low_item : message from low_ch
+               if round == 1
+                  result = 0
+                  receive high_ch, drained
+                  send low_ch, 4, low_sent
+                  if not low_sent
+                     result = 98
+               else
+                  result = 20 + result_value (low_item)
+   else
+      result = 97
 
-   send result_ch, result
+   send result_ch, result, result_sent

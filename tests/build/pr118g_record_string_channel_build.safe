@@ -6,11 +6,16 @@ package pr118g_record_string_channel_build
    source : packet;
    received : packet;
    channel data_ch : packet capacity 1;
+   sent : boolean = false;
 
    source.text = "Ada"
-   send data_ch, source
-   source.text = "Bob"
-   receive data_ch, received
+   send data_ch, source, sent
+   if sent
+      source.text = "Bob"
+      receive data_ch, received
 
-   print (received.text)
-   print (source.text)
+      print (received.text)
+      print (source.text)
+   else
+      print ("send failed")
+      print (source.text)

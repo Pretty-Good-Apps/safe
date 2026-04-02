@@ -11,7 +11,7 @@ package qualified_channel_reference_test
    subtype message is integer (0 to 100);
 
    task worker
+      sent : boolean = false;
 
       loop
-         send remote_package.data_ch, 1;
-
+         send remote_package.data_ch, 1, sent;

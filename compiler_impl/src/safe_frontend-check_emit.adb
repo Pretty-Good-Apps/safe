@@ -1795,6 +1795,9 @@ package body Safe_Frontend.Check_Emit is
               & Name_Node (Resolved_Expr.Channel_Name)
               & ",""expression"":"
               & Expression_Node (Resolved_Expr.Value)
+              & (if Resolved_Expr.Success_Var /= null
+                 then ",""success_var"":" & Name_Node (Resolved_Expr.Success_Var)
+                 else "")
               & ",""span"":"
               & JS.Span_Object (Parsed.Span)
               & "}";
