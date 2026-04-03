@@ -4755,6 +4755,11 @@ package body Safe_Frontend.Check_Resolve is
                Span    => Decl.Span,
                Message => "constant declarations require initializers"));
       end if;
+      if Decl.Decl_Type.Kind = CM.Type_Spec_Unknown
+        and then UString_Value (Decl.Type_Info.Name)'Length > 0
+      then
+         return Decl.Type_Info;
+      end if;
       return Resolve_Type_Spec (Decl.Decl_Type, Type_Env, Const_Env, Path);
    end Resolve_Decl_Type;
 
@@ -5985,6 +5990,29 @@ package body Safe_Frontend.Check_Resolve is
       Channel_Type   : GM.Type_Descriptor;
       Success_Type   : GM.Type_Descriptor;
       Target_Type    : GM.Type_Descriptor;
+      function Normalize_Preludes
+        (Preludes : CM.Statement_Access_Vectors.Vector) return CM.Statement_Access_Vectors.Vector
+      is
+      begin
+         if Preludes.Is_Empty then
+            return Preludes;
+         end if;
+
+         return
+           Normalize_Statement_List
+             (Preludes,
+              Var_Types,
+              Functions,
+              Type_Env,
+              Channel_Env,
+              Imported_Objects,
+              Local_Constants,
+              Local_Static_Constants,
+              Exact_Length_Facts,
+              Path,
+              Has_Enclosing_Return,
+              Enclosing_Return_Type);
+      end Normalize_Preludes;
    begin
       case Stmt.Kind is
          when CM.Stmt_Object_Decl =>
@@ -6008,7 +6036,7 @@ package body Safe_Frontend.Check_Resolve is
                        Enclosing_Return_Type,
                        Path);
                begin
-                  Append_Statements (Expanded, Desugared.Preludes);
+                  Append_Statements (Expanded, Normalize_Preludes (Desugared.Preludes));
                   Temp_Decl.Initializer := Desugared.Expr;
                   Result.Decl :=
                     Normalize_Object_Decl
@@ -6069,7 +6097,7 @@ package body Safe_Frontend.Check_Resolve is
                     Enclosing_Return_Type,
                     Path);
             begin
-               Append_Statements (Expanded, Desugared.Preludes);
+               Append_Statements (Expanded, Normalize_Preludes (Desugared.Preludes));
                Result.Destructure.Initializer :=
                  Contextualize_Expr_To_Target_Type
                    (Desugared.Expr,
@@ -6154,7 +6182,7 @@ package body Safe_Frontend.Check_Resolve is
                Target_Info : constant GM.Type_Descriptor :=
                  Expr_Type (Result.Target, Var_Types, Functions, Type_Env);
             begin
-               Append_Statements (Expanded, Desugared.Preludes);
+               Append_Statements (Expanded, Normalize_Preludes (Desugared.Preludes));
                Result.Value :=
                  Contextualize_Expr_To_Target_Type
                    (Desugared.Expr,
@@ -6254,7 +6282,7 @@ package body Safe_Frontend.Check_Resolve is
                        Enclosing_Return_Type,
                        Path);
                begin
-                  Append_Statements (Expanded, Desugared.Preludes);
+                  Append_Statements (Expanded, Normalize_Preludes (Desugared.Preludes));
                   Result.Value :=
                     Contextualize_Expr_To_Target_Type
                       (Desugared.Expr,
@@ -6289,7 +6317,7 @@ package body Safe_Frontend.Check_Resolve is
                Guard_Name : FT.UString := FT.To_UString ("");
                Guard_Length : Natural := 0;
             begin
-               Append_Statements (Expanded, Desugared.Preludes);
+               Append_Statements (Expanded, Normalize_Preludes (Desugared.Preludes));
                Result.Condition := Desugared.Expr;
                if Try_Direct_Growable_Length_Guard
                  (Result.Condition,
@@ -6343,7 +6371,7 @@ package body Safe_Frontend.Check_Resolve is
                           Enclosing_Return_Type,
                           Path);
                   begin
-                     Append_Statements (Expanded, Desugared.Preludes);
+                     Append_Statements (Expanded, Normalize_Preludes (Desugared.Preludes));
                      New_Part.Condition := Desugared.Expr;
                   end;
                   if Try_Direct_Growable_Length_Guard
@@ -6447,7 +6475,7 @@ package body Safe_Frontend.Check_Resolve is
                   Result.Kind := CM.Stmt_Loop;
                   Result.Condition := null;
                   Result.Body_Stmts.Clear;
-                  Append_Statements (Result.Body_Stmts, Desugared.Preludes);
+                  Append_Statements (Result.Body_Stmts, Normalize_Preludes (Desugared.Preludes));
                   Exit_Stmt := new CM.Statement;
                   Exit_Stmt.Kind := CM.Stmt_Exit;
                   Exit_Stmt.Is_Synthetic := True;
@@ -6494,7 +6522,7 @@ package body Safe_Frontend.Check_Resolve is
                        Enclosing_Return_Type,
                        Path);
                begin
-                  Append_Statements (Expanded, Desugared.Preludes);
+                  Append_Statements (Expanded, Normalize_Preludes (Desugared.Preludes));
                   Result.Condition := Desugared.Expr;
                end;
             end if;
@@ -6521,7 +6549,7 @@ package body Safe_Frontend.Check_Resolve is
                        Enclosing_Return_Type,
                        Path);
                begin
-                  Append_Statements (Expanded, Desugared.Preludes);
+                  Append_Statements (Expanded, Normalize_Preludes (Desugared.Preludes));
                   Result.Loop_Iterable := Desugared.Expr;
                   if not Is_Name_Expr (Result.Loop_Iterable) then
                      Raise_Diag
@@ -6616,8 +6644,8 @@ package body Safe_Frontend.Check_Resolve is
                           Enclosing_Return_Type,
                           Path);
                   begin
-                     Append_Statements (Expanded, Low_Desugared.Preludes);
-                     Append_Statements (Expanded, High_Desugared.Preludes);
+                     Append_Statements (Expanded, Normalize_Preludes (Low_Desugared.Preludes));
+                     Append_Statements (Expanded, Normalize_Preludes (High_Desugared.Preludes));
                      Result.Loop_Range.Low_Expr := Low_Desugared.Expr;
                      Result.Loop_Range.High_Expr := High_Desugared.Expr;
                   end;
@@ -6642,7 +6670,7 @@ package body Safe_Frontend.Check_Resolve is
                           Enclosing_Return_Type,
                           Path);
                   begin
-                     Append_Statements (Expanded, Desugared.Preludes);
+                     Append_Statements (Expanded, Normalize_Preludes (Desugared.Preludes));
                      Result.Loop_Range.Name_Expr := Desugared.Expr;
                   end;
                   Loop_Type :=
@@ -6821,7 +6849,7 @@ package body Safe_Frontend.Check_Resolve is
                     Enclosing_Return_Type,
                     Path);
             begin
-               Append_Statements (Expanded, Desugared.Preludes);
+               Append_Statements (Expanded, Normalize_Preludes (Desugared.Preludes));
                Result.Call := Desugared.Expr;
             end;
 
@@ -6855,7 +6883,7 @@ package body Safe_Frontend.Check_Resolve is
                     Enclosing_Return_Type,
                     Path);
             begin
-               Append_Statements (Expanded, Desugared.Preludes);
+               Append_Statements (Expanded, Normalize_Preludes (Desugared.Preludes));
                Result.Value := Desugared.Expr;
             end;
             Channel_Type := Channel_Element_Type (Result.Channel_Name, Channel_Env, Path);
@@ -6981,7 +7009,7 @@ package body Safe_Frontend.Check_Resolve is
                     Enclosing_Return_Type,
                     Path);
             begin
-               Append_Statements (Expanded, Desugared.Preludes);
+               Append_Statements (Expanded, Normalize_Preludes (Desugared.Preludes));
                Result.Value := Desugared.Expr;
             end;
             if not Is_Duration_Compatible
@@ -7014,7 +7042,7 @@ package body Safe_Frontend.Check_Resolve is
                     Enclosing_Return_Type,
                     Path);
             begin
-               Append_Statements (Expanded, Desugared.Preludes);
+               Append_Statements (Expanded, Normalize_Preludes (Desugared.Preludes));
                Result.Case_Expr := Desugared.Expr;
                Scrutinee_Type :=
                  Expr_Type (Result.Case_Expr, Var_Types, Functions, Type_Env);
@@ -7120,7 +7148,7 @@ package body Safe_Frontend.Check_Resolve is
                Arm_Static_Constants : Static_Value_Maps.Map;
                Binder_Stmt   : CM.Statement_Access;
             begin
-               Append_Statements (Expanded, Desugared.Preludes);
+               Append_Statements (Expanded, Normalize_Preludes (Desugared.Preludes));
                Carrier_Type := Expr_Type (Desugared.Expr, Var_Types, Functions, Type_Env);
                if not Try_Result_Carrier_Success_Type
                  (Carrier_Type, Type_Env, Success_Type)
