@@ -1,0 +1,13 @@
+-- Test: neg_pr1110b_pop_last_constant
+-- Description: `pop_last(items)` requires a writable list name.
+-- Clause: SAFE@468cf72:docs/PR11.x-series-proposed.md#pr1110b-built-in-list-of-t
+-- Expected: REJECT source_frontend_error
+
+package neg_pr1110b_pop_last_constant
+
+   function bad_pop returns integer
+      values : constant list of integer = [1, 2];
+      if pop_last (values).present
+         return 1;
+      else
+         return 0;
