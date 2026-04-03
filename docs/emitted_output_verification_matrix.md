@@ -104,6 +104,7 @@ subset remain outside the current surface; see
 | PR11.8g.1 build-surface proof-expansion set | `tests/build/pr118c2_package_pre_task.safe`, `tests/build/pr118d1_for_of_string_build.safe`, `tests/build/pr118d1_string_case_build.safe`, `tests/build/pr118d1_string_order_build.safe`, `tests/build/pr118d_bounded_string_array_component_build.safe`, `tests/build/pr118d_bounded_string_index_build.safe`, `tests/build/pr118d_bounded_string_tick_build.safe`, `tests/build/pr118d_for_of_fixed_build.safe`, `tests/build/pr118d_for_of_growable_build.safe`, `tests/build/pr118d_for_of_heap_element_build.safe` | PR11.8g.1 also widens the blocking lane across proof-friendly emitted build/package representatives. The live emitted surface now includes a named post-PR11.8d build subset rather than leaving these fixtures in an implicit “accepted but not proved” bucket. | yes | yes | yes | yes | yes | none | no |
 | Heap-backed runtime-backed string/growable surface | `tests/positive/pr118d_bounded_string.safe`, `tests/positive/pr118d_character_quote_literal.safe`, `tests/positive/pr118d_growable_array.safe`, `tests/positive/pr118d_string_length_attribute.safe`, `tests/positive/pr118d_string_mutable_object.safe`, `tests/build/pr118d1_growable_to_fixed_guard_build.safe`, `tests/build/pr118d_bounded_string_build.safe`, `tests/build/pr118d_bounded_string_field_build.safe`, `tests/build/pr118d_fixed_to_growable_build.safe`, `tests/build/pr118d_growable_to_fixed_literal_build.safe`, `tests/build/pr118d_growable_to_fixed_slice_build.safe` | PR11.8g.2 moved string/growable runtime support onto the shared proved runtime seam. PR11.8g.4 then made that seam generically honest by weakening shared `Safe_Array_RT` to length-only facts and routing non-heap growable-array component types through the stronger `Safe_Array_Identity_Ops` + `Safe_Array_Identity_RT` path where element-preservation is actually justified. | yes | yes | yes | yes | yes | none | no |
 | Fixed-width binary emitted surface | `tests/positive/pr118c_binary_boolean_logic.safe`, `tests/positive/pr118c_binary_conversion_wrap.safe`, `tests/positive/pr118c_binary_inline_object.safe`, `tests/positive/pr118c_binary_named_type.safe`, `tests/positive/pr118c_binary_param_return.safe`, `tests/positive/pr118c_binary_shift.safe` | PR11.8i.1 completes the second emitted-proof expansion pass by absorbing the remaining fixed-width binary fixtures into the blocking proof manifest alongside the earlier case-dispatch representative. The emitted numeric surface is now explicit and fully covered rather than tracked as post-PR11.8g.1 cleanup debt. | yes | yes | yes | yes | yes | none | no |
+| Built-in container checkpoint surface | `tests/positive/pr1110a_optional_guarded.safe`, `tests/positive/pr1110b_list_basics.safe`, `tests/positive/pr1110c_map_basics.safe`, plus the build-backed `pr1110a*`, `pr1110b*`, and `pr1110c*` fixtures in `scripts/_lib/proof_inventory.py` | PR11.10a/PR11.10b/PR11.10c close the shipped optional/list/map surface under blocking emitted proof manifests, and PR11.10d ratifies that union as the parent container checkpoint. The only retained gap is the named runtime-only witness `tests/build/pr1110b_list_empty_build.safe`, which remains an explicit proof exclusion rather than an unnamed coverage hole. | yes | yes | yes | yes | yes | named documented exclusion for the empty-list `pop_last` witness only | no |
 | Shared `IO` seam representative | `tests/positive/pr118c1_print.safe` | `print` now lowers through the shared standard-library `IO` package instead of per-unit generated wrappers. PR11.8g.2 includes that seam in the blocking emitted-proof lane, so emitted packages no longer rely on excluded `_safe_io` helper bodies. | yes | yes | yes | yes | yes | none | no |
 
 ## PR10.2 Rule 5 Boundary Closure
@@ -319,6 +320,41 @@ the live PR11.8f checkpoint. The set is fully reclosed under the same
 all-proved-only policy as the earlier checkpoints, including the linked-list
 observer and accumulator traversal representatives after PR11.8f.1's
 structural cursor-loop lowering.
+
+## PR11.10 Container Checkpoint Corpus
+
+PR11.10d closes the parent container milestone as the explicit union of the
+three shipped container wedges:
+
+- `PR11.10a` optional checkpoint:
+  - `tests/positive/pr1110a_optional_guarded.safe`
+  - `tests/build/pr1110a_optional_string_build.safe`
+  - `tests/build/pr1110a_optional_growable_build.safe`
+- `PR11.10b` list checkpoint:
+  - `tests/positive/pr1110b_list_basics.safe`
+  - `tests/positive/pr1110b_disjoint_mut_indices.safe`
+  - `tests/build/pr1110b_list_build.safe`
+  - `tests/build/pr1110b_list_string_build.safe`
+  - `tests/build/pr1110b_list_growable_build.safe`
+- `PR11.10c` map checkpoint:
+  - `tests/positive/pr1110c_map_basics.safe`
+  - `tests/build/pr1110c_map_build.safe`
+  - `tests/build/pr1110c_map_string_build.safe`
+  - `tests/build/pr1110c_map_list_build.safe`
+
+This exact parent checkpoint is mirrored in `scripts/_lib/proof_inventory.py`
+and summarized by `python3 scripts/run_proofs.py` as `PR11.10d checkpoint`.
+
+The parent checkpoint is closed under the same all-proved-only policy as the
+earlier emitted checkpoints. It keeps one named runtime-only exclusion:
+
+- `tests/build/pr1110b_list_empty_build.safe`
+
+That empty-list `pop_last` witness remains in the runtime/build lane, but its
+statically empty lowering still triggers GNATprove ineffectual-branch warnings
+under `--warnings=error`. The fixture is therefore retained as an explicit
+proof exclusion with documented owner/reason metadata rather than treated as an
+unnamed coverage hole.
 
 ## Emitted GNATprove Warning Suppression Inventory
 

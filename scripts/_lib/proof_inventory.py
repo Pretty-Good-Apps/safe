@@ -199,6 +199,13 @@ PR11_10C_CHECKPOINT_FIXTURES = [
 ]
 
 
+PR11_10D_CHECKPOINT_FIXTURES = (
+    PR11_10A_CHECKPOINT_FIXTURES
+    + PR11_10B_CHECKPOINT_FIXTURES
+    + PR11_10C_CHECKPOINT_FIXTURES
+)
+
+
 PR11_8I1_CHECKPOINT_FIXTURES = [
     "tests/positive/pr115_case_terminator.safe",
     "tests/positive/pr115_var_basic.safe",
@@ -300,7 +307,7 @@ EMITTED_PROOF_EXCLUSIONS = [
         path="tests/build/pr1110b_list_empty_build.safe",
         reason="runtime-only empty pop_last witness; static empty-length lowering triggers GNATprove ineffectual-branch warnings",
         owner="runtime-regression-only",
-        milestone="PR11.10b",
+        milestone="PR11.10d",
     ),
 ]
 
