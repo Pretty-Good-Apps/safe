@@ -117,15 +117,15 @@ safe/
 |--------|-------|
 | Normative clauses extracted | 205 |
 | PO entries mapped | 205 |
-| SPARK source lines | 1,079 (safe_model + safe_po, .ads + .adb) |
+| SPARK source lines | 1,229 (safe_model + safe_po, .ads + .adb) |
 | PO procedures | 23 |
-| Ghost functions | 25 |
-| Proof checks (total) | 64 |
-| -- Flow checks | 29 (45%) |
-| -- Proved (CVC5) | 34 (53%) |
-| -- Justified | 1 (2%) -- FP_Safe_Div, assumption A-05 |
+| Ghost models/functions | ordered FIFO channel model included |
+| Proof checks (total) | 132 |
+| -- Flow checks | 32 (24%) |
+| -- Proved (CVC5) | 99 (75%) |
+| -- Justified | 1 (1%) -- FP_Safe_Div, assumption A-05 |
 | -- Unproved | 0 |
-| Tracked assumptions | 14 (4 critical, 4 major, 6 minor) |
+| Tracked assumptions | 12 tracked (11 open, 1 resolved) |
 | Test files | 79 |
 | Documentation files | 4 |
 | CI scripts | 13 |
@@ -161,15 +161,15 @@ safe/
 
 ## 7. Assumption Registry
 
-The companion tracks 12 assumptions -- dependencies that the SPARK model relies on but cannot verify within SPARK itself. Full details are in `companion/assumptions.yaml`.
+The companion tracks 12 assumptions -- dependencies that the SPARK model relies on but cannot verify within SPARK itself. One of those (`B-02`, FIFO ordering) is now retained as a resolved audit entry; the remaining 11 stay open. Full details are in `companion/assumptions.yaml`.
 
 | Severity | Count | IDs |
 |----------|-------|-----|
 | Critical | 4 | A-01 (64-bit intermediates), A-02 (IEEE 754 non-trapping), A-03 (range analysis soundness), A-04 (channel serialization) |
-| Major | 4 | A-05 (FP division overflow guard), B-01 (ownership state completeness), B-02 (FIFO ordering), B-03 (task-var map coverage) |
+| Major | 4 tracked (3 open, 1 resolved) | A-05 (FP division overflow guard), B-01 (ownership state completeness), B-02 (FIFO ordering, resolved), B-03 (task-var map coverage) |
 | Minor | 4 | B-04 (Boolean null model), C-01 (flow analysis sufficiency), C-02 (Ghost erasure), D-02 (frozen spec commit) |
 
-**Budget limits:** max 15 total (current: 12), max 4 critical (current: 4). Both within limits.
+**Budget limits:** max 15 open (current: 11), max 4 open critical (current: 4). Both within limits.
 
 ---
 
@@ -185,12 +185,12 @@ Step 1: Compile
         ▼
 Step 2: Flow Analysis (Bronze)
   gnatprove --mode=flow --report=all --warnings=error
-  Gate: 29/29 flow checks, 0 errors
+  Gate: 32/32 flow checks, 0 errors
         │
         ▼
 Step 3: Prove (Silver)
   gnatprove --mode=prove --level=2 --prover=cvc5,z3,altergo
-  Gate: 64 checks, 34 proved, 1 justified, 0 unproved
+  Gate: 132 checks, 99 proved, 1 justified, 0 unproved
         │
         ▼
 Step 4: Extract Assumptions
@@ -209,8 +209,8 @@ Step 5: Diff Against Golden
 
 The companion relies exclusively on GNATprove for formal verification at two assurance gates:
 
-- **Bronze gate** -- flow analysis (data-flow, initialization, termination): 29/29 checks proved
-- **Silver gate** -- absence of runtime errors via formal proof: 34 checks proved by CVC5, 1 justified
+- **Bronze gate** -- flow analysis (data-flow, initialization, termination): 32/32 checks proved
+- **Silver gate** -- absence of runtime errors via formal proof: 99 checks proved by CVC5, 1 justified
 
 GNATprove uses Why3 internally as its intermediate VC language and dispatches to CVC5, Z3, and Alt-Ergo solvers. No additional verification tools are required. See `docs/gnatprove_profile.md` for configuration details.
 

@@ -90,8 +90,9 @@ alr exec -- gnatprove -P templates.gpr \
 
 ## Proof status
 
-325 total VCs across 17 units, 0 unproved. The checked-in baseline is
-`prove_golden.txt`. CI diffs every run against this baseline and fails on
+553 total VCs across 20 units, 0 unproved. The checked-in baseline is
+`prove_golden.txt`. Current results are 414 proved, 1 justified, and 138
+flow checks passed. CI diffs every run against this baseline and fails on
 drift.
 
 ## Assumptions

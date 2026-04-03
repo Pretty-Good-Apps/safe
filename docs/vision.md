@@ -552,3 +552,159 @@ This architecture requires the value-type string (PR11.8d), the built-in
 container layer (PR11.10), and runtime startup/shutdown coordination for
 the persistent I/O tasks. It belongs in the library/runtime layer rather
 than in a language milestone.
+
+---
+
+## AI-First Language Design
+
+Safe is designed for a world where AI agents write most of the code. The
+language guarantees memory safety, concurrency safety, and absence of runtime
+errors through the compiler alone — no annotations, no proof hints, no
+developer-authored verification scaffolding. If the compiler accepts a program,
+that program is safe. If the compiler rejects it, the error message tells the
+agent exactly what to fix.
+
+### Why AI-generated code needs a different language
+
+AI agents hallucinate. They produce code with memory errors, data races, null
+dereferences, and arithmetic overflow. In most languages, these are silent
+runtime failures discovered in production. In Safe, the compiler rejects every
+one of them before a binary is produced.
+
+Three properties make Safe effective for AI-generated code:
+
+**Zero blast radius.** The worst thing that happens when AI generates bad code
+is that the compiler says no. No silent corruption, no undefined behavior, no
+security vulnerability — just a rejection with a fix suggestion.
+
+**Readable by default.** Safe source is lowercase-only, uses no overloading, no
+implicit conversions, and no hidden control flow. Every safety check is a
+visible guard in the source. A reviewer — human or AI — can read the code and
+see the safety story without consulting documentation or tracing through type
+hierarchies.
+
+**Actionable recovery.** Every compiler rejection includes a specific fix
+suggestion and a source location. An AI agent can parse the error, apply the
+fix, and resubmit in one iteration. The conversation is: write, reject with
+fix, apply, accept. No debugging runtime crashes, no chasing undefined
+behavior.
+
+### Guards are the AI-native proof model
+
+AI agents naturally generate defensive code: if-checks, bounds checks, early
+returns. In Safe, these defensive checks are exactly what the prover needs.
+The AI does not need to learn formal methods. It writes the code it would
+write anyway, and the compiler proves those checks are sufficient or rejects
+with a specific missing-guard diagnostic.
+
+---
+
+## Long-Term Vision: Proved All The Way Down
+
+The current toolchain proves that Safe source is safe, then compiles it
+through an empirically trusted compiler (GNAT/GCC) to produce a binary.
+The proof says "this source has no runtime errors." The compilation says
+"here is a binary." Nothing ties the two together — the binary is trusted
+to be faithful to the source, but that faithfulness is not proved.
+
+The long-term vision closes that gap.
+
+### Verified sequential backend
+
+Safe's sequential, single-task, value-typed core is a near-ideal target for
+verified compilation:
+
+- No undefined behavior — every reachable state has defined semantics
+- No aliasing — the ownership model guarantees single-writer access
+- No implicit conversions — every type boundary is explicit
+- No exceptions or stack unwinding — control flow is visible and local
+- No dynamic dispatch — every call target is statically known
+- No dynamic allocation with arbitrary lifetime — allocation is scope-bounded
+- Small surface — roughly 30 constructs vs 300 for Ada, 100 for C
+
+A verified backend that takes Safe's MIR and produces proved-correct machine
+code (similar to CompCert for C) would give every binary two guarantees:
+
+1. The source is safe (proved by the VC generator and certificate checker)
+2. The binary is faithful to the source (proved by the verified backend)
+
+No other language in existence provides both simultaneously without requiring
+the programmer to write proof annotations.
+
+### Direct VC generation
+
+The current proof pipeline routes through Ada emission, GNAT, gnat2why, Why3,
+and then to SMT solvers. Each layer is unverified. The long-term architecture
+replaces this with direct VC generation from Safe's MIR:
+
+```
+Safe source → safec MIR → Safe VC generator → Z3/CVC5 → proof certificate
+                                                              ↓
+                                                   certificate checker (small, verified)
+```
+
+The SMT solvers (Z3, CVC5) remain unverified — they are commodity tools that
+no project can realistically replace. But their answers are independently
+checked by a small verified certificate checker. The trust boundary shrinks
+from "the entire toolchain" to "one small certificate checker and two SMT
+solvers."
+
+This is the architecture used by Lean (proof terms checked by a small kernel),
+CVC5 (proof certificates in some modes), and SMTCoq (Coq-checked solver
+outputs). Safe would apply the same principle to a systems programming
+language.
+
+### Two compilation targets, two concurrency stories
+
+The verified backend covers sequential code. Concurrency requires a runtime
+that provides task scheduling, mutual exclusion, and timing services. That
+runtime is not part of the verified backend — it is a trusted dependency,
+the same way the Linux kernel or the Jorvik Ada runtime is trusted today.
+
+The pragmatic split:
+
+**Verified sequential target.** Proved source + proved binary. Parallelism
+via OS processes communicating through pipes, sockets, or shared memory with
+OS-enforced access control. Each process is an independently proved Safe
+binary. For Linux/server/cloud workloads where inter-process latency is
+acceptable and process isolation is desirable.
+
+**Jorvik embedded target.** Proved source + empirically trusted binary
+(GNAT/GCC). In-process concurrency via static tasks and channels with the
+Jorvik Ada runtime providing scheduling, ceiling locking, and timing. For
+bare-metal embedded where there is no OS and latency is measured in
+microseconds.
+
+Both targets share the same Safe source language and the same source-level
+proof. The difference is only in how the binary is produced and how
+concurrency is provided.
+
+Jorvik acts as the embedded equivalent of the OS — it provides the
+concurrency services that the verified sequential backend does not cover.
+If a formally verified Jorvik-profile Ada runtime is ever produced, Safe on
+that runtime with a verified backend would have a fully proved chain from
+source to execution — no empirical trust anywhere.
+
+### Self-hosting
+
+The final step is rewriting the Safe compiler in Safe. A self-hosting compiler
+that is itself proved safe by its own proof model closes the last trust gap
+in the toolchain. The compiler becomes part of the proved artifact, not an
+external tool that must be trusted.
+
+### The north star
+
+A language where trust is mathematical, not reputational:
+
+1. Safe source → Safe compiler (self-hosting, proved) → machine code via
+   verified backend
+2. Safe source → Safe VC generator → Z3/CVC5 → proof certificate →
+   verified certificate checker
+3. Both paths share the same MIR
+4. Two external dependencies: a codegen backend and SMT solvers
+5. Every answer is independently checkable
+
+That is the endgame: a language that owns its entire safety story from source
+to proof to binary. Every link in the chain is either proved or independently
+checkable. The only empirical trust is in the SMT solvers' answers — and
+those answers come with certificates.

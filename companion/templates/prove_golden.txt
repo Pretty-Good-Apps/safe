@@ -6,13 +6,13 @@ SPARK Analysis results        Total         Flow                       Provers  
 -----------------------------------------------------------------------------------------------------
 Data Dependencies                 6            6                             .           .          .
 Flow Dependencies                 7            7                             .           .          .
-Initialization                   36           36                             .           .          .
+Initialization                   54           54                             .           .          .
 Non-Aliasing                      .            .                             .           .          .
-Run-time Checks                  66            .     65 (CVC5 99%, Trivial 1%)           1          .
-Assertions                       45            .     45 (CVC5 97%, Trivial 3%)           .          .
-Functional Contracts            122            .    122 (CVC5 98%, Trivial 2%)           .          .
+Run-time Checks                  89            .     88 (CVC5 99%, Trivial 1%)           1          .
+Assertions                      109            .    109 (CVC5 97%, Trivial 3%)           .          .
+Functional Contracts            217            .    217 (CVC5 98%, Trivial 2%)           .          .
 LSP Verification                  .            .                             .           .          .
-Termination                      61           61                             .           .          .
+Termination                      71           71                             .           .          .
 Concurrency                       .            .                             .           .          .
 -----------------------------------------------------------------------------------------------------
-Total                           343    110 (32%)                     232 (68%)      1 (0%)          .
+Total                           553    138 (25%)                     414 (75%)      1 (0%)          .

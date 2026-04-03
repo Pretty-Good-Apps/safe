@@ -379,7 +379,7 @@ affected POs/models, severity, and related spec references.
 | A-03 | Static range analysis is sound | Safe_Model.Range64, Safe_Model.Contains, Safe_Model.Subset, Safe_Model.Intersect, Safe_Model.Widen | critical | spec/05-assurance.md#5.3.6 | open |
 | A-04 | Channel implementation correctly serializes access | Safe_PO.Check_Channel_Not_Full, Safe_PO.Check_Channel_Not_Empty, Safe_PO.Check_Channel_Capacity_Positive, Safe_Model.Channel_State | critical | spec/04-tasks-and-channels.md#4.3 | open |
 | B-01 | Ownership state enumeration is complete | Safe_Model.Ownership_State, Safe_PO.Check_Not_Moved, Safe_PO.Check_Owned_For_Move, Safe_PO.Check_Borrow_Exclusive, Safe_PO.Check_Observe_Shared | major | spec/02-restrictions.md#2.3.2 | open |
-| B-02 | Channel FIFO ordering preserved by implementation | Safe_Model.Channel_State, Safe_Model.After_Append, Safe_Model.After_Remove | major | spec/04-tasks-and-channels.md#4.3.p23:197d9a49 | open |
+| B-02 | Channel FIFO ordering preserved by implementation | Safe_Model.Channel_State, Safe_Model.After_Append, Safe_Model.After_Remove, Template_Channel_FIFO.Model_Of | major | spec/04-tasks-and-channels.md#4.3.p23:197d9a49 | resolved |
 | B-03 | Task-variable map covers all shared variables | Safe_Model.Task_Var_Map, Safe_PO.Check_Exclusive_Ownership | major | spec/04-tasks-and-channels.md#4.5 | open |
 | B-04 | Not_Null_Ptr and Safe_Deref model Boolean null flag | Safe_PO.Not_Null_Ptr, Safe_PO.Safe_Deref | minor | spec/02-restrictions.md#2.8.4 | open |
 | C-01 | Flow analysis (Bronze gate) is sufficient for data-dependency proofs | All Safe_PO procedures (flow mode), All Safe_Model functions (flow mode) | minor | spec/05-assurance.md#5.2.1 | open |
@@ -422,9 +422,10 @@ affected POs/models, severity, and related spec references.
 **B-02: Channel FIFO ordering preserved by implementation**
 - Severity: major
 - Spec reference: `spec/04-tasks-and-channels.md#4.3.p23:197d9a49`
-- Affects: Safe_Model.Channel_State, Safe_Model.After_Append, Safe_Model.After_Remove
+- Affects: Safe_Model.Channel_State, Safe_Model.After_Append, Safe_Model.After_Remove, Template_Channel_FIFO.Model_Of
 - Related clauses: `4.3.p23:197d9a49`
-- Note: M2-AUD-006: Future work could extend the ghost model with a sequence type.
+- Status: resolved
+- Note: PR11.9c extends `Channel_State` to an ordered FIFO model and proves the concrete circular-buffer refinement in `template_channel_fifo`.
 
 **B-03: Task-variable map covers all shared variables**
 - Severity: major

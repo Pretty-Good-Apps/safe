@@ -101,17 +101,17 @@
 - id: B-02
   summary: "Channel FIFO ordering preserved by implementation"
   description: >
-    The ghost Channel_State models a simple length/capacity pair but does
-    not model element ordering.  FIFO preservation is assumed to hold in
-    the runtime implementation and is not verified by the SPARK companion.
+    The ordered Channel_State ghost model now tracks the logical FIFO
+    prefix explicitly, and template_channel_fifo proves that the concrete
+    circular buffer refines that model across enqueue/dequeue operations.
   spec_reference: "spec/04-tasks-and-channels.md#4.3.p23:197d9a49"
   affects:
     - Safe_Model.Channel_State
     - Safe_Model.After_Append
     - Safe_Model.After_Remove
   severity: major
-  status: open
-  note: "M2-AUD-006: Future work could extend the ghost model with a sequence type."
+  status: resolved
+  note: "Resolved in PR11.9c by the ordered Channel_State model and template_channel_fifo refinement proof."
 
 - id: B-03
   summary: "Task-variable map covers all shared variables"

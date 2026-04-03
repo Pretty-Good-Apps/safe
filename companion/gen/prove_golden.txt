@@ -1,18 +1,18 @@
 Summary of SPARK analysis
 =========================
 
----------------------------------------------------------------------------------------------------
-SPARK Analysis results        Total        Flow                      Provers   Justified   Unproved
----------------------------------------------------------------------------------------------------
-Data Dependencies                 .           .                            .           .          .
-Flow Dependencies                 .           .                            .           .          .
-Initialization                    4           4                            .           .          .
-Non-Aliasing                      .           .                            .           .          .
-Run-time Checks                  15           .                    14 (CVC5)           1          .
-Assertions                        .           .                            .           .          .
-Functional Contracts             20           .    20 (CVC5 96%, Trivial 4%)           .          .
-LSP Verification                  .           .                            .           .          .
-Termination                      25          25                            .           .          .
-Concurrency                       .           .                            .           .          .
----------------------------------------------------------------------------------------------------
-Total                            64    29 (45%)                     34 (53%)      1 (2%)          .
+----------------------------------------------------------------------------------------------------
+SPARK Analysis results        Total        Flow                       Provers   Justified   Unproved
+----------------------------------------------------------------------------------------------------
+Data Dependencies                 .           .                             .           .          .
+Flow Dependencies                 .           .                             .           .          .
+Initialization                    4           4                             .           .          .
+Non-Aliasing                      .           .                             .           .          .
+Run-time Checks                  36           .     35 (CVC5 99%, Trivial 1%)           1          .
+Assertions                       11           .    11 (CVC5 88%, Trivial 12%)           .          .
+Functional Contracts             53           .     53 (CVC5 97%, Trivial 3%)           .          .
+LSP Verification                  .           .                             .           .          .
+Termination                      28          28                             .           .          .
+Concurrency                       .           .                             .           .          .
+----------------------------------------------------------------------------------------------------
+Total                           132    32 (24%)                      99 (75%)      1 (1%)          .

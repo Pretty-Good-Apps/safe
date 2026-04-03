@@ -158,7 +158,7 @@ Ghost procedures have null bodies, so GNATprove generates no body VCs for them. 
 
 ### 4.5 Unproved VCs
 
-As of spec commit `468cf72`, the Silver gate produces **64 total checks: 29 flow, 34 proved (CVC5), 1 justified (FP_Safe_Div float overflow -- see assumption A-05), 0 unproved**. The companion is intentionally structured so that:
+As of spec commit `468cf72`, the Silver gate produces **132 total checks: 32 flow, 99 proved (CVC5), 1 justified (FP_Safe_Div float overflow -- see assumption A-05), 0 unproved**. The companion is intentionally structured so that:
 
 - All Ghost procedure bodies are null, generating no body VCs.
 - All non-Ghost procedures (`Safe_Div`, `Safe_Mod`, `Safe_Rem`, `FP_Safe_Div`) have postconditions that are tautological given the body (the body literally computes the postcondition expression).
@@ -264,7 +264,7 @@ Each assumption documents a dependency that the SPARK companion relies on but ca
 |----------|---------|-------|
 | **A** -- Implementation/Target | Properties of the compiler, runtime, or hardware (e.g., 64-bit arithmetic, IEEE 754 mode) | 4 |
 | **A** -- Implementation/Target | Properties of the compiler, runtime, or hardware (e.g., 64-bit arithmetic, IEEE 754 mode, FP overflow guard) | 5 |
-| **B** -- Modeling | Fidelity of the ghost model to the real system (e.g., ownership state completeness, FIFO ordering) | 4 |
+| **B** -- Modeling | Fidelity of the ghost model to the real system (e.g., ownership state completeness, task-var map coverage) | 4 tracked (3 open, 1 resolved) |
 | **C** -- Proof-Mode | Properties of the GNATprove verification methodology (e.g., flow analysis sufficiency, Ghost erasure) | 2 |
 | **D** -- Specification | Properties of the Safe specification text itself (e.g., frozen commit authority) | 1 |
 
@@ -273,9 +273,9 @@ Each assumption documents a dependency that the SPARK companion relies on but ca
 | Severity | Count | IDs |
 |----------|-------|-----|
 | **Critical** | 4 | A-01 (64-bit intermediates), A-02 (IEEE 754 non-trapping), A-03 (range analysis soundness), A-04 (channel serialization) |
-| **Major** | 4 | A-05 (FP division overflow guard), B-01 (ownership state completeness), B-02 (FIFO ordering), B-03 (task-var map coverage) |
+| **Major** | 4 tracked (3 open, 1 resolved) | A-05 (FP division overflow guard), B-01 (ownership state completeness), B-02 (FIFO ordering, resolved), B-03 (task-var map coverage) |
 | **Minor** | 4 | B-04 (Boolean null model), C-01 (flow analysis sufficiency), C-02 (Ghost erasure), D-02 (frozen spec commit) |
-| **Total** | **12** | |
+| **Total** | **12 tracked (11 open, 1 resolved)** | |
 
 ### 6.4 Assumption Extraction and Diffing
 
@@ -284,8 +284,8 @@ After each spec regeneration, the assumption budget should be reviewed:
 1. **Extract**: Run `scripts/extract_assumptions.sh` which parses GNATprove output and writes `companion/assumptions_extracted.txt`.
 2. **Diff**: Run `scripts/diff_assumptions.sh` which:
    - Verifies the GNATprove proof summary matches the committed golden baseline (`companion/gen/prove_golden.txt`).
-   - Counts assumption IDs and severities from `companion/assumptions.yaml`.
-   - Enforces budget limits (max 15 total, max 4 critical).
+   - Counts tracked/open/resolved assumptions and severities from `companion/assumptions.yaml`.
+   - Enforces budget limits against **open** assumptions only (max 15 open, max 4 open critical).
    - Exits with a nonzero code if drift or budget violations are detected.
 3. **Review**: Any new assumption must be explicitly justified in a review comment before the change is merged.
 
