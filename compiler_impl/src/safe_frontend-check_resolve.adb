@@ -4878,7 +4878,8 @@ package body Safe_Frontend.Check_Resolve is
       Var_Types : Type_Maps.Map;
       Functions : Function_Maps.Map;
       Type_Env  : Type_Maps.Map;
-      Const_Env : Static_Value_Maps.Map) return CM.Expr_Access
+      Const_Env : Static_Value_Maps.Map;
+      Path      : String := "") return CM.Expr_Access
    is
    begin
       if Expr = null or else Expr.Kind /= CM.Expr_Apply then
@@ -4905,7 +4906,7 @@ package body Safe_Frontend.Check_Resolve is
             then
                Raise_Diag
                  (CM.Source_Frontend_Error
-                    (Path    => "",
+                    (Path    => Path,
                      Span    => Expr.Callee.Span,
                      Message =>
                        "generic function `" & UString_Value (Callee_Name)
@@ -4972,7 +4973,7 @@ package body Safe_Frontend.Check_Resolve is
                then
                   Raise_Diag
                     (CM.Source_Frontend_Error
-                       (Path    => "",
+                       (Path    => Path,
                         Span    => Expr.Callee.Span,
                         Message =>
                           "generic function `" & Flatten_Name (Expr.Callee)
@@ -5040,7 +5041,8 @@ package body Safe_Frontend.Check_Resolve is
       Var_Types : Type_Maps.Map;
       Functions : Function_Maps.Map;
       Type_Env  : Type_Maps.Map;
-      Const_Env : Static_Value_Maps.Map) return CM.Expr_Access
+      Const_Env : Static_Value_Maps.Map;
+      Path      : String := "") return CM.Expr_Access
    is
       Result   : CM.Expr_Access;
       Field    : CM.Aggregate_Field;
@@ -5059,37 +5061,37 @@ package body Safe_Frontend.Check_Resolve is
          when CM.Expr_Apply =>
             declare
                Resolved : constant CM.Expr_Access :=
-                 Resolve_Apply (Expr, Var_Types, Functions, Type_Env, Const_Env);
+                 Resolve_Apply (Expr, Var_Types, Functions, Type_Env, Const_Env, Path);
             begin
                if Resolved.Kind = CM.Expr_Resolved_Index then
                   Result := new CM.Expr_Node'(Resolved.all);
                   Result.Prefix :=
-                    Normalize_Expr (Resolved.Prefix, Var_Types, Functions, Type_Env, Const_Env);
+                    Normalize_Expr (Resolved.Prefix, Var_Types, Functions, Type_Env, Const_Env, Path);
                   Result.Args.Clear;
                   for Item of Resolved.Args loop
                      Result.Args.Append
-                       (Normalize_Expr (Item, Var_Types, Functions, Type_Env, Const_Env));
+                       (Normalize_Expr (Item, Var_Types, Functions, Type_Env, Const_Env, Path));
                   end loop;
                elsif Resolved.Kind = CM.Expr_Call then
                   Result := new CM.Expr_Node'(Resolved.all);
                   Result.Callee :=
-                    Normalize_Expr (Resolved.Callee, Var_Types, Functions, Type_Env, Const_Env);
+                    Normalize_Expr (Resolved.Callee, Var_Types, Functions, Type_Env, Const_Env, Path);
                   Result.Args.Clear;
                   for Item of Resolved.Args loop
                      Result.Args.Append
-                       (Normalize_Expr (Item, Var_Types, Functions, Type_Env, Const_Env));
+                       (Normalize_Expr (Item, Var_Types, Functions, Type_Env, Const_Env, Path));
                   end loop;
                   if Is_Pop_Last_Builtin_Call (Result, Var_Types, Functions, Type_Env) then
                      if Natural (Result.Args.Length) /= 1 then
                         Raise_Diag
                           (CM.Source_Frontend_Error
-                             (Path    => "",
+                             (Path    => Path,
                               Span    => (if Result.Has_Call_Span then Result.Call_Span else Result.Span),
                               Message => "`pop_last(items)` expects exactly one argument"));
                      elsif not Is_Assignable_Target (Result.Args (Result.Args.First_Index)) then
                         Raise_Diag
                           (CM.Source_Frontend_Error
-                             (Path    => "",
+                             (Path    => Path,
                               Span    => Result.Args (Result.Args.First_Index).Span,
                               Message => "`pop_last` first argument must be a writable list name"));
                      else
@@ -5105,7 +5107,7 @@ package body Safe_Frontend.Check_Resolve is
                            if not Is_Growable_Array_Type (List_Type, Type_Env) then
                               Raise_Diag
                                 (CM.Source_Frontend_Error
-                                   (Path    => "",
+                                   (Path    => Path,
                                     Span    => Result.Args (Result.Args.First_Index).Span,
                                     Message => "`pop_last` expects a `mut list of T` first argument"));
                            end if;
@@ -5113,7 +5115,7 @@ package body Safe_Frontend.Check_Resolve is
                            if not Is_Container_Element_Type_Allowed (Element_Type, Type_Env) then
                               Raise_Diag
                                 (CM.Unsupported_Source_Construct
-                                   (Path    => "",
+                                   (Path    => Path,
                                     Span    => Result.Args (Result.Args.First_Index).Span,
                                     Message =>
                                       "`list of T` is limited to the admitted value-type subset in PR11.10b"));
@@ -5137,7 +5139,7 @@ package body Safe_Frontend.Check_Resolve is
                         if Natural (Result.Args.Length) /= 2 then
                            Raise_Diag
                              (CM.Source_Frontend_Error
-                                (Path    => "",
+                                (Path    => Path,
                                  Span    => (if Result.Has_Call_Span then Result.Call_Span else Result.Span),
                                  Message => "`" & Builtin_Name & "(m, key)` expects exactly two arguments"));
                         end if;
@@ -5157,26 +5159,26 @@ package body Safe_Frontend.Check_Resolve is
                            then
                               Raise_Diag
                                 (CM.Source_Frontend_Error
-                                   (Path    => "",
+                                   (Path    => Path,
                                     Span    => Map_Expr.Span,
                                     Message => "`remove` first argument must be a writable map name"));
                            elsif not Try_Map_Key_Value_Types (Map_Type, Type_Env, Key_Type, Value_Type) then
                               Raise_Diag
                                 (CM.Source_Frontend_Error
-                                   (Path    => "",
+                                   (Path    => Path,
                                     Span    => Map_Expr.Span,
                                     Message => "`" & Builtin_Name & "` expects a `map of (K, V)` first argument"));
                            elsif not Is_Map_Key_Type_Allowed (Key_Type, Type_Env) then
                               Raise_Diag
                                 (CM.Unsupported_Source_Construct
-                                   (Path    => "",
+                                   (Path    => Path,
                                     Span    => Map_Expr.Span,
                                     Message =>
                                       "`map of (K, V)` keys are limited to the admitted discrete/string subset in PR11.10c"));
                            elsif not Is_Container_Element_Type_Allowed (Value_Type, Type_Env) then
                               Raise_Diag
                                 (CM.Unsupported_Source_Construct
-                                   (Path    => "",
+                                   (Path    => Path,
                                     Span    => Map_Expr.Span,
                                     Message =>
                                       "`map of (K, V)` values are limited to the admitted value-type subset in PR11.10c"));
@@ -5188,8 +5190,8 @@ package body Safe_Frontend.Check_Resolve is
                                    Var_Types,
                                    Functions,
                                    Type_Env,
-                                   "");
-                              Reject_Uncontextualized_None (Key_Expr, "");
+                                   Path);
+                              Reject_Uncontextualized_None (Key_Expr, Path);
                               if not Compatible_Source_Expr_To_Target_Type
                                 (Key_Expr,
                                  Expr_Type (Key_Expr, Var_Types, Functions, Type_Env),
@@ -5202,7 +5204,7 @@ package body Safe_Frontend.Check_Resolve is
                               then
                                  Raise_Diag
                                    (CM.Source_Frontend_Error
-                                      (Path    => "",
+                                      (Path    => Path,
                                        Span    => Key_Expr.Span,
                                        Message => "`" & Builtin_Name & "` key type does not match the map key type"));
                               end if;
@@ -5223,7 +5225,7 @@ package body Safe_Frontend.Check_Resolve is
                        Functions,
                        Type_Env,
                        Const_Env,
-                       "");
+                       Path);
                   Result :=
                     Specialize_Interface_Call
                       (Result,
@@ -5231,36 +5233,36 @@ package body Safe_Frontend.Check_Resolve is
                        Functions,
                        Type_Env,
                        Const_Env,
-                       "");
+                       Path);
                else
                   Result := new CM.Expr_Node'(Resolved.all);
                   Result.Inner :=
-                    Normalize_Expr (Resolved.Inner, Var_Types, Functions, Type_Env, Const_Env);
+                    Normalize_Expr (Resolved.Inner, Var_Types, Functions, Type_Env, Const_Env, Path);
                end if;
             end;
          when CM.Expr_Select =>
             Result := new CM.Expr_Node'(Expr.all);
-            Result.Prefix := Normalize_Expr (Expr.Prefix, Var_Types, Functions, Type_Env, Const_Env);
+            Result.Prefix := Normalize_Expr (Expr.Prefix, Var_Types, Functions, Type_Env, Const_Env, Path);
          when CM.Expr_Binary =>
             Result := new CM.Expr_Node'(Expr.all);
-            Result.Left := Normalize_Expr (Expr.Left, Var_Types, Functions, Type_Env, Const_Env);
-            Result.Right := Normalize_Expr (Expr.Right, Var_Types, Functions, Type_Env, Const_Env);
+            Result.Left := Normalize_Expr (Expr.Left, Var_Types, Functions, Type_Env, Const_Env, Path);
+            Result.Right := Normalize_Expr (Expr.Right, Var_Types, Functions, Type_Env, Const_Env, Path);
          when CM.Expr_Unary =>
             Result := new CM.Expr_Node'(Expr.all);
-            Result.Inner := Normalize_Expr (Expr.Inner, Var_Types, Functions, Type_Env, Const_Env);
+            Result.Inner := Normalize_Expr (Expr.Inner, Var_Types, Functions, Type_Env, Const_Env, Path);
          when CM.Expr_Allocator =>
             Result := new CM.Expr_Node'(Expr.all);
             if Expr.Value /= null and then Expr.Value.Kind = CM.Expr_Annotated then
                Result.Value := new CM.Expr_Node'(Expr.Value.all);
                Result.Value.Inner :=
-                 Normalize_Expr (Expr.Value.Inner, Var_Types, Functions, Type_Env, Const_Env);
+                 Normalize_Expr (Expr.Value.Inner, Var_Types, Functions, Type_Env, Const_Env, Path);
             end if;
          when CM.Expr_Aggregate =>
             Result := new CM.Expr_Node'(Expr.all);
             Result.Fields.Clear;
             for Item of Expr.Fields loop
                Field := Item;
-               Field.Expr := Normalize_Expr (Item.Expr, Var_Types, Functions, Type_Env, Const_Env);
+               Field.Expr := Normalize_Expr (Item.Expr, Var_Types, Functions, Type_Env, Const_Env, Path);
                Result.Fields.Append (Field);
             end loop;
          when CM.Expr_Array_Literal =>
@@ -5268,19 +5270,19 @@ package body Safe_Frontend.Check_Resolve is
             Result.Elements.Clear;
             for Item of Expr.Elements loop
                Result.Elements.Append
-                 (Normalize_Expr (Item, Var_Types, Functions, Type_Env, Const_Env));
+                 (Normalize_Expr (Item, Var_Types, Functions, Type_Env, Const_Env, Path));
             end loop;
          when CM.Expr_Tuple =>
             Result := new CM.Expr_Node'(Expr.all);
             Result.Elements.Clear;
             for Item of Expr.Elements loop
                Result.Elements.Append
-                 (Normalize_Expr (Item, Var_Types, Functions, Type_Env, Const_Env));
+                 (Normalize_Expr (Item, Var_Types, Functions, Type_Env, Const_Env, Path));
             end loop;
          when CM.Expr_Annotated =>
             declare
                Inner_Result : constant CM.Expr_Access :=
-                 Normalize_Expr (Expr.Inner, Var_Types, Functions, Type_Env, Const_Env);
+                 Normalize_Expr (Expr.Inner, Var_Types, Functions, Type_Env, Const_Env, Path);
                Target_Type  : constant GM.Type_Descriptor :=
                  Resolve_Target_Type (Expr.Target, Type_Env);
             begin
@@ -5288,7 +5290,7 @@ package body Safe_Frontend.Check_Resolve is
                   if not Is_Optional_Type (Target_Type, Type_Env) then
                      Raise_Diag
                        (CM.Source_Frontend_Error
-                          (Path    => "",
+                          (Path    => Path,
                            Span    => Expr.Span,
                            Message => "`none` type ascription requires an `optional T` target"));
                   end if;
@@ -5301,7 +5303,7 @@ package body Safe_Frontend.Check_Resolve is
          when CM.Expr_Some =>
             declare
                Inner_Result  : constant CM.Expr_Access :=
-                 Normalize_Expr (Expr.Inner, Var_Types, Functions, Type_Env, Const_Env);
+                 Normalize_Expr (Expr.Inner, Var_Types, Functions, Type_Env, Const_Env, Path);
                Payload_Type  : constant GM.Type_Descriptor :=
                  Expr_Type (Inner_Result, Var_Types, Functions, Type_Env);
                Optional_Type : GM.Type_Descriptor;
@@ -5309,7 +5311,7 @@ package body Safe_Frontend.Check_Resolve is
                if not Is_Optional_Element_Type_Allowed (Payload_Type, Type_Env) then
                   Raise_Diag
                     (CM.Unsupported_Source_Construct
-                       (Path    => "",
+                       (Path    => Path,
                         Span    => Expr.Span,
                         Message =>
                           "`optional T` is limited to the admitted value-type subset in PR11.10a"));
@@ -5321,7 +5323,7 @@ package body Safe_Frontend.Check_Resolve is
             Result := new CM.Expr_Node'(Expr.all);
          when CM.Expr_Try =>
             Result := new CM.Expr_Node'(Expr.all);
-            Result.Inner := Normalize_Expr (Expr.Inner, Var_Types, Functions, Type_Env, Const_Env);
+            Result.Inner := Normalize_Expr (Expr.Inner, Var_Types, Functions, Type_Env, Const_Env, Path);
          when others =>
             Result := new CM.Expr_Node'(Expr.all);
       end case;
@@ -5885,7 +5887,7 @@ package body Safe_Frontend.Check_Resolve is
       Allow_Try : Boolean := False) return CM.Expr_Access
    is
       Result : constant CM.Expr_Access :=
-        Normalize_Expr (Expr, Var_Types, Functions, Type_Env, Const_Env);
+        Normalize_Expr (Expr, Var_Types, Functions, Type_Env, Const_Env, Path);
    begin
       Validate_Pr112_Expr_Boundaries (Result, Var_Types, Functions, Type_Env, Path);
       Validate_Print_Call_Context (Result, Var_Types, Functions, Type_Env, Path);
@@ -6671,7 +6673,7 @@ package body Safe_Frontend.Check_Resolve is
       Allow_Try : Boolean := False) return CM.Expr_Access
    is
       Result : constant CM.Expr_Access :=
-        Normalize_Expr (Expr, Var_Types, Functions, Type_Env, Const_Env);
+        Normalize_Expr (Expr, Var_Types, Functions, Type_Env, Const_Env, Path);
    begin
       Validate_Pr112_Expr_Boundaries (Result, Var_Types, Functions, Type_Env, Path);
       Validate_Print_Call_Context

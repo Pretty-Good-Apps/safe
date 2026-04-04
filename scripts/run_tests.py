@@ -256,6 +256,12 @@ INTERFACE_REJECT_CASES = [
         REPO_ROOT / "tests" / "interfaces" / "client_printable_ambiguous.safe",
         "does not satisfy interface",
     ),
+    (
+        "imported-generic-missing-type-args",
+        REPO_ROOT / "tests" / "interfaces" / "provider_generic.safe",
+        REPO_ROOT / "tests" / "interfaces" / "client_generic_missing_args.safe",
+        "requires explicit type arguments in PR11.11c",
+    ),
 ]
 
 CHECK_SUCCESS_CASES = [

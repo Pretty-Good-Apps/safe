@@ -404,8 +404,19 @@ generic_actual_part ::=
     'of' generic_actual_list
 
 generic_actual_list ::=
-    subtype_indication
-  | '(' subtype_indication { ',' subtype_indication } ')'
+    generic_actual_type
+  | '(' generic_actual_type { ',' generic_actual_type } ')'
+
+generic_actual_type ::=
+    subtype_mark
+  | binary_type_definition
+  | list_type_spec
+  | map_type_spec
+  | optional_type_spec
+  | growable_array_type_spec
+
+Generic actuals in PR11.11c use these explicit type constructors at
+name/call sites, but do not admit trailing subtype constraints there.
 
 type_conversion ::=
     type_target '(' expression ')'
