@@ -674,16 +674,13 @@ package body Safe_Frontend.Check_Resolve is
 
    function Shared_Field_Setter_Name (Field_Name : String) return String;
 
+   function Shared_Nested_Field_Setter_Name
+     (Path_Names : FT.UString_Vectors.Vector) return String;
+
    function Shared_Snapshot_Expr
      (Root_Name : String;
       Root_Type : GM.Type_Descriptor;
       Span      : FT.Source_Span) return CM.Expr_Access;
-
-   function Rebase_Shared_Target
-     (Expr                  : CM.Expr_Access;
-      Shared_Root_Name      : String;
-      Replacement_Root_Name : String;
-      Replacement_Type_Name : String) return CM.Expr_Access;
 
    function Is_Shared_Object_Name (Name : String) return Boolean;
 
@@ -691,6 +688,13 @@ package body Safe_Frontend.Check_Resolve is
      (Expr       : CM.Expr_Access;
       Type_Env   : Type_Maps.Map;
       Root_Name  : out FT.UString;
+      Field_Type : out GM.Type_Descriptor) return Boolean;
+
+   function Try_Shared_Nested_Field_Access
+     (Expr       : CM.Expr_Access;
+      Type_Env   : Type_Maps.Map;
+      Root_Name  : out FT.UString;
+      Path_Names : out FT.UString_Vectors.Vector;
       Field_Type : out GM.Type_Descriptor) return Boolean;
 
    procedure Reject_Bare_Shared_Object_Expr
@@ -1265,6 +1269,20 @@ package body Safe_Frontend.Check_Resolve is
         and then Name (Name'First .. Name'First + 10) = "__optional_";
    end Is_Optional_Type;
 
+   function Is_Plain_Record_Type
+     (Info     : GM.Type_Descriptor;
+      Type_Env : Type_Maps.Map) return Boolean
+   is
+      Base : constant GM.Type_Descriptor := Base_Type (Info, Type_Env);
+   begin
+      return FT.Lowercase (UString_Value (Base.Kind)) = "record"
+        and then not Is_Optional_Type (Base, Type_Env)
+        and then not Base.Has_Discriminant
+        and then Base.Discriminants.Is_Empty
+        and then Base.Variant_Fields.Is_Empty
+        and then not Base.Is_Result_Builtin;
+   end Is_Plain_Record_Type;
+
    function Is_Interface_Type
      (Info     : GM.Type_Descriptor;
       Type_Env : Type_Maps.Map) return Boolean
@@ -1418,6 +1436,21 @@ package body Safe_Frontend.Check_Resolve is
         "Set_" & Sanitize_Type_Name_Component (Canonical_Name (Field_Name));
    end Shared_Field_Setter_Name;
 
+   function Shared_Nested_Field_Setter_Name
+     (Path_Names : FT.UString_Vectors.Vector) return String
+   is
+      Result : FT.UString := FT.To_UString ("Set_Path");
+   begin
+      for Name of Path_Names loop
+         Result :=
+           FT.To_UString
+             (UString_Value (Result)
+              & "_"
+              & Sanitize_Type_Name_Component (Canonical_Name (UString_Value (Name))));
+      end loop;
+      return UString_Value (Result);
+   end Shared_Nested_Field_Setter_Name;
+
    function Shared_Snapshot_Expr
      (Root_Name : String;
       Root_Type : GM.Type_Descriptor;
@@ -1440,53 +1473,6 @@ package body Safe_Frontend.Check_Resolve is
            Type_Name => UString_Value (Root_Type.Name));
       return Result;
    end Shared_Snapshot_Expr;
-
-   function Rebase_Shared_Target
-     (Expr                  : CM.Expr_Access;
-      Shared_Root_Name      : String;
-      Replacement_Root_Name : String;
-      Replacement_Type_Name : String) return CM.Expr_Access
-   is
-      Result : CM.Expr_Access;
-   begin
-      if Expr = null then
-         return null;
-      end if;
-
-      case Expr.Kind is
-         when CM.Expr_Ident =>
-            if Canonical_Name (UString_Value (Expr.Name)) =
-              Canonical_Name (Shared_Root_Name)
-            then
-               return
-                 Ident_Expr
-                   (Replacement_Root_Name,
-                    Expr.Span,
-                    Replacement_Type_Name);
-            end if;
-            return new CM.Expr_Node'(Expr.all);
-         when CM.Expr_Select | CM.Expr_Resolved_Index =>
-            Result := new CM.Expr_Node'(Expr.all);
-            Result.Prefix :=
-              Rebase_Shared_Target
-                (Expr.Prefix,
-                 Shared_Root_Name,
-                 Replacement_Root_Name,
-                 Replacement_Type_Name);
-            return Result;
-         when CM.Expr_Conversion =>
-            Result := new CM.Expr_Node'(Expr.all);
-            Result.Inner :=
-              Rebase_Shared_Target
-                (Expr.Inner,
-                 Shared_Root_Name,
-                 Replacement_Root_Name,
-                 Replacement_Type_Name);
-            return Result;
-         when others =>
-            return new CM.Expr_Node'(Expr.all);
-      end case;
-   end Rebase_Shared_Target;
 
    function Is_Shared_Object_Name (Name : String) return Boolean is
       Key : constant String := Canonical_Name (Name);
@@ -1535,6 +1521,76 @@ package body Safe_Frontend.Check_Resolve is
 
       return False;
    end Try_Shared_Top_Level_Field_Access;
+
+   function Try_Shared_Nested_Field_Access
+     (Expr       : CM.Expr_Access;
+      Type_Env   : Type_Maps.Map;
+      Root_Name  : out FT.UString;
+      Path_Names : out FT.UString_Vectors.Vector;
+      Field_Type : out GM.Type_Descriptor) return Boolean
+   is
+      Current     : CM.Expr_Access := Expr;
+      Shared_Type : GM.Type_Descriptor;
+      Leaf_First  : FT.UString_Vectors.Vector;
+   begin
+      Root_Name := FT.To_UString ("");
+      Path_Names.Clear;
+      Field_Type := (others => <>);
+
+      while Current /= null and then Current.Kind = CM.Expr_Select loop
+         Leaf_First.Append (Current.Selector);
+         Current := Current.Prefix;
+      end loop;
+
+      if Current = null
+        or else Current.Kind /= CM.Expr_Ident
+        or else Natural (Leaf_First.Length) < 2
+      then
+         return False;
+      end if;
+
+      declare
+         Root_Key : constant String := Canonical_Name (UString_Value (Current.Name));
+      begin
+         if Root_Key = "" or else not Current_Shared_Object_Types.Contains (Root_Key) then
+            return False;
+         end if;
+
+         Shared_Type := Current_Shared_Object_Types.Element (Root_Key);
+         for Index in reverse Leaf_First.First_Index .. Leaf_First.Last_Index loop
+            declare
+               Base    : constant GM.Type_Descriptor := Base_Type (Shared_Type, Type_Env);
+               Matched : Boolean := False;
+            begin
+               if not Is_Plain_Record_Type (Shared_Type, Type_Env) then
+                  Path_Names.Clear;
+                  return False;
+               end if;
+
+               for Field of Base.Fields loop
+                  if Canonical_Name (UString_Value (Field.Name))
+                    = Canonical_Name (UString_Value (Leaf_First (Index)))
+                  then
+                     Path_Names.Append (Field.Name);
+                     Shared_Type :=
+                       Resolve_Type (UString_Value (Field.Type_Name), Type_Env, "", FT.Null_Span);
+                     Matched := True;
+                     exit;
+                  end if;
+               end loop;
+
+               if not Matched then
+                  Path_Names.Clear;
+                  return False;
+               end if;
+            end;
+         end loop;
+
+         Root_Name := Current.Name;
+         Field_Type := Shared_Type;
+         return True;
+      end;
+   end Try_Shared_Nested_Field_Access;
 
    procedure Reject_Bare_Shared_Object_Expr
      (Expr      : CM.Expr_Access;
@@ -9687,15 +9743,13 @@ package body Safe_Frontend.Check_Resolve is
          when CM.Stmt_Assign =>
             declare
                Shared_Root       : FT.UString := FT.To_UString ("");
+               Shared_Path       : FT.UString_Vectors.Vector;
                Shared_Field_Type : GM.Type_Descriptor;
                Root              : constant String := Root_Name (Stmt.Target);
                Desugared         : Desugared_Expr_Result;
                Setter_Call       : CM.Expr_Access;
                Target_Info       : GM.Type_Descriptor;
                Shared_Root_Type  : GM.Type_Descriptor;
-               Snapshot_Name     : FT.UString := FT.To_UString ("");
-               Snapshot_Stmts    : CM.Statement_Access_Vectors.Vector;
-               Snapshot_Target   : CM.Expr_Access;
             begin
                if Stmt.Target /= null
                  and then Stmt.Target.Kind = CM.Expr_Ident
@@ -9783,77 +9837,6 @@ package body Safe_Frontend.Check_Resolve is
                            Span    => Result.Call.Args (Result.Call.Args.First_Index).Span,
                            Message => "assignment value type does not match target type"));
                   end if;
-               elsif Root'Length > 0
-                 and then Is_Shared_Object_Name (Root)
-                 and then not Try_Shared_Top_Level_Field_Access
-                   (Stmt.Target,
-                    Type_Env,
-                    Shared_Root,
-                    Shared_Field_Type)
-               then
-                  Shared_Root_Type :=
-                    Current_Shared_Object_Types.Element
-                      (Canonical_Name (Root));
-                  Desugared :=
-                    Desugar_Executable_Expr
-                      (Normalize_Expr_Checked
-                         (Stmt.Value,
-                          Var_Types,
-                          Functions,
-                          Type_Env,
-                          Local_Static_Constants,
-                          Path,
-                          Allow_Try => True),
-                       Var_Types,
-                       Functions,
-                       Type_Env,
-                       Has_Enclosing_Return,
-                       Enclosing_Return_Type,
-                       Path);
-                  Append_Statements (Expanded, Normalize_Preludes (Desugared.Preludes));
-                  Snapshot_Name :=
-                    FT.To_UString (Next_Synthetic_Name ("Safe_Shared_Snapshot"));
-                  Snapshot_Stmts.Append
-                    (Synthetic_Object_Decl_Stmt
-                       (UString_Value (Snapshot_Name),
-                        Shared_Root_Type,
-                        Shared_Snapshot_Expr (Root, Shared_Root_Type, Stmt.Target.Span),
-                        Stmt.Target.Span,
-                        Is_Constant => False));
-                  Snapshot_Target :=
-                    Rebase_Shared_Target
-                      (Stmt.Target,
-                       Root,
-                       UString_Value (Snapshot_Name),
-                       UString_Value (Shared_Root_Type.Name));
-                  Snapshot_Stmts.Append
-                    (Synthetic_Assign_Stmt
-                       (Snapshot_Target,
-                        Desugared.Expr,
-                        Stmt.Span));
-                  Append_Statements (Expanded, Normalize_Preludes (Snapshot_Stmts));
-                  Result.Kind := CM.Stmt_Call;
-                  Result.Target := null;
-                  Result.Value := null;
-                  Setter_Call := new CM.Expr_Node;
-                  Setter_Call.Kind := CM.Expr_Call;
-                  Setter_Call.Span := Stmt.Span;
-                  Setter_Call.Callee :=
-                    Selector_Expr
-                      (Prefix    =>
-                         Ident_Expr
-                           (Shared_Wrapper_Object_Name (Root),
-                            Stmt.Target.Span,
-                            ""),
-                       Selector  => Shared_Set_All_Name,
-                       Span      => Stmt.Target.Span,
-                       Type_Name => "");
-                  Result.Call := Setter_Call;
-                  Result.Call.Args.Append
-                    (Ident_Expr
-                       (UString_Value (Snapshot_Name),
-                        Stmt.Target.Span,
-                        UString_Value (Shared_Root_Type.Name)));
                elsif Try_Shared_Top_Level_Field_Access
                  (Stmt.Target,
                   Type_Env,
@@ -9939,6 +9922,101 @@ package body Safe_Frontend.Check_Resolve is
                            Span    => Result.Call.Args (Result.Call.Args.First_Index).Span,
                            Message => "assignment value type does not match target type"));
                   end if;
+               elsif Try_Shared_Nested_Field_Access
+                 (Stmt.Target,
+                  Type_Env,
+                  Shared_Root,
+                  Shared_Path,
+                  Shared_Field_Type)
+               then
+                  Desugared :=
+                    Desugar_Executable_Expr
+                      (Normalize_Expr_Checked
+                         (Stmt.Value,
+                          Var_Types,
+                          Functions,
+                          Type_Env,
+                          Local_Static_Constants,
+                          Path,
+                          Allow_Try => True),
+                       Var_Types,
+                       Functions,
+                       Type_Env,
+                       Has_Enclosing_Return,
+                       Enclosing_Return_Type,
+                       Path);
+                  Append_Statements (Expanded, Normalize_Preludes (Desugared.Preludes));
+                  Result.Kind := CM.Stmt_Call;
+                  Result.Target := null;
+                  Result.Value := null;
+                  Setter_Call := new CM.Expr_Node;
+                  Setter_Call.Kind := CM.Expr_Call;
+                  Setter_Call.Span := Stmt.Span;
+                  Setter_Call.Callee :=
+                    Selector_Expr
+                      (Prefix    =>
+                         Ident_Expr
+                           (Shared_Wrapper_Object_Name (UString_Value (Shared_Root)),
+                            Stmt.Target.Span,
+                            ""),
+                       Selector  => Shared_Nested_Field_Setter_Name (Shared_Path),
+                       Span      => Stmt.Target.Span,
+                       Type_Name => "");
+                  Result.Call := Setter_Call;
+                  Result.Call.Args.Append
+                    (Contextualize_Expr_To_Target_Type
+                       (Desugared.Expr,
+                        Shared_Field_Type,
+                        Var_Types,
+                        Functions,
+                        Type_Env,
+                        Path));
+                  if not Result.Call.Args.Is_Empty
+                    and then Result.Call.Args (Result.Call.Args.First_Index) /= null
+                    and then UString_Value
+                      (Result.Call.Args (Result.Call.Args.First_Index).Type_Name)'Length = 0
+                    and then UString_Value (Shared_Field_Type.Name)'Length > 0
+                  then
+                     Result.Call.Args (Result.Call.Args.First_Index).Type_Name :=
+                       Shared_Field_Type.Name;
+                  end if;
+                  Reject_Uncontextualized_None
+                    (Result.Call.Args (Result.Call.Args.First_Index), Path);
+                  Reject_Static_Bounded_String_Overflow
+                    (Result.Call.Args (Result.Call.Args.First_Index),
+                     Shared_Field_Type,
+                     Type_Env,
+                     Path,
+                     Result.Call.Args (Result.Call.Args.First_Index).Span);
+                  if not Compatible_Source_Expr_To_Target_Type
+                    (Result.Call.Args (Result.Call.Args.First_Index),
+                     Expr_Type
+                       (Result.Call.Args (Result.Call.Args.First_Index),
+                        Var_Types,
+                        Functions,
+                        Type_Env),
+                     Shared_Field_Type,
+                     Var_Types,
+                     Functions,
+                     Type_Env,
+                     Local_Static_Constants,
+                     Exact_Length_Facts)
+                  then
+                     Raise_Diag
+                       (CM.Source_Frontend_Error
+                          (Path    => Path,
+                           Span    => Result.Call.Args (Result.Call.Args.First_Index).Span,
+                           Message => "assignment value type does not match target type"));
+                  end if;
+               elsif Root'Length > 0
+                 and then Is_Shared_Object_Name (Root)
+               then
+                  Raise_Diag
+                    (CM.Unsupported_Source_Construct
+                       (Path    => Path,
+                        Span    => Stmt.Target.Span,
+                        Message =>
+                          "nested writes on shared variables are limited to selector paths in PR11.12b"));
                else
                   Result.Target :=
                     Normalize_Expr_Checked

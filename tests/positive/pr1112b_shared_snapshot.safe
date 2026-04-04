@@ -21,7 +21,7 @@ package pr1112b_shared_snapshot
    local_copy = cfg;
    label_now = cfg.label;
 
-   if local_copy.count == 1 and then local_copy.status == idle and then local_copy.nested.depth == 2 and then label_now == "hello"
+   if local_copy.count == 1 and then local_copy.status == idle and then local_copy.label == "hello" and then local_copy.nested.depth == 2 and then label_now == "hello"
       print (1);
    else
       print (0);

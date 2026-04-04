@@ -998,6 +998,11 @@ EMITTED_SHAPE_CASES = [
         REPO_ROOT / "tests" / "positive" / "pr1112a_shared_field_access.safe",
         ["cfg : settings;", "cfg : settings :="],
     ),
+    (
+        "shared-root-nested-write-no-whole-record-snapshot-temp",
+        REPO_ROOT / "tests" / "build" / "pr1112b_shared_update_build.safe",
+        ["Safe_Shared_Snapshot_", "Safe_Shared_cfg.Set_All (Safe_Shared_Snapshot_"],
+    ),
 ]
 
 EMITTED_REQUIRED_SHAPE_CASES = [
@@ -1108,9 +1113,8 @@ EMITTED_REQUIRED_SHAPE_CASES = [
         REPO_ROOT / "tests" / "build" / "pr1112b_shared_update_build.safe",
         [
             "Safe_Shared_cfg.Set_All (next);",
-            "Safe_Shared_Snapshot_",
-            "Safe_Shared_cfg.Get_All",
-            "Safe_Shared_cfg.Set_All (Safe_Shared_Snapshot_",
+            "procedure Set_Path_nested_depth (Value : in counter);",
+            "Safe_Shared_cfg.Set_Path_nested_depth (7);",
         ],
     ),
 ]
