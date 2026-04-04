@@ -1614,7 +1614,7 @@ package body Safe_Frontend.Check_Resolve is
                      Found := True;
                      exit;
                   end if;
-               end loop;
+            end loop;
                if Found then
                   Reject_Static_Bounded_String_Overflow
                     (Item.Expr,
