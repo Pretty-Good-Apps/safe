@@ -845,7 +845,7 @@ package body Safe_Frontend.Check_Parse is
             begin
                Require (State, ":");
                declare
-                  Interface_Name : constant FL.Token := Expect_Identifier (State);
+                  Interface_Name : constant CM.Expr_Access := Parse_Package_Name (State);
                begin
                   for Index in Result.First_Index .. Result.Last_Index loop
                      declare
@@ -862,7 +862,7 @@ package body Safe_Frontend.Check_Parse is
                                     Message => "duplicate generic constraint for `" & FT.To_String (Formal.Name) & "`"));
                            end if;
                            Formal.Has_Constraint := True;
-                           Formal.Constraint_Name := Interface_Name.Lexeme;
+                           Formal.Constraint_Name := FT.To_UString (Name_To_String (Interface_Name));
                            Formal.Span := CM.Join (Constraint_Name.Span, Interface_Name.Span);
                            Result.Replace_Element (Index, Formal);
                            Matched := True;

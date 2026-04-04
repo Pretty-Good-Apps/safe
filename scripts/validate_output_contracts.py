@@ -572,7 +572,7 @@ def validate_safei_subprograms(items: Any, path: str) -> list[dict[str, Any]]:
         if "generic_formals" in entry:
             validate_generic_formal_list(entry.get("generic_formals"), f"{path}[{index}].generic_formals")
             require_string(entry.get("template_source"), f"{path}[{index}].template_source")
-        elif entry.get("template_source") is not None:
+        elif "template_source" in entry:
             fail(f"{path}[{index}].template_source is only valid for generic subprograms")
         validate_span(entry.get("span"), f"{path}[{index}].span")
         result.append(entry)

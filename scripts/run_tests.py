@@ -235,6 +235,12 @@ INTERFACE_CASES = [
         REPO_ROOT / "tests" / "interfaces" / "client_generic.safe",
         0,
     ),
+    (
+        "imported-generic-constraint",
+        REPO_ROOT / "tests" / "interfaces" / "provider_printable.safe",
+        REPO_ROOT / "tests" / "interfaces" / "client_generic_constraint.safe",
+        0,
+    ),
 ]
 
 INTERFACE_REJECT_CASES = [
@@ -868,6 +874,11 @@ OUTPUT_CONTRACT_REJECT_CASES = [
         "safei-bad-return-flag",
         REPO_ROOT / "tests" / "interfaces" / "provider_binary.safe",
         "subprograms[0].return_is_access_def must be a boolean",
+    ),
+    (
+        "safei-template-source-key-on-non-generic",
+        REPO_ROOT / "tests" / "interfaces" / "provider_binary.safe",
+        "subprograms[0].template_source is only valid for generic subprograms",
     ),
 ]
 
@@ -2327,7 +2338,12 @@ def run_output_contract_reject_case(
     subprograms = payload.get("subprograms")
     if not isinstance(subprograms, list) or not subprograms:
         return False, "emitted safei has no subprograms to mutate"
-    subprograms[0]["return_is_access_def"] = "bad"
+    if label == "safei-bad-return-flag":
+        subprograms[0]["return_is_access_def"] = "bad"
+    elif label == "safei-template-source-key-on-non-generic":
+        subprograms[0]["template_source"] = None
+    else:
+        return False, f"unknown output contract reject case {label}"
     safei_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
     validate = run_command(

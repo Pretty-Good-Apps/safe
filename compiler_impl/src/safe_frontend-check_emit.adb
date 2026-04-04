@@ -149,17 +149,15 @@ package body Safe_Frontend.Check_Emit is
    end Join_Object_Fields;
 
    function Source_Slice
-     (Path : String;
+     (Content : String;
       Span : FT.Source_Span) return String
    is
-      Source      : constant FS.Source_File := FS.Load (Path);
-      Content     : constant String := FT.To_String (Source.Content);
       Line        : Positive := 1;
       Column      : Positive := 1;
       Start_Index : Natural := 0;
       End_Index   : Natural := 0;
    begin
-      if Path'Length = 0 or else Span = FT.Null_Span or else Content'Length = 0 then
+      if Span = FT.Null_Span or else Content'Length = 0 then
          return "";
       end if;
 
@@ -2831,6 +2829,11 @@ package body Safe_Frontend.Check_Emit is
       Items            : String_Vectors.Vector;
       Subprogram_Index : Natural := 0;
       Params           : String_Vectors.Vector;
+      Source_Path      : constant String := FT.To_String (Parsed.Path);
+      Source_Content   : constant String :=
+        (if Source_Path'Length = 0
+         then ""
+         else FT.To_String (FS.Load (Source_Path).Content));
       function Generic_Formal_Json
         (Formal : CM.Generic_Formal) return String is
       begin
@@ -2875,7 +2878,7 @@ package body Safe_Frontend.Check_Emit is
                         declare
                            Formals : String_Vectors.Vector;
                            Source  : constant String :=
-                             Source_Slice (FT.To_String (Parsed.Path), Item.Subp_Data.Span);
+                             Source_Slice (Source_Content, Item.Subp_Data.Span);
                         begin
                            if not Item.Subp_Data.Spec.Generic_Formals.Is_Empty then
                               for Formal of Item.Subp_Data.Spec.Generic_Formals loop
