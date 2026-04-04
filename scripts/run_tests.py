@@ -37,6 +37,7 @@ VALIDATE_OUTPUT_CONTRACTS = REPO_ROOT / "scripts" / "validate_output_contracts.p
 VALIDATE_AST_OUTPUT = REPO_ROOT / "scripts" / "validate_ast_output.py"
 VSCODE_README = REPO_ROOT / "editors" / "vscode" / "README.md"
 VSCODE_PACKAGE_JSON = REPO_ROOT / "editors" / "vscode" / "package.json"
+LOCAL_WITH_RE = re.compile(r"^\s*with\s+([a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)*)\s*;\s*$")
 
 EMITTED_GNATPROVE_WARNING_RE = re.compile(
     r"pragma\s+Warnings\s*\(\s*GNATprove\b.*?\);",
@@ -228,6 +229,18 @@ INTERFACE_CASES = [
         REPO_ROOT / "tests" / "interfaces" / "client_printable.safe",
         0,
     ),
+    (
+        "imported-generic",
+        REPO_ROOT / "tests" / "interfaces" / "provider_generic.safe",
+        REPO_ROOT / "tests" / "interfaces" / "client_generic.safe",
+        0,
+    ),
+    (
+        "imported-generic-constraint",
+        REPO_ROOT / "tests" / "interfaces" / "provider_printable.safe",
+        REPO_ROOT / "tests" / "interfaces" / "client_generic_constraint.safe",
+        0,
+    ),
 ]
 
 INTERFACE_REJECT_CASES = [
@@ -248,6 +261,12 @@ INTERFACE_REJECT_CASES = [
         REPO_ROOT / "tests" / "interfaces" / "provider_printable.safe",
         REPO_ROOT / "tests" / "interfaces" / "client_printable_ambiguous.safe",
         "does not satisfy interface",
+    ),
+    (
+        "imported-generic-missing-type-args",
+        REPO_ROOT / "tests" / "interfaces" / "provider_generic.safe",
+        REPO_ROOT / "tests" / "interfaces" / "client_generic_missing_args.safe",
+        "requires explicit type arguments in PR11.11c",
     ),
 ]
 
@@ -294,6 +313,7 @@ AST_CONTRACT_CASES = [
     REPO_ROOT / "tests" / "positive" / "pr1110c_map_basics.safe",
     REPO_ROOT / "tests" / "positive" / "pr1111a_method_syntax.safe",
     REPO_ROOT / "tests" / "positive" / "pr1111b_interface_local.safe",
+    REPO_ROOT / "tests" / "positive" / "pr1111c_generic_basics.safe",
 ]
 
 DIAGNOSTIC_GOLDEN_CASES = [
@@ -539,6 +559,16 @@ BUILD_SUCCESS_CASES = [
     (
         REPO_ROOT / "tests" / "build" / "pr1111b_interface_builtin_build.safe",
         "1\n20\n",
+        False,
+    ),
+    (
+        REPO_ROOT / "tests" / "build" / "pr1111c_generic_build.safe",
+        "3\n9\n",
+        False,
+    ),
+    (
+        REPO_ROOT / "tests" / "build" / "pr1111c_imported_build.safe",
+        "1\n",
         False,
     ),
     (
@@ -834,6 +864,7 @@ OUTPUT_CONTRACT_CASES = [
     REPO_ROOT / "tests" / "interfaces" / "provider_mutual_family.safe",
     REPO_ROOT / "tests" / "interfaces" / "provider_enum.safe",
     REPO_ROOT / "tests" / "interfaces" / "provider_printable.safe",
+    REPO_ROOT / "tests" / "interfaces" / "provider_generic.safe",
     REPO_ROOT / "tests" / "interfaces" / "pr118k_try_while_contract.safe",
     REPO_ROOT / "tests" / "interfaces" / "provider_list.safe",
 ]
@@ -843,6 +874,11 @@ OUTPUT_CONTRACT_REJECT_CASES = [
         "safei-bad-return-flag",
         REPO_ROOT / "tests" / "interfaces" / "provider_binary.safe",
         "subprograms[0].return_is_access_def must be a boolean",
+    ),
+    (
+        "safei-template-source-key-on-non-generic",
+        REPO_ROOT / "tests" / "interfaces" / "provider_binary.safe",
+        "subprograms[0].template_source is only valid for generic subprograms",
     ),
 ]
 
@@ -2302,7 +2338,12 @@ def run_output_contract_reject_case(
     subprograms = payload.get("subprograms")
     if not isinstance(subprograms, list) or not subprograms:
         return False, "emitted safei has no subprograms to mutate"
-    subprograms[0]["return_is_access_def"] = "bad"
+    if label == "safei-bad-return-flag":
+        subprograms[0]["return_is_access_def"] = "bad"
+    elif label == "safei-template-source-key-on-non-generic":
+        subprograms[0]["template_source"] = None
+    else:
+        return False, f"unknown output contract reject case {label}"
     safei_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
     validate = run_command(
@@ -2361,6 +2402,31 @@ def emit_case_ada_text(
     source: Path,
     temp_root: Path,
 ) -> tuple[Path, str]:
+    def local_dependency_sources(root: Path) -> list[Path]:
+        found: list[Path] = []
+        seen: set[Path] = set()
+        pending = [root]
+
+        while pending:
+            current = pending.pop()
+            try:
+                text = current.read_text(encoding="utf-8")
+            except OSError:
+                continue
+
+            for line in text.splitlines():
+                match = LOCAL_WITH_RE.match(line)
+                if match is None:
+                    continue
+                candidate = current.parent / f"{match.group(1).split('.')[-1]}.safe"
+                if candidate == root or not candidate.exists() or candidate in seen:
+                    continue
+                seen.add(candidate)
+                found.append(candidate)
+                pending.append(candidate)
+
+        return found
+
     case_root = temp_root / f"{source.stem}-{label}"
     out_dir = case_root / "out"
     iface_dir = case_root / "iface"
@@ -2369,20 +2435,43 @@ def emit_case_ada_text(
     iface_dir.mkdir(parents=True, exist_ok=True)
     ada_dir.mkdir(parents=True, exist_ok=True)
 
-    emit = run_command(
-        [
-            str(safec),
-            "emit",
-            repo_rel(source),
-            "--out-dir",
-            str(out_dir),
-            "--interface-dir",
-            str(iface_dir),
-            "--ada-out-dir",
-            str(ada_dir),
-        ],
-        cwd=REPO_ROOT,
-    )
+    dependencies = local_dependency_sources(source)
+    for dependency in dependencies:
+        dep_emit = run_command(
+            [
+                str(safec),
+                "emit",
+                repo_rel(dependency),
+                "--out-dir",
+                str(out_dir),
+                "--interface-dir",
+                str(iface_dir),
+                "--interface-search-dir",
+                str(iface_dir),
+            ],
+            cwd=REPO_ROOT,
+        )
+        if dep_emit.returncode != 0:
+            raise RuntimeError(
+                f"dependency emit failed for {repo_rel(dependency)}: "
+                f"{first_message(dep_emit)}"
+            )
+
+    emit_args = [
+        str(safec),
+        "emit",
+        repo_rel(source),
+        "--out-dir",
+        str(out_dir),
+        "--interface-dir",
+        str(iface_dir),
+        "--ada-out-dir",
+        str(ada_dir),
+    ]
+    if dependencies:
+        emit_args.extend(["--interface-search-dir", str(iface_dir)])
+
+    emit = run_command(emit_args, cwd=REPO_ROOT)
     if emit.returncode != 0:
         raise RuntimeError(f"emit failed: {first_message(emit)}")
 
