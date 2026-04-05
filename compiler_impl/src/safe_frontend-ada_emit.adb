@@ -835,8 +835,13 @@ package body Safe_Frontend.Ada_Emit is
    function Sanitize_Type_Name_Component (Value : String) return String;
    function Shared_Wrapper_Object_Name (Root_Name : String) return String;
    function Shared_Wrapper_Type_Name (Root_Name : String) return String;
+   function Shared_Get_All_Name return String;
+   function Shared_Set_All_Name return String;
    function Shared_Field_Getter_Name (Field_Name : String) return String;
    function Shared_Field_Setter_Name (Field_Name : String) return String;
+
+   function Shared_Nested_Field_Setter_Name
+     (Path_Names : FT.UString_Vectors.Vector) return String;
    function Shared_Wrapper_Formal_Type
      (Unit          : CM.Resolved_Unit;
       Document      : GM.Mir_Document;
@@ -992,6 +997,16 @@ package body Safe_Frontend.Ada_Emit is
       return Shared_Wrapper_Object_Name (Root_Name) & "_Wrapper";
    end Shared_Wrapper_Type_Name;
 
+   function Shared_Get_All_Name return String is
+   begin
+      return "Get_All";
+   end Shared_Get_All_Name;
+
+   function Shared_Set_All_Name return String is
+   begin
+      return "Set_All";
+   end Shared_Set_All_Name;
+
    function Shared_Field_Getter_Name (Field_Name : String) return String is
    begin
       return
@@ -1004,6 +1019,37 @@ package body Safe_Frontend.Ada_Emit is
         "Set_" & Sanitize_Type_Name_Component (Canonical_Name (Field_Name));
    end Shared_Field_Setter_Name;
 
+   function Shared_Nested_Field_Setter_Name
+     (Path_Names : FT.UString_Vectors.Vector) return String
+   is
+      Result : FT.UString := FT.To_UString ("Set_Path");
+   begin
+      for Name of Path_Names loop
+         Result :=
+           FT.To_UString
+             (FT.To_String (Result)
+              & "_"
+              & Sanitize_Type_Name_Component (Canonical_Name (FT.To_String (Name))));
+      end loop;
+      return FT.To_String (Result);
+   end Shared_Nested_Field_Setter_Name;
+
+   function Is_Plain_Shared_Nested_Record
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Info     : GM.Type_Descriptor) return Boolean
+   is
+      Base      : constant GM.Type_Descriptor := Base_Type (Unit, Document, Info);
+      Name_Text : constant String := FT.Lowercase (FT.To_String (Base.Name));
+   begin
+      return FT.Lowercase (FT.To_String (Base.Kind)) = "record"
+        and then not Base.Has_Discriminant
+        and then Base.Discriminants.Is_Empty
+        and then Base.Variant_Fields.Is_Empty
+        and then not Base.Is_Result_Builtin
+        and then not (Name_Text'Length > 11 and then Name_Text (Name_Text'First .. Name_Text'First + 10) = "__optional_");
+   end Is_Plain_Shared_Nested_Record;
+
    function Shared_Wrapper_Formal_Type
      (Unit          : CM.Resolved_Unit;
       Document      : GM.Mir_Document;
@@ -1012,6 +1058,59 @@ package body Safe_Frontend.Ada_Emit is
       Position      : Positive;
       Found         : out Boolean) return GM.Type_Descriptor
    is
+      function Nested_Setter_Type
+        (Info       : GM.Type_Descriptor;
+         Path_Names : FT.UString_Vectors.Vector) return GM.Type_Descriptor
+      is
+         Base : constant GM.Type_Descriptor := Base_Type (Unit, Document, Info);
+      begin
+         for Field of Base.Fields loop
+            declare
+               Next_Path       : FT.UString_Vectors.Vector := Path_Names;
+               Field_Type_Name : constant String := FT.To_String (Field.Type_Name);
+               Field_Info      : constant GM.Type_Descriptor :=
+                 (if Has_Type (Unit, Document, Field_Type_Name)
+                  then Lookup_Type (Unit, Document, Field_Type_Name)
+                  else (others => <>));
+            begin
+               Next_Path.Append (Field.Name);
+               if Natural (Next_Path.Length) >= 2
+                 and then Shared_Nested_Field_Setter_Name (Next_Path) = Selector_Name
+               then
+                  Found := True;
+                  if Has_Type (Unit, Document, Field_Type_Name) then
+                     return Field_Info;
+                  else
+                     declare
+                        Bounded_Found : Boolean := False;
+                        Bounded_Info  : constant GM.Type_Descriptor :=
+                          Synthetic_Bounded_String_Type (Field_Type_Name, Bounded_Found);
+                     begin
+                        if Bounded_Found then
+                           return Bounded_Info;
+                        end if;
+                     end;
+                  end if;
+               end if;
+
+               if Has_Type (Unit, Document, Field_Type_Name)
+                 and then Is_Plain_Shared_Nested_Record (Unit, Document, Field_Info)
+               then
+                  declare
+                     Nested_Info : constant GM.Type_Descriptor :=
+                       Nested_Setter_Type (Field_Info, Next_Path);
+                  begin
+                     if Found then
+                        return Nested_Info;
+                     end if;
+                  end;
+               end if;
+            end;
+         end loop;
+
+         Found := False;
+         return (others => <>);
+      end Nested_Setter_Type;
    begin
       for Decl of Unit.Objects loop
          if Decl.Is_Shared and then not Decl.Names.Is_Empty then
@@ -1020,7 +1119,9 @@ package body Safe_Frontend.Ada_Emit is
                  FT.To_String (Decl.Names (Decl.Names.First_Index));
             begin
                if Shared_Wrapper_Object_Name (Root_Name) = Wrapper_Name then
-                  if Selector_Name = "Initialize" and then Position = 1 then
+                  if Selector_Name in "Initialize" | "Set_All"
+                    and then Position = 1
+                  then
                      Found := True;
                      return Decl.Type_Info;
                   elsif Position = 1 then
@@ -1047,6 +1148,16 @@ package body Safe_Frontend.Ada_Emit is
                            end;
                         end if;
                      end loop;
+
+                     declare
+                        Path_Names  : FT.UString_Vectors.Vector;
+                        Nested_Info : constant GM.Type_Descriptor :=
+                          Nested_Setter_Type (Decl.Type_Info, Path_Names);
+                     begin
+                        if Found then
+                           return Nested_Info;
+                        end if;
+                     end;
                   end if;
                end if;
             end;
@@ -1070,6 +1181,41 @@ package body Safe_Frontend.Ada_Emit is
       Record_Type   : constant String := Render_Type_Name (Decl.Type_Info);
       Record_Default : constant String := Default_Value_Expr (Unit, Document, Decl.Type_Info);
       Base_Info     : constant GM.Type_Descriptor := Base_Type (Unit, Document, Decl.Type_Info);
+      procedure Append_Nested_Setter_Specs
+        (Info       : GM.Type_Descriptor;
+         Path_Names : FT.UString_Vectors.Vector)
+      is
+         Base : constant GM.Type_Descriptor := Base_Type (Unit, Document, Info);
+      begin
+         for Field of Base.Fields loop
+            declare
+               Next_Path       : FT.UString_Vectors.Vector := Path_Names;
+               Field_Type_Name : constant String := FT.To_String (Field.Type_Name);
+               Field_Info      : constant GM.Type_Descriptor :=
+                 (if Has_Type (Unit, Document, Field_Type_Name)
+                  then Lookup_Type (Unit, Document, Field_Type_Name)
+                  else (others => <>));
+            begin
+               Next_Path.Append (Field.Name);
+               if Natural (Next_Path.Length) >= 2 then
+                  Append_Line
+                    (Buffer,
+                     "procedure "
+                     & Shared_Nested_Field_Setter_Name (Next_Path)
+                     & " (Value : in "
+                     & Render_Type_Name_From_Text (Unit, Document, Field_Type_Name, State)
+                     & ");",
+                     2);
+               end if;
+
+               if Has_Type (Unit, Document, Field_Type_Name)
+                 and then Is_Plain_Shared_Nested_Record (Unit, Document, Field_Info)
+               then
+                  Append_Nested_Setter_Specs (Field_Info, Next_Path);
+               end if;
+            end;
+         end loop;
+      end Append_Nested_Setter_Specs;
    begin
       Append_Line
         (Buffer,
@@ -1077,6 +1223,14 @@ package body Safe_Frontend.Ada_Emit is
          & Type_Name
          & " with Priority => System.Any_Priority'Last is",
          1);
+      Append_Line
+        (Buffer,
+         "function " & Shared_Get_All_Name & " return " & Record_Type & ";",
+         2);
+      Append_Line
+        (Buffer,
+         "procedure " & Shared_Set_All_Name & " (Value : in " & Record_Type & ");",
+         2);
       for Field of Base_Info.Fields loop
          declare
             Field_Type_Name : constant String :=
@@ -1104,6 +1258,11 @@ package body Safe_Frontend.Ada_Emit is
                2);
          end;
       end loop;
+      declare
+         Empty_Path : FT.UString_Vectors.Vector;
+      begin
+         Append_Nested_Setter_Specs (Decl.Type_Info, Empty_Path);
+      end;
       Append_Line
         (Buffer,
          "procedure Initialize (Value : in " & Record_Type & ");",
@@ -1128,8 +1287,73 @@ package body Safe_Frontend.Ada_Emit is
       Root_Name    : constant String := FT.To_String (Decl.Names (Decl.Names.First_Index));
       Type_Name    : constant String := Shared_Wrapper_Type_Name (Root_Name);
       Base_Info    : constant GM.Type_Descriptor := Base_Type (Unit, Document, Decl.Type_Info);
+      procedure Append_Nested_Setter_Bodies
+        (Info       : GM.Type_Descriptor;
+         Path_Names : FT.UString_Vectors.Vector)
+      is
+         Base : constant GM.Type_Descriptor := Base_Type (Unit, Document, Info);
+      begin
+         for Field of Base.Fields loop
+            declare
+               Next_Path       : FT.UString_Vectors.Vector := Path_Names;
+               Field_Type_Name : constant String := FT.To_String (Field.Type_Name);
+               Field_Info      : constant GM.Type_Descriptor :=
+                 (if Has_Type (Unit, Document, Field_Type_Name)
+                  then Lookup_Type (Unit, Document, Field_Type_Name)
+                  else (others => <>));
+               Field_Path      : SU.Unbounded_String := SU.To_Unbounded_String ("State_Value");
+            begin
+               Next_Path.Append (Field.Name);
+               for Part of Next_Path loop
+                  Field_Path := Field_Path & "." & FT.To_String (Part);
+               end loop;
+
+               if Natural (Next_Path.Length) >= 2 then
+                  Append_Line
+                    (Buffer,
+                     "procedure "
+                     & Shared_Nested_Field_Setter_Name (Next_Path)
+                     & " (Value : in "
+                     & Render_Type_Name_From_Text (Unit, Document, Field_Type_Name, State)
+                     & ") is",
+                     2);
+                  Append_Line (Buffer, "begin", 2);
+                  Append_Line (Buffer, SU.To_String (Field_Path) & " := Value;", 3);
+                  Append_Line
+                    (Buffer,
+                     "end " & Shared_Nested_Field_Setter_Name (Next_Path) & ";",
+                     2);
+                  Append_Line (Buffer);
+               end if;
+
+               if Has_Type (Unit, Document, Field_Type_Name)
+                 and then Is_Plain_Shared_Nested_Record (Unit, Document, Field_Info)
+               then
+                  Append_Nested_Setter_Bodies (Field_Info, Next_Path);
+               end if;
+            end;
+         end loop;
+      end Append_Nested_Setter_Bodies;
    begin
       Append_Line (Buffer, "protected body " & Type_Name & " is", 1);
+      Append_Line
+        (Buffer,
+         "function " & Shared_Get_All_Name & " return "
+         & Render_Type_Name (Decl.Type_Info) & " is",
+         2);
+      Append_Line (Buffer, "begin", 2);
+      Append_Line (Buffer, "return State_Value;", 3);
+      Append_Line (Buffer, "end " & Shared_Get_All_Name & ";", 2);
+      Append_Line (Buffer);
+      Append_Line
+        (Buffer,
+         "procedure " & Shared_Set_All_Name & " (Value : in "
+         & Render_Type_Name (Decl.Type_Info) & ") is",
+         2);
+      Append_Line (Buffer, "begin", 2);
+      Append_Line (Buffer, "State_Value := Value;", 3);
+      Append_Line (Buffer, "end " & Shared_Set_All_Name & ";", 2);
+      Append_Line (Buffer);
       for Field of Base_Info.Fields loop
          declare
             Field_Type_Name : constant String :=
@@ -1162,6 +1386,11 @@ package body Safe_Frontend.Ada_Emit is
             Append_Line (Buffer);
          end;
       end loop;
+      declare
+         Empty_Path : FT.UString_Vectors.Vector;
+      begin
+         Append_Nested_Setter_Bodies (Decl.Type_Info, Empty_Path);
+      end;
       Append_Line
         (Buffer,
          "procedure Initialize (Value : in " & Render_Type_Name (Decl.Type_Info) & ") is",
@@ -4719,7 +4948,7 @@ package body Safe_Frontend.Ada_Emit is
                      function Normalize_Static_String (Image : String) return String is
                      begin
                         if Image'Length > 8
-                          and then Image (Image'First .. Image'First + 6) = "String'("
+                          and then Image (Image'First .. Image'First + 7) = "String'("
                           and then Image (Image'Last) = ')'
                         then
                            return Image (Image'First + 7 .. Image'Last - 1);
