@@ -77,8 +77,11 @@ Dependency chain:
 - PR11.12e follows PR11.12d (public/imported shared declarations with the full local read/write surface exported across packages).
 - PR11.12f follows PR11.12e (exact shared ceiling-priority analysis from cross-package access summaries).
 - PR11.12g follows PR11.12f (shared-wrapper proof closure and roadmap/spec alignment).
-- PR11.13 follows PR11.12g (user-defined sum types with exhaustive match).
-- PR11.14 follows PR11.13 (closures — value-capture-only first-class functions).
+- PR11.13 follows PR11.12g (user-defined sum types with exhaustive match — parent milestone).
+- PR11.13a follows PR11.12g (sum type declaration and variant construction — pipeline validation wedge).
+- PR11.13b follows PR11.13a (exhaustive match destructuring with payload bindings).
+- PR11.13c follows PR11.13b (cross-package sum types and proof closure checkpoint).
+- PR11.14 follows PR11.13c (closures — value-capture-only first-class functions).
 - PR11.15 follows PR11.14 (string interpolation).
 - PR11.16 follows PR11.15 (nominal type aliases — distinct types with no implicit conversion).
 - PR11.17 follows PR11.16 (user-defined iteration protocol via standard interface).
@@ -2701,35 +2704,6 @@ Follows PR11.12f.
 
 ---
 
-## PR11.13: User-Defined Sum Types
-
-Add user-defined tagged unions with exhaustive `match` destructuring.
-
-### Scope
-
-- `type shape is circle (radius : integer) or rectangle (width : integer; height : integer)`
-  declares a sum type with named variants and typed payloads.
-- `match value when circle (r) ... when rectangle (w, h) ...` destructures
-  with exhaustiveness checked at compile time.
-- Sum types are value types: copy on assignment, free on scope exit.
-- No inheritance, no subtyping between variants — each variant is a
-  distinct data shape under one type name.
-- Internally lowered to a discriminated record with an enum discriminant
-  and variant parts, reusing the existing discriminant-guard proof
-  machinery.
-
-### Proof impact
-
-Zero new proof model. The discriminant is a finite enum, `match` is
-exhaustive (compiler-enforced), and each variant's fields are accessed
-only in the correct arm. GNATprove already proves this pattern.
-
-### Dependency
-
-Follows PR11.12g.
-
----
-
 ## PR11.14: Closures
 
 Add value-capture-only first-class functions.
@@ -2989,29 +2963,129 @@ and sum types (PR11.13). This is the last milestone in the PR11 series.
 ## PR11.13: User-Defined Sum Types
 
 Add user-defined tagged unions with exhaustive `match` destructuring.
+Lands as three sub-milestones.
+
+### Phasing
+
+- **PR11.13a** — Declaration and variant construction (pipeline wedge)
+- **PR11.13b** — Exhaustive match destructuring with payload bindings
+- **PR11.13c** — Cross-package export/import and proof closure
+
+---
+
+## PR11.13a: Sum Type Declaration and Construction
+
+First sum-type wedge. Introduces the type declaration syntax and
+positional variant constructors.
 
 ### Scope
 
-- `type shape is circle (radius : integer) or rectangle (width : integer; height : integer)`
-  declares a sum type with named variants and typed payloads.
-- `match value when circle (r) ... when rectangle (w, h) ...` destructures
-  with exhaustiveness checked at compile time.
+- Admit sum type declarations:
+  `type shape is circle (radius : integer) or rectangle (width : integer; height : integer)`
+- Each variant has a name and zero or more named typed payload fields.
+- Variant names are unique within the sum type.
+- Payload field types must be admitted value types (same admission
+  rules as record fields, optional payloads, and container elements).
+- Positional variant constructors: `circle (5)` and
+  `rectangle (3, 4)` produce sum-type values.
 - Sum types are value types: copy on assignment, free on scope exit.
-- No inheritance, no subtyping between variants — each variant is a
-  distinct data shape under one type name.
-- Internally lowered to a discriminated record with an enum discriminant
-  and variant parts, reusing the existing discriminant-guard proof
-  machinery.
+- Internally lowered to a discriminated record with a compiler-
+  generated enum discriminant and variant parts, reusing existing
+  discriminated-record infrastructure.
+- No `match` destructuring in this slice — variant construction
+  only. The value can be assigned, passed, returned, compared for
+  variant kind via discriminant, and printed.
+- Same-unit only in this slice; public/imported deferred to PR11.13c.
+- No typed/MIR/safei version bump.
+
+### Why this first
+
+This validates the type-declaration pipeline, the internal lowering
+to discriminated records, and the construction/emission path. If the
+pipeline has a problem, finding it on construction alone is simpler
+than also debugging match destructuring.
 
 ### Proof impact
 
-Zero new proof model. The discriminant is a finite enum, `match` is
-exhaustive (compiler-enforced), and each variant's fields are accessed
-only in the correct arm. GNATprove already proves this pattern.
+Zero. The lowered discriminated record uses existing proof machinery.
 
 ### Dependency
 
-Follows PR11.12.
+Follows PR11.12g.
+
+---
+
+## PR11.13b: Exhaustive Match on Sum Types
+
+The payoff slice. Extends `match` from `(result, T)` tuples to
+user-defined sum types with payload bindings.
+
+### Scope
+
+- Extend `match` to accept sum-type scrutinees:
+  ```
+  match value
+     when circle (r)
+        -- r : integer is bound here
+     when rectangle (w, h)
+        -- w : integer, h : integer are bound here
+  ```
+- Exhaustiveness: every variant must have exactly one arm. Missing
+  variants and duplicate variants are rejected at compile time.
+- Payload bindings are immutable locals scoped to the arm body.
+- Zero-payload variants use bare `when variant_name` (no parentheses).
+- `match` on sum types remains statement-only (same as PR11.8k
+  `match` on results).
+- The compiler desugars sum-type `match` to an `if`/`elsif` chain
+  on the hidden enum discriminant with variant-field access in each
+  arm, reusing the existing `match` lowering path from PR11.8k.
+- Same-unit only in this slice.
+- No typed/MIR/safei version bump.
+
+### Proof impact
+
+Zero. The desugared `if`/`elsif` chain is ordinary control flow.
+Variant-field access uses the existing discriminant-guard machinery
+that GNATprove already proves.
+
+### Dependency
+
+Follows PR11.13a.
+
+---
+
+## PR11.13c: Cross-Package Sum Types and Proof Closure
+
+Close the PR11.13 parent milestone with public/imported sum types
+and a proof checkpoint.
+
+### Scope
+
+- Admit `public type shape is circle (...) or rectangle (...)` for
+  cross-package export.
+- Export sum-type metadata (variant names, payload fields, internal
+  discriminant identity) through safei contracts.
+- Imported sum types support the full construction + match surface
+  in client units.
+- Add PR11.13c checkpoint fixtures covering:
+  - Local sum type construction and match
+  - Cross-package imported sum type construction and match
+  - Sum type with heap-backed payload fields (string, list)
+  - Proof that the emitted discriminated record proves clean
+- Update verification matrix and proof inventory.
+- Artifact version bump if the safei contract requires new required
+  fields for sum-type metadata; additive optional fields do not
+  require a bump.
+
+### Proof impact
+
+Zero new proof model. Each fixture proves as an ordinary
+discriminated-record program.
+
+### Dependency
+
+Follows PR11.13b. This is the checkpoint that closes the PR11.13
+parent milestone.
 
 ---
 
