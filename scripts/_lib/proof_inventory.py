@@ -406,6 +406,12 @@ EMITTED_PROOF_EXCLUSIONS = [
         owner="runtime-regression-only",
         milestone="PR11.10d",
     ),
+    EmittedProofExclusion(
+        path="tests/build/pr213_map_entry_build.safe",
+        reason="runtime-only map-entry iteration emitter regression; GNATprove spends unbounded time in the emitted heap-backed map runtime path",
+        owner="runtime-regression-only",
+        milestone="PR11.10c",
+    ),
 ]
 
 
