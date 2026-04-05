@@ -2428,6 +2428,10 @@ package body Safe_Frontend.Ada_Emit is
                      7);
                   Append_Line
                     (Buffer,
+                     Element_Free_Name & " (New_Entry);",
+                     7);
+                  Append_Line
+                    (Buffer,
                      Element_Free_Name & " (Current_Entry);",
                      7);
                   Append_Line (Buffer, "return;", 7);
@@ -2481,6 +2485,10 @@ package body Safe_Frontend.Ada_Emit is
                      & Runtime_Name & ".Concat (State_Value, Tail);",
                      5);
                   Append_Line (Buffer, "begin", 4);
+                  Append_Line
+                    (Buffer,
+                     Element_Free_Name & " (New_Entry);",
+                     5);
                   Append_Free_Value ("State_Value", Decl.Type_Info, 5);
                   Append_Free_Value ("Tail", Decl.Type_Info, 5);
                   Append_Line (Buffer, "State_Value := Updated;", 5);
@@ -15962,7 +15970,15 @@ package body Safe_Frontend.Ada_Emit is
                        FT.To_UString
                          ("Value_" & Ada.Strings.Fixed.Trim (Positive'Image (Position), Ada.Strings.Both));
                      Formal.Kind := FT.To_UString ("param");
-                     Formal.Mode := FT.To_UString ("in");
+                     Formal.Mode :=
+                       FT.To_UString
+                         ((if FT.To_String (Call_Expr.Callee.Selector) = Shared_Pop_Last_Name
+                               and then Position = Natural (Call_Expr.Args.Length)
+                           then "out"
+                           elsif FT.To_String (Call_Expr.Callee.Selector) = Shared_Remove_Name
+                             and then Position = Natural (Call_Expr.Args.Length)
+                           then "out"
+                           else "in"));
                      Formal.Type_Info := Shared_Formal_Type;
                      Subprogram.Params.Append (Formal);
                   end;

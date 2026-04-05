@@ -254,6 +254,7 @@ PR11_12C_CHECKPOINT_FIXTURES = [
 PR11_12D_CHECKPOINT_FIXTURES = [
     "tests/build/pr1112d_shared_list_root_build.safe",
     "tests/build/pr1112d_shared_map_root_build.safe",
+    "tests/build/pr1112d_shared_map_indexed_remove_build.safe",
     "tests/build/pr1112d_shared_growable_root_build.safe",
 ]
 

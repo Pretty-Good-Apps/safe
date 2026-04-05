@@ -614,6 +614,11 @@ BUILD_SUCCESS_CASES = [
         False,
     ),
     (
+        REPO_ROOT / "tests" / "build" / "pr1112d_shared_map_indexed_remove_build.safe",
+        "1\n",
+        False,
+    ),
+    (
         REPO_ROOT / "tests" / "build" / "pr1112d_shared_growable_root_build.safe",
         "3\n7\n2\n9\n",
         False,
