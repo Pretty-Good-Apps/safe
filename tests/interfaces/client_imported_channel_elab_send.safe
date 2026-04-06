@@ -4,4 +4,4 @@ package client_imported_channel_elab_send
 
    sent : boolean = false;
 
-   send provider_channel.data_ch, 1, sent
+   send provider_channel.data_ch, 1, sent;

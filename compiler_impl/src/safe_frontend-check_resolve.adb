@@ -10978,14 +10978,19 @@ package body Safe_Frontend.Check_Resolve is
       procedure Reject_Imported_Channel_Elaboration
         (Channel_Expr    : CM.Expr_Access;
          Diagnostic_Span : FT.Source_Span) is
+         Effective_Span : FT.Source_Span := Diagnostic_Span;
       begin
+         if Channel_Expr /= null then
+            Effective_Span := Channel_Expr.Span;
+         end if;
+
          if In_Unit_Statement_Context
            and then Is_Imported_Channel_Reference (Channel_Expr)
          then
             Raise_Diag
               (CM.Source_Frontend_Error
                  (Path    => Path,
-                  Span    => Diagnostic_Span,
+                  Span    => Effective_Span,
                   Message =>
                     "unit-scope elaboration must not perform imported channel operations; move this operation into a task body or another non-elaboration call path"));
          end if;
