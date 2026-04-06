@@ -11480,7 +11480,6 @@ package body Safe_Frontend.Ada_Emit is
      (Type_Item : GM.Type_Descriptor;
       State     : in out Emit_State) return String
    is
-      pragma Unreferenced (Type_Item);
    begin
       State.Needs_Ada_Strings_Unbounded := True;
       return
@@ -11504,7 +11503,6 @@ package body Safe_Frontend.Ada_Emit is
       Type_Item : GM.Type_Descriptor;
       State     : in out Emit_State) return String
    is
-      pragma Unreferenced (State);
       Name   : constant String := Ada_Safe_Name (FT.To_String (Type_Item.Name));
       Result : SU.Unbounded_String;
 
@@ -22296,10 +22294,7 @@ package body Safe_Frontend.Ada_Emit is
       Receive_Mode  : constant String := "out ";
       Buffer_Default : constant String :=
         Default_Value_Expr (Unit, Document, Channel.Element_Type);
-      Copy_Helper   : constant String := Name & "_Copy_Value";
-      Free_Helper   : constant String := Name & "_Free_Value";
    begin
-      pragma Unreferenced (Copy_Helper, Free_Helper);
       Render_Channel_Generated_Value_Helpers
         (Buffer, Unit, Document, Channel, State);
 
