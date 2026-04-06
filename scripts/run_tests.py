@@ -116,6 +116,18 @@ INTERFACE_CASES = [
         0,
     ),
     (
+        "shared-provider-ceiling",
+        REPO_ROOT / "tests" / "interfaces" / "provider_shared_ceiling.safe",
+        REPO_ROOT / "tests" / "interfaces" / "client_shared_provider_ceiling.safe",
+        0,
+    ),
+    (
+        "transitive-shared-ok",
+        REPO_ROOT / "tests" / "interfaces" / "provider_transitive_shared.safe",
+        REPO_ROOT / "tests" / "interfaces" / "client_transitive_shared_ok.safe",
+        0,
+    ),
+    (
         "transitive-global-rejected",
         REPO_ROOT / "tests" / "interfaces" / "provider_transitive_global.safe",
         REPO_ROOT / "tests" / "interfaces" / "client_transitive_global_ok.safe",
@@ -663,6 +675,21 @@ BUILD_SUCCESS_CASES = [
         False,
     ),
     (
+        REPO_ROOT / "tests" / "build" / "pr1112f_shared_record_ceiling_build.safe",
+        "20\n",
+        True,
+    ),
+    (
+        REPO_ROOT / "tests" / "build" / "pr1112f_shared_container_ceiling_build.safe",
+        "14\n",
+        True,
+    ),
+    (
+        REPO_ROOT / "tests" / "build" / "pr1112f_mixed_channel_shared_build.safe",
+        "18\n",
+        True,
+    ),
+    (
         REPO_ROOT / "tests" / "build" / "pr118d_tuple_string_build.safe",
         "ok\n",
         False,
@@ -958,6 +985,9 @@ OUTPUT_CONTRACT_CASES = [
     REPO_ROOT / "tests" / "interfaces" / "provider_generic.safe",
     REPO_ROOT / "tests" / "interfaces" / "pr118k_try_while_contract.safe",
     REPO_ROOT / "tests" / "interfaces" / "provider_list.safe",
+    REPO_ROOT / "tests" / "interfaces" / "provider_shared_ceiling.safe",
+    REPO_ROOT / "tests" / "interfaces" / "provider_shared_helper_prefix.safe",
+    REPO_ROOT / "tests" / "interfaces" / "provider_transitive_shared.safe",
 ]
 
 OUTPUT_CONTRACT_REJECT_CASES = [
@@ -970,6 +1000,11 @@ OUTPUT_CONTRACT_REJECT_CASES = [
         "safei-template-source-key-on-non-generic",
         REPO_ROOT / "tests" / "interfaces" / "provider_binary.safe",
         "subprograms[0].template_source is only valid for generic subprograms",
+    ),
+    (
+        "safei-shared-required-ceiling-nonpositive",
+        REPO_ROOT / "tests" / "interfaces" / "provider_shared_ceiling.safe",
+        "objects[0].required_ceiling must be a positive integer",
     ),
 ]
 
@@ -1263,6 +1298,52 @@ EMITTED_REQUIRED_SHAPE_CASES = [
             "Safe_Shared_data.Append (6);",
             "Safe_Shared_data.Append (7);",
             "Safe_Shared_data.Pop_Last",
+        ],
+    ),
+    (
+        "shared-private-record-exact-ceiling",
+        REPO_ROOT / "tests" / "build" / "pr1112f_shared_record_ceiling_build.safe",
+        [
+            "protected type Safe_Shared_cfg_Wrapper with Priority => 20 is",
+        ],
+    ),
+    (
+        "shared-private-container-exact-ceiling",
+        REPO_ROOT / "tests" / "build" / "pr1112f_shared_container_ceiling_build.safe",
+        [
+            "protected type Safe_Shared_values_Wrapper with Priority => 14 is",
+        ],
+    ),
+    (
+        "shared-public-provider-fallback-ceiling",
+        REPO_ROOT / "tests" / "interfaces" / "provider_shared_ceiling.safe",
+        [
+            "protected type Safe_Shared_cfg_Wrapper with Priority => System.Any_Priority'Last is",
+        ],
+    ),
+    (
+        "shared-no-analysis-fallback-ceiling",
+        REPO_ROOT / "tests" / "positive" / "pr1112a_shared_field_access.safe",
+        [
+            "protected type Safe_Shared_cfg_Wrapper with Priority => System.Any_Priority'Last is",
+        ],
+    ),
+    (
+        "shared-mixed-channel-ceiling",
+        REPO_ROOT / "tests" / "build" / "pr1112f_mixed_channel_shared_build.safe",
+        [
+            "protected type Safe_Shared_cfg_Wrapper with Priority => 18 is",
+            "protected type data_ch_Channel with Priority => 18 is",
+        ],
+    ),
+]
+
+SAFEI_REQUIRED_SHAPE_CASES = [
+    (
+        "shared-helper-prefix-prefers-longest-root",
+        REPO_ROOT / "tests" / "interfaces" / "provider_shared_helper_prefix.safe",
+        [
+            "\"provider_shared_helper_prefix.cfg_more\"",
         ],
     ),
 ]
@@ -2579,13 +2660,21 @@ def run_output_contract_reject_case(
     stem = source.stem.lower()
     safei_path = iface_dir / f"{stem}.safei.json"
     payload = json.loads(safei_path.read_text(encoding="utf-8"))
-    subprograms = payload.get("subprograms")
-    if not isinstance(subprograms, list) or not subprograms:
-        return False, "emitted safei has no subprograms to mutate"
     if label == "safei-bad-return-flag":
+        subprograms = payload.get("subprograms")
+        if not isinstance(subprograms, list) or not subprograms:
+            return False, "emitted safei has no subprograms to mutate"
         subprograms[0]["return_is_access_def"] = "bad"
     elif label == "safei-template-source-key-on-non-generic":
+        subprograms = payload.get("subprograms")
+        if not isinstance(subprograms, list) or not subprograms:
+            return False, "emitted safei has no subprograms to mutate"
         subprograms[0]["template_source"] = None
+    elif label == "safei-shared-required-ceiling-nonpositive":
+        objects = payload.get("objects")
+        if not isinstance(objects, list) or not objects:
+            return False, "emitted safei has no objects to mutate"
+        objects[0]["required_ceiling"] = 0
     else:
         return False, f"unknown output contract reject case {label}"
     safei_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
@@ -2803,6 +2892,36 @@ def run_emitted_required_shape_case(
     for snippet in required_snippets:
         if snippet not in emitted_text:
             return False, f"missing required emitted snippet {snippet!r}"
+    return True, ""
+
+
+def run_safei_required_shape_case(
+    safec: Path,
+    *,
+    label: str,
+    source: Path,
+    required_snippets: list[str],
+    temp_root: Path,
+) -> tuple[bool, str]:
+    try:
+        ada_dir, _ = emit_case_ada_text(
+            safec,
+            label=label,
+            source=source,
+            temp_root=temp_root,
+        )
+    except RuntimeError as exc:
+        return False, str(exc)
+
+    iface_dir = ada_dir.parent / "iface"
+    safei_path = iface_dir / f"{source.stem.lower()}.safei.json"
+    if not safei_path.exists():
+        return False, f"emit produced no safei contract {safei_path.name}"
+
+    safei_text = safei_path.read_text(encoding="utf-8")
+    for snippet in required_snippets:
+        if snippet not in safei_text:
+            return False, f"missing required safei snippet {snippet!r}"
     return True, ""
 
 
@@ -3176,6 +3295,20 @@ def main() -> int:
                 temp_root=temp_root,
             )
             case_label = f"emitted-required-shape:{label}:{repo_rel(source)}"
+            if ok:
+                passed += 1
+            else:
+                failures.append((case_label, detail))
+
+        for label, source, required_snippets in SAFEI_REQUIRED_SHAPE_CASES:
+            ok, detail = run_safei_required_shape_case(
+                safec,
+                label=label,
+                source=source,
+                required_snippets=required_snippets,
+                temp_root=temp_root,
+            )
+            case_label = f"safei-required-shape:{label}:{repo_rel(source)}"
             if ok:
                 passed += 1
             else:
