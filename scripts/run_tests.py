@@ -596,6 +596,11 @@ BUILD_SUCCESS_CASES = [
         False,
     ),
     (
+        REPO_ROOT / "tests" / "build" / "pr220_for_of_composite_unroll_build.safe",
+        "Ada\nAda\n",
+        False,
+    ),
+    (
         REPO_ROOT / "tests" / "build" / "pr1111a_builtin_methods_build.safe",
         "30\n15\n20\n2\n1\n",
         False,

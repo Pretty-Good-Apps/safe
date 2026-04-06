@@ -10578,6 +10578,45 @@ package body Safe_Frontend.Ada_Emit is
          Append_Line (Buffer, "end " & For_Of_Copy_Helper_Name (Unit, Document, Info) & ";", 1);
          Append_Line (Buffer);
 
+         Append_Line
+           (Buffer,
+            "function "
+            & For_Of_Copy_Helper_Name (Unit, Document, Info)
+            & " (Source : "
+            & Type_Name
+            & ") return "
+            & Type_Name
+            & ";",
+            1);
+         Append_Line
+           (Buffer,
+            "function "
+            & For_Of_Copy_Helper_Name (Unit, Document, Info)
+            & " (Source : "
+            & Type_Name
+            & ") return "
+            & Type_Name
+            & " is",
+            1);
+         Append_Line
+           (Buffer,
+            "Result : "
+            & Type_Name
+            & " := Source;",
+            2);
+         Append_Line (Buffer, "begin", 1);
+         Append_Line
+           (Buffer,
+            For_Of_Copy_Helper_Name (Unit, Document, Info)
+            & " (Result, Source);",
+            2);
+         Append_Line (Buffer, "return Result;", 2);
+         Append_Line
+           (Buffer,
+            "end " & For_Of_Copy_Helper_Name (Unit, Document, Info) & ";",
+            1);
+         Append_Line (Buffer);
+
          Append_Local_Warning_Suppression (Buffer, 1);
          Append_Line
            (Buffer,
@@ -19189,13 +19228,23 @@ package body Safe_Frontend.Ada_Emit is
                                  declare
                                     Element : constant CM.Expr_Access :=
                                       Static_Growable_Literal.Elements (Element_Index);
-                                    Loop_Item_Init : constant String :=
+                                    Loop_Item_Source : constant String :=
                                       Render_Expr_For_Target_Type
                                         (Unit,
                                          Document,
                                          Element,
                                          Element_Info,
                                          State);
+                                    Loop_Item_Init : constant String :=
+                                      (if Needs_Composite_Heap_Helper
+                                       then For_Of_Copy_Helper_Name
+                                         (Unit,
+                                          Document,
+                                          Element_Info)
+                                         & " ("
+                                         & Loop_Item_Source
+                                         & ")"
+                                       else Loop_Item_Source);
                                  begin
                                     Push_Cleanup_Frame (State);
                                     if Is_Plain_String_Type (Unit, Document, Element_Info) then
@@ -19752,7 +19801,13 @@ package body Safe_Frontend.Ada_Emit is
                                     else SU.To_Unbounded_String (Fixed_Element_Image));
                                  Loop_Item_Init :=
                                    SU.To_Unbounded_String
-                                     (Default_Value_Expr (Unit, Document, Element_Info));
+                                     (For_Of_Copy_Helper_Name
+                                        (Unit,
+                                         Document,
+                                         Element_Info)
+                                      & " ("
+                                      & SU.To_String (Loop_Item_Source)
+                                      & ")");
                               elsif Iterable_Info.Growable
                                 and then Static_Growable_Literal /= null
                                 and then not Static_Growable_Literal.Elements.Is_Empty
@@ -19913,10 +19968,6 @@ package body Safe_Frontend.Ada_Emit is
                               end if;
 
                               Append_Line (Buffer, "declare", Depth + 2);
-                              if Needs_Composite_Heap_Helper then
-                                 Append_Initialization_Warning_Suppression
-                                   (Buffer, Depth + 3);
-                              end if;
                               Append_Line
                                 (Buffer,
                                  FT.To_String (Item.Loop_Var)
@@ -19926,25 +19977,7 @@ package body Safe_Frontend.Ada_Emit is
                                  & SU.To_String (Loop_Item_Init)
                                  & ";",
                                  Depth + 3);
-                              if Needs_Composite_Heap_Helper then
-                                 Append_Initialization_Warning_Restore
-                                   (Buffer, Depth + 3);
-                              end if;
                               Append_Line (Buffer, "begin", Depth + 2);
-                              if Needs_Composite_Heap_Helper then
-                                 Append_Line
-                                   (Buffer,
-                                    For_Of_Copy_Helper_Name
-                                      (Unit,
-                                       Document,
-                                       Element_Info)
-                                    & " ("
-                                    & FT.To_String (Item.Loop_Var)
-                                    & ", "
-                                    & SU.To_String (Loop_Item_Source)
-                                    & ");",
-                                    Depth + 3);
-                              end if;
                               Render_Required_Statement_Suite
                                 (Buffer,
                                  Unit,
