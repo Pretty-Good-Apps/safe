@@ -4261,7 +4261,6 @@ package body Safe_Frontend.Check_Resolve is
    begin
       if FT.Lowercase (UString_Value (Info.Kind)) /= "record"
         or else not Info.Has_Discriminant
-        or else Info.Variant_Fields.Is_Empty
         or else Variant_Disc /= "__sum_tag"
         or else Disc_Name /= "__sum_tag"
       then

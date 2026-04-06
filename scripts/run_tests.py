@@ -374,6 +374,12 @@ STATIC_INTERFACE_CASES = [
         REPO_ROOT / "tests" / "interfaces" / "client_bad_sum.safe",
         1,
     ),
+    (
+        "bad-zero-payload-sum-metadata",
+        REPO_ROOT / "tests" / "interfaces" / "provider_bad_zero_sum.safei.json",
+        REPO_ROOT / "tests" / "interfaces" / "client_bad_zero_sum.safe",
+        1,
+    ),
 ]
 
 
