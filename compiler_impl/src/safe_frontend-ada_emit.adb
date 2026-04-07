@@ -498,6 +498,12 @@ package body Safe_Frontend.Ada_Emit is
       Document : GM.Mir_Document;
       Expr     : CM.Expr_Access;
       State    : in out Emit_State) return String;
+   function Render_String_Value_Image
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Expr     : CM.Expr_Access;
+      Info     : GM.Type_Descriptor;
+      State    : in out Emit_State) return String;
    function Render_String_Expr
      (Unit     : CM.Resolved_Unit;
       Document : GM.Mir_Document;
@@ -811,6 +817,12 @@ package body Safe_Frontend.Ada_Emit is
    function Select_References_Channel
      (Stmt         : CM.Statement_Access;
       Channel_Name : String) return Boolean;
+   procedure Ignore_Select_Arm (Arm : CM.Select_Arm);
+   generic
+      with procedure Visit_Statement (Item : CM.Statement_Access);
+      with procedure Visit_Select_Arm (Arm : CM.Select_Arm);
+   procedure Walk_Statement_Structure
+     (Statements : CM.Statement_Access_Vectors.Vector);
    procedure Collect_Select_Dispatcher_Names
      (Statements : CM.Statement_Access_Vectors.Vector;
       Names      : in out FT.UString_Vectors.Vector);
@@ -5046,52 +5058,52 @@ package body Safe_Frontend.Ada_Emit is
       return False;
    end Select_References_Channel;
 
-   procedure Collect_Select_Dispatcher_Names
-     (Statements : CM.Statement_Access_Vectors.Vector;
-      Names      : in out FT.UString_Vectors.Vector)
+   procedure Ignore_Select_Arm (Arm : CM.Select_Arm) is
+      pragma Unreferenced (Arm);
+   begin
+      null;
+   end Ignore_Select_Arm;
+
+   procedure Walk_Statement_Structure
+     (Statements : CM.Statement_Access_Vectors.Vector)
    is
-      procedure Collect_From
+      procedure Walk_From
         (Nested_Statements : CM.Statement_Access_Vectors.Vector);
 
-      procedure Maybe_Add (Stmt : CM.Statement_Access) is
-         Name_Text : constant String := Select_Dispatcher_Name (Stmt);
-      begin
-         if not Contains_Name (Names, Name_Text) then
-            Names.Append (FT.To_UString (Name_Text));
-         end if;
-      end Maybe_Add;
-
-      procedure Collect_From
+      procedure Walk_From
         (Nested_Statements : CM.Statement_Access_Vectors.Vector)
       is
       begin
          for Item of Nested_Statements loop
-            if Item = null then
-               null;
-            else
+            if Item /= null then
+               Visit_Statement (Item);
                case Item.Kind is
                   when CM.Stmt_If =>
-                     Collect_From (Item.Then_Stmts);
+                     Walk_From (Item.Then_Stmts);
                      for Part of Item.Elsifs loop
-                        Collect_From (Part.Statements);
+                        Walk_From (Part.Statements);
                      end loop;
                      if Item.Has_Else then
-                        Collect_From (Item.Else_Stmts);
+                        Walk_From (Item.Else_Stmts);
                      end if;
                   when CM.Stmt_Case =>
                      for Arm of Item.Case_Arms loop
-                        Collect_From (Arm.Statements);
+                        Walk_From (Arm.Statements);
+                     end loop;
+                  when CM.Stmt_Match =>
+                     for Arm of Item.Match_Arms loop
+                        Walk_From (Arm.Statements);
                      end loop;
                   when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
-                     Collect_From (Item.Body_Stmts);
+                     Walk_From (Item.Body_Stmts);
                   when CM.Stmt_Select =>
-                     Maybe_Add (Item);
                      for Arm of Item.Arms loop
+                        Visit_Select_Arm (Arm);
                         case Arm.Kind is
                            when CM.Select_Arm_Channel =>
-                              Collect_From (Arm.Channel_Data.Statements);
+                              Walk_From (Arm.Channel_Data.Statements);
                            when CM.Select_Arm_Delay =>
-                              Collect_From (Arm.Delay_Data.Statements);
+                              Walk_From (Arm.Delay_Data.Statements);
                            when others =>
                               null;
                         end case;
@@ -5101,7 +5113,27 @@ package body Safe_Frontend.Ada_Emit is
                end case;
             end if;
          end loop;
-      end Collect_From;
+      end Walk_From;
+   begin
+      Walk_From (Statements);
+   end Walk_Statement_Structure;
+
+   procedure Collect_Select_Dispatcher_Names
+     (Statements : CM.Statement_Access_Vectors.Vector;
+      Names      : in out FT.UString_Vectors.Vector)
+   is
+      procedure Visit_Statement (Stmt : CM.Statement_Access) is
+         Name_Text : constant String := Select_Dispatcher_Name (Stmt);
+      begin
+         if Stmt = null or else Stmt.Kind /= CM.Stmt_Select then
+            return;
+         elsif not Contains_Name (Names, Name_Text) then
+            Names.Append (FT.To_UString (Name_Text));
+         end if;
+      end Visit_Statement;
+
+      procedure Collect_From is new Walk_Statement_Structure
+        (Visit_Statement, Ignore_Select_Arm);
    begin
       Collect_From (Statements);
    end Collect_Select_Dispatcher_Names;
@@ -5111,10 +5143,7 @@ package body Safe_Frontend.Ada_Emit is
       Names      : in out FT.UString_Vectors.Vector;
       Counts     : in out FT.UString_Vectors.Vector)
    is
-      procedure Collect_From
-        (Nested_Statements : CM.Statement_Access_Vectors.Vector);
-
-      procedure Maybe_Add (Stmt : CM.Statement_Access) is
+      procedure Visit_Statement (Stmt : CM.Statement_Access) is
          Name_Text         : constant String := Select_Rotation_State_Name (Stmt);
          Channel_Arm_Count : Natural := 0;
       begin
@@ -5134,49 +5163,10 @@ package body Safe_Frontend.Ada_Emit is
 
          Names.Append (FT.To_UString (Name_Text));
          Counts.Append (FT.To_UString (Trim_Image (Long_Long_Integer (Channel_Arm_Count))));
-      end Maybe_Add;
+      end Visit_Statement;
 
-      procedure Collect_From
-        (Nested_Statements : CM.Statement_Access_Vectors.Vector)
-      is
-      begin
-         for Item of Nested_Statements loop
-            if Item = null then
-               null;
-            else
-               case Item.Kind is
-                  when CM.Stmt_If =>
-                     Collect_From (Item.Then_Stmts);
-                     for Part of Item.Elsifs loop
-                        Collect_From (Part.Statements);
-                     end loop;
-                     if Item.Has_Else then
-                        Collect_From (Item.Else_Stmts);
-                     end if;
-                  when CM.Stmt_Case =>
-                     for Arm of Item.Case_Arms loop
-                        Collect_From (Arm.Statements);
-                     end loop;
-                  when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
-                     Collect_From (Item.Body_Stmts);
-                  when CM.Stmt_Select =>
-                     Maybe_Add (Item);
-                     for Arm of Item.Arms loop
-                        case Arm.Kind is
-                           when CM.Select_Arm_Channel =>
-                              Collect_From (Arm.Channel_Data.Statements);
-                           when CM.Select_Arm_Delay =>
-                              Collect_From (Arm.Delay_Data.Statements);
-                           when others =>
-                              null;
-                        end case;
-                     end loop;
-                  when others =>
-                     null;
-               end case;
-            end if;
-         end loop;
-      end Collect_From;
+      procedure Collect_From is new Walk_Statement_Structure
+        (Visit_Statement, Ignore_Select_Arm);
    begin
       Collect_From (Statements);
    end Collect_Select_Rotation_State;
@@ -5185,60 +5175,20 @@ package body Safe_Frontend.Ada_Emit is
      (Statements : CM.Statement_Access_Vectors.Vector;
       Names      : in out FT.UString_Vectors.Vector)
    is
-      procedure Collect_From
-        (Nested_Statements : CM.Statement_Access_Vectors.Vector);
-
-      procedure Maybe_Add (Stmt : CM.Statement_Access) is
+      procedure Visit_Statement (Stmt : CM.Statement_Access) is
          Name_Text : constant String := Select_Dispatcher_Timer_Name (Stmt);
       begin
-         if Select_Has_Delay_Arm (Stmt)
+         if Stmt = null or else Stmt.Kind /= CM.Stmt_Select then
+            return;
+         elsif Select_Has_Delay_Arm (Stmt)
            and then not Contains_Name (Names, Name_Text)
          then
             Names.Append (FT.To_UString (Name_Text));
          end if;
-      end Maybe_Add;
+      end Visit_Statement;
 
-      procedure Collect_From
-        (Nested_Statements : CM.Statement_Access_Vectors.Vector)
-      is
-      begin
-         for Item of Nested_Statements loop
-            if Item = null then
-               null;
-            else
-               case Item.Kind is
-                  when CM.Stmt_If =>
-                     Collect_From (Item.Then_Stmts);
-                     for Part of Item.Elsifs loop
-                        Collect_From (Part.Statements);
-                     end loop;
-                     if Item.Has_Else then
-                        Collect_From (Item.Else_Stmts);
-                     end if;
-                  when CM.Stmt_Case =>
-                     for Arm of Item.Case_Arms loop
-                        Collect_From (Arm.Statements);
-                     end loop;
-                  when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
-                     Collect_From (Item.Body_Stmts);
-                  when CM.Stmt_Select =>
-                     Maybe_Add (Item);
-                     for Arm of Item.Arms loop
-                        case Arm.Kind is
-                           when CM.Select_Arm_Channel =>
-                              Collect_From (Arm.Channel_Data.Statements);
-                           when CM.Select_Arm_Delay =>
-                              Collect_From (Arm.Delay_Data.Statements);
-                           when others =>
-                              null;
-                        end case;
-                     end loop;
-                  when others =>
-                     null;
-               end case;
-            end if;
-         end loop;
-      end Collect_From;
+      procedure Collect_From is new Walk_Statement_Structure
+        (Visit_Statement, Ignore_Select_Arm);
    begin
       Collect_From (Statements);
    end Collect_Select_Delay_Timer_Names;
@@ -5248,60 +5198,20 @@ package body Safe_Frontend.Ada_Emit is
       Channel_Name : String;
       Names        : in out FT.UString_Vectors.Vector)
    is
-      procedure Collect_From
-        (Nested_Statements : CM.Statement_Access_Vectors.Vector);
-
-      procedure Maybe_Add (Stmt : CM.Statement_Access) is
+      procedure Visit_Statement (Stmt : CM.Statement_Access) is
          Name_Text : constant String := Select_Dispatcher_Name (Stmt);
       begin
-         if Select_References_Channel (Stmt, Channel_Name)
+         if Stmt = null or else Stmt.Kind /= CM.Stmt_Select then
+            return;
+         elsif Select_References_Channel (Stmt, Channel_Name)
            and then not Contains_Name (Names, Name_Text)
          then
             Names.Append (FT.To_UString (Name_Text));
          end if;
-      end Maybe_Add;
+      end Visit_Statement;
 
-      procedure Collect_From
-        (Nested_Statements : CM.Statement_Access_Vectors.Vector)
-      is
-      begin
-         for Item of Nested_Statements loop
-            if Item = null then
-               null;
-            else
-               case Item.Kind is
-                  when CM.Stmt_If =>
-                     Collect_From (Item.Then_Stmts);
-                     for Part of Item.Elsifs loop
-                        Collect_From (Part.Statements);
-                     end loop;
-                     if Item.Has_Else then
-                        Collect_From (Item.Else_Stmts);
-                     end if;
-                  when CM.Stmt_Case =>
-                     for Arm of Item.Case_Arms loop
-                        Collect_From (Arm.Statements);
-                     end loop;
-                  when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
-                     Collect_From (Item.Body_Stmts);
-                  when CM.Stmt_Select =>
-                     Maybe_Add (Item);
-                     for Arm of Item.Arms loop
-                        case Arm.Kind is
-                           when CM.Select_Arm_Channel =>
-                              Collect_From (Arm.Channel_Data.Statements);
-                           when CM.Select_Arm_Delay =>
-                              Collect_From (Arm.Delay_Data.Statements);
-                           when others =>
-                              null;
-                        end case;
-                     end loop;
-                  when others =>
-                     null;
-               end case;
-            end if;
-         end loop;
-      end Collect_From;
+      procedure Collect_From is new Walk_Statement_Structure
+        (Visit_Statement, Ignore_Select_Arm);
    begin
       Collect_From (Statements);
    end Collect_Select_Dispatcher_Names_For_Channel;
@@ -8938,6 +8848,32 @@ package body Safe_Frontend.Ada_Emit is
       return SU.To_String (Result);
    end Render_Record_Aggregate_For_Type;
 
+   function Render_String_Value_Image
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Expr     : CM.Expr_Access;
+      Info     : GM.Type_Descriptor;
+      State    : in out Emit_State) return String
+   is
+   begin
+      if Is_Plain_String_Type (Unit, Document, Info) then
+         State.Needs_Safe_String_RT := True;
+         return
+           "Safe_String_RT.To_String ("
+           & Render_Heap_String_Expr (Unit, Document, Expr, State)
+           & ")";
+      elsif Is_Bounded_String_Type (Info) then
+         Register_Bounded_String_Type (State, Info);
+         return
+           Bounded_String_Instance_Name (Info)
+           & ".To_String ("
+           & Render_Expr (Unit, Document, Expr, State)
+           & ")";
+      end if;
+
+      return Render_Expr (Unit, Document, Expr, State);
+   end Render_String_Value_Image;
+
    function Render_String_Expr
      (Unit     : CM.Resolved_Unit;
       Document : GM.Mir_Document;
@@ -9032,34 +8968,16 @@ package body Safe_Frontend.Ada_Emit is
                end;
             end if;
 
-            if Has_Expr_Type and then Is_Plain_String_Type (Unit, Document, Expr_Type_Info) then
-               State.Needs_Safe_String_RT := True;
+            if Has_Expr_Type then
                return
-                 "Safe_String_RT.To_String ("
-                 & Render_Heap_String_Expr (Unit, Document, Expr, State)
-                 & ")";
-            elsif Has_Expr_Type and then Is_Bounded_String_Type (Expr_Type_Info) then
-               Register_Bounded_String_Type (State, Expr_Type_Info);
-               return
-                 Bounded_String_Instance_Name (Expr_Type_Info)
-                 & ".To_String ("
-                 & Render_Expr (Unit, Document, Expr, State)
-                 & ")";
+                 Render_String_Value_Image
+                   (Unit, Document, Expr, Expr_Type_Info, State);
             end if;
          end;
-      elsif Has_Expr_Type and then Is_Plain_String_Type (Unit, Document, Expr_Type_Info) then
-         State.Needs_Safe_String_RT := True;
+      elsif Has_Expr_Type then
          return
-           "Safe_String_RT.To_String ("
-           & Render_Heap_String_Expr (Unit, Document, Expr, State)
-           & ")";
-      elsif Has_Expr_Type and then Is_Bounded_String_Type (Expr_Type_Info) then
-         Register_Bounded_String_Type (State, Expr_Type_Info);
-         return
-           Bounded_String_Instance_Name (Expr_Type_Info)
-           & ".To_String ("
-           & Render_Expr (Unit, Document, Expr, State)
-           & ")";
+           Render_String_Value_Image
+             (Unit, Document, Expr, Expr_Type_Info, State);
       end if;
 
       return Render_Expr (Unit, Document, Expr, State);
@@ -10176,63 +10094,40 @@ package body Safe_Frontend.Ada_Emit is
          end loop;
       end Add_From_Decls;
 
-      procedure Add_From_Statements (Statements : CM.Statement_Access_Vectors.Vector) is
+      procedure Visit_Statement (Item : CM.Statement_Access) is
       begin
-         for Item of Statements loop
-            if Item = null then
+         case Item.Kind is
+            when CM.Stmt_Object_Decl =>
+               Add_From_Info (Item.Decl.Type_Info);
+            when CM.Stmt_Destructure_Decl =>
+               Add_From_Info (Item.Destructure.Type_Info);
+            when CM.Stmt_For =>
+               if Item.Loop_Iterable /= null then
+                  declare
+                     Found : Boolean := False;
+                     One_Char_Info : GM.Type_Descriptor := (others => <>);
+                  begin
+                     One_Char_Info :=
+                       Synthetic_Bounded_String_Type ("__bounded_string_1", Found);
+                     if Found then
+                        Add_From_Info (One_Char_Info);
+                     end if;
+                  end;
+               end if;
+            when others =>
                null;
-            else
-               case Item.Kind is
-                  when CM.Stmt_Object_Decl =>
-                     Add_From_Info (Item.Decl.Type_Info);
-                  when CM.Stmt_Destructure_Decl =>
-                     Add_From_Info (Item.Destructure.Type_Info);
-                  when CM.Stmt_If =>
-                     Add_From_Statements (Item.Then_Stmts);
-                     for Part of Item.Elsifs loop
-                        Add_From_Statements (Part.Statements);
-                     end loop;
-                     if Item.Has_Else then
-                        Add_From_Statements (Item.Else_Stmts);
-                     end if;
-                  when CM.Stmt_Case =>
-                     for Arm of Item.Case_Arms loop
-                        Add_From_Statements (Arm.Statements);
-                     end loop;
-                  when CM.Stmt_While | CM.Stmt_Loop =>
-                     Add_From_Statements (Item.Body_Stmts);
-                  when CM.Stmt_For =>
-                     if Item.Loop_Iterable /= null then
-                        declare
-                           Found : Boolean := False;
-                           One_Char_Info : GM.Type_Descriptor := (others => <>);
-                        begin
-                           One_Char_Info :=
-                             Synthetic_Bounded_String_Type ("__bounded_string_1", Found);
-                           if Found then
-                              Add_From_Info (One_Char_Info);
-                           end if;
-                        end;
-                     end if;
-                     Add_From_Statements (Item.Body_Stmts);
-                  when CM.Stmt_Select =>
-                     for Arm of Item.Arms loop
-                        case Arm.Kind is
-                           when CM.Select_Arm_Channel =>
-                              Add_From_Info (Arm.Channel_Data.Type_Info);
-                              Add_From_Statements (Arm.Channel_Data.Statements);
-                           when CM.Select_Arm_Delay =>
-                              Add_From_Statements (Arm.Delay_Data.Statements);
-                           when others =>
-                              null;
-                        end case;
-                     end loop;
-                  when others =>
-                     null;
-               end case;
-            end if;
-         end loop;
-      end Add_From_Statements;
+         end case;
+      end Visit_Statement;
+
+      procedure Visit_Select_Arm (Arm : CM.Select_Arm) is
+      begin
+         if Arm.Kind = CM.Select_Arm_Channel then
+            Add_From_Info (Arm.Channel_Data.Type_Info);
+         end if;
+      end Visit_Select_Arm;
+
+      procedure Add_From_Statements is new Walk_Statement_Structure
+        (Visit_Statement, Visit_Select_Arm);
    begin
       for Item of Unit.Types loop
          if Item.Generic_Formals.Is_Empty then
@@ -10270,8 +10165,6 @@ package body Safe_Frontend.Ada_Emit is
       Seen : FT.UString_Vectors.Vector;
 
       procedure Add_From_Info (Info : GM.Type_Descriptor);
-      procedure Add_From_Statements
-        (Statements : CM.Statement_Access_Vectors.Vector);
 
       procedure Add_From_Info (Info : GM.Type_Descriptor) is
          Name_Text : constant String := Render_Type_Name (Info);
@@ -10288,69 +10181,33 @@ package body Safe_Frontend.Ada_Emit is
          Result.Append (Info);
       end Add_From_Info;
 
-      procedure Add_From_Statements
-        (Statements : CM.Statement_Access_Vectors.Vector)
-      is
+      procedure Visit_Statement (Item : CM.Statement_Access) is
       begin
-         for Item of Statements loop
-            if Item = null then
-               null;
-            else
-               case Item.Kind is
-                  when CM.Stmt_If =>
-                     Add_From_Statements (Item.Then_Stmts);
-                     for Part of Item.Elsifs loop
-                        Add_From_Statements (Part.Statements);
-                     end loop;
-                     if Item.Has_Else then
-                        Add_From_Statements (Item.Else_Stmts);
-                     end if;
-                  when CM.Stmt_Case =>
-                     for Arm of Item.Case_Arms loop
-                        Add_From_Statements (Arm.Statements);
-                     end loop;
-                  when CM.Stmt_While | CM.Stmt_Loop =>
-                     Add_From_Statements (Item.Body_Stmts);
-                  when CM.Stmt_For =>
-                     if Item.Loop_Iterable /= null then
-                        declare
-                           Iterable_Info : constant GM.Type_Descriptor :=
-                             Base_Type
-                               (Unit,
-                                Document,
-                                Expr_Type_Info (Unit, Document, Item.Loop_Iterable));
-                           Is_String_Iterable : constant Boolean :=
-                             FT.Lowercase (FT.To_String (Iterable_Info.Kind)) = "string";
-                        begin
-                           if not Is_String_Iterable
-                             and then Iterable_Info.Has_Component_Type
-                           then
-                              Add_From_Info
-                                (Resolve_Type_Name
-                                   (Unit,
-                                    Document,
-                                    FT.To_String (Iterable_Info.Component_Type)));
-                           end if;
-                        end;
-                     end if;
-                     Add_From_Statements (Item.Body_Stmts);
-                  when CM.Stmt_Select =>
-                     for Arm of Item.Arms loop
-                        case Arm.Kind is
-                           when CM.Select_Arm_Channel =>
-                              Add_From_Statements (Arm.Channel_Data.Statements);
-                           when CM.Select_Arm_Delay =>
-                              Add_From_Statements (Arm.Delay_Data.Statements);
-                           when others =>
-                              null;
-                        end case;
-                     end loop;
-                  when others =>
-                     null;
-               end case;
-            end if;
-         end loop;
-      end Add_From_Statements;
+         if Item.Kind = CM.Stmt_For and then Item.Loop_Iterable /= null then
+            declare
+               Iterable_Info : constant GM.Type_Descriptor :=
+                 Base_Type
+                   (Unit,
+                    Document,
+                    Expr_Type_Info (Unit, Document, Item.Loop_Iterable));
+               Is_String_Iterable : constant Boolean :=
+                 FT.Lowercase (FT.To_String (Iterable_Info.Kind)) = "string";
+            begin
+               if not Is_String_Iterable
+                 and then Iterable_Info.Has_Component_Type
+               then
+                  Add_From_Info
+                    (Resolve_Type_Name
+                       (Unit,
+                        Document,
+                        FT.To_String (Iterable_Info.Component_Type)));
+               end if;
+            end;
+         end if;
+      end Visit_Statement;
+
+      procedure Add_From_Statements is new Walk_Statement_Structure
+        (Visit_Statement, Ignore_Select_Arm);
    begin
       for Item of Unit.Subprograms loop
          Add_From_Statements (Item.Statements);
@@ -10905,8 +10762,6 @@ package body Safe_Frontend.Ada_Emit is
       procedure Add_From_Info (Info : GM.Type_Descriptor);
       procedure Add_From_Decls (Decls : CM.Resolved_Object_Decl_Vectors.Vector);
       procedure Add_From_Decls (Decls : CM.Object_Decl_Vectors.Vector);
-      procedure Add_From_Statements
-        (Statements : CM.Statement_Access_Vectors.Vector);
 
       procedure Add_From_Info (Info : GM.Type_Descriptor) is
          Name_Text : constant String := FT.To_String (Info.Name);
@@ -10935,51 +10790,29 @@ package body Safe_Frontend.Ada_Emit is
          end loop;
       end Add_From_Decls;
 
-      procedure Add_From_Statements
-        (Statements : CM.Statement_Access_Vectors.Vector) is
+      procedure Visit_Statement (Item : CM.Statement_Access) is
       begin
-         for Item of Statements loop
-            if Item = null then
+         case Item.Kind is
+            when CM.Stmt_Object_Decl =>
+               Add_From_Info (Item.Decl.Type_Info);
+            when CM.Stmt_Destructure_Decl =>
+               Add_From_Info (Item.Destructure.Type_Info);
+            when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
+               Add_From_Decls (Item.Declarations);
+            when others =>
                null;
-            else
-               case Item.Kind is
-                  when CM.Stmt_Object_Decl =>
-                     Add_From_Info (Item.Decl.Type_Info);
-                  when CM.Stmt_Destructure_Decl =>
-                     Add_From_Info (Item.Destructure.Type_Info);
-                  when CM.Stmt_If =>
-                     Add_From_Statements (Item.Then_Stmts);
-                     for Part of Item.Elsifs loop
-                        Add_From_Statements (Part.Statements);
-                     end loop;
-                     if Item.Has_Else then
-                        Add_From_Statements (Item.Else_Stmts);
-                     end if;
-                  when CM.Stmt_Case =>
-                     for Arm of Item.Case_Arms loop
-                        Add_From_Statements (Arm.Statements);
-                     end loop;
-                  when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
-                     Add_From_Decls (Item.Declarations);
-                     Add_From_Statements (Item.Body_Stmts);
-                  when CM.Stmt_Select =>
-                     for Arm of Item.Arms loop
-                        case Arm.Kind is
-                           when CM.Select_Arm_Channel =>
-                              Add_From_Info (Arm.Channel_Data.Type_Info);
-                              Add_From_Statements (Arm.Channel_Data.Statements);
-                           when CM.Select_Arm_Delay =>
-                              Add_From_Statements (Arm.Delay_Data.Statements);
-                           when others =>
-                              null;
-                        end case;
-                     end loop;
-                  when others =>
-                     null;
-               end case;
-            end if;
-         end loop;
-      end Add_From_Statements;
+         end case;
+      end Visit_Statement;
+
+      procedure Visit_Select_Arm (Arm : CM.Select_Arm) is
+      begin
+         if Arm.Kind = CM.Select_Arm_Channel then
+            Add_From_Info (Arm.Channel_Data.Type_Info);
+         end if;
+      end Visit_Select_Arm;
+
+      procedure Add_From_Statements is new Walk_Statement_Structure
+        (Visit_Statement, Visit_Select_Arm);
    begin
       for Item of Unit.Types loop
          if Item.Generic_Formals.Is_Empty then
@@ -12949,13 +12782,10 @@ package body Safe_Frontend.Ada_Emit is
             Base_Kind : constant String := FT.Lowercase (FT.To_String (Base_Info.Kind));
             Base_Name : constant String := FT.Lowercase (FT.To_String (Base_Info.Name));
          begin
-            if Is_Plain_String_Type (Unit, Document, Info) then
-               return
-                 "Safe_String_RT.To_String ("
-                 & Render_Heap_String_Expr (Unit, Document, Expr, State)
-                 & ")";
-            elsif Is_Bounded_String_Type (Info) then
-               return Render_String_Expr (Unit, Document, Expr, State);
+            if Is_Plain_String_Type (Unit, Document, Info)
+              or else Is_Bounded_String_Type (Info)
+            then
+               return Render_String_Value_Image (Unit, Document, Expr, Info, State);
             elsif Base_Kind = "string" or else Base_Name = "string" then
                return Render_String_Expr (Unit, Document, Expr, State);
             elsif Base_Kind = "boolean" or else Base_Name = "boolean" then
