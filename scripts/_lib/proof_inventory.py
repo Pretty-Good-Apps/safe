@@ -408,6 +408,18 @@ EMITTED_PROOF_EXCLUSIONS = [
         owner="runtime-regression-only",
         milestone="PR11.10d",
     ),
+    EmittedProofExclusion(
+        path="tests/build/pr213_map_entry_build.safe",
+        reason="runtime-only map-entry iteration proof-performance issue; GNATprove spends unbounded time in the emitted heap-backed map runtime path",
+        owner="runtime-regression-only",
+        milestone="PR11.10c",
+    ),
+    EmittedProofExclusion(
+        path="tests/build/pr220_for_of_composite_unroll_build.safe",
+        reason="runtime-only static composite for-of unroll regression; build witness locks deep-copy before cleanup without adding another proof-heavy heap runtime target",
+        owner="runtime-regression-only",
+        milestone="PR11.10c",
+    ),
 ]
 
 
