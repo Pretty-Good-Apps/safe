@@ -414,6 +414,9 @@ package Safe_Frontend.Check_Model is
       Stmt_Exit,
       Stmt_Send,
       Stmt_Receive,
+      --  Retained for legacy parser migration diagnostics only. The parser can
+      --  still build this node for old `try_send` syntax, and the resolver
+      --  rejects it with the rename guidance.
       Stmt_Try_Send,
       Stmt_Try_Receive,
       Stmt_Match,
