@@ -1403,7 +1403,8 @@ package body Safe_Frontend.Check_Lower is
       Type_Env         : Type_Maps.Map;
       Span             : FT.Source_Span;
       Ownership_Effect : GM.Ownership_Effect_Kind := GM.Ownership_None;
-      Declaration_Init : Boolean := False) return GM.Op_Entry
+      Declaration_Init : Boolean := False;
+      Type_Name        : FT.UString := FT.To_UString ("")) return GM.Op_Entry
    is
       Result : GM.Op_Entry := (others => <>);
    begin
@@ -1411,7 +1412,11 @@ package body Safe_Frontend.Check_Lower is
       Result.Span := Span;
       Result.Target := Lower_Target (Target, Target_Types, Type_Env);
       Result.Value := Lower_Expr (Value, Value_Types, Type_Env);
-      Result.Type_Name := Expr_Type (Target, Target_Types, Type_Env).Name;
+      if Has_Text (Type_Name) then
+         Result.Type_Name := Type_Name;
+      else
+         Result.Type_Name := Expr_Type (Target, Target_Types, Type_Env).Name;
+      end if;
       Result.Ownership_Effect := Ownership_Effect;
       Result.Declaration_Init := Declaration_Init;
       return Result;
@@ -1442,6 +1447,10 @@ package body Safe_Frontend.Check_Lower is
                declare
                   Decl_Visible : Type_Maps.Map := Visible_Types;
                begin
+                  --  Lower_Target resolves identifiers through the visible type
+                  --  map, so pre-populate co-declared names before lowering any
+                  --  decl-init targets. The initializer path still uses
+                  --  Visible_Types.
                   for Name of Stmt.Decl.Names loop
                      Decl_Visible.Include
                        (UString_Value (Name),
@@ -1483,7 +1492,8 @@ package body Safe_Frontend.Check_Lower is
                              Type_Env,
                              Stmt.Decl.Span,
                              Ownership_Effect,
-                             Declaration_Init => True);
+                             Declaration_Init => True,
+                             Type_Name        => Stmt.Decl.Type_Info.Name);
                         Add_Op (Work, UString_Value (Current_Id), Assign_Op);
                      end;
                   end loop;
@@ -1520,7 +1530,8 @@ package body Safe_Frontend.Check_Lower is
                     Visible_Types,
                     Type_Env,
                     Stmt.Destructure.Span,
-                    Declaration_Init => True);
+                    Declaration_Init => True,
+                    Type_Name        => Tuple_Type.Name);
                Add_Op (Work, UString_Value (Current_Id), Assign_Op);
 
                for Index in Stmt.Destructure.Names.First_Index .. Stmt.Destructure.Names.Last_Index loop
@@ -1549,7 +1560,8 @@ package body Safe_Frontend.Check_Lower is
                           Temp_Visible,
                           Type_Env,
                           Stmt.Destructure.Span,
-                          Declaration_Init => True);
+                          Declaration_Init => True,
+                          Type_Name        => FT.To_UString (Element_Type_Name));
                      Add_Op (Work, UString_Value (Current_Id), Assign_Op);
                   end;
                end loop;

@@ -2840,6 +2840,69 @@ def run_emitted_shape_case(
     return True, ""
 
 
+def run_tuple_destructure_mir_type_case(safec: Path, *, temp_root: Path) -> tuple[bool, str]:
+    source = REPO_ROOT / "tests" / "positive" / "pr113_tuple_destructure.safe"
+
+    case_root = temp_root / "pr113-tuple-destructure-mir-type"
+    out_dir = case_root / "out"
+    iface_dir = case_root / "iface"
+    ada_dir = case_root / "ada"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    iface_dir.mkdir(parents=True, exist_ok=True)
+    ada_dir.mkdir(parents=True, exist_ok=True)
+
+    emit = run_command(
+        [
+            str(safec),
+            "emit",
+            repo_rel(source),
+            "--out-dir",
+            str(out_dir),
+            "--interface-dir",
+            str(iface_dir),
+            "--ada-out-dir",
+            str(ada_dir),
+        ],
+        cwd=REPO_ROOT,
+    )
+    if emit.returncode != 0:
+        return False, f"emit failed: {first_message(emit)}"
+
+    stem = source.stem.lower()
+    mir_payload = json.loads((out_dir / f"{stem}.mir.json").read_text(encoding="utf-8"))
+    read_second = next(
+        (graph for graph in mir_payload.get("graphs", []) if graph.get("name") == "read_second"),
+        None,
+    )
+    if read_second is None:
+        return False, "missing read_second graph in tuple destructure MIR"
+
+    expected_types = {
+        "__safe_destructure_1": "__tuple_boolean_integer",
+        "found": "boolean",
+        "value": "integer",
+    }
+    found_types: dict[str, str] = {}
+
+    for block in read_second.get("blocks", []):
+        for op in block.get("ops", []):
+            if op.get("kind") != "assign":
+                continue
+            target = op.get("target", {})
+            if target.get("tag") != "ident":
+                continue
+            name = target.get("name")
+            if name in expected_types and op.get("declaration_init") is True:
+                found_types[name] = op.get("type")
+
+    for name, expected in expected_types.items():
+        actual = found_types.get(name)
+        if actual != expected:
+            return False, f"tuple destructure MIR type for {name!r} was {actual!r}, expected {expected!r}"
+
+    return True, ""
+
+
 def emit_case_ada_text(
     safec: Path,
     *,
@@ -3369,6 +3432,12 @@ def main() -> int:
             passed += 1
         else:
             failures.append(("target-bits check", detail))
+
+        ok, detail = run_tuple_destructure_mir_type_case(safec, temp_root=temp_root)
+        if ok:
+            passed += 1
+        else:
+            failures.append(("mir-shape:tuple-destructure-type-names", detail))
 
         for label, source, forbidden_snippets in EMITTED_SHAPE_CASES:
             ok, detail = run_emitted_shape_case(
