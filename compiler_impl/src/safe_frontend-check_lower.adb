@@ -1816,7 +1816,8 @@ package body Safe_Frontend.Check_Lower is
                     Visible_Types,
                     Type_Env,
                     Stmt.Case_Expr.Span,
-                    Declaration_Init => True);
+                    Declaration_Init => True,
+                    Type_Name        => Case_Type.Name);
                Add_Op (Work, UString_Value (Entry_Id), Assign_Op);
 
                if Stmt.Case_Arms.Length > 1 then
@@ -2080,7 +2081,8 @@ package body Safe_Frontend.Check_Lower is
                           Visible_Types,
                           Type_Env,
                           Stmt.Span,
-                          Declaration_Init => True);
+                          Declaration_Init => True,
+                          Type_Name        => Iterable_Type.Name);
                      Add_Op (Work, UString_Value (Init_Id), Assign_Op);
 
                      Assign_Op :=
@@ -2095,7 +2097,8 @@ package body Safe_Frontend.Check_Lower is
                           Loop_Types,
                           Type_Env,
                           Stmt.Span,
-                          Declaration_Init => True);
+                          Declaration_Init => True,
+                          Type_Name        => Index_Type.Name);
                      Add_Op (Work, UString_Value (Init_Id), Assign_Op);
 
                      Terminator := (others => <>);
@@ -2148,7 +2151,8 @@ package body Safe_Frontend.Check_Lower is
                           Loop_Types,
                           Type_Env,
                           Stmt.Span,
-                          Declaration_Init => True);
+                          Declaration_Init => True,
+                          Type_Name        => Loop_Type.Name);
                      Add_Op (Work, UString_Value (Body_Id), Assign_Op);
 
                      Body_End :=
@@ -2186,7 +2190,8 @@ package body Safe_Frontend.Check_Lower is
                           Loop_Types,
                           Loop_Types,
                           Type_Env,
-                          Stmt.Span);
+                          Stmt.Span,
+                          Type_Name => Index_Type.Name);
                      Add_Op (Work, UString_Value (Latch_Id), Assign_Op);
 
                      Terminator := (others => <>);
@@ -2230,7 +2235,8 @@ package body Safe_Frontend.Check_Lower is
                     Loop_Types,
                     Type_Env,
                     Stmt.Span,
-                    Declaration_Init => True);
+                    Declaration_Init => True,
+                    Type_Name        => Loop_Type.Name);
                Add_Op (Work, UString_Value (Init_Id), Assign_Op);
 
                Terminator := (others => <>);
@@ -2304,7 +2310,8 @@ package body Safe_Frontend.Check_Lower is
                     Loop_Types,
                     Loop_Types,
                     Type_Env,
-                    Stmt.Span);
+                    Stmt.Span,
+                    Type_Name => Loop_Type.Name);
                Add_Op (Work, UString_Value (Latch_Id), Assign_Op);
 
                Terminator := (others => <>);
@@ -2681,7 +2688,8 @@ package body Safe_Frontend.Check_Lower is
                              Visible,
                              Visible,
                              Type_Env),
-                          Declaration_Init => True);
+                          Declaration_Init => True,
+                          Type_Name        => Decl.Type_Info.Name);
                   end;
                   Add_Op (Work, UString_Value (Entry_Id), Assign_Op);
                end if;
@@ -2713,7 +2721,8 @@ package body Safe_Frontend.Check_Lower is
                           Visible,
                           Visible,
                           Type_Env),
-                       Declaration_Init => True);
+                       Declaration_Init => True,
+                       Type_Name        => Decl.Type_Info.Name);
                end;
                Add_Op (Work, UString_Value (Entry_Id), Assign_Op);
             end if;
@@ -2827,7 +2836,8 @@ package body Safe_Frontend.Check_Lower is
                              Visible,
                              Visible,
                              Type_Env),
-                          Declaration_Init => True);
+                          Declaration_Init => True,
+                          Type_Name        => Decl.Type_Info.Name);
                   end;
                   Add_Op (Work, UString_Value (Entry_Id), Assign_Op);
                end if;
@@ -2972,7 +2982,8 @@ package body Safe_Frontend.Check_Lower is
                              Visible,
                              Visible,
                              Type_Env),
-                          Declaration_Init => True);
+                          Declaration_Init => True,
+                          Type_Name        => Decl.Type_Info.Name);
                   end;
                   Add_Op (Work, UString_Value (Entry_Id), Assign_Op);
                end if;
@@ -3004,7 +3015,8 @@ package body Safe_Frontend.Check_Lower is
                           Visible,
                           Visible,
                           Type_Env),
-                       Declaration_Init => True);
+                       Declaration_Init => True,
+                       Type_Name        => Decl.Type_Info.Name);
                end;
                Add_Op (Work, UString_Value (Entry_Id), Assign_Op);
             end if;
