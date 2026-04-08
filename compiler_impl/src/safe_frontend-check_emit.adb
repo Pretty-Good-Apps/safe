@@ -3214,6 +3214,8 @@ package body Safe_Frontend.Check_Emit is
          end if;
       end loop;
 
+      --  Validation builds should fail loudly if parsed and resolved
+      --  subprogram order ever drifts.
       pragma Assert
         (Natural (Resolved.Subprograms.Length) = Parsed_Subprogram_Count);
 
@@ -3221,6 +3223,9 @@ package body Safe_Frontend.Check_Emit is
          if Item.Kind = CM.Item_Subprogram then
             --  Resolved.Subprograms is a Positive-indexed vector today, and the
             --  parsed item order is matched by incrementing before lookup.
+            --  Keep the release-build guards even though the assertion above
+            --  proves them in assertion-enabled runs; the pre-helper code
+            --  silently skipped inconsistent state here.
             Subprogram_Index := Subprogram_Index + 1;
             if Item.Subp_Data.Is_Public
               and then not Resolved.Subprograms.Is_Empty

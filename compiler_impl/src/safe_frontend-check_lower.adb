@@ -1416,8 +1416,9 @@ package body Safe_Frontend.Check_Lower is
       if Has_Text (Type_Name) then
          Result.Type_Name := Type_Name;
       else
-         --  Omitting Type_Name means the caller intends the target-side type
-         --  lookup. Today that path is only used when both maps are the same.
+         --  Plain assignment intentionally uses this fallback with identical
+         --  target/value maps. Mixed-map callers must pass an explicit
+         --  Type_Name instead of relying on target-side lookup.
          pragma Assert (Target_Types = Value_Types);
          Result.Type_Name := Expr_Type (Target, Target_Types, Type_Env).Name;
       end if;
@@ -2667,6 +2668,9 @@ package body Safe_Frontend.Check_Lower is
          Add_Op (Work, UString_Value (Entry_Id), Scope_Op);
       end if;
 
+      --  Visible already contains all package and local declaration names from
+      --  the registration passes above, so these declaration-init targets do
+      --  not need a separate Decl_Visible overlay.
       for Decl of Package_Objects loop
          if not Decl.Is_Shared then
             for Name of Decl.Names loop
@@ -2815,6 +2819,9 @@ package body Safe_Frontend.Check_Lower is
       Register_Scope_Entry (Work, "scope0", UString_Value (Entry_Id));
       Result.Entry_BB := Entry_Id;
 
+      --  Visible already contains all unit object names from the registration
+      --  pass above, so declaration-init targets lower through the populated
+      --  map directly here.
       for Decl of Unit.Objects loop
          if not Decl.Is_Shared then
             for Name of Decl.Names loop
@@ -2961,6 +2968,9 @@ package body Safe_Frontend.Check_Lower is
          Add_Op (Work, UString_Value (Entry_Id), Scope_Op);
       end if;
 
+      --  Visible already contains all package and task-local declaration names
+      --  from the registration passes above, so these declaration-init targets
+      --  do not need a separate Decl_Visible overlay.
       for Decl of Package_Objects loop
          if not Decl.Is_Shared then
             for Name of Decl.Names loop
