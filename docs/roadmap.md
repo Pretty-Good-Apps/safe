@@ -88,12 +88,12 @@ Dependency chain:
 - PR11.22d follows PR11.22c (emitter deduplication and vestigial code removal).
 - PR11.22e follows PR11.22d (emitter file split into domain-focused modules).
 - PR11.22f follows PR11.22e (resolver cleanup and builtin-resolution consolidation).
-- PR11.23 follows PR11.22h (proof diagnostic mapping — Safe-native proof failure messages with source locations and fix guidance).
 - PR11.15 follows PR11.22f (string interpolation — low risk, high usability).
 - PR11.16 follows PR11.15 (nominal type aliases — distinct types with no implicit conversion).
 - PR11.14 follows PR11.16 (closures — deferred past hygiene to reduce implementation risk).
 - PR11.22g follows PR11.14 (test infrastructure modularization).
 - PR11.22h follows PR11.22g (shared stdlib contract audit and body-drift check).
+- PR11.23 follows PR11.22h (proof diagnostic mapping — Safe-native proof failure messages with source locations and fix guidance).
 - PR11.17–PR11.21 moved to PR14 series (deferred past all existing work; see PR14 below).
 
 ---
@@ -3211,7 +3211,6 @@ stdlib packages.
 ### Dependency
 
 Follows PR11.22g. Safety-critical audit — medium effort, high value.
-This is the last PR11 milestone.
 
 ---
 
