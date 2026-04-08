@@ -319,10 +319,6 @@ package body Safe_Frontend.Ada_Emit.Proofs is
          Visited_Calls   : in out FT.UString_Vectors.Vector) return Boolean
       is
       begin
-         if Name'Length = 0 then
-            return False;
-         end if;
-
          for Decl of Item_Subprogram.Declarations loop
             if Expr_Uses_Name (Decl.Initializer, Name) then
                return True;
@@ -334,6 +330,10 @@ package body Safe_Frontend.Ada_Emit.Proofs is
            or else Called_Subprograms_Mention_Name (Item_Subprogram, Visited_Calls);
       end Subprogram_Mentions_Name;
    begin
+      if Name'Length = 0 then
+         return False;
+      end if;
+
       declare
          Visited_Calls : FT.UString_Vectors.Vector;
          Subprogram_Name : constant String := FT.Lowercase (FT.To_String (Subprogram.Name));
