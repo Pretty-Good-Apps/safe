@@ -420,10 +420,11 @@ package body Safe_Frontend.Check_Lower is
    function Ownership_Assignment_Effect
      (Target    : CM.Expr_Access;
       Value     : CM.Expr_Access;
-      Var_Types : Type_Maps.Map;
+      Target_Types : Type_Maps.Map;
+      Value_Types : Type_Maps.Map;
       Type_Env  : Type_Maps.Map) return GM.Ownership_Effect_Kind
    is
-      Target_Type : constant GM.Type_Descriptor := Expr_Type (Target, Var_Types, Type_Env);
+      Target_Type : constant GM.Type_Descriptor := Expr_Type (Target, Target_Types, Type_Env);
       Target_Role : constant String := Type_Access_Role (Target_Type);
       Value_Type  : GM.Type_Descriptor;
    begin
@@ -437,7 +438,7 @@ package body Safe_Frontend.Check_Lower is
          if Value /= null and then Value.Kind in CM.Expr_Call | CM.Expr_Allocator then
             return GM.Ownership_Move;
          elsif Value /= null and then Value.Kind in CM.Expr_Ident | CM.Expr_Select then
-            Value_Type := Expr_Type (Value, Var_Types, Type_Env);
+            Value_Type := Expr_Type (Value, Value_Types, Type_Env);
             if Type_Access_Role (Value_Type) = "Owner" then
                return GM.Ownership_Move;
             end if;
@@ -1397,7 +1398,8 @@ package body Safe_Frontend.Check_Lower is
    function Build_Assignment_Op
      (Target           : CM.Expr_Access;
       Value            : CM.Expr_Access;
-      Var_Types        : Type_Maps.Map;
+      Target_Types     : Type_Maps.Map;
+      Value_Types      : Type_Maps.Map;
       Type_Env         : Type_Maps.Map;
       Span             : FT.Source_Span;
       Ownership_Effect : GM.Ownership_Effect_Kind := GM.Ownership_None;
@@ -1407,9 +1409,9 @@ package body Safe_Frontend.Check_Lower is
    begin
       Result.Kind := GM.Op_Assign;
       Result.Span := Span;
-      Result.Target := Lower_Target (Target, Var_Types, Type_Env);
-      Result.Value := Lower_Expr (Value, Var_Types, Type_Env);
-      Result.Type_Name := Expr_Type (Target, Var_Types, Type_Env).Name;
+      Result.Target := Lower_Target (Target, Target_Types, Type_Env);
+      Result.Value := Lower_Expr (Value, Value_Types, Type_Env);
+      Result.Type_Name := Expr_Type (Target, Target_Types, Type_Env).Name;
       Result.Ownership_Effect := Ownership_Effect;
       Result.Declaration_Init := Declaration_Init;
       return Result;
@@ -1468,6 +1470,7 @@ package body Safe_Frontend.Check_Lower is
                                (Target_Expr,
                                 Stmt.Decl.Initializer,
                                 Decl_Visible,
+                                Visible_Types,
                                 Type_Env)
                            else GM.Ownership_None);
                      begin
@@ -1476,6 +1479,7 @@ package body Safe_Frontend.Check_Lower is
                             (Target_Expr,
                              Init_Expr,
                              Decl_Visible,
+                             Visible_Types,
                              Type_Env,
                              Stmt.Decl.Span,
                              Ownership_Effect,
@@ -1513,6 +1517,7 @@ package body Safe_Frontend.Check_Lower is
                    (Temp_Target,
                     Stmt.Destructure.Initializer,
                     Temp_Visible,
+                    Temp_Visible,
                     Type_Env,
                     Stmt.Destructure.Span,
                     Declaration_Init => True);
@@ -1541,6 +1546,7 @@ package body Safe_Frontend.Check_Lower is
                          (Element_Target,
                           Element_Source,
                           Temp_Visible,
+                          Temp_Visible,
                           Type_Env,
                           Stmt.Destructure.Span,
                           Declaration_Init => True);
@@ -1556,10 +1562,15 @@ package body Safe_Frontend.Check_Lower is
                 (Stmt.Target,
                  Stmt.Value,
                  Visible_Types,
+                 Visible_Types,
                  Type_Env,
                  Stmt.Span,
                  Ownership_Assignment_Effect
-                   (Stmt.Target, Stmt.Value, Visible_Types, Type_Env));
+                   (Stmt.Target,
+                    Stmt.Value,
+                    Visible_Types,
+                    Visible_Types,
+                    Type_Env));
             Add_Op (Work, UString_Value (Current_Id), Assign_Op);
             return Current_Id;
 
@@ -1789,6 +1800,7 @@ package body Safe_Frontend.Check_Lower is
                  Build_Assignment_Op
                    (Temp_Target,
                     Stmt.Case_Expr,
+                    Case_Types,
                     Case_Types,
                     Type_Env,
                     Stmt.Case_Expr.Span,
@@ -2053,6 +2065,7 @@ package body Safe_Frontend.Check_Lower is
                          (Snapshot_Expr,
                           Stmt.Loop_Iterable,
                           Loop_Types,
+                          Loop_Types,
                           Type_Env,
                           Stmt.Span,
                           Declaration_Init => True);
@@ -2066,6 +2079,7 @@ package body Safe_Frontend.Check_Lower is
                            elsif Iterable_Type.Growable
                            then Literal_Expr (1, Stmt.Span)
                            else Literal_Expr (Index_Type.Low, Stmt.Span)),
+                          Loop_Types,
                           Loop_Types,
                           Type_Env,
                           Stmt.Span,
@@ -2119,6 +2133,7 @@ package body Safe_Frontend.Check_Lower is
                          (Item_Expr,
                           Element_Expr,
                           Loop_Types,
+                          Loop_Types,
                           Type_Env,
                           Stmt.Span,
                           Declaration_Init => True);
@@ -2156,6 +2171,7 @@ package body Safe_Frontend.Check_Lower is
                        Build_Assignment_Op
                          (Index_Expr,
                           Inc_Expr,
+                          Loop_Types,
                           Loop_Types,
                           Type_Env,
                           Stmt.Span);
@@ -2198,6 +2214,7 @@ package body Safe_Frontend.Check_Lower is
                        Stmt.Span,
                        UString_Value (Loop_Type.Name)),
                     Low_Expr,
+                    Loop_Types,
                     Loop_Types,
                     Type_Env,
                     Stmt.Span,
@@ -2272,6 +2289,7 @@ package body Safe_Frontend.Check_Lower is
                        Stmt.Span,
                        UString_Value (Loop_Type.Name)),
                     Inc_Expr,
+                    Loop_Types,
                     Loop_Types,
                     Type_Env,
                     Stmt.Span);
@@ -2642,10 +2660,15 @@ package body Safe_Frontend.Check_Lower is
                          (Target_Expr,
                           Decl.Initializer,
                           Visible,
+                          Visible,
                           Type_Env,
                           Decl.Span,
                           Ownership_Assignment_Effect
-                            (Target_Expr, Decl.Initializer, Visible, Type_Env),
+                            (Target_Expr,
+                             Decl.Initializer,
+                             Visible,
+                             Visible,
+                             Type_Env),
                           Declaration_Init => True);
                   end;
                   Add_Op (Work, UString_Value (Entry_Id), Assign_Op);
@@ -2669,10 +2692,15 @@ package body Safe_Frontend.Check_Lower is
                       (Target_Expr,
                        Decl.Initializer,
                        Visible,
+                       Visible,
                        Type_Env,
                        Decl.Span,
                        Ownership_Assignment_Effect
-                         (Target_Expr, Decl.Initializer, Visible, Type_Env),
+                         (Target_Expr,
+                          Decl.Initializer,
+                          Visible,
+                          Visible,
+                          Type_Env),
                        Declaration_Init => True);
                end;
                Add_Op (Work, UString_Value (Entry_Id), Assign_Op);
@@ -2778,10 +2806,15 @@ package body Safe_Frontend.Check_Lower is
                          (Target_Expr,
                           Decl.Initializer,
                           Visible,
+                          Visible,
                           Type_Env,
                           Decl.Span,
                           Ownership_Assignment_Effect
-                            (Target_Expr, Decl.Initializer, Visible, Type_Env),
+                            (Target_Expr,
+                             Decl.Initializer,
+                             Visible,
+                             Visible,
+                             Type_Env),
                           Declaration_Init => True);
                   end;
                   Add_Op (Work, UString_Value (Entry_Id), Assign_Op);
@@ -2918,10 +2951,15 @@ package body Safe_Frontend.Check_Lower is
                          (Target_Expr,
                           Decl.Initializer,
                           Visible,
+                          Visible,
                           Type_Env,
                           Decl.Span,
                           Ownership_Assignment_Effect
-                            (Target_Expr, Decl.Initializer, Visible, Type_Env),
+                            (Target_Expr,
+                             Decl.Initializer,
+                             Visible,
+                             Visible,
+                             Type_Env),
                           Declaration_Init => True);
                   end;
                   Add_Op (Work, UString_Value (Entry_Id), Assign_Op);
@@ -2945,10 +2983,15 @@ package body Safe_Frontend.Check_Lower is
                       (Target_Expr,
                        Decl.Initializer,
                        Visible,
+                       Visible,
                        Type_Env,
                        Decl.Span,
                        Ownership_Assignment_Effect
-                         (Target_Expr, Decl.Initializer, Visible, Type_Env),
+                         (Target_Expr,
+                          Decl.Initializer,
+                          Visible,
+                          Visible,
+                          Type_Env),
                        Declaration_Init => True);
                end;
                Add_Op (Work, UString_Value (Entry_Id), Assign_Op);

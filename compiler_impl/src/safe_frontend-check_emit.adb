@@ -3209,6 +3209,8 @@ package body Safe_Frontend.Check_Emit is
    begin
       for Item of Parsed.Items loop
          if Item.Kind = CM.Item_Subprogram then
+            --  Resolved.Subprograms is a Positive-indexed vector today, and the
+            --  parsed item order is matched by incrementing before lookup.
             Subprogram_Index := Subprogram_Index + 1;
             if Item.Subp_Data.Is_Public
               and then not Resolved.Subprograms.Is_Empty
