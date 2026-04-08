@@ -1517,7 +1517,7 @@ package body Safe_Frontend.Check_Lower is
                    (Temp_Target,
                     Stmt.Destructure.Initializer,
                     Temp_Visible,
-                    Temp_Visible,
+                    Visible_Types,
                     Type_Env,
                     Stmt.Destructure.Span,
                     Declaration_Init => True);

@@ -1370,7 +1370,7 @@ package body Safe_Frontend.Mir_Bronze is
                         Result.Direct_Writes,
                         Result.Direct_Outputs,
                         Result.Use_Spans,
-                       Op.Span);
+                        Op.Span);
                   end if;
                when GM.Op_Call =>
                   Walk (Op.Value);
@@ -1395,7 +1395,7 @@ package body Safe_Frontend.Mir_Bronze is
                      Result.Direct_Writes,
                      Result.Direct_Outputs,
                      Result.Use_Spans,
-                       Op.Span);
+                     Op.Span);
                when GM.Op_Channel_Try_Send =>
                   Walk (Op.Value);
                   Root := FT.To_UString (Flatten_Name (Op.Channel));
@@ -1431,7 +1431,7 @@ package body Safe_Frontend.Mir_Bronze is
                      Result.Direct_Writes,
                      Result.Direct_Outputs,
                      Result.Use_Spans,
-                       Op.Span);
+                     Op.Span);
                when GM.Op_Delay =>
                   Walk (Op.Value);
                when others =>
