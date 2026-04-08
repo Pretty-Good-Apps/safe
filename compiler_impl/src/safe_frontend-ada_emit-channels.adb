@@ -1,7 +1,4 @@
 with Ada.Containers;
-with Ada.Strings.Fixed;
-with Ada.Strings.Unbounded;
-with Safe_Frontend.Ada_Emit.Internal;
 with Safe_Frontend.Ada_Emit.Statements;
 with Safe_Frontend.Ada_Emit.Types;
 
@@ -894,6 +891,15 @@ package body Safe_Frontend.Ada_Emit.Channels is
                              State)
                         & ");",
                         2);
+                     if Is_Plain_String_Type (Unit, Document, Field_Info) then
+                        State.Needs_Safe_String_RT := True;
+                        Append_Line
+                          (Buffer,
+                           "procedure "
+                           & Shared_Nested_Field_Setter_Name (Next_Path)
+                           & " (Value : in String);",
+                           2);
+                     end if;
                   end if;
 
                   if Is_Plain_Shared_Nested_Record (Unit, Document, Field_Info) then
@@ -999,6 +1005,15 @@ package body Safe_Frontend.Ada_Emit.Channels is
                      & Field_Type_Name
                      & ");",
                      2);
+                  if Is_Plain_String_Type (Unit, Document, Field_Info) then
+                     State.Needs_Safe_String_RT := True;
+                     Append_Line
+                       (Buffer,
+                        "procedure "
+                        & Shared_Field_Setter_Name (FT.To_String (Field.Name))
+                        & " (Value : in String);",
+                        2);
+                  end if;
                end;
             end loop;
             declare

@@ -1,9 +1,5 @@
-with Ada.Characters.Handling;
 with Ada.Containers;
-with Ada.Strings.Fixed;
-with Ada.Strings.Unbounded;
 with Safe_Frontend.Ada_Emit.Expressions;
-with Safe_Frontend.Ada_Emit.Internal;
 with Safe_Frontend.Ada_Emit.Statements;
 with Safe_Frontend.Ada_Emit.Types;
 
@@ -333,8 +329,6 @@ package body Safe_Frontend.Ada_Emit.Proofs is
    is
       pragma Unreferenced (Document);
       Items : FT.UString_Vectors.Vector;
-      Dispatcher_Names : FT.UString_Vectors.Vector;
-      Timer_Names : FT.UString_Vectors.Vector;
 
       procedure Add_Unique (Name : String) is
       begin
@@ -357,17 +351,6 @@ package body Safe_Frontend.Ada_Emit.Proofs is
 
       for Task_Item of Unit.Tasks loop
          Add_Unique (FT.To_String (Task_Item.Name));
-      end loop;
-
-      Collect_Select_Dispatcher_Names (Unit.Statements, Dispatcher_Names);
-      Collect_Select_Delay_Timer_Names (Unit.Statements, Timer_Names);
-      for Task_Item of Unit.Tasks loop
-         Collect_Select_Dispatcher_Names
-           (Task_Item.Statements,
-            Dispatcher_Names);
-         Collect_Select_Delay_Timer_Names
-           (Task_Item.Statements,
-            Timer_Names);
       end loop;
 
       for Decl of Unit.Objects loop
