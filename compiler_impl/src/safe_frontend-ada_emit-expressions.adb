@@ -172,9 +172,8 @@ package body Safe_Frontend.Ada_Emit.Expressions is
       Depth  : Natural) renames AI.Append_Task_Channel_Call_Warning_Restore;
 
    procedure Raise_Internal (Message : String) is
-      pragma Unreferenced (Message);
    begin
-      raise AI.Emitter_Internal;
+      raise AI.Emitter_Internal with Message;
    end Raise_Internal;
 
    procedure Raise_Unsupported
