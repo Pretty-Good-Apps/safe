@@ -11668,23 +11668,19 @@ package body Safe_Frontend.Check_Resolve is
                   --  Reject_Uncontextualized_None, which only walks nested
                   --  `none` values. Emitted nodes still carry the field type
                   --  name for downstream emission.
-                  if not Result.Call.Args.Is_Empty
-                    and then Result.Call.Args (Result.Call.Args.First_Index) /= null
+                  if UString_Value
+                    (Result.Call.Args (Result.Call.Args.First_Index).Type_Name)'Length = 0
+                    and then UString_Value (Shared_Field_Type.Name)'Length > 0
                   then
-                     if UString_Value
-                       (Result.Call.Args (Result.Call.Args.First_Index).Type_Name)'Length = 0
-                       and then UString_Value (Shared_Field_Type.Name)'Length > 0
-                     then
-                        Result.Call.Args (Result.Call.Args.First_Index).Type_Name :=
-                          Shared_Field_Type.Name;
-                     elsif Result.Call.Args (Result.Call.Args.First_Index).Kind = CM.Expr_String
-                       and then
-                         (Is_Bounded_String_Type (Shared_Field_Type, Type_Env)
-                          or else Is_String_Type (Shared_Field_Type, Type_Env))
-                     then
-                        Result.Call.Args (Result.Call.Args.First_Index).Type_Name :=
-                          Shared_Field_Type.Name;
-                     end if;
+                     Result.Call.Args (Result.Call.Args.First_Index).Type_Name :=
+                       Shared_Field_Type.Name;
+                  elsif Result.Call.Args (Result.Call.Args.First_Index).Kind = CM.Expr_String
+                    and then
+                      (Is_Bounded_String_Type (Shared_Field_Type, Type_Env)
+                       or else Is_String_Type (Shared_Field_Type, Type_Env))
+                  then
+                     Result.Call.Args (Result.Call.Args.First_Index).Type_Name :=
+                       Shared_Field_Type.Name;
                   end if;
                   Reject_Static_Bounded_String_Overflow
                     (Result.Call.Args (Result.Call.Args.First_Index),
@@ -11745,23 +11741,19 @@ package body Safe_Frontend.Check_Resolve is
                   --  Reject_Uncontextualized_None, which only walks nested
                   --  `none` values. Emitted nodes still carry the field type
                   --  name for downstream emission.
-                  if not Result.Call.Args.Is_Empty
-                    and then Result.Call.Args (Result.Call.Args.First_Index) /= null
+                  if UString_Value
+                    (Result.Call.Args (Result.Call.Args.First_Index).Type_Name)'Length = 0
+                    and then UString_Value (Shared_Field_Type.Name)'Length > 0
                   then
-                     if UString_Value
-                       (Result.Call.Args (Result.Call.Args.First_Index).Type_Name)'Length = 0
-                       and then UString_Value (Shared_Field_Type.Name)'Length > 0
-                     then
-                        Result.Call.Args (Result.Call.Args.First_Index).Type_Name :=
-                          Shared_Field_Type.Name;
-                     elsif Result.Call.Args (Result.Call.Args.First_Index).Kind = CM.Expr_String
-                       and then
-                         (Is_Bounded_String_Type (Shared_Field_Type, Type_Env)
-                          or else Is_String_Type (Shared_Field_Type, Type_Env))
-                     then
-                        Result.Call.Args (Result.Call.Args.First_Index).Type_Name :=
-                          Shared_Field_Type.Name;
-                     end if;
+                     Result.Call.Args (Result.Call.Args.First_Index).Type_Name :=
+                       Shared_Field_Type.Name;
+                  elsif Result.Call.Args (Result.Call.Args.First_Index).Kind = CM.Expr_String
+                    and then
+                      (Is_Bounded_String_Type (Shared_Field_Type, Type_Env)
+                       or else Is_String_Type (Shared_Field_Type, Type_Env))
+                  then
+                     Result.Call.Args (Result.Call.Args.First_Index).Type_Name :=
+                       Shared_Field_Type.Name;
                   end if;
                   Reject_Static_Bounded_String_Overflow
                     (Result.Call.Args (Result.Call.Args.First_Index),
