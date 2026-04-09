@@ -5827,7 +5827,7 @@ package body Safe_Frontend.Check_Resolve is
                           FT.Null_Span),
                        Value_Type,
                        Type_Env);
-               when Builtin_None | Builtin_Append | Builtin_Pop_Last =>
+               when others =>
                   null;
             end case;
       end case;
@@ -7448,11 +7448,11 @@ package body Safe_Frontend.Check_Resolve is
       Type_Env  : Type_Maps.Map;
       Name      : String) return Boolean
    is
+      Kind : constant Builtin_Method_Kind := Builtin_Method_Kind_For_Name (Name);
    begin
       return
-        Builtin_Method_Kind_For_Call (Expr, Var_Types, Functions, Type_Env) =
-          Builtin_Method_Kind_For_Name (Name)
-          and then Builtin_Method_Kind_For_Name (Name) /= Builtin_None;
+        Kind /= Builtin_None
+        and then Builtin_Method_Kind_For_Call (Expr, Var_Types, Functions, Type_Env) = Kind;
    end Is_Unshadowed_Builtin_Call;
 
    function Is_Append_Builtin_Call
@@ -11596,6 +11596,11 @@ package body Safe_Frontend.Check_Resolve is
                         Path,
                         "assignment value type does not match target type",
                         Stamp_String_Literal => False));
+                  --  Validation intentionally runs before the setter-side
+                  --  Type_Name stamping below. Selector-path shared setters
+                  --  keep the pre-refactor behavior: no contextual string
+                  --  stamping during compatibility checks, but emitted nodes
+                  --  still carry the field type name for downstream emission.
                   if not Result.Call.Args.Is_Empty
                     and then Result.Call.Args (Result.Call.Args.First_Index) /= null
                   then
