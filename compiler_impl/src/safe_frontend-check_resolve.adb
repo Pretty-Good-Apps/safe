@@ -5753,7 +5753,7 @@ package body Safe_Frontend.Check_Resolve is
    begin
       if Has_Function (Functions, Name) or else Has_Type (Type_Env, Name) then
          return False;
-      elsif Name /= FT.Lowercase (Name) then
+      elsif Name /= Canonical_Name (Name) then
          return False;
       end if;
 
@@ -6222,10 +6222,8 @@ package body Safe_Frontend.Check_Resolve is
                  Const_Env,
                  Exact_Length_Maps.Empty_Map);
          when Builtin_None =>
-            null;
+            return False;
       end case;
-
-      return False;
    end Builtin_Method_Call_Compatible;
 
    function Rewrite_Method_Apply
@@ -7434,6 +7432,9 @@ package body Safe_Frontend.Check_Resolve is
            Path);
    begin
       if Result = null then
+         pragma Assert
+           (Value = null,
+            "Validate_And_Contextualize_Value: null contextualization result for non-null input");
          Raise_Diag
            (CM.Source_Frontend_Error
               (Path    => Path,
@@ -7441,7 +7442,9 @@ package body Safe_Frontend.Check_Resolve is
                Message =>
                  (if Value = null
                   then "internal null value passed to Validate_And_Contextualize_Value"
-                  else Mismatch_Message)));
+                  else
+                    "internal null contextualization result in "
+                    & "Validate_And_Contextualize_Value")));
       end if;
 
       if Stamp_String_Literal then
@@ -7506,7 +7509,7 @@ package body Safe_Frontend.Check_Resolve is
       Type_Env  : Type_Maps.Map;
       Name      : String) return Boolean is
    begin
-      if Name /= FT.Lowercase (Name) then
+      if Name /= Canonical_Name (Name) then
          return False;
       end if;
 
