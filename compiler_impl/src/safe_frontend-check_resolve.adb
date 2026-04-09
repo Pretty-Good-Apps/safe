@@ -7438,7 +7438,10 @@ package body Safe_Frontend.Check_Resolve is
            (CM.Source_Frontend_Error
               (Path    => Path,
                Span    => (if Value = null then FT.Null_Span else Value.Span),
-               Message => Mismatch_Message));
+               Message =>
+                 (if Value = null
+                  then "internal null value passed to Validate_And_Contextualize_Value"
+                  else Mismatch_Message)));
       end if;
 
       if Stamp_String_Literal then
