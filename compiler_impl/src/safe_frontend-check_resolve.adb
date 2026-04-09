@@ -5825,11 +5825,13 @@ package body Safe_Frontend.Check_Resolve is
                       (Resolve_Type
                          (UString_Value (Member.Params (Member.Params.First_Index + 2).Type_Name),
                           Type_Env,
-                          "",
-                          FT.Null_Span),
+                         "",
+                         FT.Null_Span),
                        Value_Type,
                        Type_Env);
                when Builtin_None | Builtin_Append | Builtin_Pop_Last =>
+                  --  Unreachable here: the enclosing arm already narrowed
+                  --  Builtin_Kind to the map-operation builtin set.
                   null;
             end case;
       end case;
@@ -7453,6 +7455,10 @@ package body Safe_Frontend.Check_Resolve is
    is
       Kind : constant Builtin_Method_Kind := Builtin_Method_Kind_For_Name (Name);
    begin
+      if Name /= FT.Lowercase (Name) then
+         return False;
+      end if;
+
       return
         Kind /= Builtin_None
         and then Builtin_Method_Kind_For_Call (Expr, Var_Types, Functions, Type_Env) = Kind;
