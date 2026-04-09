@@ -6997,7 +6997,8 @@ package body Safe_Frontend.Check_Resolve is
                                          Const_Env,
                                          Exact_Length_Maps.Empty_Map,
                                          Path,
-                                         "`" & Builtin_Name & "` key type does not match the map key type");
+                                         "`" & Builtin_Name & "` key type does not match the map key type",
+                                         Stamp_String_Literal => False);
                                     Result.Args.Replace_Element (Result.Args.First_Index + 1, Key_Expr);
                                     if Builtin_Kind = Builtin_Contains then
                                        Result.Type_Name := FT.To_UString ("boolean");
@@ -7432,19 +7433,21 @@ package body Safe_Frontend.Check_Resolve is
            Path);
    begin
       if Result = null then
-         pragma Assert
-           (Value = null,
-            "Validate_And_Contextualize_Value: null contextualization result for non-null input");
-         Raise_Diag
-           (CM.Source_Frontend_Error
-              (Path    => Path,
-               Span    => (if Value = null then FT.Null_Span else Value.Span),
-               Message =>
-                 (if Value = null
-                  then "internal null value passed to Validate_And_Contextualize_Value"
-                  else
+         if Value = null then
+            Raise_Diag
+              (CM.Source_Frontend_Error
+                 (Path    => Path,
+                  Span    => FT.Null_Span,
+                  Message => "internal null value passed to Validate_And_Contextualize_Value"));
+         else
+            Raise_Diag
+              (CM.Source_Frontend_Error
+                 (Path    => Path,
+                  Span    => Value.Span,
+                  Message =>
                     "internal null contextualization result in "
-                    & "Validate_And_Contextualize_Value")));
+                    & "Validate_And_Contextualize_Value"));
+         end if;
       end if;
 
       if Stamp_String_Literal then
