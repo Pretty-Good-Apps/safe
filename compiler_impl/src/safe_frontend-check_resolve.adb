@@ -7436,12 +7436,8 @@ package body Safe_Frontend.Check_Resolve is
            Path);
    begin
       if Result = null then
-         pragma Assert
-           (Value = null,
-            "non-null Value produced a null contextualization result");
          raise Program_Error
-           with "Validate_And_Contextualize_Value: null contextualization result"
-                & (if Value = null then " (null input)" else " (non-null input)");
+           with "Validate_And_Contextualize_Value: null input";
       end if;
 
       if Stamp_String_Literal then
