@@ -11208,11 +11208,11 @@ package body Safe_Frontend.Check_Resolve is
    end Desugar_Executable_Expr;
 
    type Resolver_Env is record
-      Functions             : Function_Maps.Map;
-      Type_Env              : Type_Maps.Map;
-      Channel_Env           : Type_Maps.Map;
-      Imported_Objects      : Type_Maps.Map;
-      Path                  : FT.UString;
+      Functions             : not null access constant Function_Maps.Map;
+      Type_Env              : not null access constant Type_Maps.Map;
+      Channel_Env           : not null access constant Type_Maps.Map;
+      Imported_Objects      : not null access constant Type_Maps.Map;
+      Path                  : not null access constant String;
       Has_Enclosing_Return  : Boolean := False;
       Enclosing_Return_Type : GM.Type_Descriptor := (others => <>);
    end record;
@@ -11234,8 +11234,11 @@ package body Safe_Frontend.Check_Resolve is
       Exact_Length_Facts : Exact_Length_Maps.Map) return CM.Statement_Access_Vectors.Vector
    is
       Result      : CM.Statement_Access_Vectors.Vector;
-      Functions   : Function_Maps.Map renames Env.Functions;
-      Type_Env    : Type_Maps.Map renames Env.Type_Env;
+      Functions   : Function_Maps.Map renames Env.Functions.all;
+      Type_Env    : Type_Maps.Map renames Env.Type_Env.all;
+      --  This body only uses Functions/Type_Env directly for local type
+      --  tracking; the remaining stable fields stay bundled in Env and are
+      --  forwarded to Normalize_Statement unchanged.
       Local_Types : Type_Maps.Map := Var_Types;
       Current_Constants : Type_Maps.Map := Local_Constants;
       Current_Static_Constants : Static_Value_Maps.Map := Local_Static_Constants;
@@ -11334,13 +11337,13 @@ package body Safe_Frontend.Check_Resolve is
    is
       Expanded       : CM.Statement_Access_Vectors.Vector;
       Result         : constant CM.Statement_Access := new CM.Statement'(Stmt.all);
-      Functions      : Function_Maps.Map renames Env.Functions;
-      Type_Env       : Type_Maps.Map renames Env.Type_Env;
-      Channel_Env    : Type_Maps.Map renames Env.Channel_Env;
-      Imported_Objects : Type_Maps.Map renames Env.Imported_Objects;
-      Path           : constant String := UString_Value (Env.Path);
-      Has_Enclosing_Return : constant Boolean := Env.Has_Enclosing_Return;
-      Enclosing_Return_Type : constant GM.Type_Descriptor := Env.Enclosing_Return_Type;
+      Functions      : Function_Maps.Map renames Env.Functions.all;
+      Type_Env       : Type_Maps.Map renames Env.Type_Env.all;
+      Channel_Env    : Type_Maps.Map renames Env.Channel_Env.all;
+      Imported_Objects : Type_Maps.Map renames Env.Imported_Objects.all;
+      Path           : String renames Env.Path.all;
+      Has_Enclosing_Return : Boolean renames Env.Has_Enclosing_Return;
+      Enclosing_Return_Type : GM.Type_Descriptor renames Env.Enclosing_Return_Type;
       Local_Types    : Type_Maps.Map := Var_Types;
       Current_Constants : Type_Maps.Map := Local_Constants;
       Current_Static_Constants : Static_Value_Maps.Map := Local_Static_Constants;
@@ -15394,12 +15397,13 @@ package body Safe_Frontend.Check_Resolve is
       return CM.Resolve_Result
    is
       Normalized_Target_Bits : constant Positive := (if BT.Is_Valid_Target_Bits (Target_Bits) then Target_Bits else 64);
-      Type_Env         : Type_Maps.Map;
-      Functions        : Function_Maps.Map;
+      Type_Env         : aliased Type_Maps.Map;
+      Functions        : aliased Function_Maps.Map;
       Package_Vars     : Type_Maps.Map;
-      Channel_Env      : Type_Maps.Map;
+      Channel_Env      : aliased Type_Maps.Map;
       Const_Env        : Static_Value_Maps.Map;
-      Imported_Objects : Type_Maps.Map;
+      Imported_Objects : aliased Type_Maps.Map;
+      Unit_Path        : aliased constant String := UString_Value (Unit.Path);
       Task_Priorities  : Task_Priority_Vectors.Vector;
       Result           : CM.Resolved_Unit;
       Completed_Local_Type_Decls   : Type_Decl_Vectors.Vector;
@@ -16633,11 +16637,11 @@ package body Safe_Frontend.Check_Resolve is
 
          declare
             Env : constant Resolver_Env :=
-              (Functions        => Functions,
-               Type_Env         => Type_Env,
-               Channel_Env      => Channel_Env,
-               Imported_Objects => Imported_Objects,
-               Path             => Unit.Path,
+              (Functions        => Functions'Unchecked_Access,
+               Type_Env         => Type_Env'Unchecked_Access,
+               Channel_Env      => Channel_Env'Unchecked_Access,
+               Imported_Objects => Imported_Objects'Unchecked_Access,
+               Path             => Unit_Path'Unchecked_Access,
                others           => <>);
          begin
             Synthetic_Name_Counter := 0;
@@ -16772,11 +16776,11 @@ package body Safe_Frontend.Check_Resolve is
 
                declare
                   Env : constant Resolver_Env :=
-                    (Functions             => Functions,
-                     Type_Env              => Type_Env,
-                     Channel_Env           => Channel_Env,
-                     Imported_Objects      => Imported_Objects,
-                     Path                  => Unit.Path,
+                    (Functions             => Functions'Unchecked_Access,
+                     Type_Env              => Type_Env'Unchecked_Access,
+                     Channel_Env           => Channel_Env'Unchecked_Access,
+                     Imported_Objects      => Imported_Objects'Unchecked_Access,
+                     Path                  => Unit_Path'Unchecked_Access,
                      Has_Enclosing_Return  => Info.Has_Return_Type,
                      Enclosing_Return_Type => Info.Return_Type);
                   Previous_Select_Context : constant Boolean :=
@@ -16913,11 +16917,11 @@ package body Safe_Frontend.Check_Resolve is
 
                declare
                   Env : constant Resolver_Env :=
-                    (Functions        => Functions,
-                     Type_Env         => Type_Env,
-                     Channel_Env      => Channel_Env,
-                     Imported_Objects => Imported_Objects,
-                     Path             => Unit.Path,
+                    (Functions        => Functions'Unchecked_Access,
+                     Type_Env         => Type_Env'Unchecked_Access,
+                     Channel_Env      => Channel_Env'Unchecked_Access,
+                     Imported_Objects => Imported_Objects'Unchecked_Access,
+                     Path             => Unit_Path'Unchecked_Access,
                      others           => <>);
                   Previous_Task_Context : constant Boolean := Current_In_Task_Body;
                begin
@@ -17057,11 +17061,11 @@ package body Safe_Frontend.Check_Resolve is
 
                      declare
                         Env : constant Resolver_Env :=
-                          (Functions             => Functions,
-                           Type_Env              => Type_Env,
-                           Channel_Env           => Channel_Env,
-                           Imported_Objects      => Imported_Objects,
-                           Path                  => Unit.Path,
+                          (Functions             => Functions'Unchecked_Access,
+                           Type_Env              => Type_Env'Unchecked_Access,
+                           Channel_Env           => Channel_Env'Unchecked_Access,
+                           Imported_Objects      => Imported_Objects'Unchecked_Access,
+                           Path                  => Unit_Path'Unchecked_Access,
                            Has_Enclosing_Return  => Info.Has_Return_Type,
                            Enclosing_Return_Type => Info.Return_Type);
                         Previous_Select_Context : constant Boolean :=
@@ -17109,11 +17113,11 @@ package body Safe_Frontend.Check_Resolve is
                   Info         : constant Function_Info := Template.Info;
                   Subprogram   : CM.Resolved_Subprogram;
                   Visible      : Type_Maps.Map := Package_Vars;
-                  Local_Functions : Function_Maps.Map := Functions;
+                  Local_Functions : aliased Function_Maps.Map := Functions;
                   Visible_Constants : Type_Maps.Map;
                   Visible_Static_Constants : Static_Value_Maps.Map := Const_Env;
-                  Local_Type_Env : Type_Maps.Map := Type_Env;
-                  Local_Imported_Objects : Type_Maps.Map := Imported_Objects;
+                  Local_Type_Env : aliased Type_Maps.Map := Type_Env;
+                  Local_Imported_Objects : aliased Type_Maps.Map := Imported_Objects;
                   Local_Decl   : CM.Resolved_Object_Decl;
                begin
                   if not Info.Generic_Formals.Is_Empty then
@@ -17218,11 +17222,11 @@ package body Safe_Frontend.Check_Resolve is
 
                   declare
                      Env : constant Resolver_Env :=
-                       (Functions             => Local_Functions,
-                        Type_Env              => Local_Type_Env,
-                        Channel_Env           => Channel_Env,
-                        Imported_Objects      => Local_Imported_Objects,
-                        Path                  => Unit.Path,
+                       (Functions             => Local_Functions'Unchecked_Access,
+                        Type_Env              => Local_Type_Env'Unchecked_Access,
+                        Channel_Env           => Channel_Env'Unchecked_Access,
+                        Imported_Objects      => Local_Imported_Objects'Unchecked_Access,
+                        Path                  => Unit_Path'Unchecked_Access,
                         Has_Enclosing_Return  => Info.Has_Return_Type,
                         Enclosing_Return_Type => Info.Return_Type);
                      Previous_Select_Context : constant Boolean :=
