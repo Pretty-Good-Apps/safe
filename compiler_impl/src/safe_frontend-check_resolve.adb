@@ -5975,7 +5975,10 @@ package body Safe_Frontend.Check_Resolve is
 
    function Is_Method_Builtin_Name (Name : String) return Boolean is
    begin
-      return Name = FT.Lowercase (Name)
+      --  Callers must pass a pre-canonicalized builtin name here; keep the
+      --  guard explicit so future call sites do not silently widen the helper
+      --  contract.
+      return Name = Canonical_Name (Name)
         and then Builtin_Method_Kind_For_Canonical_Name (Name) /= Builtin_None;
    end Is_Method_Builtin_Name;
 
@@ -7433,21 +7436,16 @@ package body Safe_Frontend.Check_Resolve is
            Path);
    begin
       if Result = null then
-         if Value = null then
-            Raise_Diag
-              (CM.Source_Frontend_Error
-                 (Path    => Path,
-                  Span    => FT.Null_Span,
-                  Message => "internal null value passed to Validate_And_Contextualize_Value"));
-         else
-            Raise_Diag
-              (CM.Source_Frontend_Error
-                 (Path    => Path,
-                  Span    => Value.Span,
-                  Message =>
-                    "internal null contextualization result in "
-                    & "Validate_And_Contextualize_Value"));
-         end if;
+         pragma Assert
+           (Value = null,
+            "non-null Value produced a null contextualization result");
+         Raise_Diag
+           (CM.Source_Frontend_Error
+              (Path    => Path,
+               Span    => (if Value = null then FT.Null_Span else Value.Span),
+               Message =>
+                 "internal null input/result in "
+                 & "Validate_And_Contextualize_Value"));
       end if;
 
       if Stamp_String_Literal then
