@@ -3949,8 +3949,15 @@ package body Safe_Frontend.Ada_Emit.Types is
       Name : constant String := Ada_Safe_Name (FT.To_String (Type_Item.Name));
       --  Nominal parents may be imported qualified types. Ada_Qualified_Name
       --  still maps unqualified builtins through Ada_Safe_Name.
-      Base : constant String := Ada_Qualified_Name (FT.To_String (Type_Item.Base));
+      Base : constant String :=
+        (if Type_Item.Has_Base
+         then Ada_Qualified_Name (FT.To_String (Type_Item.Base))
+         else "");
    begin
+      if Base'Length = 0 then
+         Raise_Internal ("nominal type missing base during Ada emission");
+      end if;
+
       if Type_Item.Has_Low and then Type_Item.Has_High then
          return
            "type "

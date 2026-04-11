@@ -1220,6 +1220,9 @@ package body Safe_Frontend.Check_Resolve is
    begin
       loop
          if Is_Nominal_Type (Current) then
+            --  Each `is new` nominal declaration roots its own family.
+            --  Subtypes of that nominal share the family, but another
+            --  nominal derived from it starts a distinct family.
             return Canonical_Name (UString_Value (Current.Name));
          end if;
 
@@ -1369,6 +1372,9 @@ package body Safe_Frontend.Check_Resolve is
       if Has_Nominal_Family (Left, Type_Env)
         or else Has_Nominal_Family (Right, Type_Env)
       then
+         --  PR11.16 nominal types are integer-family-only, so nominal
+         --  identity takes precedence over the broad integerish fallback
+         --  below without suppressing access/tuple/float compatibility.
          return Same_Nominal_Family (Left, Right, Type_Env);
       end if;
 
@@ -14472,7 +14478,8 @@ package body Safe_Frontend.Check_Resolve is
             declare
                Parent      : constant GM.Type_Descriptor :=
                  Resolve_Type_Spec (Decl.Parent_Type, Type_Env, Const_Env, Path);
-               --  This Base_Type follows all Has_Base links, including nominal
+               --  This is the resolver-local Base_Type, not the Ada emitter
+               --  wrapper. It follows all Has_Base links, including nominal
                --  parents, so this fallback recovers root integer bounds.
                Parent_Base : constant GM.Type_Descriptor := Base_Type (Parent, Type_Env);
                Parent_Name : constant String := UString_Value (Parent.Name);
