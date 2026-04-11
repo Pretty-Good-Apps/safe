@@ -32,7 +32,6 @@ package pr1116_nominal_integer
    derived : derived_user_id = explicit_derived (current);
 
    current = bump (small);
-   current = widen (small);
 
    if current > 0 and then current < 1000
       current = current + 1
