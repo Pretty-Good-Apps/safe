@@ -497,7 +497,7 @@ package body Safe_Frontend.Ada_Emit.Types is
    is
       Result : GM.Type_Descriptor := Preferred_Imported_Synthetic_Type (Unit, Info);
    begin
-      while FT.To_String (Result.Kind) in "subtype" | "nominal"
+      while FT.To_String (Result.Kind) = "subtype"
         and then Result.Has_Base
         and then Has_Type (Unit, Document, FT.To_String (Result.Base))
       loop
@@ -505,6 +505,22 @@ package body Safe_Frontend.Ada_Emit.Types is
       end loop;
       return Result;
    end Base_Type;
+
+   function Integer_Base_Type
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Info     : GM.Type_Descriptor) return GM.Type_Descriptor
+   is
+      Result : GM.Type_Descriptor := Preferred_Imported_Synthetic_Type (Unit, Info);
+   begin
+      while FT.To_String (Result.Kind) in "subtype" | "nominal"
+        and then Result.Has_Base
+        and then Has_Type (Unit, Document, FT.To_String (Result.Base))
+      loop
+         Result := Lookup_Type (Unit, Document, FT.To_String (Result.Base));
+      end loop;
+      return Result;
+   end Integer_Base_Type;
 
    function Has_Type
      (Unit     : CM.Resolved_Unit;
@@ -977,7 +993,7 @@ package body Safe_Frontend.Ada_Emit.Types is
       Document : GM.Mir_Document;
       Info     : GM.Type_Descriptor) return Boolean
    is
-      Base            : constant GM.Type_Descriptor := Base_Type (Unit, Document, Info);
+      Base            : constant GM.Type_Descriptor := Integer_Base_Type (Unit, Document, Info);
       Kind            : constant String := FT.To_String (Base.Kind);
       Name            : constant String := FT.To_String (Base.Name);
       Unresolved_Base : constant String :=

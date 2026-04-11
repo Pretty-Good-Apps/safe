@@ -1208,9 +1208,20 @@ package body Safe_Frontend.Check_Resolve is
       Type_Env : Type_Maps.Map) return String
    is
       Current : GM.Type_Descriptor := Info;
-      Steps   : Natural := 0;
+      Seen    : String_Index_Maps.Map;
    begin
       loop
+         declare
+            Current_Name : constant String :=
+              Canonical_Name (UString_Value (Current.Name));
+         begin
+            if Seen.Contains (Current_Name) then
+               return "";
+            end if;
+
+            Seen.Include (Current_Name, 1);
+         end;
+
          if Is_Nominal_Type (Current) then
             return Canonical_Name (UString_Value (Current.Name));
          end if;
@@ -1219,8 +1230,6 @@ package body Safe_Frontend.Check_Resolve is
            or else not Has_Type (Type_Env, UString_Value (Current.Base));
 
          Current := Get_Type (Type_Env, UString_Value (Current.Base));
-         Steps := Steps + 1;
-         exit when Steps > 64;
       end loop;
 
       return "";
@@ -6643,6 +6652,8 @@ package body Safe_Frontend.Check_Resolve is
                 (Get_Type (Type_Env, UString_Value (Callee_Name)).Kind) = "nominal"
               and then Natural (Expr.Args.Length) = 1
             then
+               --  Imported nominal types live in the shared type environment,
+               --  not the local Var_Types map checked above.
                Result.Kind := CM.Expr_Conversion;
                Result.Target := Expr.Callee;
                Result.Inner := Expr.Args (Expr.Args.First_Index);
@@ -14434,6 +14445,13 @@ package body Safe_Frontend.Check_Resolve is
                   Result.Low := Parent_Base.Low;
                   Result.Has_High := True;
                   Result.High := Parent_Base.High;
+               else
+                  Raise_Diag
+                    (CM.Source_Frontend_Error
+                       (Path    => Path,
+                        Span    => Decl.Parent_Type.Span,
+                        Message =>
+                          "nominal type aliases require bounded integer-family parent in PR11.16"));
                end if;
             end;
          when CM.Type_Decl_Integer =>
