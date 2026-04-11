@@ -1211,6 +1211,10 @@ package body Safe_Frontend.Check_Resolve is
       Seen    : String_Index_Maps.Map;
    begin
       loop
+         if Is_Nominal_Type (Current) then
+            return Canonical_Name (UString_Value (Current.Name));
+         end if;
+
          declare
             Current_Name : constant String :=
               Canonical_Name (UString_Value (Current.Name));
@@ -1221,10 +1225,6 @@ package body Safe_Frontend.Check_Resolve is
 
             Seen.Include (Current_Name, 1);
          end;
-
-         if Is_Nominal_Type (Current) then
-            return Canonical_Name (UString_Value (Current.Name));
-         end if;
 
          exit when not Current.Has_Base
            or else not Has_Type (Type_Env, UString_Value (Current.Base));
@@ -5513,16 +5513,6 @@ package body Safe_Frontend.Check_Resolve is
                    (Has_Nominal_Family (Left_Type, Type_Env)
                     or else Has_Nominal_Family (Right_Type, Type_Env))
                then
-                  if Nominal_Operands_Compatible
-                    (Expr.Left,
-                     Left_Type,
-                     Expr.Right,
-                     Right_Type,
-                     Type_Env)
-                  then
-                     return Nominal_Result_Type (Left_Type, Right_Type, Type_Env);
-                  end if;
-
                   --  Validation raises the primary diagnostic. Preserve the
                   --  nominal-side type here to avoid cascading Default_Integer
                   --  inferences for the same invalid sub-expression.
