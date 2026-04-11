@@ -1286,6 +1286,9 @@ package body Safe_Frontend.Check_Resolve is
    begin
       return Has_Nominal_Family (Target, Type_Env)
         and then Try_Integer_Literal_Context_Value (Expr, Value)
+        --  Literal operands are gated by the immediate target type bounds.
+        --  Subtypes of a nominal family intentionally keep their narrower
+        --  range unless the expression explicitly converts to a wider type.
         and then (not Target.Has_Low or else Value >= CM.Wide_Integer (Target.Low))
         and then (not Target.Has_High or else Value <= CM.Wide_Integer (Target.High));
    end Nominal_Integer_Literal_Compatible;
@@ -5509,13 +5512,20 @@ package body Safe_Frontend.Check_Resolve is
                  and then
                    (Has_Nominal_Family (Left_Type, Type_Env)
                     or else Has_Nominal_Family (Right_Type, Type_Env))
-                 and then Nominal_Operands_Compatible
-                   (Expr.Left,
-                    Left_Type,
-                    Expr.Right,
-                    Right_Type,
-                    Type_Env)
                then
+                  if Nominal_Operands_Compatible
+                    (Expr.Left,
+                     Left_Type,
+                     Expr.Right,
+                     Right_Type,
+                     Type_Env)
+                  then
+                     return Nominal_Result_Type (Left_Type, Right_Type, Type_Env);
+                  end if;
+
+                  --  Validation raises the primary diagnostic. Preserve the
+                  --  nominal-side type here to avoid cascading Default_Integer
+                  --  inferences for the same invalid sub-expression.
                   return Nominal_Result_Type (Left_Type, Right_Type, Type_Env);
                end if;
                if UString_Value (Left_Type.Kind) = "float" or else UString_Value (Right_Type.Kind) = "float" then

@@ -1020,7 +1020,9 @@ package body Safe_Frontend.Ada_Emit.Types is
       Kind            : constant String := FT.To_String (Base.Kind);
       Name            : constant String := FT.To_String (Base.Name);
       Unresolved_Base : constant String :=
-        (if Kind = "subtype" and then Base.Has_Base then FT.To_String (Base.Base) else "");
+        (if Kind in "subtype" | "nominal" and then Base.Has_Base
+         then FT.To_String (Base.Base)
+         else "");
    begin
       return Kind = "integer"
         or else Is_Builtin_Integer_Name (Name)
@@ -3962,12 +3964,7 @@ package body Safe_Frontend.Ada_Emit.Types is
            & ";";
       end if;
 
-      return
-        "type "
-        & Name
-        & " is new "
-        & Base
-        & ";";
+      Raise_Internal ("nominal type missing range bounds during Ada emission");
    end Render_Nominal_Type_Decl;
 
    function Render_Array_Type_Decl
