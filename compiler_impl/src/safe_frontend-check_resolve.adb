@@ -1437,6 +1437,9 @@ package body Safe_Frontend.Check_Resolve is
       if Has_Nominal_Family (Left, Type_Env)
         or else Has_Nominal_Family (Right, Type_Env)
       then
+         --  Subtypes of a nominal root share the same family. Directional
+         --  range narrowing is enforced by the generated Ada/SPARK subtype
+         --  checks; the Safe type check here only requires family identity.
          return Same_Nominal_Family (Left, Right, Type_Env);
       end if;
 

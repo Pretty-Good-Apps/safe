@@ -1482,6 +1482,10 @@ package body Safe_Frontend.Check_Emit is
               & JS.Span_Object (Decl.Span)
               & "}";
          when CM.Type_Decl_Nominal =>
+            --  Parent_Type.Span is already used by the nested SubtypeIndication
+            --  node and does not include the `new` keyword. Until the parser
+            --  stores an `is new ...` span, keep the derived definition aligned
+            --  with the other type_definition nodes by using the declaration span.
             return
               "{""node_type"":""TypeDeclaration"",""is_public"":"
               & JS.Bool_Literal (Decl.Is_Public)
