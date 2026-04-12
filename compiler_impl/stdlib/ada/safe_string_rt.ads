@@ -49,6 +49,9 @@ package Safe_String_RT is
    function Equal (Left, Right : Safe_String) return Boolean
       with Global => null,
            Post => Equal'Result = (To_String (Left) = To_String (Right)),
+           --  Body is SPARK_Mode (Off); this postcondition is an assumed
+           --  contract verified manually against the body, not discharged by
+           --  GNATprove.
            Depends => (Equal'Result => (Left, Right));
 
 private
