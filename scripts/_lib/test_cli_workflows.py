@@ -89,6 +89,11 @@ BUILD_SUCCESS_CASES = [
         False,
     ),
     (
+        REPO_ROOT / "tests" / "build" / "pr223_imported_enum_comparison_build.safe",
+        "1\n",
+        False,
+    ),
+    (
         REPO_ROOT / "tests" / "build" / "pr225_imported_string_literal_build.safe",
         "Ada\n",
         False,

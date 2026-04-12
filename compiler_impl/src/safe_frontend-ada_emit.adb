@@ -2141,6 +2141,7 @@ package body Safe_Frontend.Ada_Emit is
           or else Spec_Needs_Interfaces
           or else Spec_Needs_System
           or else Spec_Needs_Safe_Ownership_RT
+          or else not Context.Imported_Enum_Use_Types.Is_Empty
           or else Context.State.Needs_Unevaluated_Use_Of_Old)
         and then Original_Spec'Length >= Pragma_Block'Length
         and then
