@@ -108,6 +108,7 @@ private package Safe_Frontend.Ada_Emit.Internal is
       Body_Text  : SU.Unbounded_String;
       Body_Withs : FT.UString_Vectors.Vector;
       Imported_Enum_Use_Types : FT.UString_Vectors.Vector;
+      Imported_Enum_Literal_Use_Names : FT.UString_Vectors.Vector;
       Synthetic_Types : GM.Type_Descriptor_Vectors.Vector;
       Owner_Access_Helper_Types : GM.Type_Descriptor_Vectors.Vector;
       For_Of_Helper_Types : GM.Type_Descriptor_Vectors.Vector;
