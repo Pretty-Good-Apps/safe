@@ -379,6 +379,10 @@ EMITTED_PROOF_REGRESSION_FIXTURES = [
     "tests/positive/pr1122f1_multi_decl_object.safe",
     "tests/build/pr212_string_literal_build.safe",
     "tests/build/pr226_remainder_boolean_build.safe",
+    "tests/build/pr225_maker.safe",
+    "tests/build/pr225_imported_string_literal_build.safe",
+    "tests/build/pr224_provider_printable.safe",
+    "tests/build/pr224_imported_generic_string_aggregate_build.safe",
     "tests/build/pr119d_send_single_eval_build.safe",
 ]
 

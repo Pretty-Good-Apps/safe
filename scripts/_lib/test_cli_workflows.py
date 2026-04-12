@@ -89,6 +89,16 @@ BUILD_SUCCESS_CASES = [
         False,
     ),
     (
+        REPO_ROOT / "tests" / "build" / "pr225_imported_string_literal_build.safe",
+        "Ada\n",
+        False,
+    ),
+    (
+        REPO_ROOT / "tests" / "build" / "pr224_imported_generic_string_aggregate_build.safe",
+        "demo\n",
+        False,
+    ),
+    (
         REPO_ROOT / "tests" / "build" / "pr1110a_optional_string_build.safe",
         "Ada\n",
         False,

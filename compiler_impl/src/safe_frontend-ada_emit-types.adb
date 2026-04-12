@@ -1133,13 +1133,14 @@ package body Safe_Frontend.Ada_Emit.Types is
       Document : GM.Mir_Document;
       Name     : String) return Boolean
    is
+      Lower_Name : constant String := FT.Lowercase (Name);
    begin
-      if FT.Lowercase (Name) = "boolean" then
+      if Lower_Name = "boolean" then
          return False;
       elsif Has_Type (Unit, Document, Name) then
          return Is_Wide_Integer_Type (Unit, Document, Lookup_Type (Unit, Document, Name));
       end if;
-      return Is_Integer_Type (Unit, Document, Name);
+      return Is_Builtin_Integer_Name (Lower_Name);
    end Is_Wide_Integer_Type;
 
    function Is_Binary_Type

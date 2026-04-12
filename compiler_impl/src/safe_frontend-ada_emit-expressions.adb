@@ -1115,7 +1115,8 @@ package body Safe_Frontend.Ada_Emit.Expressions is
       Type_Info : GM.Type_Descriptor;
       State     : in out Emit_State) return String
    is
-      Result : SU.Unbounded_String := SU.To_Unbounded_String ("(");
+      Record_Info : constant GM.Type_Descriptor := Base_Type (Unit, Document, Type_Info);
+      Result      : SU.Unbounded_String := SU.To_Unbounded_String ("(");
       First_Association : Boolean := True;
    begin
       if Expr = null then
@@ -1130,7 +1131,7 @@ package body Safe_Frontend.Ada_Emit.Expressions is
             Result :=
               Result
               & SU.To_Unbounded_String
-                  (FT.To_String (Constraint.Name)
+                  (Ada_Safe_Name (FT.To_String (Constraint.Name))
                    & " => "
                    & Render_Scalar_Value (Constraint.Value));
             First_Association := False;
@@ -1141,7 +1142,7 @@ package body Safe_Frontend.Ada_Emit.Expressions is
          declare
             Field_Type : GM.Type_Descriptor := (others => <>);
          begin
-            for Item of Type_Info.Fields loop
+            for Item of Record_Info.Fields loop
                if FT.To_String (Item.Name) = FT.To_String (Field.Field_Name) then
                   Field_Type := Resolve_Type_Name (Unit, Document, FT.To_String (Item.Type_Name));
                   exit;
@@ -1153,7 +1154,7 @@ package body Safe_Frontend.Ada_Emit.Expressions is
             Result :=
               Result
               & SU.To_Unbounded_String
-                  (FT.To_String (Field.Field_Name)
+                  (Ada_Safe_Name (FT.To_String (Field.Field_Name))
                    & " => "
                    & (if Has_Text (Field_Type.Name)
                       then Render_Expr_For_Target_Type
@@ -1367,11 +1368,14 @@ package body Safe_Frontend.Ada_Emit.Expressions is
       Source_Type_Info : GM.Type_Descriptor := (others => <>);
       Target_Is_String : constant Boolean :=
         FT.Lowercase (FT.To_String (Target_Info.Kind)) = "string";
+      Target_Base      : GM.Type_Descriptor := (others => <>);
       Has_Expr_Type  : Boolean := False;
    begin
       if Expr = null then
          return "";
       end if;
+
+      Target_Base := Base_Type (Unit, Document, Target_Info);
 
       if Has_Text (Expr.Type_Name) then
          declare
@@ -1445,6 +1449,10 @@ package body Safe_Frontend.Ada_Emit.Expressions is
            & ".To_Bounded ("
            & Render_String_Expr (Unit, Document, Expr, State)
            & ")";
+      elsif Expr.Kind = CM.Expr_Aggregate
+        and then FT.Lowercase (FT.To_String (Target_Base.Kind)) = "record"
+      then
+         return Render_Record_Aggregate_For_Type (Unit, Document, Expr, Target_Info, State);
       elsif AI.Is_Owner_Access (Target_Info)
         and then Target_Info.Has_Target
         and then Expr.Kind in CM.Expr_Aggregate | CM.Expr_Tuple
@@ -1471,8 +1479,8 @@ package body Safe_Frontend.Ada_Emit.Expressions is
       elsif Is_Growable_Array_Type (Unit, Document, Target_Info) then
          return Render_Growable_Array_Expr
            (Unit, Document, Expr, Target_Info, State);
-      elsif FT.Lowercase (FT.To_String (Base_Type (Unit, Document, Target_Info).Kind)) = "array"
-        and then not Base_Type (Unit, Document, Target_Info).Growable
+      elsif FT.Lowercase (FT.To_String (Target_Base.Kind)) = "array"
+        and then not Target_Base.Growable
         and then
           (Expr.Kind = CM.Expr_Array_Literal
            or else Expr.Kind in CM.Expr_Ident | CM.Expr_Select
@@ -1782,7 +1790,6 @@ package body Safe_Frontend.Ada_Emit.Expressions is
                   begin
                      for Formal of Param.Params loop
                         Position := Position + 1;
-                        exit when Position > Natural (Index);
                         if Position = Natural (Index) then
                            if FT.To_String (Formal.Mode) in "" | "in" | "borrow" then
                               Arg_Image :=
@@ -1806,6 +1813,48 @@ package body Safe_Frontend.Ada_Emit.Expressions is
                   exit when Used_Formal;
                end if;
             end loop;
+
+            if not Used_Formal then
+               for Imported of Unit.Imported_Subprograms loop
+                  declare
+                     Imported_Name  : constant String :=
+                       FT.Lowercase (FT.To_String (Imported.Name));
+                     Imported_Short : constant String :=
+                       FT.Lowercase (AET.Synthetic_Type_Tail_Name (FT.To_String (Imported.Name)));
+                  begin
+                     if Imported_Name = Lower_Callee
+                       or else Imported_Short = Lower_Callee
+                     then
+                        declare
+                           Position : Natural := 0;
+                        begin
+                           for Formal of Imported.Params loop
+                              Position := Position + 1;
+                              if Position = Natural (Index) then
+                                 if FT.To_String (Formal.Mode) in "" | "in" | "borrow" then
+                                    Arg_Image :=
+                                      SU.To_Unbounded_String
+                                        (Render_Expr_For_Target_Type
+                                           (Unit,
+                                            Document,
+                                            Expr.Args (Index),
+                                            Formal.Type_Info,
+                                            State));
+                                 else
+                                    Arg_Image :=
+                                      SU.To_Unbounded_String
+                                        (Render_Expr (Unit, Document, Expr.Args (Index), State));
+                                 end if;
+                                 Used_Formal := True;
+                                 exit;
+                              end if;
+                           end loop;
+                        end;
+                     end if;
+                  end;
+                  exit when Used_Formal;
+               end loop;
+            end if;
 
             if not Used_Formal and then Expr.Callee /= null then
                declare
