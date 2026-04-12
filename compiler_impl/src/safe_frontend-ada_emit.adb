@@ -857,9 +857,30 @@ package body Safe_Frontend.Ada_Emit is
 
       for Item of Unit.Imported_Types loop
          if FT.Lowercase (FT.To_String (Item.Kind)) = "enum" then
-            Add_Imported_Enum_Use_Type
-              (Context,
-               Ada_Qualified_Name (FT.To_String (Item.Name)));
+            declare
+               Enum_Type_Name : constant String :=
+                 Ada_Qualified_Name (FT.To_String (Item.Name));
+            begin
+               Add_Imported_Enum_Use_Type (Context, Enum_Type_Name);
+               for Literal of Item.Enum_Literals loop
+                  declare
+                     Literal_Key : constant String :=
+                       Enum_Type_Name
+                       & "="
+                       & Render_Enum_Literal_Name
+                           (FT.To_String (Literal),
+                            Enum_Type_Name);
+                  begin
+                     if not Contains_Name
+                       (Context.Imported_Enum_Literal_Use_Names,
+                        Literal_Key)
+                     then
+                        Context.Imported_Enum_Literal_Use_Names.Append
+                          (FT.To_UString (Literal_Key));
+                     end if;
+                  end;
+               end loop;
+            end;
          end if;
       end loop;
 
@@ -2141,13 +2162,34 @@ package body Safe_Frontend.Ada_Emit is
       end Enclosing_Package_Name;
 
       function Spec_Uses_Imported_Enum_Type (Qualified_Type : String) return Boolean is
-         Package_Name : constant String := Enclosing_Package_Name (Qualified_Type);
+         function Spec_Uses_Imported_Enum_Literal return Boolean is
+         begin
+            for Item of Context.Imported_Enum_Literal_Use_Names loop
+               declare
+                  Literal_Key : constant String := FT.To_String (Item);
+                  Separator   : constant Natural :=
+                    Ada.Strings.Fixed.Index (Literal_Key, "=");
+               begin
+                  if Separator > Literal_Key'First
+                    and then
+                      Literal_Key (Literal_Key'First .. Separator - 1) =
+                      Qualified_Type
+                    and then Separator < Literal_Key'Last
+                    and then
+                      Ada.Strings.Fixed.Index
+                        (Original_Spec,
+                         Literal_Key (Separator + 1 .. Literal_Key'Last)) > 0
+                  then
+                     return True;
+                  end if;
+               end;
+            end loop;
+            return False;
+         end Spec_Uses_Imported_Enum_Literal;
       begin
          return
            Ada.Strings.Fixed.Index (Original_Spec, Qualified_Type) > 0
-           or else
-             (Package_Name'Length > 0
-              and then Ada.Strings.Fixed.Index (Original_Spec, Package_Name & ".") > 0);
+           or else Spec_Uses_Imported_Enum_Literal;
       end Spec_Uses_Imported_Enum_Type;
 
       function Spec_Needs_Imported_Enum_Use_Types return Boolean is
