@@ -1684,6 +1684,56 @@ package body Safe_Frontend.Ada_Emit.Statements is
            and then FT.To_String (Expr.Name) = Counter_Name;
       end Is_Counter_Ident;
 
+      function Expr_Contains_Call (Expr : CM.Expr_Access) return Boolean is
+      begin
+         if Expr = null then
+            return False;
+         end if;
+
+         case Expr.Kind is
+            when CM.Expr_Call =>
+               return True;
+            when CM.Expr_Select =>
+               return Expr_Contains_Call (Expr.Prefix);
+            when CM.Expr_Resolved_Index =>
+               if Expr_Contains_Call (Expr.Prefix) then
+                  return True;
+               end if;
+               for Item of Expr.Args loop
+                  if Expr_Contains_Call (Item) then
+                     return True;
+                  end if;
+               end loop;
+               return False;
+            when CM.Expr_Conversion | CM.Expr_Annotated | CM.Expr_Unary =>
+               return
+                 Expr_Contains_Call (Expr.Inner)
+                 or else Expr_Contains_Call (Expr.Target);
+            when CM.Expr_Binary =>
+               return
+                 Expr_Contains_Call (Expr.Left)
+                 or else Expr_Contains_Call (Expr.Right);
+            when CM.Expr_Allocator | CM.Expr_Some | CM.Expr_Try =>
+               return Expr_Contains_Call (Expr.Value);
+            when CM.Expr_Aggregate =>
+               for Field of Expr.Fields loop
+                  if Expr_Contains_Call (Field.Expr) then
+                     return True;
+                  end if;
+               end loop;
+               return False;
+            when CM.Expr_Array_Literal | CM.Expr_Tuple =>
+               for Item of Expr.Elements loop
+                  if Expr_Contains_Call (Item) then
+                     return True;
+                  end if;
+               end loop;
+               return False;
+            when others =>
+               return False;
+         end case;
+      end Expr_Contains_Call;
+
       function Is_Positive_Static_Offset
         (Expr         : CM.Expr_Access;
          Counter_Name : String) return Boolean
@@ -1752,7 +1802,11 @@ package body Safe_Frontend.Ada_Emit.Statements is
 
          case Item.Kind is
             when CM.Stmt_Assign =>
-               if Root_Name (Item.Target) = Counter_Name then
+               if Expr_Contains_Call (Item.Target)
+                 or else Expr_Contains_Call (Item.Value)
+               then
+                  Analysis.Unsafe := True;
+               elsif Root_Name (Item.Target) = Counter_Name then
                   Analysis.Count := Analysis.Count + 1;
                   if not Is_Positive_Self_Increment (Item.Value, Counter_Name) then
                      Analysis.Unsafe := True;
@@ -1760,6 +1814,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
                end if;
 
             when CM.Stmt_Object_Decl =>
+               if Expr_Contains_Call (Item.Decl.Initializer) then
+                  Analysis.Unsafe := True;
+               end if;
                for Decl_Name of Item.Decl.Names loop
                   if FT.To_String (Decl_Name) = Counter_Name then
                      Analysis.Unsafe := True;
@@ -1767,6 +1824,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
                end loop;
 
             when CM.Stmt_Destructure_Decl =>
+               if Expr_Contains_Call (Item.Destructure.Initializer) then
+                  Analysis.Unsafe := True;
+               end if;
                for Decl_Name of Item.Destructure.Names loop
                   if FT.To_String (Decl_Name) = Counter_Name then
                      Analysis.Unsafe := True;
@@ -1774,13 +1834,19 @@ package body Safe_Frontend.Ada_Emit.Statements is
                end loop;
 
             when CM.Stmt_Call =>
-               if Expr_Uses_Name (Item.Call, Counter_Name) then
-                  Analysis.Unsafe := True;
-               end if;
+               Analysis.Unsafe := True;
 
             when CM.Stmt_If =>
+               if Expr_Contains_Call (Item.Condition) then
+                  Analysis.Unsafe := True;
+                  return;
+               end if;
                Analyze_Statements (Item.Then_Stmts, Counter_Name, Analysis);
                for Part of Item.Elsifs loop
+                  if Expr_Contains_Call (Part.Condition) then
+                     Analysis.Unsafe := True;
+                     return;
+                  end if;
                   Analyze_Statements (Part.Statements, Counter_Name, Analysis);
                end loop;
                if Item.Has_Else then
@@ -1788,11 +1854,23 @@ package body Safe_Frontend.Ada_Emit.Statements is
                end if;
 
             when CM.Stmt_Case =>
+               if Expr_Contains_Call (Item.Case_Expr) then
+                  Analysis.Unsafe := True;
+                  return;
+               end if;
                for Arm of Item.Case_Arms loop
+                  if Expr_Contains_Call (Arm.Choice) then
+                     Analysis.Unsafe := True;
+                     return;
+                  end if;
                   Analyze_Statements (Arm.Statements, Counter_Name, Analysis);
                end loop;
 
             when CM.Stmt_Match =>
+               if Expr_Contains_Call (Item.Match_Expr) then
+                  Analysis.Unsafe := True;
+                  return;
+               end if;
                for Arm of Item.Match_Arms loop
                   Analyze_Statements (Arm.Statements, Counter_Name, Analysis);
                end loop;
@@ -1804,6 +1882,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
                         if FT.To_String (Arm.Channel_Data.Variable_Name) = Counter_Name
                           or else Expr_Uses_Name
                             (Arm.Channel_Data.Channel_Name, Counter_Name)
+                          or else Expr_Contains_Call
+                            (Arm.Channel_Data.Channel_Name)
                         then
                            Analysis.Unsafe := True;
                            return;
@@ -1813,6 +1893,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
                      when CM.Select_Arm_Delay =>
                         if Expr_Uses_Name
                           (Arm.Delay_Data.Duration_Expr, Counter_Name)
+                          or else Expr_Contains_Call
+                            (Arm.Delay_Data.Duration_Expr)
                         then
                            Analysis.Unsafe := True;
                            return;
@@ -1829,6 +1911,10 @@ package body Safe_Frontend.Ada_Emit.Statements is
                  or else Expr_Uses_Name (Item.Value, Counter_Name)
                  or else Expr_Uses_Name (Item.Target, Counter_Name)
                  or else Expr_Uses_Name (Item.Success_Var, Counter_Name)
+                 or else Expr_Contains_Call (Item.Channel_Name)
+                 or else Expr_Contains_Call (Item.Value)
+                 or else Expr_Contains_Call (Item.Target)
+                 or else Expr_Contains_Call (Item.Success_Var)
                then
                   Analysis.Unsafe := True;
                end if;
@@ -1837,6 +1923,10 @@ package body Safe_Frontend.Ada_Emit.Statements is
                Analysis.Unsafe := True;
 
             when CM.Stmt_While | CM.Stmt_Loop =>
+               if Expr_Contains_Call (Item.Condition) then
+                  Analysis.Unsafe := True;
+                  return;
+               end if;
                declare
                   Nested : Counter_Write_Analysis;
                begin
@@ -1848,6 +1938,12 @@ package body Safe_Frontend.Ada_Emit.Statements is
 
             when CM.Stmt_For =>
                if FT.To_String (Item.Loop_Var) = Counter_Name then
+                  Analysis.Unsafe := True;
+               elsif Expr_Contains_Call (Item.Loop_Range.Name_Expr)
+                 or else Expr_Contains_Call (Item.Loop_Range.Low_Expr)
+                 or else Expr_Contains_Call (Item.Loop_Range.High_Expr)
+                 or else Expr_Contains_Call (Item.Loop_Iterable)
+               then
                   Analysis.Unsafe := True;
                else
                   declare
@@ -1861,7 +1957,11 @@ package body Safe_Frontend.Ada_Emit.Statements is
                end if;
 
             when others =>
-               null;
+               if Expr_Contains_Call (Item.Value)
+                 or else Expr_Contains_Call (Item.Condition)
+               then
+                  Analysis.Unsafe := True;
+               end if;
          end case;
       end Analyze_Statement;
 
@@ -1895,6 +1995,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
       begin
          if Counter_Name'Length = 0
            or else Expr_Uses_Name (Stmt.Condition.Right, Counter_Name)
+           or else Expr_Contains_Call (Stmt.Condition.Right)
            or else not Has_Text (Stmt.Condition.Left.Type_Name)
            or else
              not Is_Integer_Type
@@ -3161,6 +3262,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
                     State.Static_Length_Bindings.Length;
                   Previous_Static_Integer_Count : constant Ada.Containers.Count_Type :=
                     State.Static_Integer_Bindings.Length;
+                  Previous_Loop_Integer_Count : constant Ada.Containers.Count_Type :=
+                    State.Loop_Integer_Bindings.Length;
                   Previous_Static_String_Count : constant Ada.Containers.Count_Type :=
                     State.Static_String_Bindings.Length;
 
@@ -3232,6 +3335,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
                   begin
                      Restore_Static_Length_Bindings (State, Previous_Static_Length_Count);
                      Restore_Static_Integer_Bindings (State, Previous_Static_Integer_Count);
+                     Restore_Loop_Integer_Bindings (State, Previous_Loop_Integer_Count);
                      Restore_Static_String_Bindings (State, Previous_Static_String_Count);
                   end Restore_Static_Counts;
 
@@ -3395,6 +3499,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                 State.Static_Length_Bindings.Length;
                               Previous_Static_Integer_Count : constant Ada.Containers.Count_Type :=
                                 State.Static_Integer_Bindings.Length;
+                              Previous_Loop_Integer_Count : constant Ada.Containers.Count_Type :=
+                                State.Loop_Integer_Bindings.Length;
                               Previous_Static_String_Count : constant Ada.Containers.Count_Type :=
                                 State.Static_String_Bindings.Length;
                            begin
@@ -3437,6 +3543,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                     In_Loop);
                                  Restore_Static_Length_Bindings (State, Previous_Static_Length_Count);
                                  Restore_Static_Integer_Bindings (State, Previous_Static_Integer_Count);
+                                 Restore_Loop_Integer_Bindings (State, Previous_Loop_Integer_Count);
                                  Restore_Static_String_Bindings (State, Previous_Static_String_Count);
                               end loop;
                               Append_Line (Buffer, "end if;", Depth + 1);
@@ -3451,6 +3558,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
                           State.Static_Length_Bindings.Length;
                         Previous_Static_Integer_Count : constant Ada.Containers.Count_Type :=
                           State.Static_Integer_Bindings.Length;
+                        Previous_Loop_Integer_Count : constant Ada.Containers.Count_Type :=
+                          State.Loop_Integer_Bindings.Length;
                         Previous_Static_String_Count : constant Ada.Containers.Count_Type :=
                           State.Static_String_Bindings.Length;
                      begin
@@ -3476,6 +3585,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
                               In_Loop);
                            Restore_Static_Length_Bindings (State, Previous_Static_Length_Count);
                            Restore_Static_Integer_Bindings (State, Previous_Static_Integer_Count);
+                           Restore_Loop_Integer_Bindings (State, Previous_Loop_Integer_Count);
                            Restore_Static_String_Bindings (State, Previous_Static_String_Count);
                         end loop;
                         Append_Line (Buffer, "end case;", Depth);
@@ -6149,7 +6259,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
             if Is_Integer_Type (Unit, Document, Target_Type)
               and then Has_Loop_Integer_Tracking (State, Tracked_Target_Name)
             then
-               if Try_Static_Integer_Value (Stmt.Value, Static_Value) then
+               if In_Loop then
+                  Invalidate_Loop_Integer (State, Tracked_Target_Name);
+               elsif Try_Tracked_Static_Integer_Value (State, Stmt.Value, Static_Value) then
                   Bind_Loop_Integer (State, Tracked_Target_Name, Static_Value);
                else
                   Invalidate_Loop_Integer (State, Tracked_Target_Name);
