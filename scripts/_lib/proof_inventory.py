@@ -464,6 +464,12 @@ EMITTED_PROOF_EXCLUSIONS = [
         milestone="PR11.10c",
     ),
     EmittedProofExclusion(
+        path="tests/build/pr227_shared_snapshot_order_build.safe",
+        reason="runtime-only shared-snapshot ordering regression; proof remains covered by issue #228 volatile shared field read follow-up",
+        owner="runtime-regression-only",
+        milestone="issue-227",
+    ),
+    EmittedProofExclusion(
         path="tests/interfaces/pr119a_select_delay_receive.safe",
         reason="runtime-only entry-unit select-with-delay witness; current generated elaboration helper is accepted for build/run coverage but not yet proof-closed",
         owner="runtime-regression-only",

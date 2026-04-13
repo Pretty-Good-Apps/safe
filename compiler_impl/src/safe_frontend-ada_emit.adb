@@ -618,6 +618,39 @@ package body Safe_Frontend.Ada_Emit is
       return False;
    end Decl_Uses_Package_Subprogram_Name;
 
+   function Decl_Uses_Shared_Object_Name
+     (Unit : CM.Resolved_Unit;
+      Decl : CM.Resolved_Object_Decl) return Boolean
+   is
+   begin
+      if Decl.Initializer = null or else Unit.Objects.Is_Empty then
+         return False;
+      end if;
+
+      for Object_Decl of Unit.Objects loop
+         if Object_Decl.Is_Shared then
+            for Name of Object_Decl.Names loop
+               declare
+                  Name_Text : constant String := FT.To_String (Name);
+               begin
+                  if Name_Text'Length > 0
+                    and then
+                      (Expr_Uses_Name (Decl.Initializer, Name_Text)
+                       or else
+                         Expr_Uses_Name
+                           (Decl.Initializer,
+                            Shared_Wrapper_Object_Name (Name_Text)))
+                  then
+                     return True;
+                  end if;
+               end;
+            end loop;
+         end if;
+      end loop;
+
+      return False;
+   end Decl_Uses_Shared_Object_Name;
+
    function Should_Defer_Package_Object_Initializer
      (Unit     : CM.Resolved_Unit;
       Document : GM.Mir_Document;
@@ -632,7 +665,8 @@ package body Safe_Frontend.Ada_Emit is
           (Has_Heap_Value_Type (Unit, Document, Decl.Type_Info)
            or else Is_Owner_Access (Decl.Type_Info)
            or else Decl_Uses_Deferred_Package_Init_Name (Decl, Names)
-           or else Decl_Uses_Package_Subprogram_Name (Unit, Decl));
+           or else Decl_Uses_Package_Subprogram_Name (Unit, Decl)
+           or else Decl_Uses_Shared_Object_Name (Unit, Decl));
    end Should_Defer_Package_Object_Initializer;
 
    procedure Register_Deferred_Package_Init_Names
@@ -1301,6 +1335,15 @@ package body Safe_Frontend.Ada_Emit is
            (Context.Spec_Inner, Unit, Document, Type_Item);
       end loop;
 
+      if (for some Decl of Unit.Objects => Decl.Is_Shared) then
+         for Decl of Unit.Objects loop
+            if Decl.Is_Shared then
+               Render_Shared_Object_Spec
+                 (Context.Spec_Inner, Unit, Document, Decl, Bronze, Context.State);
+            end if;
+         end loop;
+      end if;
+
       if not Unit.Objects.Is_Empty then
          for Decl of Unit.Objects loop
             if not Decl.Is_Shared then
@@ -1366,15 +1409,6 @@ package body Safe_Frontend.Ada_Emit is
          if (for some Decl of Unit.Objects => not Decl.Is_Shared) then
             Append_Line (Context.Spec_Inner);
          end if;
-      end if;
-
-      if (for some Decl of Unit.Objects => Decl.Is_Shared) then
-         for Decl of Unit.Objects loop
-            if Decl.Is_Shared then
-               Render_Shared_Object_Spec
-                 (Context.Spec_Inner, Unit, Document, Decl, Bronze, Context.State);
-            end if;
-         end loop;
       end if;
 
       if not Unit.Channels.Is_Empty then
