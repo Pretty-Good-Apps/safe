@@ -1661,6 +1661,265 @@ package body Safe_Frontend.Ada_Emit.Statements is
       return "";
    end Loop_Variant_Image;
 
+   procedure Append_Counted_While_Lower_Bound_Invariant
+     (Buffer   : in out SU.Unbounded_String;
+      Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      State    : Emit_State;
+      Stmt     : CM.Statement;
+      Depth    : Natural)
+   is
+      type Counter_Write_Analysis is record
+         Count  : Natural := 0;
+         Unsafe : Boolean := False;
+      end record;
+
+      function Is_Counter_Ident
+        (Expr         : CM.Expr_Access;
+         Counter_Name : String) return Boolean is
+      begin
+         return
+           Expr /= null
+           and then Expr.Kind = CM.Expr_Ident
+           and then FT.To_String (Expr.Name) = Counter_Name;
+      end Is_Counter_Ident;
+
+      function Is_Positive_Static_Offset
+        (Expr         : CM.Expr_Access;
+         Counter_Name : String) return Boolean
+      is
+         Value : Long_Long_Integer := 0;
+      begin
+         return
+           Expr /= null
+           and then not Expr_Uses_Name (Expr, Counter_Name)
+           and then Try_Tracked_Static_Integer_Value (State, Expr, Value)
+           and then Value > 0;
+      end Is_Positive_Static_Offset;
+
+      function Is_Positive_Self_Increment
+        (Expr         : CM.Expr_Access;
+         Counter_Name : String) return Boolean
+      is
+      begin
+         if Expr = null
+           or else Expr.Kind /= CM.Expr_Binary
+           or else Map_Operator (FT.To_String (Expr.Operator)) /= "+"
+         then
+            return False;
+         end if;
+
+         return
+           (Is_Counter_Ident (Expr.Left, Counter_Name)
+            and then Is_Positive_Static_Offset (Expr.Right, Counter_Name))
+           or else
+           (Is_Counter_Ident (Expr.Right, Counter_Name)
+            and then Is_Positive_Static_Offset (Expr.Left, Counter_Name));
+      end Is_Positive_Self_Increment;
+
+      function Declarations_Contain_Name
+        (Declarations : CM.Object_Decl_Vectors.Vector;
+         Name         : String) return Boolean
+      is
+      begin
+         for Decl of Declarations loop
+            for Decl_Name of Decl.Names loop
+               if FT.To_String (Decl_Name) = Name then
+                  return True;
+               end if;
+            end loop;
+         end loop;
+         return False;
+      end Declarations_Contain_Name;
+
+      procedure Analyze_Statements
+        (Statements   : CM.Statement_Access_Vectors.Vector;
+         Counter_Name : String;
+         Analysis     : in out Counter_Write_Analysis);
+
+      procedure Analyze_Statement
+        (Item         : CM.Statement_Access;
+         Counter_Name : String;
+         Analysis     : in out Counter_Write_Analysis)
+      is
+      begin
+         if Item = null then
+            return;
+         elsif Declarations_Contain_Name (Item.Declarations, Counter_Name) then
+            Analysis.Unsafe := True;
+            return;
+         end if;
+
+         case Item.Kind is
+            when CM.Stmt_Assign =>
+               if Root_Name (Item.Target) = Counter_Name then
+                  Analysis.Count := Analysis.Count + 1;
+                  if not Is_Positive_Self_Increment (Item.Value, Counter_Name) then
+                     Analysis.Unsafe := True;
+                  end if;
+               end if;
+
+            when CM.Stmt_Object_Decl =>
+               for Decl_Name of Item.Decl.Names loop
+                  if FT.To_String (Decl_Name) = Counter_Name then
+                     Analysis.Unsafe := True;
+                  end if;
+               end loop;
+
+            when CM.Stmt_Destructure_Decl =>
+               for Decl_Name of Item.Destructure.Names loop
+                  if FT.To_String (Decl_Name) = Counter_Name then
+                     Analysis.Unsafe := True;
+                  end if;
+               end loop;
+
+            when CM.Stmt_Call =>
+               if Expr_Uses_Name (Item.Call, Counter_Name) then
+                  Analysis.Unsafe := True;
+               end if;
+
+            when CM.Stmt_If =>
+               Analyze_Statements (Item.Then_Stmts, Counter_Name, Analysis);
+               for Part of Item.Elsifs loop
+                  Analyze_Statements (Part.Statements, Counter_Name, Analysis);
+               end loop;
+               if Item.Has_Else then
+                  Analyze_Statements (Item.Else_Stmts, Counter_Name, Analysis);
+               end if;
+
+            when CM.Stmt_Case =>
+               for Arm of Item.Case_Arms loop
+                  Analyze_Statements (Arm.Statements, Counter_Name, Analysis);
+               end loop;
+
+            when CM.Stmt_Match =>
+               for Arm of Item.Match_Arms loop
+                  Analyze_Statements (Arm.Statements, Counter_Name, Analysis);
+               end loop;
+
+            when CM.Stmt_Select =>
+               for Arm of Item.Arms loop
+                  case Arm.Kind is
+                     when CM.Select_Arm_Channel =>
+                        if FT.To_String (Arm.Channel_Data.Variable_Name) = Counter_Name
+                          or else Expr_Uses_Name
+                            (Arm.Channel_Data.Channel_Name, Counter_Name)
+                        then
+                           Analysis.Unsafe := True;
+                           return;
+                        end if;
+                        Analyze_Statements
+                          (Arm.Channel_Data.Statements, Counter_Name, Analysis);
+                     when CM.Select_Arm_Delay =>
+                        if Expr_Uses_Name
+                          (Arm.Delay_Data.Duration_Expr, Counter_Name)
+                        then
+                           Analysis.Unsafe := True;
+                           return;
+                        end if;
+                        Analyze_Statements
+                          (Arm.Delay_Data.Statements, Counter_Name, Analysis);
+                     when others =>
+                        null;
+                  end case;
+               end loop;
+
+            when CM.Stmt_Send | CM.Stmt_Receive | CM.Stmt_Try_Receive =>
+               if Expr_Uses_Name (Item.Channel_Name, Counter_Name)
+                 or else Expr_Uses_Name (Item.Value, Counter_Name)
+                 or else Expr_Uses_Name (Item.Target, Counter_Name)
+                 or else Expr_Uses_Name (Item.Success_Var, Counter_Name)
+               then
+                  Analysis.Unsafe := True;
+               end if;
+
+            when CM.Stmt_Try_Send =>
+               Analysis.Unsafe := True;
+
+            when CM.Stmt_While | CM.Stmt_Loop =>
+               declare
+                  Nested : Counter_Write_Analysis;
+               begin
+                  Analyze_Statements (Item.Body_Stmts, Counter_Name, Nested);
+                  if Nested.Count > 0 or else Nested.Unsafe then
+                     Analysis.Unsafe := True;
+                  end if;
+               end;
+
+            when CM.Stmt_For =>
+               if FT.To_String (Item.Loop_Var) = Counter_Name then
+                  Analysis.Unsafe := True;
+               else
+                  declare
+                     Nested : Counter_Write_Analysis;
+                  begin
+                     Analyze_Statements (Item.Body_Stmts, Counter_Name, Nested);
+                     if Nested.Count > 0 or else Nested.Unsafe then
+                        Analysis.Unsafe := True;
+                     end if;
+                  end;
+               end if;
+
+            when others =>
+               null;
+         end case;
+      end Analyze_Statement;
+
+      procedure Analyze_Statements
+        (Statements   : CM.Statement_Access_Vectors.Vector;
+         Counter_Name : String;
+         Analysis     : in out Counter_Write_Analysis)
+      is
+      begin
+         for Item of Statements loop
+            Analyze_Statement (Item, Counter_Name, Analysis);
+            exit when Analysis.Unsafe;
+         end loop;
+      end Analyze_Statements;
+
+      Entry_Value : Long_Long_Integer := 0;
+   begin
+      if Stmt.Condition = null
+        or else Stmt.Condition.Kind /= CM.Expr_Binary
+        or else Map_Operator (FT.To_String (Stmt.Condition.Operator)) not in "<" | "<="
+        or else Stmt.Condition.Left = null
+        or else Stmt.Condition.Left.Kind /= CM.Expr_Ident
+        or else Stmt.Condition.Right = null
+      then
+         return;
+      end if;
+
+      declare
+         Counter_Name : constant String := FT.To_String (Stmt.Condition.Left.Name);
+         Analysis     : Counter_Write_Analysis;
+      begin
+         if Counter_Name'Length = 0
+           or else Expr_Uses_Name (Stmt.Condition.Right, Counter_Name)
+           or else not Has_Text (Stmt.Condition.Left.Type_Name)
+           or else
+             not Is_Integer_Type
+               (Unit, Document, FT.To_String (Stmt.Condition.Left.Type_Name))
+           or else not Try_Loop_Integer_Binding (State, Counter_Name, Entry_Value)
+         then
+            return;
+         end if;
+
+         Analyze_Statements (Stmt.Body_Stmts, Counter_Name, Analysis);
+         if Analysis.Unsafe or else Analysis.Count /= 1 then
+            return;
+         end if;
+
+         Append_Line
+           (Buffer,
+            "pragma Loop_Invariant ("
+            & Counter_Name
+            & " >= "
+            & Trim_Image (Entry_Value)
+            & ");",
+            Depth);
+      end;
+   end Append_Counted_While_Lower_Bound_Invariant;
+
    function Shared_Field_Getter_Call_Info
      (Unit     : CM.Resolved_Unit;
       Document : GM.Mir_Document;
@@ -2698,8 +2957,11 @@ package body Safe_Frontend.Ada_Emit.Statements is
                     Tail_Statements (Statements, Index + 1);
                   Previous_Wide_Count : constant Ada.Containers.Count_Type :=
                     State.Wide_Local_Names.Length;
+                  Previous_Loop_Integer_Count : constant Ada.Containers.Count_Type :=
+                    State.Loop_Integer_Bindings.Length;
                   Block_Declarations  : CM.Object_Decl_Vectors.Vector;
                   Suppress_Initialization_Warnings : Boolean := False;
+                  Static_Value        : Long_Long_Integer := 0;
                begin
                   Block_Declarations.Append (Item.Decl);
                   Suppress_Initialization_Warnings :=
@@ -2725,6 +2987,16 @@ package body Safe_Frontend.Ada_Emit.Statements is
                     (Buffer,
                      Render_Object_Decl_Text (Unit, Document, State, Item.Decl, Local_Context => True),
                      Depth + 1);
+                  if Item.Decl.Has_Initializer
+                    and then Item.Decl.Initializer /= null
+                    and then Is_Integer_Type (Unit, Document, Item.Decl.Type_Info)
+                    and then Try_Tracked_Static_Integer_Value
+                      (State, Item.Decl.Initializer, Static_Value)
+                  then
+                     for Name of Item.Decl.Names loop
+                        Bind_Loop_Integer (State, FT.To_String (Name), Static_Value);
+                     end loop;
+                  end if;
                   if Suppress_Initialization_Warnings then
                      Append_Initialization_Warning_Restore
                        (Buffer, Depth + 1);
@@ -2745,6 +3017,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
                   Append_Line (Buffer, "end;", Depth);
                   Pop_Cleanup_Frame (State);
                   Pop_Type_Binding_Frame (State);
+                  Restore_Loop_Integer_Bindings (State, Previous_Loop_Integer_Count);
                   Restore_Wide_Names (State, Previous_Wide_Count);
                end;
                return;
@@ -3224,6 +3497,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
                      if Variant_Image'Length > 0 then
                         Append_Line (Buffer, "pragma Loop_Variant (" & Variant_Image & ");", Depth + 1);
                      end if;
+                     Append_Counted_While_Lower_Bound_Invariant
+                       (Buffer, Unit, Document, State, Item.all, Depth + 1);
                      Render_Required_Statement_Suite
                        (Buffer, Unit, Document, Item.Body_Stmts, State, Depth + 1, Return_Type, True);
                      Append_Line (Buffer, "end loop;", Depth);
@@ -3235,6 +3510,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
                            "pragma Loop_Variant (" & Variant_Image & ");",
                            Depth + 1);
                      end if;
+                     Append_Counted_While_Lower_Bound_Invariant
+                       (Buffer, Unit, Document, State, Item.all, Depth + 1);
                      Append_Line (Buffer, "declare", Depth + 1);
                      Append_Shared_Condition_Declarations
                        (Buffer, Rendered, Depth + 2);
@@ -5869,6 +6146,16 @@ package body Safe_Frontend.Ada_Emit.Statements is
             Static_Length    : Natural := 0;
             Previous_Length  : Natural := 0;
          begin
+            if Is_Integer_Type (Unit, Document, Target_Type)
+              and then Has_Loop_Integer_Tracking (State, Tracked_Target_Name)
+            then
+               if Try_Static_Integer_Value (Stmt.Value, Static_Value) then
+                  Bind_Loop_Integer (State, Tracked_Target_Name, Static_Value);
+               else
+                  Invalidate_Loop_Integer (State, Tracked_Target_Name);
+               end if;
+            end if;
+
             if not In_Loop
               and then Is_Integer_Type (Unit, Document, Target_Type)
               and then Has_Static_Integer_Tracking (State, Tracked_Target_Name)
