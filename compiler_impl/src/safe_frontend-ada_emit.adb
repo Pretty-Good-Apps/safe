@@ -657,16 +657,22 @@ package body Safe_Frontend.Ada_Emit is
       Decl     : CM.Resolved_Object_Decl;
       Names    : FT.UString_Vectors.Vector) return Boolean
    is
+      Uses_Deferred_Init_Name : constant Boolean :=
+        Decl_Uses_Deferred_Package_Init_Name (Decl, Names);
+      Uses_Shared_Object : constant Boolean :=
+        Decl_Uses_Shared_Object_Name (Unit, Decl);
    begin
       return
-        not Decl.Is_Constant
-        and then Decl.Has_Initializer
+        Decl.Has_Initializer
         and then
-          (Has_Heap_Value_Type (Unit, Document, Decl.Type_Info)
-           or else Is_Owner_Access (Decl.Type_Info)
-           or else Decl_Uses_Deferred_Package_Init_Name (Decl, Names)
-           or else Decl_Uses_Package_Subprogram_Name (Unit, Decl)
-           or else Decl_Uses_Shared_Object_Name (Unit, Decl));
+          (Uses_Shared_Object
+           or else Uses_Deferred_Init_Name
+           or else
+             (not Decl.Is_Constant
+              and then
+                (Has_Heap_Value_Type (Unit, Document, Decl.Type_Info)
+                 or else Is_Owner_Access (Decl.Type_Info)
+                 or else Decl_Uses_Package_Subprogram_Name (Unit, Decl))));
    end Should_Defer_Package_Object_Initializer;
 
    procedure Register_Deferred_Package_Init_Names
