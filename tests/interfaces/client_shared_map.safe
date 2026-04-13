@@ -18,3 +18,5 @@ package client_shared_map
                if removed.value == 1
                   if not provider_shared_map.cache.contains ("one")
                      ok = true;
+
+      print (ok);
