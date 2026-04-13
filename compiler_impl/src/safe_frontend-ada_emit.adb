@@ -566,6 +566,16 @@ package body Safe_Frontend.Ada_Emit is
       return Result;
    end Unit_File_Stem;
 
+   function Enclosing_Package_Name (Qualified_Type : String) return String is
+   begin
+      for Index in reverse Qualified_Type'Range loop
+         if Qualified_Type (Index) = '.' then
+            return Qualified_Type (Qualified_Type'First .. Index - 1);
+         end if;
+      end loop;
+      return "";
+   end Enclosing_Package_Name;
+
    function Decl_Uses_Deferred_Package_Init_Name
      (Decl  : CM.Resolved_Object_Decl;
       Names : FT.UString_Vectors.Vector) return Boolean
@@ -1798,10 +1808,16 @@ package body Safe_Frontend.Ada_Emit is
                    (FT.To_String
                       (Preferred_Imported_Synthetic_Type
                          (Unit, Decl.Type_Info).Name));
+               Type_Use_Package : constant String :=
+                 Enclosing_Package_Name (Type_Use_Name);
+               Current_Package : constant String :=
+                 Ada_Qualified_Name (FT.To_String (Unit.Package_Name));
                Uses_Qualified_Type : constant Boolean :=
-                 Ada.Strings.Fixed.Index (Type_Use_Name, ".") > 0;
+                 Type_Use_Package'Length > 0;
             begin
-               if Uses_Qualified_Type then
+               if Uses_Qualified_Type
+                 and then Type_Use_Package /= Current_Package
+               then
                   Add_Imported_Use_Type (Context, Type_Use_Name);
                end if;
 
@@ -2374,16 +2390,6 @@ package body Safe_Frontend.Ada_Emit is
       Spec_Needs_Safe_Ownership_RT : constant Boolean :=
         not Context.Owner_Access_Helper_Types.Is_Empty;
 
-      function Enclosing_Package_Name (Qualified_Type : String) return String is
-      begin
-         for Index in reverse Qualified_Type'Range loop
-            if Qualified_Type (Index) = '.' then
-               return Qualified_Type (Qualified_Type'First .. Index - 1);
-            end if;
-         end loop;
-         return "";
-      end Enclosing_Package_Name;
-
       function Spec_Uses_Imported_Use_Type (Qualified_Type : String) return Boolean is
          function Spec_Uses_Imported_Enum_Literal return Boolean is
          begin
@@ -2410,6 +2416,8 @@ package body Safe_Frontend.Ada_Emit is
             return False;
          end Spec_Uses_Imported_Enum_Literal;
       begin
+         --  Enum-origin entries may be needed only through a literal reference;
+         --  numeric-origin entries rely on the direct type-name match.
          return
            Ada.Strings.Fixed.Index (Original_Spec, Qualified_Type) > 0
            or else Spec_Uses_Imported_Enum_Literal;
