@@ -840,6 +840,10 @@ package body Safe_Frontend.Ada_Emit is
      (Context : in out Emit_Context;
       Name    : String) renames AI.Add_Imported_Enum_Use_Type;
 
+   procedure Add_Imported_Use_Type
+     (Context : in out Emit_Context;
+      Name    : String) renames AI.Add_Imported_Enum_Use_Type;
+
    function Package_Select_Refined_State
      (Context : Emit_Context) return String renames AI.Package_Select_Refined_State;
 
@@ -1780,9 +1784,35 @@ package body Safe_Frontend.Ada_Emit is
          Base_Kind : constant String := FT.Lowercase (FT.To_String (Base.Kind));
          Static_Image : SU.Unbounded_String := SU.Null_Unbounded_String;
          Static_Length : Natural := 0;
+         Static_Value : Long_Long_Integer := 0;
       begin
          if not Decl.Has_Initializer or else Decl.Initializer = null or else Name'Length = 0 then
             return "";
+         end if;
+
+         if Is_Wide_Integer_Type (Unit, Document, Decl.Type_Info)
+           and then Try_Static_Integer_Value (Decl.Initializer, Static_Value)
+         then
+            declare
+               Type_Image : constant String :=
+                 Render_Subtype_Indication (Unit, Document, Decl.Type_Info);
+               Uses_Qualified_Type : constant Boolean :=
+                 Ada.Strings.Fixed.Index (Type_Image, ".") > 0;
+            begin
+               if Uses_Qualified_Type then
+                  Add_Imported_Use_Type (Context, Type_Image);
+               end if;
+
+               if Base_Kind /= "integer" or else Uses_Qualified_Type then
+                  return
+                    Ada_Safe_Name (Name)
+                    & " = "
+                    & Type_Image
+                    & " ("
+                    & Trim_Wide_Image (CM.Wide_Integer (Static_Value))
+                    & ")";
+               end if;
+            end;
          end if;
 
          if Base_Kind = "integer"
