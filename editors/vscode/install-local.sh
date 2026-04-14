@@ -42,6 +42,10 @@ for candidate in "${EXTENSIONS_DIR}/${publisher}.${name}-"*; do
   fi
 done
 
+if [ -e "$install_path" ] || [ -L "$install_path" ]; then
+  rm -rf "$install_path"
+fi
+
 ln -s "$SCRIPT_DIR" "$install_path"
 
 printf 'Installed local VS Code extension symlink:\n'
