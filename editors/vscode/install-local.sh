@@ -34,6 +34,22 @@ version=$3
 install_name="${publisher}.${name}-${version}"
 install_path="${EXTENSIONS_DIR}/${install_name}"
 
+case "$install_name" in
+  ""|*/*)
+    printf 'install-local: invalid extension install name: %s\n' "$install_name" >&2
+    exit 1
+    ;;
+esac
+
+case "$install_path" in
+  "$EXTENSIONS_DIR"/*)
+    ;;
+  *)
+    printf 'install-local: refusing to remove path outside VS Code extensions: %s\n' "$install_path" >&2
+    exit 1
+    ;;
+esac
+
 mkdir -p "$EXTENSIONS_DIR"
 
 for candidate in "${EXTENSIONS_DIR}/${publisher}.${name}-"*; do
@@ -42,7 +58,7 @@ for candidate in "${EXTENSIONS_DIR}/${publisher}.${name}-"*; do
   fi
 done
 
-if [ -e "$install_path" ] || [ -L "$install_path" ]; then
+if [ -e "$install_path" ]; then
   rm -rf "$install_path"
 fi
 
