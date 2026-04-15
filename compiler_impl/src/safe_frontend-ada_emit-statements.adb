@@ -284,6 +284,11 @@ package body Safe_Frontend.Ada_Emit.Statements is
       Rendered : Shared_Condition_Render;
       Depth    : Natural)
    ;
+   function Replace_All
+     (Text : String;
+      From : String;
+      To   : String) return String
+   ;
    function Is_Explicit_Float_Narrowing
      (Unit        : CM.Resolved_Unit;
       Document    : GM.Mir_Document;
@@ -1665,10 +1670,12 @@ package body Safe_Frontend.Ada_Emit.Statements is
      (Unit      : CM.Resolved_Unit;
       Document  : GM.Mir_Document;
       Condition : CM.Expr_Access;
+      Rendered  : Shared_Condition_Render;
       State     : in out Emit_State) return String
    is
       Operator : constant String :=
         (if Condition = null then "" else Map_Operator (FT.To_String (Condition.Operator)));
+      Image    : SU.Unbounded_String;
    begin
       if Condition = null
         or else Condition.Kind /= CM.Expr_Binary
@@ -1680,13 +1687,26 @@ package body Safe_Frontend.Ada_Emit.Statements is
       end if;
 
       --  Keep variant-bearing while guards as runtime checks even when current
-      --  static bindings can prove the first iteration enters.
-      return
-        Render_Expr (Unit, Document, Condition.Left, State)
-        & " "
-        & Operator
-        & " "
-        & Render_Expr (Unit, Document, Condition.Right, State);
+      --  static bindings can prove the first iteration enters. Preserve any
+      --  shared-condition snapshots so getter calls remain single-evaluated.
+      Image :=
+        SU.To_Unbounded_String
+          (Render_Expr (Unit, Document, Condition.Left, State)
+           & " "
+           & Operator
+           & " "
+           & Render_Expr (Unit, Document, Condition.Right, State));
+
+      for Replacement of Rendered.Replacements loop
+         Image :=
+           SU.To_Unbounded_String
+             (Replace_All
+                (SU.To_String (Image),
+                 FT.To_String (Replacement.Call_Image),
+                 FT.To_String (Replacement.Replacement_Image)));
+      end loop;
+
+      return SU.To_String (Image);
    end Render_Variant_While_Guard_Image;
 
    procedure Append_Counted_While_Lower_Bound_Invariant
@@ -3651,7 +3671,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
                   Variant_Guard_Image : constant String :=
                     (if Variant_Image'Length > 0
                      then Render_Variant_While_Guard_Image
-                       (Unit, Document, Item.Condition, State)
+                       (Unit, Document, Item.Condition, Rendered, State)
                      else "");
                   pragma Assert
                     (Variant_Image'Length = 0 or else Variant_Guard_Image'Length > 0);
