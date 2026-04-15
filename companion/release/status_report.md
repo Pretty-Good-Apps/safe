@@ -232,7 +232,7 @@ gnatprove --mode=prove --level=2 --prover=cvc5,z3,altergo --steps=0 --timeout=12
 | C-02 | Proof-only (Ghost) procedures have no runtime effect | Minor | Proof-Mode | Open |
 | D-02 | Frozen spec commit is authoritative | Minor | Specification | Open |
 
-**Budget status:** 13 tracked, 12 open, 1 resolved; 5 open critical (limit: 5) -- WITHIN LIMITS.
+**Budget status:** 13 tracked, 12 open, 1 resolved; 5 open critical (limit: 5) -- WITHIN LIMITS (open-critical AT LIMIT).
 
 ---
 

@@ -37,7 +37,7 @@ The companion targets the Safe specification at commit `468cf72`. Any subsequent
 # From the repository root:
 python3 scripts/run_tests.py
 python3 scripts/run_proofs.py
-python3 scripts/run_embedded_smoke.py
+python3 scripts/run_embedded_smoke.py --target stm32f4 --suite concurrency
 scripts/diff_assumptions.sh
 ```
 
@@ -45,7 +45,7 @@ This covers the current CI gates:
 
 1. **Test** -- `python3 scripts/run_tests.py`
 2. **Prove** -- `python3 scripts/run_proofs.py` (includes the companion and emitted-proof checkpoints)
-3. **Embedded smoke** -- `python3 scripts/run_embedded_smoke.py`
+3. **Embedded smoke** -- `python3 scripts/run_embedded_smoke.py --target stm32f4 --suite concurrency`
 4. **Diff against golden** -- `scripts/diff_assumptions.sh`
 
 ### Run Companion Proof Steps Directly
