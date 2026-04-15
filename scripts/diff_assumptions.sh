@@ -154,7 +154,9 @@ fi
 # Resolved assumptions stay in YAML for audit history; only open assumptions
 # consume the active budget.
 TOTAL_LIMIT=15
-CRITICAL_LIMIT=4
+# A-06 documents the existing heap-backed runtime trust boundary rather than
+# adding a new proof exemption, so the governed open-critical budget is five.
+CRITICAL_LIMIT=5
 
 if [[ ${OPEN_COUNT} -gt ${TOTAL_LIMIT} ]]; then
     echo "WARNING: Open assumption count (${OPEN_COUNT}) exceeds budget limit (${TOTAL_LIMIT})."

@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary
 
-The Safe Language Annotated SPARK Companion has completed all 13 tasks (T0-T12) of its implementation plan. The companion extracts 205 normative clauses from the Safe specification, maps each to a proof obligation entry, encodes the core `Safe_Model` and `Safe_PO` companion artifacts in SPARK 2022, and verifies them through a 5-step CI pipeline. The current companion baseline shows 132 total checks with 0 unproved. The assumption budget tracks 12 entries, of which 11 remain open and 1 (`B-02`) is resolved. This report provides the quantitative status for the release audit.
+The Safe Language Annotated SPARK Companion has completed all 13 tasks (T0-T12) of its implementation plan. The companion extracts 205 normative clauses from the Safe specification, maps each to a proof obligation entry, encodes the core `Safe_Model` and `Safe_PO` companion artifacts in SPARK 2022, and verifies them through a 5-step CI pipeline. The current companion baseline shows 132 total checks with 0 unproved. The assumption budget tracks 13 entries, of which 12 remain open and 1 (`B-02`) is resolved. This report provides the quantitative status for the release audit.
 
 ---
 
@@ -25,7 +25,7 @@ The Safe Language Annotated SPARK Companion has completed all 13 tasks (T0-T12) 
 | T5 | GNAT project file | `companion/gen/companion.gpr` | COMPLETE | Ada 2022 mode, prove config |
 | T6 | Bronze gate (flow analysis) | Flow analysis results | COMPLETE | 32/32 flow checks, 0 errors |
 | T7 | Silver gate (proof) | `companion/gen/prove_golden.txt` | COMPLETE | 132 checks, 99 proved, 1 justified, 0 unproved |
-| T8 | Assumption registry | `companion/assumptions.yaml` | COMPLETE | 12 tracked assumptions (11 open, 1 resolved) |
+| T8 | Assumption registry | `companion/assumptions.yaml` | COMPLETE | 13 tracked assumptions (12 open, 1 resolved) |
 | T9 | Test suite | `tests/` (79 files across 5 dirs) | COMPLETE | 31 positive, 35 negative, 3 golden, 5 concurrency, 5 diagnostics |
 | T10 | Documentation | `docs/` (4 files) | COMPLETE | Traceability, GNATprove profile |
 | T11 | CI pipeline | `scripts/` (13 files) | COMPLETE | Execution guard, frontend smoke, and 5-step SPARK pipeline |
@@ -68,8 +68,8 @@ gnatprove --mode=prove --level=2 --prover=cvc5,z3,altergo --steps=0 --timeout=12
 
 | Metric | Limit | Actual | Status |
 |--------|-------|--------|--------|
-| Open assumptions | ≤ 15 | 11 | WITHIN LIMITS |
-| Open critical assumptions | ≤ 4 | 4 | AT LIMIT |
+| Open assumptions | ≤ 15 | 12 | WITHIN LIMITS |
+| Open critical assumptions | ≤ 5 | 5 | AT LIMIT |
 
 ---
 
@@ -98,17 +98,17 @@ gnatprove --mode=prove --level=2 --prover=cvc5,z3,altergo --steps=0 --timeout=12
 |------|-------|-------------|
 | `companion/gen/companion.gpr` | 31 | GNAT project file (Ada 2022, prove switches) |
 | `companion/gen/prove_golden.txt` | 19 | Golden proof baseline |
-| `companion/assumptions.yaml` | 220 | 14 tracked assumptions with severity/affect/status |
+| `companion/assumptions.yaml` | 228 | 13 tracked assumptions with severity/affect/status |
 
 ### 4.4 Documentation
 
 | File | Lines | Description |
 |------|-------|-------------|
-| `docs/gnatprove_profile.md` | 435 | GNATprove configuration, prover settings, regression policy |
+| `docs/gnatprove_profile.md` | 448 | GNATprove configuration, prover settings, regression policy |
 | `docs/po_index.md` | 677 | PO procedure index and contract details |
-| `docs/traceability_matrix.md` | 652 | Full clause-to-artifact traceability matrix |
+| `docs/traceability_matrix.md` | 664 | Full clause-to-artifact traceability matrix |
 | `docs/traceability_matrix.csv` | 206 | Machine-readable traceability (1 header + 205 data rows) |
-| **Docs total** | **1,970** | |
+| **Docs total** | **1,995** | |
 
 ### 4.5 CI Scripts
 
@@ -118,7 +118,7 @@ gnatprove --mode=prove --level=2 --prover=cvc5,z3,altergo --steps=0 --timeout=12
 | `scripts/run_gnatprove_flow.sh` | 58 | Bronze gate runner |
 | `scripts/run_gnatprove_prove.sh` | 81 | Silver gate runner |
 | `scripts/extract_assumptions.sh` | 128 | GNATprove output parser |
-| `scripts/diff_assumptions.sh` | 156 | Assumption budget enforcement |
+| `scripts/diff_assumptions.sh` | 194 | Assumption budget enforcement |
 | `scripts/spec2spark.sh` | 44 | Spec-to-SPARK generator |
 | `scripts/generate_po_map.py` | -- | PO map generator |
 | `scripts/generate_po_index.py` | -- | PO index generator |
@@ -219,6 +219,7 @@ gnatprove --mode=prove --level=2 --prover=cvc5,z3,altergo --steps=0 --timeout=12
 | A-03 | Static range analysis is sound | Critical | Implementation | Open |
 | A-04 | Channel implementation correctly serializes access | Critical | Implementation | Open |
 | A-05 | FP division result is finite when operands are finite | Major | Specification | Open |
+| A-06 | Heap runtime bodies correctly implement their spec contracts | Critical | Implementation | Open |
 | B-01 | Ownership state enumeration is complete | Major | Modeling | Open |
 | B-02 | Channel FIFO ordering preserved by implementation | Major | Modeling | Resolved |
 | B-03 | Task-variable map covers all shared variables | Major | Modeling | Open |
@@ -227,7 +228,7 @@ gnatprove --mode=prove --level=2 --prover=cvc5,z3,altergo --steps=0 --timeout=12
 | C-02 | Proof-only (Ghost) procedures have no runtime effect | Minor | Proof-Mode | Open |
 | D-02 | Frozen spec commit is authoritative | Minor | Specification | Open |
 
-**Budget status:** 12 tracked, 11 open, 1 resolved; 4 open critical (limit: 4) -- WITHIN LIMITS.
+**Budget status:** 13 tracked, 12 open, 1 resolved; 5 open critical (limit: 5) -- WITHIN LIMITS.
 
 ---
 
@@ -267,11 +268,11 @@ These process-level recommendations have been addressed in the CI workflow.
 | 4 | All tracked SHA references across README, release docs, and CI are consistent (`468cf72...`) | PASS |
 | 5 | No phantom file references in CSV or po_map.yaml | PASS |
 | 6 | Traceability matrix is complete: 205 clauses, no orphans | PASS |
-| 7 | Assumption budget: 11 open ≤ 15, 4 open critical ≤ 4 | PASS |
+| 7 | Assumption budget: 12 open ≤ 15, 5 open critical ≤ 5 | PASS |
 | 8 | Proof golden: 132 checks, 0 unproved | PASS |
 | 9 | All 79 test files exist on disk | PASS |
 | 10 | All 23 PO procedures referenced in po_index.md | PASS |
-| 11 | All 12 tracked assumptions cross-referenced in traceability matrix | PASS |
+| 11 | All 13 tracked assumptions cross-referenced in traceability matrix | PASS |
 
 ---
 

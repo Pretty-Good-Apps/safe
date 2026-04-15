@@ -77,6 +77,29 @@
   severity: critical
   status: open
 
+- id: A-06
+  summary: "Heap runtime bodies correctly implement their spec contracts"
+  description: >
+    Heap-backed runtime packages use SPARK_Mode Off bodies for allocation,
+    copying, deallocation, and selected equality operations.  GNATprove reasons
+    through their visible spec contracts but does not prove that the bodies
+    implement those contracts.  This assumption covers Safe_String_RT,
+    Safe_Array_RT, Safe_Array_Identity_RT, Safe_Ownership_RT, and the
+    generated Clone_Element / Free_Element seams that connect emitted Safe
+    types to those runtimes.  Safe_String_RT.Equal's string-equality
+    postcondition is a named manually-verified subcase of this assumption.
+  spec_reference: "docs/emitted_output_verification_matrix.md#spark_mode-off-boundary-inventory"
+  affects:
+    - Safe_String_RT
+    - Safe_Array_RT
+    - Safe_Array_Identity_RT
+    - Safe_Ownership_RT
+    - "Generated Clone_Element and Free_Element formals"
+    - "Safe_String_RT.Equal postcondition"
+  severity: critical
+  status: open
+  note: "PR11.22h.2 records an existing trust boundary exposed by the shared runtime contract audit; it does not add new runtime behavior."
+
 # ============================================================================
 #  B -- Modeling Assumptions (Ghost Model Fidelity)
 # ============================================================================

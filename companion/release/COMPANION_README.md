@@ -66,7 +66,7 @@ safe/
 │   ├── clauses.yaml           # 205 extracted normative clauses (2,638 lines)
 │   └── po_map.yaml            # 205 PO entries mapping clauses to artifacts (1,662 lines)
 ├── companion/
-│   ├── assumptions.yaml       # 14 tracked assumptions (220 lines)
+│   ├── assumptions.yaml       # 13 tracked assumptions (228 lines)
 │   ├── gen/
 │   │   ├── companion.gpr      # GNAT project file (31 lines)
 │   │   └── prove_golden.txt   # Golden proof baseline (19 lines)
@@ -79,15 +79,15 @@ safe/
 │       ├── safe_po.ads        # 23 PO procedure specs (365 lines)
 │       └── safe_po.adb        # PO procedure bodies (340 lines)
 ├── docs/
-│   ├── gnatprove_profile.md   # GNATprove configuration & prover settings (435 lines)
+│   ├── gnatprove_profile.md   # GNATprove configuration & prover settings (448 lines)
 │   ├── po_index.md            # PO procedure index (677 lines)
-│   ├── traceability_matrix.md # Full clause-to-artifact traceability (652 lines)
+│   ├── traceability_matrix.md # Full clause-to-artifact traceability (664 lines)
 │   └── traceability_matrix.csv# Machine-readable traceability (206 lines)
 ├── meta/
 │   ├── commit.txt             # Frozen spec SHA
 │   └── generator_version.txt  # Generator version (spec2spark v0.1.0)
 ├── scripts/
-│   ├── diff_assumptions.sh    # Assumption budget enforcement (156 lines)
+│   ├── diff_assumptions.sh    # Assumption budget enforcement (194 lines)
 │   ├── extract_assumptions.sh # GNATprove output parser (128 lines)
 │   ├── generate_po_index.py   # PO index generator
 │   ├── generate_po_map.py     # PO map generator
@@ -125,7 +125,7 @@ safe/
 | -- Proved (CVC5) | 99 (75%) |
 | -- Justified | 1 (1%) -- FP_Safe_Div, assumption A-05 |
 | -- Unproved | 0 |
-| Tracked assumptions | 12 tracked (11 open, 1 resolved) |
+| Tracked assumptions | 13 tracked (12 open, 1 resolved) |
 | Test files | 79 |
 | Documentation files | 4 |
 | CI scripts | 13 |
@@ -161,15 +161,15 @@ safe/
 
 ## 7. Assumption Registry
 
-The companion tracks 12 assumptions -- dependencies that the SPARK model relies on but cannot verify within SPARK itself. One of those (`B-02`, FIFO ordering) is now retained as a resolved audit entry; the remaining 11 stay open. Full details are in `companion/assumptions.yaml`.
+The companion tracks 13 assumptions -- dependencies that the SPARK model relies on but cannot verify within SPARK itself. One of those (`B-02`, FIFO ordering) is retained as a resolved audit entry; the remaining 12 stay open. Full details are in `companion/assumptions.yaml`.
 
 | Severity | Count | IDs |
 |----------|-------|-----|
-| Critical | 4 | A-01 (64-bit intermediates), A-02 (IEEE 754 non-trapping), A-03 (range analysis soundness), A-04 (channel serialization) |
+| Critical | 5 | A-01 (64-bit intermediates), A-02 (IEEE 754 non-trapping), A-03 (range analysis soundness), A-04 (channel serialization), A-06 (heap runtime contracts) |
 | Major | 4 tracked (3 open, 1 resolved) | A-05 (FP division overflow guard), B-01 (ownership state completeness), B-02 (FIFO ordering, resolved), B-03 (task-var map coverage) |
 | Minor | 4 | B-04 (Boolean null model), C-01 (flow analysis sufficiency), C-02 (Ghost erasure), D-02 (frozen spec commit) |
 
-**Budget limits:** max 15 open (current: 11), max 4 open critical (current: 4). Both within limits.
+**Budget limits:** max 15 open (current: 12), max 5 open critical (current: 5). Both within limits.
 
 ---
 
