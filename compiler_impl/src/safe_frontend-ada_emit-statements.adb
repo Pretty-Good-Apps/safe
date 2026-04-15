@@ -3940,9 +3940,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
                           CM.Wide_Integer (Left) + CM.Wide_Integer (Right);
                      begin
                         Sum := 0;
-                        if Wide_Sum < 0
-                          or else Wide_Sum > CM.Wide_Integer (Long_Long_Integer'Last)
-                        then
+                        if Wide_Sum > CM.Wide_Integer (Long_Long_Integer'Last) then
                            return False;
                         end if;
 
@@ -4023,11 +4021,19 @@ package body Safe_Frontend.Ada_Emit.Statements is
                               end loop;
 
                            when CM.Stmt_If =>
+                              if Expr_Uses_Name (Stmt.Condition, Name) then
+                                 Unsafe := True;
+                                 return;
+                              end if;
                               Add_Branch
                                 (Stmt.Then_Stmts,
                                  Max_Step,
                                  Unsafe);
                               for Part of Stmt.Elsifs loop
+                                 if Expr_Uses_Name (Part.Condition, Name) then
+                                    Unsafe := True;
+                                    return;
+                                 end if;
                                  Add_Branch
                                    (Part.Statements,
                                     Max_Step,
@@ -4041,7 +4047,33 @@ package body Safe_Frontend.Ada_Emit.Statements is
                               end if;
 
                            when CM.Stmt_Case =>
+                              if Expr_Uses_Name (Stmt.Case_Expr, Name) then
+                                 Unsafe := True;
+                                 return;
+                              end if;
                               for Arm of Stmt.Case_Arms loop
+                                 if Expr_Uses_Name (Arm.Choice, Name) then
+                                    Unsafe := True;
+                                    return;
+                                 end if;
+                                 Add_Branch
+                                   (Arm.Statements,
+                                    Max_Step,
+                                    Unsafe);
+                              end loop;
+
+                           when CM.Stmt_Match =>
+                              if Expr_Uses_Name (Stmt.Match_Expr, Name) then
+                                 Unsafe := True;
+                                 return;
+                              end if;
+                              for Arm of Stmt.Match_Arms loop
+                                 for Binder of Arm.Binders loop
+                                    if FT.To_String (Binder) = Name then
+                                       Unsafe := True;
+                                       return;
+                                    end if;
+                                 end loop;
                                  Add_Branch
                                    (Arm.Statements,
                                     Max_Step,
@@ -4148,16 +4180,11 @@ package body Safe_Frontend.Ada_Emit.Statements is
                      is
                         procedure Visit_Assignment (Stmt : CM.Statement) is
                            Name_Image  : constant String := Target_Ident_Name (Stmt.Target);
-                           Step_Value  : Long_Long_Integer := 0;
                            Max_Delta   : Long_Long_Integer := 0;
                            Unsafe      : Boolean := False;
                         begin
                            if Name_Image'Length = 0
                              or else Contains_Growable_Accumulator (Name_Image)
-                             or else not Supported_Accumulator_Assignment
-                               (Stmt,
-                                Name_Image,
-                                Step_Value)
                            then
                               return;
                            end if;
@@ -4211,6 +4238,10 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                     for Arm of Nested.Case_Arms loop
                                        Collect_Growable_Accumulators (Arm.Statements);
                                     end loop;
+                                 when CM.Stmt_Match =>
+                                    for Arm of Nested.Match_Arms loop
+                                       Collect_Growable_Accumulators (Arm.Statements);
+                                    end loop;
                                  when others =>
                                     null;
                               end case;
@@ -4224,16 +4255,25 @@ package body Safe_Frontend.Ada_Emit.Statements is
                         Name_Text : constant String := FT.To_String (Info.Name);
                         Type_Image : constant String := FT.To_String (Info.Type_Image);
                         Delta_Image : constant String := Trim_Image (Info.Max_Delta);
-                        Remaining_Image : constant String :=
-                          "Safe_Runtime.Wide_Integer ("
-                          & Delta_Image
-                          & ") * Safe_Runtime.Wide_Integer (Long_Long_Integer ("
+                        Length_Image : constant String :=
+                          "Safe_Runtime.Wide_Integer (Long_Long_Integer ("
                           & Array_Runtime_Instance_Name (Iterable_Info)
                           & ".Length ("
                           & Snapshot_Name
-                          & ")) - "
+                          & ")))";
+                        Total_Headroom_Image : constant String :=
+                          "Safe_Runtime.Wide_Integer ("
+                          & Delta_Image
+                          & ") * "
+                          & Length_Image;
+                        Remaining_Image : constant String :=
+                          "Safe_Runtime.Wide_Integer ("
+                          & Delta_Image
+                          & ") * ("
+                          & Length_Image
+                          & " - Safe_Runtime.Wide_Integer ("
                           & Index_Name
-                          & " + 1)";
+                          & ") + Safe_Runtime.Wide_Integer (1))";
                      begin
                         State.Needs_Safe_Runtime := True;
                         return
@@ -4245,9 +4285,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
                           & Name_Text
                           & "'Loop_Entry) <= Safe_Runtime.Wide_Integer ("
                           & Type_Image
-                          & "'Last) - Safe_Runtime.Wide_Integer ("
-                          & Delta_Image
-                          & ") * Safe_Runtime.Wide_Integer (Natural'Last) and then Safe_Runtime.Wide_Integer ("
+                          & "'Last) - "
+                          & Total_Headroom_Image
+                          & " and then Safe_Runtime.Wide_Integer ("
                           & Name_Text
                           & ") <= Safe_Runtime.Wide_Integer ("
                           & Type_Image
