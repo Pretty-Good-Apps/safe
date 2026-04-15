@@ -77,6 +77,22 @@
   severity: critical
   status: open
 
+- id: A-05
+  summary: "FP division result is finite when operands are finite"
+  description: >
+    The FP_Safe_Div body has a float overflow check that GNATprove cannot
+    discharge at level 2: dividing a finite X by a very small finite Y
+    (e.g., subnormal) can produce infinity.  The compiler's narrowing-point
+    analysis guarantees the result is finite before it reaches a narrowing
+    point (D27 Rule 5).  This runtime guarantee is modeled by a pragma
+    Annotate (GNATprove, Intentional) in the FP_Safe_Div body.
+  spec_reference: "spec/02-restrictions.md#2.8.5"
+  affects:
+    - Safe_PO.FP_Safe_Div
+  severity: major
+  status: open
+  note: "M3-AUD-002: GNATprove counterexample: X=-1.1e-5, Y=1.3e-318 → overflow."
+
 - id: A-06
   summary: "Heap runtime bodies correctly implement their spec contracts"
   description: >
@@ -199,21 +215,6 @@
 #  D -- Specification Assumptions
 # ============================================================================
 
-- id: A-05
-  summary: "FP division result is finite when operands are finite"
-  description: >
-    The FP_Safe_Div body has a float overflow check that GNATprove cannot
-    discharge at level 2: dividing a finite X by a very small finite Y
-    (e.g., subnormal) can produce infinity.  The compiler's narrowing-point
-    analysis guarantees the result is finite before it reaches a narrowing
-    point (D27 Rule 5).  This runtime guarantee is modeled by a pragma
-    Annotate (GNATprove, Intentional) in the FP_Safe_Div body.
-  spec_reference: "spec/02-restrictions.md#2.8.5"
-  affects:
-    - Safe_PO.FP_Safe_Div
-  severity: major
-  status: open
-  note: "M3-AUD-002: GNATprove counterexample: X=-1.1e-5, Y=1.3e-318 → overflow."
 
 - id: D-02
   summary: "Frozen spec commit is authoritative"

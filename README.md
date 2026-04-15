@@ -128,12 +128,12 @@ Honesty about limits is part of the safety story:
 
 ## What "Proven" Means
 
-Accepted Safe programs are emitted as Ada/SPARK and checked by GNATprove for
-Silver-level absence of runtime errors: no overflow, out-of-bounds access,
-division by zero, uninitialized read, null dereference, or type-constraint
-violation on the admitted proof surface. This proves the emitted Ada/SPARK; it
-does not constitute a formal semantic-preservation proof from Safe source to
-Ada.
+In the default proof-enabled build pipeline, accepted Safe programs are emitted
+as Ada/SPARK and checked by GNATprove for Silver-level absence of runtime
+errors: no overflow, out-of-bounds access, division by zero, uninitialized
+read, null dereference, or type-constraint violation on the admitted proof
+surface. This proves the emitted Ada/SPARK; it does not constitute a formal
+semantic-preservation proof from Safe source to Ada.
 
 The proof story trusts GNATprove, GNAT and its runtime, the Safe compiler's
 emission correctness, and the tracked assumptions in

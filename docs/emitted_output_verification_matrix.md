@@ -474,13 +474,15 @@ is load-bearing for proofs that involve clone/copy operations.
 
 | Tier | Runtime | Applies to | Proved to callers | Trusted / not proved |
 |------|---------|------------|-------------------|----------------------|
-| Identity tier | `Safe_Array_Identity_RT` via `Safe_Array_Identity_Ops` | Simple value-identity elements such as integers, booleans, and enums | Length and element equality after clone/copy | The `SPARK_Mode Off` body and the wrapper postcondition that clone returns the source value |
+| Identity tier | `Safe_Array_Identity_RT` via `Safe_Array_Identity_Ops` | Simple value-identity elements such as integers, booleans, and enums | Length and element equality after clone/copy, including the wrapper-level fact that `Clone_Element'Result = Source` | The `SPARK_Mode Off` body plus correctness of tier selection and wrapper emission |
 | Base tier | `Safe_Array_RT` | Heap-backed elements such as strings, nested containers, maps, and records containing reference-backed fields | Length preservation and bounds facts | Element contents, clone independence, and deep-free behavior beyond the visible length contracts |
 
 Generated `Clone_Element` and `Free_Element` functions are the seam between
 emitted Safe types and these runtimes. For the identity tier, generated clone
-functions route through wrappers carrying `Clone'Result = Source`; for the base
-tier, generated clone/free functions are trusted to implement the value-semantics
+functions route through wrappers whose `Clone'Result = Source` postcondition is
+proved to callers; the remaining trust boundary is the `SPARK_Mode Off` runtime
+body together with correct tier selection/emission. For the base tier,
+generated clone/free functions are trusted to implement the value-semantics
 contract required by the runtime body, but callers only receive the runtime
 spec's length-level facts.
 

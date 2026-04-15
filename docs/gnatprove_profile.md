@@ -293,7 +293,7 @@ After each spec regeneration, the assumption budget should be reviewed:
 - **New assumptions require explicit justification.** No assumption may be added to `assumptions.yaml` without a review that documents the rationale, the affected procedures, and the severity classification.
 - **Critical assumptions require sign-off** from at least two engineers.
 - **Assumption removal** (resolution) is encouraged and should be tracked with a `status: resolved` field and a note explaining how the assumption was discharged.
-- **Target**: The total assumption count should not grow beyond 15 without a formal budget review. Any growth in critical assumptions beyond 5 requires escalation.
+- **Target**: The total assumption count should not grow beyond 15 without a formal budget review. Any growth in open critical assumptions beyond 5 requires escalation.
 
 ---
 

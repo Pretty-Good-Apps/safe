@@ -79,17 +79,17 @@ gnatprove --mode=prove --level=2 --prover=cvc5,z3,altergo --steps=0 --timeout=12
 
 | File | Lines | Description |
 |------|-------|-------------|
-| `clauses/clauses.yaml` | 2,638 | 205 normative clauses with metadata, normative text, and content hashes |
-| `clauses/po_map.yaml` | 1,662 | 205 PO entries mapping clauses to target categories, artifacts, and tests |
+| `clauses/clauses.yaml` | 2,632 | 205 normative clauses with metadata, normative text, and content hashes |
+| `clauses/po_map.yaml` | 1,661 | 205 PO entries mapping clauses to target categories, artifacts, and tests |
 
 ### 4.2 SPARK Companion Code
 
 | File | Lines | Description |
 |------|-------|-------------|
-| `companion/spark/safe_model.ads` | 319 | Ghost type declarations and 25 ghost functions |
-| `companion/spark/safe_model.adb` | 55 | Expression-function bodies for ghost models |
-| `companion/spark/safe_po.ads` | 365 | 23 PO procedure specifications with Pre/Post contracts |
-| `companion/spark/safe_po.adb` | 340 | PO procedure bodies (19 null/ghost + 4 computational) |
+| `companion/spark/safe_model.ads` | 366 | Ghost type declarations and 25 ghost functions |
+| `companion/spark/safe_model.adb` | 116 | Expression-function bodies for ghost models |
+| `companion/spark/safe_po.ads` | 390 | 23 PO procedure specifications with Pre/Post contracts |
+| `companion/spark/safe_po.adb` | 357 | PO procedure bodies (19 null/ghost + 4 computational) |
 | **SPARK total** | **1,079** | |
 
 ### 4.3 Build Configuration
@@ -97,18 +97,18 @@ gnatprove --mode=prove --level=2 --prover=cvc5,z3,altergo --steps=0 --timeout=12
 | File | Lines | Description |
 |------|-------|-------------|
 | `companion/gen/companion.gpr` | 31 | GNAT project file (Ada 2022, prove switches) |
-| `companion/gen/prove_golden.txt` | 19 | Golden proof baseline |
-| `companion/assumptions.yaml` | 228 | 13 tracked assumptions with severity/affect/status |
+| `companion/gen/prove_golden.txt` | 18 | Golden proof baseline |
+| `companion/assumptions.yaml` | 229 | 13 tracked assumptions with severity/affect/status |
 
 ### 4.4 Documentation
 
 | File | Lines | Description |
 |------|-------|-------------|
 | `docs/gnatprove_profile.md` | 448 | GNATprove configuration, prover settings, regression policy |
-| `docs/po_index.md` | 677 | PO procedure index and contract details |
+| `docs/po_index.md` | 673 | PO procedure index and contract details |
 | `docs/traceability_matrix.md` | 664 | Full clause-to-artifact traceability matrix |
 | `docs/traceability_matrix.csv` | 206 | Machine-readable traceability (1 header + 205 data rows) |
-| **Docs total** | **1,995** | |
+| **Docs total** | **1,991** | |
 
 ### 4.5 CI Scripts
 
@@ -117,7 +117,7 @@ gnatprove --mode=prove --level=2 --prover=cvc5,z3,altergo --steps=0 --timeout=12
 | `scripts/run_all.sh` | 167 | Full 5-step CI pipeline |
 | `scripts/run_gnatprove_flow.sh` | 58 | Bronze gate runner |
 | `scripts/run_gnatprove_prove.sh` | 81 | Silver gate runner |
-| `scripts/extract_assumptions.sh` | 128 | GNATprove output parser |
+| `scripts/extract_assumptions.sh` | 129 | GNATprove output parser |
 | `scripts/diff_assumptions.sh` | 194 | Assumption budget enforcement |
 | `scripts/spec2spark.sh` | 44 | Spec-to-SPARK generator |
 | `scripts/generate_po_map.py` | -- | PO map generator |

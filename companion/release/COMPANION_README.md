@@ -63,24 +63,24 @@ scripts/run_gnatprove_prove.sh
 ```
 safe/
 ├── clauses/
-│   ├── clauses.yaml           # 205 extracted normative clauses (2,638 lines)
-│   └── po_map.yaml            # 205 PO entries mapping clauses to artifacts (1,662 lines)
+│   ├── clauses.yaml           # 205 extracted normative clauses (2,632 lines)
+│   └── po_map.yaml            # 205 PO entries mapping clauses to artifacts (1,661 lines)
 ├── companion/
-│   ├── assumptions.yaml       # 13 tracked assumptions (228 lines)
+│   ├── assumptions.yaml       # 13 tracked assumptions (229 lines)
 │   ├── gen/
 │   │   ├── companion.gpr      # GNAT project file (31 lines)
-│   │   └── prove_golden.txt   # Golden proof baseline (19 lines)
+│   │   └── prove_golden.txt   # Golden proof baseline (18 lines)
 │   ├── release/
 │   │   ├── COMPANION_README.md    # This file
 │   │   └── status_report.md       # Quantitative status report
 │   └── spark/
-│       ├── safe_model.ads     # Ghost type/function models (319 lines)
-│       ├── safe_model.adb     # Ghost expression-function bodies (55 lines)
-│       ├── safe_po.ads        # 23 PO procedure specs (365 lines)
-│       └── safe_po.adb        # PO procedure bodies (340 lines)
+│       ├── safe_model.ads     # Ghost type/function models (366 lines)
+│       ├── safe_model.adb     # Ghost expression-function bodies (116 lines)
+│       ├── safe_po.ads        # 23 PO procedure specs (390 lines)
+│       └── safe_po.adb        # PO procedure bodies (357 lines)
 ├── docs/
 │   ├── gnatprove_profile.md   # GNATprove configuration & prover settings (448 lines)
-│   ├── po_index.md            # PO procedure index (677 lines)
+│   ├── po_index.md            # PO procedure index (673 lines)
 │   ├── traceability_matrix.md # Full clause-to-artifact traceability (664 lines)
 │   └── traceability_matrix.csv# Machine-readable traceability (206 lines)
 ├── meta/
@@ -88,7 +88,7 @@ safe/
 │   └── generator_version.txt  # Generator version (spec2spark v0.1.0)
 ├── scripts/
 │   ├── diff_assumptions.sh    # Assumption budget enforcement (194 lines)
-│   ├── extract_assumptions.sh # GNATprove output parser (128 lines)
+│   ├── extract_assumptions.sh # GNATprove output parser (129 lines)
 │   ├── generate_po_index.py   # PO index generator
 │   ├── generate_po_map.py     # PO map generator
 │   ├── lint_safe_syntax.sh    # Safe surface-syntax linter
