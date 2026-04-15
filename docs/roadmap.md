@@ -3194,8 +3194,9 @@ The README positions Safe around the claim that accepted programs are safe by
 construction. That claim is only defensible if every compiling fixture in the
 admitted surface is either proved by the standard emitted-proof gate or rejected
 before emission with a direct Safe diagnostic. The live proof inventory already
-prevents unnamed coverage holes, but `runtime-regression-only` exclusions still
-weaken the stronger "if it compiles, it is safe" wording.
+prevents unnamed coverage holes. PR11.22h.1 removes the former
+`runtime-regression-only` exclusions so the stronger "if it compiles, it is
+safe" wording no longer depends on an ambiguous compiling-but-unproved bucket.
 
 ### Scope
 
@@ -3218,29 +3219,30 @@ weaken the stronger "if it compiles, it is safe" wording.
 
 The target set started as the live `runtime-regression-only` inventory after the
 generated composite `for ... of` helper coverage landed. PR11.22h.1a closes the
-low-risk proof promotions; PR11.22h.1b closes the shared exit-condition
-proof gap and leaves only the map-entry loop gap explicit:
+low-risk proof promotions, PR11.22h.1b closes the shared exit-condition proof
+gap, and PR11.22h.1c closes the final map-entry loop gap:
 
 | Fixture | Current reason | Expected direction |
 |---------|----------------|--------------------|
 | `tests/build/pr1110b_list_empty_build.safe` | Empty-list `pop_last` witness produced GNATprove no-effect / unused-assignment warnings under `--warnings=error` | Closed by PR11.22h.1a with narrow generated-warning suppression around the two synthetic trim branches |
-| `tests/build/pr213_map_entry_build.safe` | Map-entry `for of` loop accumulator lacks generated loop facts for overflow proof | Add generated accumulator invariants/facts, or reclassify with a focused proof-bearing companion if the full shape remains intractable |
+| `tests/build/pr213_map_entry_build.safe` | Former map-entry `for of` loop accumulator lacked generated loop facts for overflow proof | Closed by PR11.22h.1c with conservative generated accumulator headroom invariants for composite growable `for of` loops |
 | `tests/build/pr227_shared_snapshot_order_build.safe` | Former shared snapshot ordering regression now proves at level 2 | Closed by PR11.22h.1a by promoting the fixture to the emitted-proof regression list |
 | `tests/build/pr228_shared_loop_exit_condition_build.safe` | Shared exit-condition loop lowered to a static `while true` shape whose variant proof lacked the original `count < limit` guard fact | Closed by PR11.22h.1b by preserving dynamic guards for variant-bearing `while` loops |
 
 ### Acceptance Criteria
 
 - `scripts/run_proofs.py` passes with all non-excluded fixtures proved.
-- The count of `runtime-regression-only` exclusions is reduced to zero, or every
-  retained item is paired with smaller proof-bearing coverage and wording that
-  prevents an unqualified proof claim.
+- The count of `runtime-regression-only` exclusions is reduced to zero; any
+  future proof-performance exclusion must be explicitly owned outside that
+  category and paired with proof-bearing coverage.
 - `scripts/run_tests.py` still enforces zero uncovered fixtures.
 - Public docs distinguish:
   - proved admitted fixtures,
   - frontend/spec exclusions,
   - tooling-reject fixtures,
   - any retained proof-performance exclusions.
-- The README safety claim is updated to match the live evidence.
+- The README safety claim is updated to state that no compiling runtime
+  regression fixture remains outside the emitted proof lane.
 
 ### Dependency
 

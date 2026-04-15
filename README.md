@@ -8,7 +8,7 @@ it.
 
 [![CI](https://github.com/berkeleynerd/safe/actions/workflows/ci.yml/badge.svg)](https://github.com/berkeleynerd/safe/actions/workflows/ci.yml)
 ![Spec version](https://img.shields.io/badge/spec-v0.1_working_draft-blue)
-![Proved fixtures](https://img.shields.io/badge/proved_fixtures-255-brightgreen)
+![Proved fixtures](https://img.shields.io/badge/proved_fixtures-256-brightgreen)
 
 Safe is a language in its own right. The current toolchain compiles it through
 Ada/SPARK-oriented artifacts, but the user-facing goal is not to preserve Ada
@@ -131,10 +131,11 @@ Honesty about limits is part of the safety story:
 Two independent evidence channels back the safety claims:
 
 **Emitted proof corpus.** The blocking emitted-proof inventory currently covers
-255 fixtures with 5 explicit exclusions and 0 uncovered fixtures: 3 frontend
-spec exclusions, 1 intentional tooling-reject fixture, and 1 remaining runtime
-proof gap. These fixtures are emitted as Ada/SPARK and verified by GNATprove
-through the repository proof lane.
+256 fixtures with 4 explicit exclusions and 0 uncovered fixtures: 3 frontend
+spec exclusions and 1 intentional tooling-reject fixture. No compiling
+runtime-regression fixture remains outside the emitted proof lane. These
+fixtures are emitted as Ada/SPARK and verified by GNATprove through the
+repository proof lane.
 
 **Companion emission templates.** The companion inventory currently reports 553
 total VCs across 20 units: 138 Bronze flow checks passed, 414 Silver proof VCs
@@ -143,7 +144,7 @@ proved, 1 Silver VC justified, and 0 unproved. Its 16 templates account for
 
 | Metric | Value |
 |--------|-------|
-| Proved emitted fixtures | 255 (5 exclusions: 3 spec, 1 tooling, 1 runtime proof gap; 0 uncovered) |
+| Proved emitted fixtures | 256 (4 exclusions: 3 spec, 1 tooling, 0 runtime proof gaps; 0 uncovered) |
 | Companion template VCs | 553 total (414 proved, 1 justified, 0 unproved, 138 flow passed) |
 | Companion templates | 16 templates, 315 template checks |
 | Tracked proof assumptions | 12 |
