@@ -1661,7 +1661,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
       return "";
    end Loop_Variant_Image;
 
-   function Render_Counted_While_Guard_Image
+   function Render_Variant_While_Guard_Image
      (Unit      : CM.Resolved_Unit;
       Document  : GM.Mir_Document;
       Condition : CM.Expr_Access;
@@ -1672,26 +1672,22 @@ package body Safe_Frontend.Ada_Emit.Statements is
    begin
       if Condition = null
         or else Condition.Kind /= CM.Expr_Binary
-        or else Operator not in "<" | "<="
         or else Condition.Left = null
         or else Condition.Right = null
-        or else Condition.Left.Kind /= CM.Expr_Ident
-        or else Condition.Right.Kind /= CM.Expr_Ident
-        or else not Is_Integer_Type (Unit, Document, FT.To_String (Condition.Left.Type_Name))
-        or else not Is_Integer_Type (Unit, Document, FT.To_String (Condition.Right.Type_Name))
+        or else Operator'Length = 0
       then
          return "";
       end if;
 
-      --  Keep variant-bearing counted while guards as runtime checks even when
-      --  current static bindings can prove the first iteration enters.
+      --  Keep variant-bearing while guards as runtime checks even when current
+      --  static bindings can prove the first iteration enters.
       return
         Render_Expr (Unit, Document, Condition.Left, State)
         & " "
         & Operator
         & " "
         & Render_Expr (Unit, Document, Condition.Right, State);
-   end Render_Counted_While_Guard_Image;
+   end Render_Variant_While_Guard_Image;
 
    procedure Append_Counted_While_Lower_Bound_Invariant
      (Buffer   : in out SU.Unbounded_String;
@@ -3652,14 +3648,16 @@ package body Safe_Frontend.Ada_Emit.Statements is
                   Rendered : constant Shared_Condition_Render :=
                     Render_Shared_Condition (Unit, Document, Item.Condition, State, Index);
                   Variant_Image : constant String := Loop_Variant_Image (Unit, Document, Item.Condition, State);
-                  Counted_Guard_Image : constant String :=
+                  Variant_Guard_Image : constant String :=
                     (if Variant_Image'Length > 0
-                     then Render_Counted_While_Guard_Image
+                     then Render_Variant_While_Guard_Image
                        (Unit, Document, Item.Condition, State)
                      else "");
+                  pragma Assert
+                    (Variant_Image'Length = 0 or else Variant_Guard_Image'Length > 0);
                   Condition_Image : constant String :=
-                    (if Counted_Guard_Image'Length > 0
-                     then Counted_Guard_Image
+                    (if Variant_Guard_Image'Length > 0
+                     then Variant_Guard_Image
                      else FT.To_String (Rendered.Image));
                begin
                   if Rendered.Snapshots.Is_Empty then
