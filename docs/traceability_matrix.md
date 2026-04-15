@@ -379,7 +379,7 @@ affected POs/models, severity, and related spec references.
 | A-03 | Static range analysis is sound | Safe_Model.Range64, Safe_Model.Contains, Safe_Model.Subset, Safe_Model.Intersect, Safe_Model.Widen | critical | spec/05-assurance.md#5.3.6 | open |
 | A-04 | Channel implementation correctly serializes access | Safe_PO.Check_Channel_Not_Full, Safe_PO.Check_Channel_Not_Empty, Safe_PO.Check_Channel_Capacity_Positive, Safe_Model.Channel_State | critical | spec/04-tasks-and-channels.md#4.3 | open |
 | A-05 | FP division result is finite when operands are finite | Safe_PO.FP_Safe_Div | major | spec/02-restrictions.md#2.8.5 | open |
-| A-06 | Heap runtime bodies correctly implement their spec contracts | Safe_String_RT, Safe_Array_RT, Safe_Array_Identity_RT, Safe_Ownership_RT, generated Clone_Element / Free_Element formals, Safe_String_RT.Equal postcondition | critical | docs/emitted_output_verification_matrix.md#spark_mode-off-boundary-inventory | open |
+| A-06 | Heap runtime bodies correctly implement their spec contracts | Safe_String_RT, Safe_Array_RT, Safe_Array_Identity_RT, Safe_Ownership_RT, generated Clone_Element / Free_Element formals, Safe_String_RT.Equal postcondition | critical | spec/05-assurance.md#5.3.1 | open |
 | B-01 | Ownership state enumeration is complete | Safe_Model.Ownership_State, Safe_PO.Check_Not_Moved, Safe_PO.Check_Owned_For_Move, Safe_PO.Check_Borrow_Exclusive, Safe_PO.Check_Observe_Shared | major | spec/02-restrictions.md#2.3.2 | open |
 | B-02 | Channel FIFO ordering preserved by implementation | Safe_Model.Channel_State, Safe_Model.After_Append, Safe_Model.After_Remove, Template_Channel_FIFO.Model_Of | major | spec/04-tasks-and-channels.md#4.3.p23:197d9a49 | resolved |
 | B-03 | Task-variable map covers all shared variables | Safe_Model.Task_Var_Map, Safe_PO.Check_Exclusive_Ownership | major | spec/04-tasks-and-channels.md#4.5 | open |
@@ -423,9 +423,9 @@ affected POs/models, severity, and related spec references.
 
 **A-06: Heap runtime bodies correctly implement their spec contracts**
 - Severity: critical
-- Spec reference: `docs/emitted_output_verification_matrix.md#spark_mode-off-boundary-inventory`
+- Spec reference: `spec/05-assurance.md#5.3.1`
 - Affects: Safe_String_RT, Safe_Array_RT, Safe_Array_Identity_RT, Safe_Ownership_RT, generated Clone_Element / Free_Element formals, Safe_String_RT.Equal postcondition
-- Related clauses: none. A-06 is an implementation trust-boundary record; the detailed boundary inventory lives in `docs/emitted_output_verification_matrix.md#spark_mode-off-boundary-inventory`.
+- Related clauses: `5.3.1.p12:99a94209`, `5.3.1.p12a:047a8410`. A-06 is an implementation trust-boundary record; the detailed boundary inventory lives in `docs/emitted_output_verification_matrix.md#spark_mode-off-boundary-inventory`.
 - Note: A-06 records an existing SPARK_Mode Off heap-runtime trust boundary exposed by the shared runtime audit; it does not add new emitted behavior or a new proof exemption.
 
 **B-01: Ownership state enumeration is complete**

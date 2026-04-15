@@ -156,6 +156,8 @@ fi
 TOTAL_LIMIT=15
 # A-06 documents the existing heap-backed runtime trust boundary rather than
 # adding a new proof exemption, so the governed open-critical budget is five.
+# The budget is intentionally at limit; any additional open critical assumption
+# must be paired with formal budget review before merge.
 CRITICAL_LIMIT=5
 
 if [[ ${OPEN_COUNT} -gt ${TOTAL_LIMIT} ]]; then

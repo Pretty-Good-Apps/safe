@@ -104,7 +104,7 @@
     generated Clone_Element / Free_Element seams that connect emitted Safe
     types to those runtimes.  Safe_String_RT.Equal's string-equality
     postcondition is a named manually-verified subcase of this assumption.
-  spec_reference: "docs/emitted_output_verification_matrix.md#spark_mode-off-boundary-inventory"
+  spec_reference: "spec/05-assurance.md#5.3.1"
   affects:
     - Safe_String_RT
     - Safe_Array_RT
@@ -114,7 +114,7 @@
     - "Safe_String_RT.Equal postcondition"
   severity: critical
   status: open
-  note: "PR11.22h.2 records an existing trust boundary exposed by the shared runtime contract audit; it does not add new runtime behavior."
+  note: "PR11.22h.2 records an existing trust boundary exposed by the shared runtime contract audit; it does not add new runtime behavior. Detailed boundary inventory: docs/emitted_output_verification_matrix.md#spark_mode-off-boundary-inventory."
 
 # ============================================================================
 #  B -- Modeling Assumptions (Ghost Model Fidelity)

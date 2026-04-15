@@ -93,7 +93,7 @@ safe/
 │   └── generator_version.txt  # Generator version (spec2spark v0.1.0)
 ├── scripts/
 │   ├── _lib/                  # Shared harness modules and inventories (16 files, 8,343 lines)
-│   ├── diff_assumptions.sh    # Assumption budget enforcement (194 lines)
+│   ├── diff_assumptions.sh    # Assumption budget enforcement (196 lines)
 │   ├── extract_assumptions.sh # GNATprove output parser (129 lines)
 │   ├── generate_po_index.py   # PO index generator (272 lines)
 │   ├── generate_po_map.py     # PO map generator (1,137 lines)
@@ -137,7 +137,7 @@ safe/
 | Tracked assumptions | 13 tracked (12 open, 1 resolved) |
 | Test files | 79 |
 | Documentation files | 4 |
-| Repository scripts/modules | 32 tracked files (13,990 lines) |
+| Repository scripts/modules | 32 tracked files (13,992 lines) |
 
 ---
 

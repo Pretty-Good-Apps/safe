@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary
 
-The Safe Language Annotated SPARK Companion has completed all 13 tasks (T0-T12) of its implementation plan. The companion extracts 205 normative clauses from the Safe specification, maps each to a proof obligation entry, encodes the core `Safe_Model` and `Safe_PO` companion artifacts in SPARK 2022, and verifies them through a 5-step CI pipeline. The current companion baseline shows 132 total checks with 0 unproved. The assumption budget tracks 13 entries, of which 12 remain open and 1 (`B-02`) is resolved. This report provides the quantitative status for the release audit.
+The Safe Language Annotated SPARK Companion has completed all 13 tasks (T0-T12) of its implementation plan. The companion extracts 205 normative clauses from the Safe specification, maps each to a proof obligation entry, encodes the core `Safe_Model` and `Safe_PO` companion artifacts in SPARK 2022, and verifies them through the current 4-step CI gate suite (tests, proofs, embedded smoke, and diff). The current companion baseline shows 132 total checks with 0 unproved. The assumption budget tracks 13 entries, of which 12 remain open and 1 (`B-02`) is resolved. This report provides the quantitative status for the release audit.
 
 ---
 
@@ -115,7 +115,7 @@ gnatprove --mode=prove --level=2 --prover=cvc5,z3,altergo --steps=0 --timeout=12
 | File | Lines | Description |
 |------|-------|-------------|
 | `scripts/_lib/` | 8,343 | Shared harness modules, proof inventory, and test-runner helpers (16 files) |
-| `scripts/diff_assumptions.sh` | 194 | Assumption budget enforcement |
+| `scripts/diff_assumptions.sh` | 196 | Assumption budget enforcement |
 | `scripts/extract_assumptions.sh` | 129 | GNATprove output parser |
 | `scripts/generate_po_index.py` | 272 | PO index generator |
 | `scripts/generate_po_map.py` | 1,137 | PO map generator |
@@ -131,7 +131,7 @@ gnatprove --mode=prove --level=2 --prover=cvc5,z3,altergo --steps=0 --timeout=12
 | `scripts/validate_ast_output.py` | 295 | AST contract validator |
 | `scripts/validate_mir_output.py` | 55 | MIR contract validator |
 | `scripts/validate_output_contracts.py` | 770 | Output contract validator |
-| **Scripts total** | **32 tracked files** | 13,990 lines |
+| **Scripts total** | **32 tracked files** | 13,992 lines |
 
 ### 4.6 Test Suite
 
@@ -272,7 +272,7 @@ These process-level recommendations have been addressed in the CI workflow.
 | 4 | All tracked SHA references across README, release docs, and CI are consistent (`468cf72...`) | PASS |
 | 5 | No phantom file references in CSV or po_map.yaml | PASS |
 | 6 | Traceability matrix is complete: 205 clauses, no orphans | PASS |
-| 7 | Assumption budget: 12 open ≤ 15, 5 open critical ≤ 5 | PASS |
+| 7 | Assumption budget: 12 open ≤ 15, 5 open critical ≤ 5 (AT LIMIT) | PASS |
 | 8 | Proof golden: 132 checks, 0 unproved | PASS |
 | 9 | All 79 test files exist on disk | PASS |
 | 10 | All 23 PO procedures referenced in po_index.md | PASS |
