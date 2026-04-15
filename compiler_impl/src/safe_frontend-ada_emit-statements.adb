@@ -3776,9 +3776,18 @@ package body Safe_Frontend.Ada_Emit.Statements is
                         else Render_Type_Name (Iterable_Info));
                      Element_Type_Image  : constant String :=
                        Render_Type_Name (Element_Info);
+                     type Growable_Accumulator_Info is record
+                        Name        : FT.UString := FT.To_UString ("");
+                        Type_Image  : FT.UString := FT.To_UString ("");
+                        Max_Delta   : Long_Long_Integer := 0;
+                     end record;
+                     package Growable_Accumulator_Vectors is new Ada.Containers.Vectors
+                       (Index_Type   => Positive,
+                        Element_Type => Growable_Accumulator_Info);
                      Accumulator_Names : FT.UString_Vectors.Vector;
                      Accumulator_Type_Images : FT.UString_Vectors.Vector;
                      Invalidated_Accumulator_Names : FT.UString_Vectors.Vector;
+                     Growable_Accumulators : Growable_Accumulator_Vectors.Vector;
                      Has_Top_Level_Loop_Invariant : Boolean := False;
 
                      function Contains_Name
@@ -3844,6 +3853,468 @@ package body Safe_Frontend.Ada_Emit.Statements is
                           and then Expr.Kind = CM.Expr_Ident
                           and then FT.To_String (Expr.Name) = Name;
                      end Same_Target_Name;
+
+                     function Target_Ident_Name (Expr : CM.Expr_Access) return String is
+                     begin
+                        if Expr /= null and then Expr.Kind = CM.Expr_Ident then
+                           return FT.To_String (Expr.Name);
+                        end if;
+                        return "";
+                     end Target_Ident_Name;
+
+                     function Accumulator_Value_Expr
+                       (Expr : CM.Expr_Access) return CM.Expr_Access is
+                     begin
+                        if Expr /= null
+                          and then Expr.Kind in CM.Expr_Annotated | CM.Expr_Conversion
+                          and then Expr.Inner /= null
+                        then
+                           return Accumulator_Value_Expr (Expr.Inner);
+                        end if;
+
+                        return Expr;
+                     end Accumulator_Value_Expr;
+
+                     function Try_Nonnegative_Static_Step
+                       (Expr       : CM.Expr_Access;
+                        Name       : String;
+                        Step_Value : out Long_Long_Integer) return Boolean
+                     is
+                        Value : Long_Long_Integer := 0;
+                     begin
+                        Step_Value := 0;
+                        if Expr = null
+                          or else Expr_Uses_Name (Expr, Name)
+                          or else not Try_Resolved_Static_Integer_Value
+                            (Unit, Document, State, Expr, Value)
+                          or else Value < 0
+                        then
+                           return False;
+                        end if;
+
+                        Step_Value := Value;
+                        return True;
+                     end Try_Nonnegative_Static_Step;
+
+                     function Supported_Accumulator_Assignment
+                       (Stmt       : CM.Statement;
+                        Name       : String;
+                        Step_Value : out Long_Long_Integer) return Boolean
+                     is
+                     begin
+                        Step_Value := 0;
+                        declare
+                           Value_Expr : constant CM.Expr_Access :=
+                             Accumulator_Value_Expr (Stmt.Value);
+                        begin
+                           if Target_Ident_Name (Stmt.Target) /= Name
+                             or else Value_Expr = null
+                             or else Value_Expr.Kind /= CM.Expr_Binary
+                             or else FT.To_String (Value_Expr.Operator) /= "+"
+                           then
+                              return False;
+                           end if;
+
+                           if Same_Target_Name (Value_Expr.Left, Name) then
+                              return Try_Nonnegative_Static_Step
+                                (Value_Expr.Right,
+                                 Name,
+                                 Step_Value);
+                           elsif Same_Target_Name (Value_Expr.Right, Name) then
+                              return Try_Nonnegative_Static_Step
+                                (Value_Expr.Left,
+                                 Name,
+                                 Step_Value);
+                           end if;
+                        end;
+
+                        return False;
+                     end Supported_Accumulator_Assignment;
+
+                     function Add_Step
+                       (Left  : Long_Long_Integer;
+                        Right : Long_Long_Integer;
+                        Sum   : out Long_Long_Integer) return Boolean
+                     is
+                        Wide_Sum : constant CM.Wide_Integer :=
+                          CM.Wide_Integer (Left) + CM.Wide_Integer (Right);
+                     begin
+                        Sum := 0;
+                        if Wide_Sum > CM.Wide_Integer (Long_Long_Integer'Last) then
+                           return False;
+                        end if;
+
+                        Sum := Long_Long_Integer (Wide_Sum);
+                        return True;
+                     end Add_Step;
+
+                     procedure Analyze_Accumulator_Statements
+                       (Statements : CM.Statement_Access_Vectors.Vector;
+                        Name       : String;
+                        Max_Step   : out Long_Long_Integer;
+                        Unsafe     : out Boolean);
+
+                     procedure Analyze_Accumulator_Statement
+                       (Stmt     : CM.Statement_Access;
+                        Name     : String;
+                        Max_Step : out Long_Long_Integer;
+                        Unsafe   : out Boolean)
+                     is
+                        procedure Add_Branch
+                          (Branch_Statements : CM.Statement_Access_Vectors.Vector;
+                           Branch_Max        : in out Long_Long_Integer;
+                           Branch_Unsafe     : in out Boolean)
+                        is
+                           Candidate_Step   : Long_Long_Integer := 0;
+                           Candidate_Unsafe : Boolean := False;
+                        begin
+                           Analyze_Accumulator_Statements
+                             (Branch_Statements,
+                              Name,
+                              Candidate_Step,
+                              Candidate_Unsafe);
+                           if Candidate_Unsafe then
+                              Branch_Unsafe := True;
+                           elsif Candidate_Step > Branch_Max then
+                              Branch_Max := Candidate_Step;
+                           end if;
+                        end Add_Branch;
+
+                        Step_Value : Long_Long_Integer := 0;
+                     begin
+                        Max_Step := 0;
+                        Unsafe := False;
+                        if Stmt = null then
+                           return;
+                        end if;
+
+                        case Stmt.Kind is
+                           when CM.Stmt_Assign =>
+                              if Target_Ident_Name (Stmt.Target) = Name then
+                                 if Supported_Accumulator_Assignment
+                                   (Stmt.all,
+                                    Name,
+                                    Step_Value)
+                                 then
+                                    Max_Step := Step_Value;
+                                 else
+                                    Unsafe := True;
+                                 end if;
+                              elsif Expr_Uses_Name (Stmt.Target, Name) then
+                                 Unsafe := True;
+                              end if;
+
+                           when CM.Stmt_Object_Decl =>
+                              for Decl_Name of Stmt.Decl.Names loop
+                                 if FT.To_String (Decl_Name) = Name then
+                                    Unsafe := True;
+                                    return;
+                                 end if;
+                              end loop;
+
+                           when CM.Stmt_Destructure_Decl =>
+                              for Decl_Name of Stmt.Destructure.Names loop
+                                 if FT.To_String (Decl_Name) = Name then
+                                    Unsafe := True;
+                                    return;
+                                 end if;
+                              end loop;
+
+                           when CM.Stmt_If =>
+                              if Expr_Uses_Name (Stmt.Condition, Name) then
+                                 --  Guard-dependent increments can be safe, but this
+                                 --  optional proof heuristic is only emitted for
+                                 --  unconditional accumulator progress.
+                                 Unsafe := True;
+                                 return;
+                              end if;
+                              Add_Branch
+                                (Stmt.Then_Stmts,
+                                 Max_Step,
+                                 Unsafe);
+                              for Part of Stmt.Elsifs loop
+                                 if Expr_Uses_Name (Part.Condition, Name) then
+                                    --  Keep guard-dependent accumulator updates
+                                    --  fail-closed for this optional invariant.
+                                    Unsafe := True;
+                                    return;
+                                 end if;
+                                 Add_Branch
+                                   (Part.Statements,
+                                    Max_Step,
+                                    Unsafe);
+                              end loop;
+                              if Stmt.Has_Else then
+                                 Add_Branch
+                                   (Stmt.Else_Stmts,
+                                    Max_Step,
+                                    Unsafe);
+                              end if;
+
+                           when CM.Stmt_Case =>
+                              if Expr_Uses_Name (Stmt.Case_Expr, Name) then
+                                 Unsafe := True;
+                                 return;
+                              end if;
+                              for Arm of Stmt.Case_Arms loop
+                                 if Expr_Uses_Name (Arm.Choice, Name) then
+                                    Unsafe := True;
+                                    return;
+                                 end if;
+                                 Add_Branch
+                                   (Arm.Statements,
+                                    Max_Step,
+                                    Unsafe);
+                              end loop;
+
+                           when CM.Stmt_Match =>
+                              if Expr_Uses_Name (Stmt.Match_Expr, Name) then
+                                 Unsafe := True;
+                                 return;
+                              end if;
+                              for Arm of Stmt.Match_Arms loop
+                                 for Binder of Arm.Binders loop
+                                    if FT.To_String (Binder) = Name then
+                                       Unsafe := True;
+                                       return;
+                                    end if;
+                                 end loop;
+                                 Add_Branch
+                                   (Arm.Statements,
+                                    Max_Step,
+                                    Unsafe);
+                              end loop;
+
+                           when CM.Stmt_Select =>
+                              --  Select arms have synchronization semantics; keep this
+                              --  proof heuristic fail-closed instead of inferring headroom
+                              --  through channel/delay alternatives.
+                              Unsafe := True;
+
+                           when others =>
+                              if Statements_Use_Name (Stmt.Body_Stmts, Name)
+                                or else Expr_Uses_Name (Stmt.Target, Name)
+                                or else Expr_Uses_Name (Stmt.Value, Name)
+                                or else Expr_Uses_Name (Stmt.Call, Name)
+                                or else Expr_Uses_Name (Stmt.Channel_Name, Name)
+                                or else Expr_Uses_Name (Stmt.Success_Var, Name)
+                              then
+                                 Unsafe := True;
+                              end if;
+                        end case;
+                     end Analyze_Accumulator_Statement;
+
+                     procedure Analyze_Accumulator_Statements
+                       (Statements : CM.Statement_Access_Vectors.Vector;
+                        Name       : String;
+                        Max_Step   : out Long_Long_Integer;
+                        Unsafe     : out Boolean)
+                     is
+                        Total : Long_Long_Integer := 0;
+                     begin
+                        Max_Step := 0;
+                        Unsafe := False;
+                        for Nested of Statements loop
+                           declare
+                              Statement_Step   : Long_Long_Integer := 0;
+                              Statement_Unsafe : Boolean := False;
+                           begin
+                              Analyze_Accumulator_Statement
+                                (Nested,
+                                 Name,
+                                 Statement_Step,
+                                 Statement_Unsafe);
+                              if Statement_Unsafe
+                                or else not Add_Step (Total, Statement_Step, Total)
+                              then
+                                 Unsafe := True;
+                                 return;
+                              end if;
+                           end;
+                        end loop;
+                        Max_Step := Total;
+                     end Analyze_Accumulator_Statements;
+
+                     function Growable_Accumulator_Headroom_OK
+                       (Info      : GM.Type_Descriptor;
+                        Max_Delta : Long_Long_Integer) return Boolean
+                     is
+                        Base_Info : constant GM.Type_Descriptor :=
+                          Base_Type (Unit, Document, Info);
+                        High_Value : constant CM.Wide_Integer :=
+                          (if Info.Has_High
+                           then CM.Wide_Integer (Info.High)
+                           elsif Base_Info.Has_High
+                           then CM.Wide_Integer (Base_Info.High)
+                           else CM.Wide_Integer (Long_Long_Integer'Last));
+                        Low_Value : constant CM.Wide_Integer :=
+                          (if Info.Has_Low
+                           then CM.Wide_Integer (Info.Low)
+                           elsif Base_Info.Has_Low
+                           then CM.Wide_Integer (Base_Info.Low)
+                           else CM.Wide_Integer (Long_Long_Integer'First));
+                        Required_Headroom : constant CM.Wide_Integer :=
+                          CM.Wide_Integer (Max_Delta) * CM.Wide_Integer (Natural'Last);
+                        Runtime_Wide_Last : constant CM.Wide_Integer :=
+                          CM.Wide_Integer (Long_Long_Integer'Last);
+                        Range_Width : constant CM.Wide_Integer :=
+                          High_Value - Low_Value;
+                     begin
+                        --  The emitted invariant performs the headroom arithmetic in
+                        --  Safe_Runtime.Wide_Integer. Require the conservative
+                        --  Natural'Last budget to fit that runtime type as well as
+                        --  the accumulator's declared range.
+                        return Max_Delta > 0
+                          and then Low_Value <= High_Value
+                          and then Required_Headroom <= Runtime_Wide_Last
+                          and then Required_Headroom <= Range_Width;
+                     end Growable_Accumulator_Headroom_OK;
+
+                     function Contains_Growable_Accumulator (Name : String) return Boolean is
+                     begin
+                        for Info of Growable_Accumulators loop
+                           if FT.To_String (Info.Name) = Name then
+                              return True;
+                           end if;
+                        end loop;
+                        return False;
+                     end Contains_Growable_Accumulator;
+
+                     procedure Add_Growable_Accumulator
+                       (Name       : String;
+                        Type_Image : String;
+                        Max_Delta  : Long_Long_Integer) is
+                     begin
+                        if Contains_Growable_Accumulator (Name) then
+                           return;
+                        end if;
+
+                        Growable_Accumulators.Append
+                          ((Name       => FT.To_UString (Name),
+                            Type_Image => FT.To_UString (Type_Image),
+                            Max_Delta  => Max_Delta));
+                     end Add_Growable_Accumulator;
+
+                     procedure Collect_Growable_Accumulators
+                       (Statements : CM.Statement_Access_Vectors.Vector)
+                     is
+                        procedure Visit_Assignment (Stmt : CM.Statement) is
+                           Name_Image  : constant String := Target_Ident_Name (Stmt.Target);
+                           Max_Delta   : Long_Long_Integer := 0;
+                           Unsafe      : Boolean := False;
+                        begin
+                           if Name_Image'Length = 0
+                             or else Contains_Growable_Accumulator (Name_Image)
+                           then
+                              return;
+                           end if;
+
+                           declare
+                              Target_Info : constant GM.Type_Descriptor :=
+                                Expr_Type_Info (Unit, Document, Stmt.Target);
+                              Target_Type_Image : constant String :=
+                                (if Is_Wide_Name (State, Name_Image)
+                                 then "Safe_Runtime.Wide_Integer"
+                                 else Render_Subtype_Indication (Unit, Document, Target_Info));
+                           begin
+                              if not Is_Integer_Type (Unit, Document, Target_Info) then
+                                 return;
+                              end if;
+
+                              Analyze_Accumulator_Statements
+                                (Item.Body_Stmts,
+                                 Name_Image,
+                                 Max_Delta,
+                                 Unsafe);
+                              if not Unsafe
+                                and then Growable_Accumulator_Headroom_OK
+                                  (Target_Info,
+                                   Max_Delta)
+                              then
+                                 Add_Growable_Accumulator
+                                   (Name_Image,
+                                    Target_Type_Image,
+                                    Max_Delta);
+                              end if;
+                           end;
+                        end Visit_Assignment;
+                     begin
+                        for Nested of Statements loop
+                           if Nested = null then
+                              null;
+                           else
+                              case Nested.Kind is
+                                 when CM.Stmt_Assign =>
+                                    Visit_Assignment (Nested.all);
+                                 when CM.Stmt_If =>
+                                    Collect_Growable_Accumulators (Nested.Then_Stmts);
+                                    for Part of Nested.Elsifs loop
+                                       Collect_Growable_Accumulators (Part.Statements);
+                                    end loop;
+                                    if Nested.Has_Else then
+                                       Collect_Growable_Accumulators (Nested.Else_Stmts);
+                                    end if;
+                                 when CM.Stmt_Case =>
+                                    for Arm of Nested.Case_Arms loop
+                                       Collect_Growable_Accumulators (Arm.Statements);
+                                    end loop;
+                                 when CM.Stmt_Match =>
+                                    for Arm of Nested.Match_Arms loop
+                                       Collect_Growable_Accumulators (Arm.Statements);
+                                    end loop;
+                                 when others =>
+                                    null;
+                              end case;
+                           end if;
+                        end loop;
+                     end Collect_Growable_Accumulators;
+
+                     function Growable_Accumulator_Invariant
+                       (Info : Growable_Accumulator_Info) return String
+                     is
+                        Name_Text : constant String := FT.To_String (Info.Name);
+                        Type_Image : constant String := FT.To_String (Info.Type_Image);
+                        Delta_Image : constant String := Trim_Image (Info.Max_Delta);
+                        Length_Image : constant String :=
+                          "Safe_Runtime.Wide_Integer (Long_Long_Integer ("
+                          & Array_Runtime_Instance_Name (Iterable_Info)
+                          & ".Length ("
+                          & Snapshot_Name
+                          & ")))";
+                        Total_Headroom_Image : constant String :=
+                          "Safe_Runtime.Wide_Integer ("
+                          & Delta_Image
+                          & ") * "
+                          & Length_Image;
+                        Remaining_Image : constant String :=
+                          "Safe_Runtime.Wide_Integer ("
+                          & Delta_Image
+                          & ") * ("
+                          & Length_Image
+                          & " - Safe_Runtime.Wide_Integer ("
+                          & Index_Name
+                          & ") + Safe_Runtime.Wide_Integer (1))";
+                     begin
+                        State.Needs_Safe_Runtime := True;
+                        return
+                          "pragma Loop_Invariant (Safe_Runtime.Wide_Integer ("
+                          & Name_Text
+                          & ") >= Safe_Runtime.Wide_Integer ("
+                          & Name_Text
+                          & "'Loop_Entry) and then Safe_Runtime.Wide_Integer ("
+                          & Name_Text
+                          & "'Loop_Entry) <= Safe_Runtime.Wide_Integer ("
+                          & Type_Image
+                          & "'Last) - "
+                          & Total_Headroom_Image
+                          & " and then Safe_Runtime.Wide_Integer ("
+                          & Name_Text
+                          & ") <= Safe_Runtime.Wide_Integer ("
+                          & Type_Image
+                          & "'Last) - "
+                          & Remaining_Image
+                          & ");";
+                     end Growable_Accumulator_Invariant;
 
                      procedure Collect_String_Accumulators
                        (Statements : CM.Statement_Access_Vectors.Vector)
@@ -4869,6 +5340,18 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                  end loop;
                               end if;
                            elsif Iterable_Info.Growable then
+                              if Needs_Composite_Heap_Helper then
+                                 Collect_Growable_Accumulators (Item.Body_Stmts);
+                                 if not Growable_Accumulators.Is_Empty then
+                                    Has_Top_Level_Loop_Invariant := True;
+                                    for Candidate of Growable_Accumulators loop
+                                       Append_Line
+                                         (Buffer,
+                                          Growable_Accumulator_Invariant (Candidate),
+                                          Depth + 2);
+                                    end loop;
+                                 end if;
+                              end if;
                               declare
                                  Invariant_Image : constant String := Static_Growable_Prefix_Sum_Invariant;
                               begin

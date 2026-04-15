@@ -402,6 +402,7 @@ EMITTED_PROOF_REGRESSION_FIXTURES = [
     "tests/build/pr1110b_list_empty_build.safe",
     "tests/positive/pr221_for_of_tuple_helper.safe",
     "tests/positive/pr221_for_of_discriminated_helper.safe",
+    "tests/build/pr213_map_entry_build.safe",
     "tests/interfaces/pr119a_select_delay_receive.safe",
     "tests/interfaces/pr119a_select_delay_timeout.safe",
     "tests/interfaces/pr119a_select_zero_delay_ready.safe",
@@ -462,12 +463,6 @@ EMITTED_PROOF_EXCLUSIONS = [
         reason="intentional tooling reject fixture with missing dependency interface; not an admitted emitted proof target",
         owner="tooling-reject-case",
         milestone="PR11.8i.1",
-    ),
-    EmittedProofExclusion(
-        path="tests/build/pr213_map_entry_build.safe",
-        reason="map-entry iteration accumulator lacks generated loop facts for overflow proof; generated tuple for-of helper path is covered by pr221_for_of_tuple_helper",
-        owner="runtime-regression-only",
-        milestone="issue-221",
     ),
 ]
 
