@@ -472,7 +472,11 @@ def replay_failure_logs(result: object) -> None:
     stage = getattr(result, "stage", "")
     raw_stage_output = getattr(result, "raw_stage_output", {})
     stage_output = getattr(result, "stage_output", {})
-    captured = raw_stage_output.get(stage) or stage_output.get(stage, "")
+    captured = (
+        raw_stage_output.get(stage)
+        if stage in raw_stage_output
+        else stage_output.get(stage, "")
+    )
     if not captured:
         return
     print(f"--- {stage} output ---", file=sys.stderr)

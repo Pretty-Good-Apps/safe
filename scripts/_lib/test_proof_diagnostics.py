@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import subprocess
 import tempfile
@@ -25,6 +27,7 @@ from _lib.test_harness import RunCounts, record_result
 from safe_cli import (
     clear_diagnostics_sidecar,
     diagnostics_sidecar_path,
+    replay_failure_logs,
     write_diagnostics_sidecar,
 )
 
@@ -277,6 +280,21 @@ def run_record_gnatprove_pass_output_case() -> tuple[bool, str]:
     return True, ""
 
 
+def run_verbose_replay_prefers_empty_raw_output_case() -> tuple[bool, str]:
+    result = SimpleNamespace(
+        stage="prove",
+        raw_stage_output={"prove": ""},
+        stage_output={"prove": "proof failed: no Safe-mappable diagnostics found\n"},
+    )
+    stream = io.StringIO()
+    with contextlib.redirect_stderr(stream):
+        replay_failure_logs(result)
+    rendered = stream.getvalue()
+    if rendered:
+        return False, f"expected empty raw output to suppress fallback replay, got {rendered!r}"
+    return True, ""
+
+
 def run_cli_diagnostics_sidecar_case() -> tuple[bool, str]:
     with tempfile.TemporaryDirectory(prefix="safe-diagnostics-sidecar-") as temp_root_str:
         source = Path(temp_root_str) / "demo.safe"
@@ -321,6 +339,7 @@ def run_proof_diagnostic_checks() -> RunCounts:
         ("proof-diagnostic-output", run_rewrite_output_case),
         ("proof-diagnostic-output-fallback", run_rewrite_output_fallback_case),
         ("proof-diagnostic-pass-output", run_record_gnatprove_pass_output_case),
+        ("proof-diagnostic-verbose-empty-raw", run_verbose_replay_prefers_empty_raw_output_case),
         ("proof-diagnostic-cli-sidecar", run_cli_diagnostics_sidecar_case),
     ]
     for label, case in cases:
