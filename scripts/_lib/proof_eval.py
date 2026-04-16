@@ -12,6 +12,7 @@ from pathlib import Path
 
 from .harness_common import COMPILER_ROOT, REPO_ROOT, find_command, require_safec, sha256_file
 from .pr09_emit import emitted_body_file
+from .proof_diagnostics import rewrite_gnatprove_output
 from .project_cache import (
     STDLIB_ADA_DIR,
     ProjectEmitError,
@@ -91,6 +92,8 @@ class ProofRunResult:
     flow_summary: SummaryRow | None = None
     prove_summary: SummaryRow | None = None
     stage_output: dict[str, str] = field(default_factory=dict)
+    diagnostics_json: list[dict[str, object]] = field(default_factory=list)
+    raw_stage_output: dict[str, str] = field(default_factory=dict)
 
 
 def run_command(
@@ -184,6 +187,20 @@ def format_completed_output(completed: subprocess.CompletedProcess[str]) -> str:
         parts.append(completed.stderr)
     return "".join(parts)
 
+
+
+def record_gnatprove_stage_output(
+    result: ProofRunResult,
+    stage: str,
+    completed: subprocess.CompletedProcess[str],
+    *,
+    ada_dir: Path,
+) -> None:
+    raw_output = format_completed_output(completed)
+    result.raw_stage_output[stage] = raw_output
+    rewritten, diagnostics = rewrite_gnatprove_output(raw_output, ada_dir, stage=stage)
+    result.stage_output[stage] = rewritten
+    result.diagnostics_json.extend(diagnostics)
 
 def non_info_lines(completed: subprocess.CompletedProcess[str]) -> list[str]:
     lines: list[str] = []
@@ -700,7 +717,7 @@ def run_cached_source_proof(
             timeout=command_timeout,
         )
         result.stage = mode
-        result.stage_output[mode] = format_completed_output(completed)
+        record_gnatprove_stage_output(result, mode, completed, ada_dir=shared_paths["ada"])
         try:
             rows = parse_gnatprove_summary(summary_path)
         except (FileNotFoundError, RuntimeError) as exc:
@@ -840,7 +857,7 @@ def run_source_proof(
             timeout=command_timeout,
         )
         result.stage = mode
-        result.stage_output[mode] = format_completed_output(completed)
+        record_gnatprove_stage_output(result, mode, completed, ada_dir=paths["ada"])
         try:
             rows = parse_gnatprove_summary(summary_path)
         except (FileNotFoundError, RuntimeError) as exc:

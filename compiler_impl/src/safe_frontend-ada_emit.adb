@@ -1550,6 +1550,8 @@ package body Safe_Frontend.Ada_Emit is
                              and then
                                Statements_Use_Name (Unit.Statements, Decl_Name))));
                begin
+                  Append_Source_Comment
+                    (Context.Spec_Inner, FT.To_String (Unit.Path), Decl.Span, 1);
                   if Needs_Decl_Warning_Fence then
                      Append_Local_Warning_Suppression (Context.Spec_Inner, 1);
                   end if;
@@ -1579,6 +1581,8 @@ package body Safe_Frontend.Ada_Emit is
 
       if not Unit.Channels.Is_Empty then
          for Channel of Unit.Channels loop
+            Append_Source_Comment
+              (Context.Spec_Inner, FT.To_String (Unit.Path), Channel.Span, 1);
             Render_Channel_Spec (Context.Spec_Inner, Unit, Document, Channel, Bronze);
          end loop;
       end if;
@@ -1597,6 +1601,11 @@ package body Safe_Frontend.Ada_Emit is
                          (Unit, Document, Subprogram, Context.State));
                begin
                   if Expression_Image'Length = 0 then
+                     Append_Source_Comment
+                       (Context.Spec_Inner,
+                        FT.To_String (Unit.Path),
+                        Subprogram.Span,
+                        1);
                      Append_Line
                        (Context.Spec_Inner,
                         Render_Ada_Subprogram_Keyword (Subprogram)
@@ -1626,6 +1635,11 @@ package body Safe_Frontend.Ada_Emit is
                          (Unit, Document, Subprogram, Context.State));
                begin
                   if Expression_Image'Length > 0 then
+                     Append_Source_Comment
+                       (Context.Spec_Inner,
+                        FT.To_String (Unit.Path),
+                        Subprogram.Span,
+                        1);
                      Append_Line
                        (Context.Spec_Inner,
                         Render_Ada_Subprogram_Keyword (Subprogram)
@@ -1647,6 +1661,8 @@ package body Safe_Frontend.Ada_Emit is
 
       if not Unit.Tasks.Is_Empty then
          for Task_Item of Unit.Tasks loop
+            Append_Source_Comment
+              (Context.Spec_Inner, FT.To_String (Unit.Path), Task_Item.Span, 1);
             Append_Line
               (Context.Spec_Inner,
                "task "
@@ -2054,6 +2070,8 @@ package body Safe_Frontend.Ada_Emit is
       end if;
 
       for Channel of Unit.Channels loop
+         Append_Source_Comment
+           (Context.Body_Inner, FT.To_String (Unit.Path), Channel.Span, 1);
          Render_Channel_Body (Context.Body_Inner, Unit, Document, Channel, Context.State);
       end loop;
 
@@ -2066,12 +2084,16 @@ package body Safe_Frontend.Ada_Emit is
                 Render_Expression_Function_Image
                   (Unit, Document, Subprogram, Context.State)'Length = 0)
          then
+            Append_Source_Comment
+              (Context.Body_Inner, FT.To_String (Unit.Path), Subprogram.Span, 1);
             Render_Subprogram_Body
               (Context.Body_Inner, Unit, Document, Subprogram, Context.State);
          end if;
       end loop;
 
       for Task_Item of Unit.Tasks loop
+         Append_Source_Comment
+           (Context.Body_Inner, FT.To_String (Unit.Path), Task_Item.Span, 1);
          Render_Task_Body (Context.Body_Inner, Unit, Document, Task_Item, Context.State);
       end loop;
 
@@ -2149,6 +2171,8 @@ package body Safe_Frontend.Ada_Emit is
                  and then Decl.Has_Initializer
                  and then Decl.Initializer /= null
                then
+                  Append_Source_Comment
+                    (Context.Body_Inner, FT.To_String (Unit.Path), Decl.Span, 2);
                   Append_Line
                     (Context.Body_Inner,
                      Shared_Wrapper_Object_Name
@@ -2170,6 +2194,8 @@ package body Safe_Frontend.Ada_Emit is
                    (Unit, Document, Decl, Deferred_Names)
                then
                   for Name of Decl.Names loop
+                     Append_Source_Comment
+                       (Context.Body_Inner, FT.To_String (Unit.Path), Decl.Span, 2);
                      Append_Gnatprove_Warning_Suppression
                        (Context.Body_Inner,
                         "unused assignment",

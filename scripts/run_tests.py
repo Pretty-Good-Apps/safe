@@ -15,6 +15,7 @@ from _lib import (
     test_fixtures,
     test_interfaces,
     test_proof_cli,
+    test_proof_diagnostics,
 )
 from _lib.test_harness import Failure, RunCounts, build_compiler, print_summary
 

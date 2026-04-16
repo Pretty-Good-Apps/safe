@@ -369,6 +369,7 @@ def unit_artifact_hashes(paths: dict[str, Path], source: Path) -> dict[str, str]
         paths["iface"] / f"{stem}.safei.json",
         paths["ada"] / f"{stem}.ads",
         paths["ada"] / f"{stem}.adb",
+        paths["ada"] / f"{stem}_line_map.json",
     ]
     hashes: dict[str, str] = {}
     for path in candidates:
@@ -482,6 +483,7 @@ def unit_emit_signature(state: dict, source: Path) -> str:
 def shared_support_hashes(paths: dict[str, Path], sources: list[Path]) -> dict[str, str]:
     owned_names = {f"{source.stem.lower()}.ads" for source in sources}
     owned_names.update(f"{source.stem.lower()}.adb" for source in sources)
+    owned_names.update(f"{source.stem.lower()}_line_map.json" for source in sources)
     hashes: dict[str, str] = {}
     for path in sorted(paths["ada"].glob("*")):
         if not path.is_file():
