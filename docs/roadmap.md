@@ -96,8 +96,7 @@ Dependency chain:
 - PR11.22h follows PR11.22g (shared stdlib contract audit and body-drift check).
 - PR11.22h.1 follows PR11.22h (runtime-only emitted proof exclusion burn-down).
 - PR11.22h.2 follows PR11.22h.1 (proof guarantee governance and trust-boundary documentation).
-- PR11.23 follows PR11.22h.2 (proof diagnostic mapping — Safe-native proof failure messages with source locations and fix guidance).
-- PR11.23a follows PR11.23 (binary modular arithmetic wraparound proof coverage).
+- PR11.23a follows PR11.22h.2 (binary modular arithmetic wraparound proof coverage).
 - PR11.23b follows PR11.23a (additional while-loop variant patterns).
 - PR11.23c follows PR11.23b (conditional static-delta accumulator coverage).
 - PR11.23d follows PR11.23c (conditional string append growth invariants).
@@ -106,6 +105,7 @@ Dependency chain:
 - PR11.23g follows PR11.23f (fixed-depth nested iteration invariant composition).
 - PR11.23h follows PR11.23g (auto-snapshot compound shared reads).
 - PR11.23i follows PR11.23h (clamp-style exported postconditions).
+- PR11.23 follows PR11.23i (proof diagnostic mapping — Safe-native proof failure messages with source locations and fix guidance).
 - PR11.17–PR11.21 moved to PR14 series (deferred past all existing work; see PR14 below).
 
 ---
@@ -3384,16 +3384,16 @@ unchanged.
 
 ### Dependency
 
-Follows PR11.22h.2. Deferred until after the hygiene and proof-governance
-series so the mapping lands on a cleaned emitter, stabilized proof/build
-surface, and precise public proof claim.
+Follows PR11.23i. Deferred until after the hygiene, proof-governance, and
+proof-expansion burn-down series so the mapping lands on a cleaned emitter,
+stabilized proof/build surface, and precise public proof claim.
 
 ---
 
 ## PR11.23a–PR11.23i: Proof-Expansion Burn-Down
 
-Close the small proof-surface issues identified after PR11.23 before starting
-the PR12 native CLI rewrite. Each slice is one issue and one proof fixture,
+Close the small proof-surface issues identified after PR11.22h.2 before
+starting the PR12 native CLI rewrite. Each slice is one issue and one proof fixture,
 with optional emitter heuristics kept fail-closed.
 
 | Slice | Issue | Target |
@@ -3410,7 +3410,7 @@ with optional emitter heuristics kept fail-closed.
 
 ### Dependency
 
-Follows PR11.23. PR12.1 follows PR11.23i.
+Follows PR11.22h.2. PR11.23 follows PR11.23i. PR12.1 follows PR11.23i.
 
 ---
 
