@@ -9,14 +9,13 @@ prevent entire categories of bugs. The language's goal is ...
 ![Spec version](https://img.shields.io/badge/spec-v0.1_working_draft-blue)
 ![Proved fixtures](https://img.shields.io/badge/proved_fixtures-256-brightgreen)
 
-Safe is a language in its own right. The current toolchain compiles it through
-Ada/SPARK-oriented artifacts, but the user-facing goal is not to preserve Ada
+The current toolchain compiles it through
+Ada/SPARK-oriented artifacts. The user-facing goal is not to preserve Ada
 as a source language. The design keeps the parts that support proof-oriented
 systems programming and removes or redesigns the parts that create avoidable
 sharp edges.
 
-The current admitted source surface is fully lowercase, with underscores as the
-word separator for multiword spellings.
+As an AI-first language, Safe is designed to be read and only lightly edited by human developers. To this end, the currently admitted source surface is verbose and fully lowercase with underscores as the word separator for multiword spellings.
 
 ---
 
