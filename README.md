@@ -1,9 +1,9 @@
 # Safe
 
-A systems programming language built around SPARK-class safety guarantees, with
-a smaller surface designed to avoid sharp edges rather than expose them.
+An AI "read first" systems programming language built around formal methods providing safety guarantees designed to
+prevent entire categories of bugs. The language's goal is ... 
 
-If it compiles, it is proven.
+> If it compiles, it is proven.
 
 [![CI](https://github.com/berkeleynerd/safe/actions/workflows/ci.yml/badge.svg)](https://github.com/berkeleynerd/safe/actions/workflows/ci.yml)
 ![Spec version](https://img.shields.io/badge/spec-v0.1_working_draft-blue)
