@@ -3099,6 +3099,12 @@ package body Safe_Frontend.Ada_Emit.Statements is
                   "encountered null statement during Ada emission");
             end if;
 
+            Append_Source_Comment
+              (Buffer,
+               FT.To_String (Unit.Path),
+               Item.Span,
+               Depth);
+
             case Item.Kind is
             when CM.Stmt_Object_Decl =>
                declare

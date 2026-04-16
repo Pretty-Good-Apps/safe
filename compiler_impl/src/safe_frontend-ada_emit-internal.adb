@@ -8,6 +8,7 @@ package body Safe_Frontend.Ada_Emit.Internal is
    use type CM.Expr_Access;
    use type CM.Expr_Kind;
    use type CM.Statement_Access;
+   use type FT.Source_Span;
 
    Indent_Width : constant Positive := 3;
 
@@ -91,6 +92,27 @@ package body Safe_Frontend.Ada_Emit.Internal is
         Buffer
         & SU.To_Unbounded_String (Indentation (Depth) & Text & ASCII.LF);
    end Append_Line;
+
+   procedure Append_Source_Comment
+     (Buffer      : in out SU.Unbounded_String;
+      Source_File : String;
+      Span        : FT.Source_Span;
+      Depth       : Natural := 0) is
+   begin
+      if Span = FT.Null_Span then
+         return;
+      end if;
+
+      Append_Line
+        (Buffer,
+         "-- safe:"
+         & Source_File
+         & ":"
+         & FT.Image (Span.Start_Pos.Line)
+         & ":"
+         & FT.Image (Span.Start_Pos.Column),
+         Depth);
+   end Append_Source_Comment;
 
    function Join_Names (Items : FT.UString_Vectors.Vector) return String is
       Result : SU.Unbounded_String;

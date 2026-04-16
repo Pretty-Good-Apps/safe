@@ -5,6 +5,7 @@ with Ada.IO_Exceptions;
 with Ada.Streams;
 with Ada.Streams.Stream_IO;
 with Ada.Strings.Fixed;
+with Ada.Strings.Unbounded;
 with Ada.Text_IO;
 with Safe_Frontend.Ada_Emit;
 with Safe_Frontend.Check_Emit;
@@ -13,6 +14,7 @@ with Safe_Frontend.Check_Parse;
 with Safe_Frontend.Check_Render;
 with Safe_Frontend.Check_Resolve;
 with Safe_Frontend.Diagnostics;
+with Safe_Frontend.Json;
 with Safe_Frontend.Lexer;
 with Safe_Frontend.Mir_Analyze;
 with Safe_Frontend.Mir_Bronze;
@@ -34,6 +36,8 @@ package body Safe_Frontend.Driver is
    package MB renames Safe_Frontend.Mir_Bronze;
    package MD renames Safe_Frontend.Mir_Diagnostics;
    package FS renames Safe_Frontend.Source;
+   package FJ renames Safe_Frontend.Json;
+   package SU renames Ada.Strings.Unbounded;
    use type CP.CM.Unit_Kind;
    type Lex_Result is record
       Input       : FS.Source_File;
@@ -188,12 +192,166 @@ package body Safe_Frontend.Driver is
       Delete_If_Exists
         (Ada_Out_Dir & "/" & Ada_Stem & ".adb",
          Cleanup_Failed);
+      Delete_If_Exists
+        (Ada_Out_Dir & "/" & Ada_Stem & "_line_map.json",
+         Cleanup_Failed);
       if Has_Main then
          Delete_If_Exists
            (Ada_Out_Dir & "/main.adb",
             Cleanup_Failed);
       end if;
    end Cleanup_Ada_Artifacts;
+
+   function Build_Line_Map_Json
+     (Unit_Name : String;
+      Spec_File : String;
+      Spec_Text : String;
+      Body_File : String;
+      Body_Text : String) return String
+   is
+      --  Keep marker parsing semantics in sync with scripts/_lib/proof_diagnostics.py.
+      Safe_Marker : constant String := "-- safe:";
+      LF          : constant String := (1 => ASCII.LF);
+      Result      : SU.Unbounded_String := SU.Null_Unbounded_String;
+      Entry_Count : Natural := 0;
+
+      procedure Append_Entry
+        (Ada_File : String;
+         Ada_Line : Positive;
+         Payload  : String) is
+         Last_Colon : Natural := 0;
+         Prev_Colon : Natural := 0;
+      begin
+         Last_Colon :=
+           Ada.Strings.Fixed.Index
+             (Payload, ":", Going => Ada.Strings.Backward);
+         if Last_Colon = 0
+           or else Last_Colon = Payload'First
+           or else Last_Colon = Payload'Last
+         then
+            return;
+         end if;
+
+         declare
+            Prefix : constant String := Payload (Payload'First .. Last_Colon - 1);
+         begin
+            Prev_Colon :=
+              Ada.Strings.Fixed.Index
+                (Prefix, ":", Going => Ada.Strings.Backward);
+            if Prev_Colon = 0
+              or else Prev_Colon = Prefix'First
+              or else Prev_Colon = Prefix'Last
+            then
+               return;
+            end if;
+
+            declare
+               Safe_Line : constant Integer :=
+                 Integer'Value (Prefix (Prev_Colon + 1 .. Prefix'Last));
+               Safe_Col : constant Integer :=
+                 Integer'Value (Payload (Last_Colon + 1 .. Payload'Last));
+            begin
+               if Safe_Line <= 0 or else Safe_Col <= 0 then
+                  return;
+               end if;
+
+               if Entry_Count = 0 then
+                  SU.Append (Result, ASCII.LF);
+               else
+                  SU.Append (Result, "," & ASCII.LF);
+               end if;
+               Entry_Count := Entry_Count + 1;
+               SU.Append
+                 (Result,
+                  "    {""ada_file"":" & FJ.Quote (Ada_File)
+                  & ",""ada_line"":" & FT.Image (Ada_Line)
+                  & ",""safe_file"":"
+                  & FJ.Quote (Prefix (Prefix'First .. Prev_Colon - 1))
+                  & ",""safe_line"":" & FT.Image (Safe_Line)
+                  & ",""safe_col"":" & FT.Image (Safe_Col)
+                  & "}");
+            exception
+               when Constraint_Error =>
+                  return;
+            end;
+         end;
+      end Append_Entry;
+
+      procedure Scan_Text
+        (Ada_File : String;
+         Text     : String) is
+         Line_Start : Positive := Text'First;
+         Line_No    : Positive := 1;
+      begin
+         if Text'Length = 0 then
+            return;
+         end if;
+
+         loop
+            declare
+               Line_End_Match : constant Natural :=
+                 Ada.Strings.Fixed.Index (Text, LF, From => Line_Start);
+               Line_End       : constant Natural :=
+                 (if Line_End_Match = 0 then Text'Last else Line_End_Match - 1);
+            begin
+               if Line_Start <= Line_End then
+                  declare
+                     Line            : constant String := Text (Line_Start .. Line_End);
+                     First_Non_Space : Natural := Line'First;
+                  begin
+                     while First_Non_Space <= Line'Last
+                       and then (Line (First_Non_Space) = ' '
+                                 or else Line (First_Non_Space) = ASCII.HT)
+                     loop
+                        First_Non_Space := First_Non_Space + 1;
+                     end loop;
+
+                     if First_Non_Space <= Line'Last
+                       and then First_Non_Space + Safe_Marker'Length - 1
+                                <= Line'Last
+                       and then Line
+                                  (First_Non_Space
+                                   .. First_Non_Space
+                                      + Safe_Marker'Length
+                                      - 1)
+                                = Safe_Marker
+                     then
+                        declare
+                           Payload_Start : constant Natural :=
+                             First_Non_Space + Safe_Marker'Length;
+                        begin
+                           if Payload_Start <= Line'Last then
+                              Append_Entry
+                                (Ada_File,
+                                 Line_No,
+                                 Line (Payload_Start .. Line'Last));
+                           end if;
+                        end;
+                     end if;
+                  end;
+               end if;
+
+               exit when Line_End_Match = 0 or else Line_End_Match = Text'Last;
+               Line_Start := Line_End_Match + 1;
+               Line_No := Line_No + 1;
+            end;
+         end loop;
+      end Scan_Text;
+   begin
+      SU.Append (Result, "{" & ASCII.LF);
+      SU.Append (Result, "  ""format"":""safe-line-map-v0""," & ASCII.LF);
+      SU.Append (Result, "  ""unit"":" & FJ.Quote (Unit_Name) & "," & ASCII.LF);
+      SU.Append (Result, "  ""entries"": [");
+      Scan_Text (Spec_File, Spec_Text);
+      Scan_Text (Body_File, Body_Text);
+      if Entry_Count > 0 then
+         SU.Append (Result, ASCII.LF & "  ]" & ASCII.LF);
+      else
+         SU.Append (Result, "]" & ASCII.LF);
+      end if;
+      SU.Append (Result, "}" & ASCII.LF);
+      return SU.To_String (Result);
+   end Build_Line_Map_Json;
 
    function Failure_Exit_Code (Result : Lex_Result) return Integer is
    begin
@@ -686,6 +844,14 @@ package body Safe_Frontend.Driver is
                      Write_File
                        (Ada_Out_Dir & "/" & Ada_Stem & ".adb",
                         FT.To_String (Ada_Result.Body_Text));
+                     Write_File
+                       (Ada_Out_Dir & "/" & Ada_Stem & "_line_map.json",
+                        Build_Line_Map_Json
+                          (Unit_Name => FT.To_String (Ada_Result.Unit_Name),
+                           Spec_File => Ada_Stem & ".ads",
+                           Spec_Text => FT.To_String (Ada_Result.Spec_Text),
+                           Body_File => Ada_Stem & ".adb",
+                           Body_Text => FT.To_String (Ada_Result.Body_Text)));
                      if Pipeline.Resolved.Kind = CP.CM.Unit_Entry then
                         Write_File
                           (Ada_Out_Dir & "/main.adb",

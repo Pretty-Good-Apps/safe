@@ -12,6 +12,12 @@ from pathlib import Path
 
 from .harness_common import COMPILER_ROOT, REPO_ROOT, find_command, require_safec, sha256_file
 from .pr09_emit import emitted_body_file
+from .proof_diagnostics import (
+    LineMap,
+    load_all_line_maps,
+    mirror_with_clauses_into_emitted_unit_files,
+    rewrite_gnatprove_output,
+)
 from .project_cache import (
     STDLIB_ADA_DIR,
     ProjectEmitError,
@@ -87,10 +93,13 @@ class ProofRunResult:
     proof_root: Path
     passed: bool
     stage: str
+    target_bits: int = 64
     detail: str = ""
     flow_summary: SummaryRow | None = None
     prove_summary: SummaryRow | None = None
     stage_output: dict[str, str] = field(default_factory=dict)
+    diagnostics_json: list[dict[str, object]] = field(default_factory=list)
+    raw_stage_output: dict[str, str] = field(default_factory=dict)
 
 
 def run_command(
@@ -185,6 +194,31 @@ def format_completed_output(completed: subprocess.CompletedProcess[str]) -> str:
     return "".join(parts)
 
 
+
+def record_gnatprove_stage_output(
+    result: ProofRunResult,
+    stage: str,
+    completed: subprocess.CompletedProcess[str],
+    *,
+    ada_dir: Path,
+    line_maps: LineMap | None = None,
+) -> None:
+    raw_output = format_completed_output(completed)
+    result.raw_stage_output[stage] = raw_output
+    rewritten, diagnostics = rewrite_gnatprove_output(
+        raw_output,
+        ada_dir,
+        stage=stage,
+        fallback_on_empty=completed.returncode != 0,
+        line_maps=line_maps,
+    )
+    result.stage_output[stage] = rewritten
+    result.diagnostics_json.extend(
+        dict(item, target_bits=result.target_bits)
+        for item in diagnostics
+    )
+
+
 def non_info_lines(completed: subprocess.CompletedProcess[str]) -> list[str]:
     lines: list[str] = []
     for stream in (completed.stderr, completed.stdout):
@@ -274,41 +308,11 @@ def local_dependency_source(source_dir: Path, package_name: str) -> Path | None:
 
 
 def mirror_with_clauses_into_emitted_unit(source: Path, ada_dir: Path) -> None:
-    dependencies = leading_with_dependencies(source)
-    if not dependencies:
-        return
-
-    lower_dependencies = [dependency.lower() for dependency in dependencies]
-    for suffix in (".ads", ".adb"):
-        unit_path = ada_dir / f"{source.stem.lower()}{suffix}"
-        if not unit_path.exists():
-            continue
-        lines = unit_path.read_text(encoding="utf-8").splitlines()
-        insertion = 0
-        existing_withs: set[str] = set()
-        while insertion < len(lines):
-            stripped = lines[insertion].strip()
-            if not stripped:
-                insertion += 1
-                continue
-            if stripped.lower().startswith("with ") and stripped.endswith(";"):
-                existing_withs.add(stripped[5:-1].strip().lower())
-                insertion += 1
-                continue
-            if stripped.lower().startswith("pragma ") and stripped.endswith(";"):
-                insertion += 1
-                continue
-            break
-
-        new_withs = [
-            f"with {dependency};"
-            for dependency, lowered in zip(dependencies, lower_dependencies)
-            if lowered not in existing_withs
-        ]
-        if not new_withs:
-            continue
-        updated = lines[:insertion] + new_withs + lines[insertion:]
-        unit_path.write_text("\n".join(updated) + "\n", encoding="utf-8")
+    mirror_with_clauses_into_emitted_unit_files(
+        source_stem=source.stem,
+        dependencies=leading_with_dependencies(source),
+        ada_dir=ada_dir,
+    )
 
 
 def write_emitted_project(ada_dir: Path) -> Path:
@@ -606,6 +610,7 @@ def run_cached_source_proof(
         proof_root=safe_prove_paths(source, target_bits=target_bits)["root"],
         passed=False,
         stage="check" if run_check else "emit",
+        target_bits=target_bits,
     )
 
     try:
@@ -661,6 +666,7 @@ def run_cached_source_proof(
 
     project_paths = ensure_safe_prove_root(source, target_bits=target_bits)
     write_safe_prove_project(project_paths, ada_dir=shared_paths["ada"])
+    line_maps = load_all_line_maps(shared_paths["ada"])
 
     compile_completed = compile_cached_proof_project(
         project_paths,
@@ -700,7 +706,13 @@ def run_cached_source_proof(
             timeout=command_timeout,
         )
         result.stage = mode
-        result.stage_output[mode] = format_completed_output(completed)
+        record_gnatprove_stage_output(
+            result,
+            mode,
+            completed,
+            ada_dir=shared_paths["ada"],
+            line_maps=line_maps,
+        )
         try:
             rows = parse_gnatprove_summary(summary_path)
         except (FileNotFoundError, RuntimeError) as exc:
@@ -806,6 +818,7 @@ def run_source_proof(
         result.detail = f"emit failed: {first_message(emit_completed)}"
         return result
     mirror_with_clauses_into_emitted_unit(source, paths["ada"])
+    line_maps = load_all_line_maps(paths["ada"])
 
     compile_completed = compile_emitted_ada(paths["ada"], toolchain=toolchain)
     result.stage = "compile"
@@ -840,7 +853,13 @@ def run_source_proof(
             timeout=command_timeout,
         )
         result.stage = mode
-        result.stage_output[mode] = format_completed_output(completed)
+        record_gnatprove_stage_output(
+            result,
+            mode,
+            completed,
+            ada_dir=paths["ada"],
+            line_maps=line_maps,
+        )
         try:
             rows = parse_gnatprove_summary(summary_path)
         except (FileNotFoundError, RuntimeError) as exc:

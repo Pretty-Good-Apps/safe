@@ -157,6 +157,11 @@ private package Safe_Frontend.Ada_Emit.Internal is
      (Buffer : in out SU.Unbounded_String;
       Text   : String := "";
       Depth  : Natural := 0);
+   procedure Append_Source_Comment
+     (Buffer      : in out SU.Unbounded_String;
+      Source_File : String;
+      Span        : FT.Source_Span;
+      Depth       : Natural := 0);
    function Join_Names (Items : FT.UString_Vectors.Vector) return String;
    function Contains_Name
      (Items : FT.UString_Vectors.Vector;

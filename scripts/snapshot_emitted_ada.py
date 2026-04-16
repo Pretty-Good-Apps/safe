@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Snapshot or verify emitted Ada across the proved fixture corpus."""
+"""Snapshot or verify emitted Ada and line-map sidecars across the proved fixture corpus."""
 
 from __future__ import annotations
 
@@ -78,7 +78,7 @@ def emit_fixture(*, safec: Path, source: Path) -> dict[str, str]:
         return {
             name: digest
             for name, digest in sorted(file_hashes(ada_dir).items())
-            if name.endswith((".adb", ".ads"))
+            if name.endswith((".adb", ".ads")) or name.endswith("_line_map.json")
         }
 
 

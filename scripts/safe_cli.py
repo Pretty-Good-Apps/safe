@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -34,6 +35,7 @@ from _lib.project_cache import (
     build_fingerprint,
     ensure_project_emitted,
     ensure_safe_build_root,
+    project_cache_root,
     reset_project_cache,
     reset_cached_source_proof,
     reset_root_workdirs,
@@ -62,10 +64,10 @@ from _lib.pr111_language_eval import (
 
 
 USAGE = """usage:
-  safe build [--clean] [--clean-proofs] [--no-prove] [--level 1|2] [--target-bits 32|64] <file.safe>
+  safe build [--clean] [--clean-proofs] [--no-prove] [--verbose] [--level 1|2] [--target-bits 32|64] <file.safe>
   safe prove [--verbose] [--level 1|2] [--target-bits 32|64] [file.safe]
   safe deploy [--target stm32f4] --board stm32f4-discovery [--simulate] [--watch-symbol NAME --expect-value N] [--timeout SECONDS] <file.safe>
-  safe run   [--no-prove] [--level 1|2] [--target-bits 32|64] <file.safe>
+  safe run   [--no-prove] [--verbose] [--level 1|2] [--target-bits 32|64] <file.safe>
   safe check <safec check args...>
   safe emit  <safec emit args...>
 """
@@ -135,6 +137,14 @@ def add_proof_level_argument(parser: argparse.ArgumentParser, *, default: int) -
     )
 
 
+def add_verbose_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Replay captured failing-stage tool output after Safe diagnostics.",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="safe build",
@@ -155,6 +165,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip the post-build root proof step.",
     )
+    add_verbose_argument(parser)
     add_proof_level_argument(parser, default=1)
     add_target_bits_argument(parser)
     parser.add_argument("source", help="Safe source to build.")
@@ -166,11 +177,7 @@ def prove_parser() -> argparse.ArgumentParser:
         prog="safe prove",
         description="Run the emitted GNATprove audit for one or more Safe sources.",
     )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Replay captured failing-stage tool output.",
-    )
+    add_verbose_argument(parser)
     add_proof_level_argument(parser, default=2)
     add_target_bits_argument(parser)
     parser.add_argument(
@@ -191,6 +198,7 @@ def run_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip the post-build root proof step.",
     )
+    add_verbose_argument(parser)
     add_proof_level_argument(parser, default=1)
     add_target_bits_argument(parser)
     parser.add_argument("source", help="Safe source to run.")
@@ -288,17 +296,63 @@ def source_uses_default_proof_gate(source: Path) -> bool:
     return repo_relative not in EXCLUDED_PROOF_PATHS
 
 
-def report_proof_failure(command_label: str, result: object) -> None:
-    print(f"safe {command_label}: PROOF FAILED", file=sys.stderr)
+def diagnostics_sidecar_path(source: Path) -> Path:
+    return project_cache_root(source) / "diagnostics.json"
+
+
+def clear_diagnostics_sidecar_path(path: Path) -> None:
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        pass
+
+
+def clear_diagnostics_sidecar(source: Path) -> None:
+    clear_diagnostics_sidecar_path(diagnostics_sidecar_path(source))
+
+
+def write_diagnostics_sidecar_payload(path: Path, diagnostics: list[dict[str, object]]) -> None:
+    if not diagnostics:
+        clear_diagnostics_sidecar_path(path)
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(diagnostics, indent=2) + "\n", encoding="utf-8")
+
+
+def write_diagnostics_sidecar(result: object) -> None:
+    source = getattr(result, "source", None)
+    diagnostics = getattr(result, "diagnostics_json", [])
+    if not isinstance(source, Path):
+        return
+    write_diagnostics_sidecar_payload(diagnostics_sidecar_path(source), diagnostics)
+
+
+def stage_output_for_user(result: object) -> str:
     stage_output = getattr(result, "stage_output", {})
     stage = getattr(result, "stage", "")
-    captured = stage_output.get(stage, "")
+    return stage_output.get(stage, "")
+
+
+def print_captured_stage_output(captured: str) -> None:
+    print(
+        captured,
+        end="" if captured.endswith("\n") else "\n",
+        file=sys.stderr,
+    )
+
+
+def report_proof_failure(command_label: str, result: object, *, verbose: bool = False) -> None:
+    write_diagnostics_sidecar(result)
+    print(f"safe {command_label}: PROOF FAILED", file=sys.stderr)
+    captured = stage_output_for_user(result)
     if captured:
-        print(captured, end="" if captured.endswith("\n") else "\n", file=sys.stderr)
-        return
-    detail = getattr(result, "detail", "")
-    if detail:
-        print(f"  {detail}", file=sys.stderr)
+        print_captured_stage_output(captured)
+    else:
+        detail = getattr(result, "detail", "")
+        if detail:
+            print(f"  {detail}", file=sys.stderr)
+    if verbose:
+        replay_failure_logs(result)
 
 
 def build_source(
@@ -310,11 +364,13 @@ def build_source(
     prove_level: int,
     target_bits: int,
     command_label: str,
+    verbose: bool = False,
 ) -> tuple[dict[str, str], Path] | int:
     env = ensure_sdkroot(os.environ.copy())
     safec = safec_path()
     safec_hash = sha256_file(safec)
     source = require_source_file(resolve_source_arg(source_arg))
+    clear_diagnostics_sidecar(source)
 
     if clean:
         reset_project_cache(source)
@@ -386,7 +442,7 @@ def build_source(
                 target_bits=target_bits,
             )
             if not result.passed:
-                report_proof_failure(command_label, result)
+                report_proof_failure(command_label, result, verbose=verbose)
                 return 1
     return env, executable
 
@@ -400,6 +456,7 @@ def safe_build(args: argparse.Namespace) -> int:
         prove_level=args.level,
         target_bits=args.target_bits,
         command_label="build",
+        verbose=args.verbose,
     )
     if isinstance(built, int):
         return built
@@ -417,6 +474,7 @@ def safe_run(args: argparse.Namespace) -> int:
         prove_level=args.level,
         target_bits=args.target_bits,
         command_label="run",
+        verbose=args.verbose,
     )
     if isinstance(built, int):
         return built
@@ -441,9 +499,12 @@ def format_pass_summary(result: object) -> str:
 
 
 def replay_failure_logs(result: object) -> None:
-    stage_output = getattr(result, "stage_output", {})
     stage = getattr(result, "stage", "")
-    captured = stage_output.get(stage, "")
+    raw_stage_output = getattr(result, "raw_stage_output", {})
+    stage_output = getattr(result, "stage_output", {})
+    captured = raw_stage_output.get(stage, "")
+    if not captured:
+        captured = stage_output.get(stage, "")
     if not captured:
         return
     print(f"--- {stage} output ---", file=sys.stderr)
@@ -471,6 +532,10 @@ def safe_prove(args: argparse.Namespace) -> int:
         print(f"safe prove: {exc}", file=sys.stderr)
         return 1
 
+    diagnostics_by_sidecar: dict[Path, list[dict[str, object]]] = {}
+    for sidecar_path in {diagnostics_sidecar_path(source) for source in sources}:
+        clear_diagnostics_sidecar_path(sidecar_path)
+
     passed = 0
     failed = 0
     for source in sources:
@@ -488,8 +553,21 @@ def safe_prove(args: argparse.Namespace) -> int:
             continue
         failed += 1
         print(f"FAIL {label} [{result.stage}] {result.detail}")
+        if result.stage in {"flow", "prove"}:
+            diagnostics = getattr(result, "diagnostics_json", [])
+            if diagnostics:
+                diagnostics_by_sidecar.setdefault(
+                    diagnostics_sidecar_path(source),
+                    [],
+                ).extend(diagnostics)
+            captured = stage_output_for_user(result)
+            if captured:
+                print_captured_stage_output(captured)
         if args.verbose:
             replay_failure_logs(result)
+
+    for sidecar_path, diagnostics in diagnostics_by_sidecar.items():
+        write_diagnostics_sidecar_payload(sidecar_path, diagnostics)
 
     print(f"{passed} passed, {failed} failed")
     verdict = "PASS" if failed == 0 else "FAIL"
