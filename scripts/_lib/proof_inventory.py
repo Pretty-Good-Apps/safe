@@ -367,6 +367,11 @@ PR11_8I1_CHECKPOINT_FIXTURES = [
 ]
 
 
+PR11_23_PROOF_EXPANSION_FIXTURES = [
+    "tests/build/proof_expansion_binary_wraparound_build.safe",
+]
+
+
 EMITTED_PROOF_REGRESSION_FIXTURES = [
     "tests/concurrency/select_with_delay.safe",
     "tests/concurrency/select_with_delay_multiarm.safe",
@@ -435,6 +440,7 @@ EMITTED_PROOF_FIXTURES = (
     + PR11_13B_CHECKPOINT_FIXTURES
     + PR11_13C_CHECKPOINT_FIXTURES
     + PR11_16_CHECKPOINT_FIXTURES
+    + PR11_23_PROOF_EXPANSION_FIXTURES
     + EMITTED_PROOF_REGRESSION_FIXTURES
 )
 

@@ -1,5 +1,5 @@
 {
-  "compiler_hash": "a2db9e06a7aac1f6bad0fb6d6d488304ce67c74ac6bdcee4c1b903c7fddb2f41",
+  "compiler_hash": "38ea7bdab7215b8d1cfd5b606db0537b259a04d31b326265daab2b6522458c68",
   "fixtures": {
     "tests/build/pr1110a_optional_growable_build.safe": {
       "pr1110a_optional_growable_build.adb": "edea57f7f04c1890732b861d79740c6b86dbea49247d4148e722aaf4c447f102",
@@ -600,6 +600,11 @@
       "pr232_provider_numeric.adb": "742dcf040433ee2bcd11639a011fceb5de885a7f1e455022476c2f2c15ac2b57",
       "pr232_provider_numeric.ads": "81f84e4d3fd3d6f1a1395a74bad7505aa8a99e01a43feb202d728eebc4f8eb9f",
       "pr232_provider_numeric_line_map.json": "a8fb4df7c6543de52607a33cc2487be3a4c9dc0093fca93f56ed4012b89d2f72"
+    },
+    "tests/build/proof_expansion_binary_wraparound_build.safe": {
+      "proof_expansion_binary_wraparound_build.adb": "8f85ece050f64fca7c3292fb28a58a0cb5ef889b3750a297ebe2e2ce2bf7b694",
+      "proof_expansion_binary_wraparound_build.ads": "130a4dac66dc223f493769c81d8a907f8e1786c883aa7f98aa0e34fc75840f1e",
+      "proof_expansion_binary_wraparound_build_line_map.json": "493aca855e97d0b5615d855a0436ae790cc9a422e165562aa8e08927bebbea4a"
     },
     "tests/concurrency/channel_ceiling_priority.safe": {
       "channel_ceiling_priority.adb": "a0cff49798793d14f174408b1467817e72c09e65cdbfa1174c61150bb96ed5ef",

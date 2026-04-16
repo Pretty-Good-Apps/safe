@@ -97,6 +97,15 @@ Dependency chain:
 - PR11.22h.1 follows PR11.22h (runtime-only emitted proof exclusion burn-down).
 - PR11.22h.2 follows PR11.22h.1 (proof guarantee governance and trust-boundary documentation).
 - PR11.23 follows PR11.22h.2 (proof diagnostic mapping — Safe-native proof failure messages with source locations and fix guidance).
+- PR11.23a follows PR11.23 (binary modular arithmetic wraparound proof coverage).
+- PR11.23b follows PR11.23a (additional while-loop variant patterns).
+- PR11.23c follows PR11.23b (conditional static-delta accumulator coverage).
+- PR11.23d follows PR11.23c (conditional string append growth invariants).
+- PR11.23e follows PR11.23d (multiple independent accumulator invariants).
+- PR11.23f follows PR11.23e (scoped sum/count relational invariants).
+- PR11.23g follows PR11.23f (fixed-depth nested iteration invariant composition).
+- PR11.23h follows PR11.23g (auto-snapshot compound shared reads).
+- PR11.23i follows PR11.23h (clamp-style exported postconditions).
 - PR11.17–PR11.21 moved to PR14 series (deferred past all existing work; see PR14 below).
 
 ---
@@ -3381,6 +3390,30 @@ surface, and precise public proof claim.
 
 ---
 
+## PR11.23a–PR11.23i: Proof-Expansion Burn-Down
+
+Close the small proof-surface issues identified after PR11.23 before starting
+the PR12 native CLI rewrite. Each slice is one issue and one proof fixture,
+with optional emitter heuristics kept fail-closed.
+
+| Slice | Issue | Target |
+|---|---|---|
+| PR11.23a | #294 | Binary modular arithmetic wraparound proof coverage |
+| PR11.23b | #282 | Additional while-loop variant patterns |
+| PR11.23c | #279 | Conditional static-delta accumulator coverage |
+| PR11.23d | #280 | Conditional string append growth invariants |
+| PR11.23e | #283 | Multiple independent accumulator invariants |
+| PR11.23f | #285 | Scoped sum/count relational invariants |
+| PR11.23g | #284 | Fixed-depth nested iteration invariant composition |
+| PR11.23h | #287 | Auto-snapshot compound shared reads |
+| PR11.23i | #288 | Clamp-style exported postconditions |
+
+### Dependency
+
+Follows PR11.23. PR12.1 follows PR11.23i.
+
+---
+
 # PR12: Tooling and Developer Ergonomics
 
 The PR11 series delivers a language that is safe by construction. The PR12
@@ -3394,7 +3427,7 @@ that gap before the claims-hardening work begins.
 
 ## Dependency Chain
 
-- PR12.1 follows PR11.23 (compiled native `safe` CLI binary).
+- PR12.1 follows PR11.23i (compiled native `safe` CLI binary).
 - PR12.2 follows PR12.1 (single-archive distribution).
 - PR12.3 follows PR12.2 (`safe fmt` — code formatter).
 - PR12.4 follows PR12.3 (full LSP server).
@@ -3437,7 +3470,7 @@ makes the distribution self-contained.
 
 ### Dependency
 
-Follows PR11.23.
+Follows PR11.23i.
 
 ---
 
