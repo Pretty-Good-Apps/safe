@@ -515,7 +515,6 @@ def safe_prove(args: argparse.Namespace) -> int:
         label = display_source_for_user(source, cwd=cwd)
         if result.passed:
             passed += 1
-            clear_diagnostics_sidecar(source)
             print(f"PASS {label} ({format_pass_summary(result)})")
             continue
         failed += 1

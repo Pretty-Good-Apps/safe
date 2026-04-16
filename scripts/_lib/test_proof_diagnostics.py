@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -19,6 +20,7 @@ from _lib.proof_diagnostics import (
     rewrite_gnatprove_output,
     write_line_map_sidecar,
 )
+from _lib.proof_eval import ProofRunResult, record_gnatprove_stage_output
 from _lib.test_harness import RunCounts, record_result
 from safe_cli import (
     clear_diagnostics_sidecar,
@@ -246,6 +248,31 @@ def run_rewrite_output_fallback_case() -> tuple[bool, str]:
     return True, ""
 
 
+def run_record_gnatprove_pass_output_case() -> tuple[bool, str]:
+    with tempfile.TemporaryDirectory(prefix="safe-proof-pass-output-") as temp_root_str:
+        temp_root = Path(temp_root_str)
+        result = ProofRunResult(
+            source=temp_root / "demo.safe",
+            proof_root=temp_root,
+            passed=True,
+            stage="prove",
+        )
+        completed = subprocess.CompletedProcess(
+            args=["gnatprove"],
+            returncode=0,
+            stdout="/tmp/out/demo.adb:5:11: info: assertion proved\n",
+            stderr="",
+        )
+        record_gnatprove_stage_output(result, "prove", completed, ada_dir=temp_root)
+    if result.stage_output.get("prove") != "no proof diagnostics to report\n":
+        return False, f"unexpected passing stage output {result.stage_output!r}"
+    if "/tmp/out/demo.adb" not in result.raw_stage_output.get("prove", ""):
+        return False, f"raw passing output was not preserved {result.raw_stage_output!r}"
+    if result.diagnostics_json:
+        return False, f"passing proof should not emit diagnostics {result.diagnostics_json!r}"
+    return True, ""
+
+
 def run_cli_diagnostics_sidecar_case() -> tuple[bool, str]:
     with tempfile.TemporaryDirectory(prefix="safe-diagnostics-sidecar-") as temp_root_str:
         source = Path(temp_root_str) / "demo.safe"
@@ -289,6 +316,7 @@ def run_proof_diagnostic_checks() -> RunCounts:
         ("proof-diagnostic-rewrite", run_rewrite_diagnostic_case),
         ("proof-diagnostic-output", run_rewrite_output_case),
         ("proof-diagnostic-output-fallback", run_rewrite_output_fallback_case),
+        ("proof-diagnostic-pass-output", run_record_gnatprove_pass_output_case),
         ("proof-diagnostic-cli-sidecar", run_cli_diagnostics_sidecar_case),
     ]
     for label, case in cases:
