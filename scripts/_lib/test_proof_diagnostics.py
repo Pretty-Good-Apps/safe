@@ -106,6 +106,7 @@ def run_line_map_loading_case() -> tuple[bool, str]:
             encoding="utf-8",
         )
         (temp_root / "ignored_line_map.json").write_text("not json", encoding="utf-8")
+        (temp_root / "list_line_map.json").write_text("[]", encoding="utf-8")
         line_maps = load_all_line_maps(temp_root)
     entry = lookup_line_map_entry(line_maps, "/tmp/build/demo.adb", 12)
     if entry != LineMapEntry("demo.adb", 10, "demo.safe", 4, 7):

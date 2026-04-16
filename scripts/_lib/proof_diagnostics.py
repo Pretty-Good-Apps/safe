@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 import re
-from typing import Iterable
+from typing import Iterable, Sequence
 
 from .proof_diagnostic_catalog import DEFAULT_CATALOG, ProofDiagnosticPattern
 
@@ -128,6 +128,55 @@ def write_line_map_sidecar(ada_dir: Path, unit: str) -> Path:
     return path
 
 
+def mirror_with_clauses_into_emitted_unit_files(
+    *,
+    source_stem: str,
+    dependencies: Sequence[str],
+    ada_dir: Path,
+) -> None:
+    if not dependencies:
+        return
+
+    changed = False
+    lowered_dependencies = [dependency.lower() for dependency in dependencies]
+    for suffix in (".ads", ".adb"):
+        unit_path = ada_dir / f"{source_stem.lower()}{suffix}"
+        if not unit_path.exists():
+            continue
+        lines = unit_path.read_text(encoding="utf-8").splitlines()
+        insertion = 0
+        existing_withs: set[str] = set()
+        while insertion < len(lines):
+            stripped = lines[insertion].strip()
+            if not stripped:
+                insertion += 1
+                continue
+            if stripped.lower().startswith("with ") and stripped.endswith(";"):
+                existing_withs.add(stripped[5:-1].strip().lower())
+                insertion += 1
+                continue
+            if stripped.lower().startswith("pragma ") and stripped.endswith(";"):
+                insertion += 1
+                continue
+            break
+
+        additions = [
+            f"with {dependency};"
+            for dependency, lowered in zip(dependencies, lowered_dependencies)
+            if lowered not in existing_withs
+        ]
+        if not additions:
+            continue
+        unit_path.write_text(
+            "\n".join(lines[:insertion] + additions + lines[insertion:]) + "\n",
+            encoding="utf-8",
+        )
+        changed = True
+
+    if changed:
+        write_line_map_sidecar(ada_dir, source_stem)
+
+
 def _entry_from_payload(payload: dict[str, object]) -> LineMapEntry | None:
     try:
         ada_file = str(payload["ada_file"])
@@ -152,6 +201,8 @@ def load_all_line_maps(ada_dir: Path) -> LineMap:
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict):
             continue
         if payload.get("format") != LINE_MAP_FORMAT:
             continue
@@ -273,6 +324,7 @@ __all__ = [
     "classify_message",
     "load_all_line_maps",
     "lookup_line_map_entry",
+    "mirror_with_clauses_into_emitted_unit_files",
     "parse_gnatprove_diagnostic",
     "render_safe_diagnostic",
     "rewrite_diagnostic",

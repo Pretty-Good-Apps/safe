@@ -12,7 +12,7 @@ from pathlib import Path
 from .harness_common import REPO_ROOT, sha256_file, sha256_text
 from .pr09_emit import emitted_body_file
 from .pr111_language_eval import executable_name, safe_build_main_text
-from .proof_diagnostics import write_line_map_sidecar
+from .proof_diagnostics import mirror_with_clauses_into_emitted_unit_files
 
 CACHE_VERSION = 2
 STDLIB_ADA_DIR = REPO_ROOT / "compiler_impl" / "stdlib" / "ada"
@@ -326,45 +326,11 @@ def resolve_project_sources(root_source: Path) -> list[Path]:
 
 
 def mirror_with_clauses_into_emitted_unit(source: Path, ada_dir: Path) -> None:
-    # Keep in sync with proof_eval.mirror_with_clauses_into_emitted_unit.
-    dependencies = leading_with_dependencies(source)
-    if not dependencies:
-        return
-
-    changed = False
-    lowered_dependencies = [dependency.lower() for dependency in dependencies]
-    for suffix in (".ads", ".adb"):
-        unit_path = ada_dir / f"{source.stem.lower()}{suffix}"
-        if not unit_path.exists():
-            continue
-        lines = unit_path.read_text(encoding="utf-8").splitlines()
-        insertion = 0
-        existing_withs: set[str] = set()
-        while insertion < len(lines):
-            stripped = lines[insertion].strip()
-            if not stripped:
-                insertion += 1
-                continue
-            if stripped.lower().startswith("with ") and stripped.endswith(";"):
-                existing_withs.add(stripped[5:-1].strip().lower())
-                insertion += 1
-                continue
-            if stripped.lower().startswith("pragma ") and stripped.endswith(";"):
-                insertion += 1
-                continue
-            break
-        additions = [
-            f"with {dependency};"
-            for dependency, lowered in zip(dependencies, lowered_dependencies)
-            if lowered not in existing_withs
-        ]
-        if not additions:
-            continue
-        unit_path.write_text("\n".join(lines[:insertion] + additions + lines[insertion:]) + "\n", encoding="utf-8")
-        changed = True
-
-    if changed:
-        write_line_map_sidecar(ada_dir, source.stem)
+    mirror_with_clauses_into_emitted_unit_files(
+        source_stem=source.stem,
+        dependencies=leading_with_dependencies(source),
+        ada_dir=ada_dir,
+    )
 
 
 def unit_artifact_hashes(paths: dict[str, Path], source: Path) -> dict[str, str]:

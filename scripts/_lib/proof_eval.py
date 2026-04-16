@@ -12,7 +12,7 @@ from pathlib import Path
 
 from .harness_common import COMPILER_ROOT, REPO_ROOT, find_command, require_safec, sha256_file
 from .pr09_emit import emitted_body_file
-from .proof_diagnostics import rewrite_gnatprove_output, write_line_map_sidecar
+from .proof_diagnostics import mirror_with_clauses_into_emitted_unit_files, rewrite_gnatprove_output
 from .project_cache import (
     STDLIB_ADA_DIR,
     ProjectEmitError,
@@ -205,6 +205,7 @@ def record_gnatprove_stage_output(
     result.stage_output[stage] = rewritten
     result.diagnostics_json.extend(diagnostics)
 
+
 def non_info_lines(completed: subprocess.CompletedProcess[str]) -> list[str]:
     lines: list[str] = []
     for stream in (completed.stderr, completed.stdout):
@@ -294,47 +295,11 @@ def local_dependency_source(source_dir: Path, package_name: str) -> Path | None:
 
 
 def mirror_with_clauses_into_emitted_unit(source: Path, ada_dir: Path) -> None:
-    # Keep in sync with project_cache.mirror_with_clauses_into_emitted_unit.
-    dependencies = leading_with_dependencies(source)
-    if not dependencies:
-        return
-
-    changed = False
-    lower_dependencies = [dependency.lower() for dependency in dependencies]
-    for suffix in (".ads", ".adb"):
-        unit_path = ada_dir / f"{source.stem.lower()}{suffix}"
-        if not unit_path.exists():
-            continue
-        lines = unit_path.read_text(encoding="utf-8").splitlines()
-        insertion = 0
-        existing_withs: set[str] = set()
-        while insertion < len(lines):
-            stripped = lines[insertion].strip()
-            if not stripped:
-                insertion += 1
-                continue
-            if stripped.lower().startswith("with ") and stripped.endswith(";"):
-                existing_withs.add(stripped[5:-1].strip().lower())
-                insertion += 1
-                continue
-            if stripped.lower().startswith("pragma ") and stripped.endswith(";"):
-                insertion += 1
-                continue
-            break
-
-        new_withs = [
-            f"with {dependency};"
-            for dependency, lowered in zip(dependencies, lower_dependencies)
-            if lowered not in existing_withs
-        ]
-        if not new_withs:
-            continue
-        updated = lines[:insertion] + new_withs + lines[insertion:]
-        unit_path.write_text("\n".join(updated) + "\n", encoding="utf-8")
-        changed = True
-
-    if changed:
-        write_line_map_sidecar(ada_dir, source.stem)
+    mirror_with_clauses_into_emitted_unit_files(
+        source_stem=source.stem,
+        dependencies=leading_with_dependencies(source),
+        ada_dir=ada_dir,
+    )
 
 
 def write_emitted_project(ada_dir: Path) -> Path:

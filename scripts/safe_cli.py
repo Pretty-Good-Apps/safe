@@ -520,6 +520,10 @@ def safe_prove(args: argparse.Namespace) -> int:
         print(f"FAIL {label} [{result.stage}] {result.detail}")
         if result.stage in {"flow", "prove"}:
             write_diagnostics_sidecar(result)
+            stage_output = getattr(result, "stage_output", {})
+            captured = stage_output.get(result.stage, "")
+            if captured:
+                print(captured, end="" if captured.endswith("\n") else "\n", file=sys.stderr)
         if args.verbose:
             replay_failure_logs(result)
 
