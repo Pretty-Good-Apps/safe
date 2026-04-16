@@ -1688,16 +1688,23 @@ package body Safe_Frontend.Ada_Emit.Statements is
               & FT.To_String (Condition.Left.Name)
               & ", Decreases => "
               & FT.To_String (Condition.Right.Name);
-         elsif Is_Positive_Left_Mirror_Bound (Operator, Condition.Left)
-           and then Is_Integer_Ident (Condition.Right)
-         then
-            return "Decreases => " & FT.To_String (Condition.Right.Name);
-         elsif Is_Positive_Left_Mirror_Bound (Operator, Condition.Left)
-           and then Is_Length_Select (Condition.Right)
-         then
-            return
-              "Decreases => "
-              & Render_Expr (Unit, Document, Condition.Right, State);
+         else
+            declare
+               Has_Positive_Left_Bound : constant Boolean :=
+                 Is_Positive_Left_Mirror_Bound (Operator, Condition.Left);
+            begin
+               if Has_Positive_Left_Bound
+                 and then Is_Integer_Ident (Condition.Right)
+               then
+                  return "Decreases => " & FT.To_String (Condition.Right.Name);
+               elsif Has_Positive_Left_Bound
+                 and then Is_Length_Select (Condition.Right)
+               then
+                  return
+                    "Decreases => "
+                    & Render_Expr (Unit, Document, Condition.Right, State);
+               end if;
+            end;
          end if;
       elsif Operator in ">" | ">=" then
          --  Downward countdowns intentionally track the moving left side only.
