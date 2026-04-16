@@ -1,6 +1,6 @@
 # Safe
 
-An AI "read first" systems programming language built around formal methods providing safety guarantees designed to
+An AI "first" systems programming language built around formal methods providing safety guarantees designed to
 prevent entire categories of bugs. The language's goal is ... 
 
 > If it compiles, it is proven.
