@@ -4538,6 +4538,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
                               return False;
                            end if;
                         end;
+                        if SU.Length (Image) < 2 then
+                           return False;
+                        end if;
 
                         Step_Value := Long_Long_Integer (Length);
                         return True;
