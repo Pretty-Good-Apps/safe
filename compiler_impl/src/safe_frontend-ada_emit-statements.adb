@@ -1615,10 +1615,25 @@ package body Safe_Frontend.Ada_Emit.Statements is
 
       function Is_Length_Select (Expr : CM.Expr_Access) return Boolean is
       begin
-         return
-           Expr /= null
-           and then Expr.Kind = CM.Expr_Select
-           and then FT.To_String (Expr.Selector) = "length";
+         if Expr = null
+           or else Expr.Kind /= CM.Expr_Select
+           or else Expr.Prefix = null
+           or else FT.To_String (Expr.Selector) /= "length"
+         then
+            return False;
+         end if;
+
+         declare
+            Prefix_Info : constant GM.Type_Descriptor :=
+              Base_Type
+                (Unit,
+                 Document,
+                 Expr_Type_Info (Unit, Document, Expr.Prefix));
+         begin
+            return
+              Is_Plain_String_Type (Unit, Document, Prefix_Info)
+              or else Is_Array_Type (Unit, Document, Prefix_Info);
+         end;
       end Is_Length_Select;
 
       function Is_Zero (Expr : CM.Expr_Access) return Boolean is
