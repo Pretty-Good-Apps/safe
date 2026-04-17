@@ -1618,6 +1618,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
          end if;
 
          if Expr /= null and then Expr.Kind = CM.Expr_Ident then
+            --  Invariant: identifiers that reach emission in accepted
+            --  while-variant guards were bound by Register_Type_Bindings or
+            --  Register_Param_Type_Bindings during statement rendering.
             Raise_Internal
               ("while-variant identifier `"
                & FT.To_String (Expr.Name)
