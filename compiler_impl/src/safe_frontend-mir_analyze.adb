@@ -3491,6 +3491,9 @@ package body Safe_Frontend.Mir_Analyze is
             & " `text.length > 0` or `text.length >= 1` (strings only)."));
       Result.Notes.Append
         (FT.To_UString
+           ("for `>` / `>=` two-identifier countdown guards, the right-hand bound must be a literal or constant; use `Lo < Hi` / `Lo <= Hi` for bidirectional moving bounds."));
+      Result.Notes.Append
+        (FT.To_UString
            ("rewrite the loop to match one of those forms, or use a different construct whose termination proof does not depend on an emitted Loop_Variant."));
       return Result;
    end While_Loop_Variant_Diagnostic;
