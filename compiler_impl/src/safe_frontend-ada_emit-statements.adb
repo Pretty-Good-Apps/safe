@@ -1620,19 +1620,6 @@ package body Safe_Frontend.Ada_Emit.Statements is
                (Unit, Document, Resolved_Type_Info (Expr));
       end Is_Integer_Ident;
 
-      function Is_Integer_Bound (Expr : CM.Expr_Access) return Boolean is
-      begin
-         return
-           Expr /= null
-           and then
-             (Expr.Kind = CM.Expr_Int
-              or else
-              (Expr.Kind = CM.Expr_Ident
-               and then
-                 Is_Integer_Type
-                   (Unit, Document, Resolved_Type_Info (Expr))));
-      end Is_Integer_Bound;
-
       function Is_Length_Select (Expr : CM.Expr_Access) return Boolean is
       begin
          if Expr = null
@@ -1742,9 +1729,10 @@ package body Safe_Frontend.Ada_Emit.Statements is
          end if;
       elsif Operator in ">" | ">=" then
          --  Downward countdowns with two integer identifiers mirror the < / <=
-         --  path's bidirectional form. Literal-bound countdowns track the left
-         --  side only. Length drains stay limited to > 0 / >= 1 because the
-         --  runtime contracts only expose empty-bound decrease facts.
+         --  path's bidirectional form. Literal-bound integer countdowns may
+         --  use any integer literal and track the left side only. Length
+         --  drains stay limited to > 0 / >= 1 because the runtime contracts
+         --  only expose empty-bound decrease facts.
          if Is_Integer_Ident (Condition.Left)
            and then Is_Integer_Ident (Condition.Right)
          then
@@ -1754,7 +1742,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
               & ", Decreases => "
               & FT.To_String (Condition.Left.Name);
          elsif Is_Integer_Ident (Condition.Left)
-           and then Is_Integer_Bound (Condition.Right)
+           and then Condition.Right /= null
+           and then Condition.Right.Kind = CM.Expr_Int
          then
             return "Decreases => " & FT.To_String (Condition.Left.Name);
          elsif Is_Length_Select (Condition.Left)

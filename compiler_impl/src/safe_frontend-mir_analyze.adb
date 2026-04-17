@@ -3426,10 +3426,10 @@ package body Safe_Frontend.Mir_Analyze is
               or else Is_Length_Select (Condition.Right));
       elsif UString_Value (Condition.Operator) in ">" | ">=" then
          --  Downward countdowns with two integer identifiers mirror the < / <=
-         --  path's bidirectional form in the emitter. Literal-bound countdowns
-         --  track the left side only. Length drains stay limited to > 0 / >= 1
-         --  because the runtime contracts only expose empty-bound decrease
-         --  facts.
+         --  path's bidirectional form in the emitter. Literal-bound integer
+         --  countdowns may use any integer literal and track the left side
+         --  only. Length drains stay limited to > 0 / >= 1 because the
+         --  runtime contracts only expose empty-bound decrease facts.
          return
            (Is_Integer_Ident (Condition.Left)
             and then Is_Integer_Bound (Condition.Right))
@@ -3469,9 +3469,9 @@ package body Safe_Frontend.Mir_Analyze is
            ("supported while-loop proof shapes are structural `Cursor != null` traversal,"
             & " simple integer-bound `Lo < Hi` / `Lo <= Hi` conditions, literal-left"
             & " mirror forms like `0 < remaining` / `1 <= values.length`, countdown"
-            & " guards like `remaining > 0`, `remaining >= 1`, or `index >= lower_bound`,"
-            & " and direct length guards like `values.length == N`, `values.length > 0`,"
-            & " or `values.length >= 1`."));
+            & " guards like `remaining > 0`, `remaining >= 1`, `index > lower_bound`,"
+            & " or `index >= lower_bound`, and direct length guards like"
+            & " `values.length == N`, `values.length > 0`, or `values.length >= 1`."));
       Result.Notes.Append
         (FT.To_UString
            ("rewrite the loop to match one of those forms, or use a different construct whose termination proof does not depend on an emitted Loop_Variant."));
