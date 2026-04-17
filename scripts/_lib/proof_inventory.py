@@ -371,6 +371,7 @@ PR11_8I1_CHECKPOINT_FIXTURES = [
 PR11_23_PROOF_EXPANSION_FIXTURES = [
     "tests/build/pr1123a_binary_wraparound_build.safe",
     "tests/build/pr1123b_while_variant_patterns_build.safe",
+    "tests/build/pr213_map_entry_build.safe",
 ]
 
 
@@ -409,7 +410,6 @@ EMITTED_PROOF_REGRESSION_FIXTURES = [
     "tests/build/pr1110b_list_empty_build.safe",
     "tests/positive/pr221_for_of_tuple_helper.safe",
     "tests/positive/pr221_for_of_discriminated_helper.safe",
-    "tests/build/pr213_map_entry_build.safe",
     "tests/interfaces/pr119a_select_delay_receive.safe",
     "tests/interfaces/pr119a_select_delay_timeout.safe",
     "tests/interfaces/pr119a_select_zero_delay_ready.safe",
