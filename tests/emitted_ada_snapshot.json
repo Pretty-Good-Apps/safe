@@ -1,5 +1,5 @@
 {
-  "compiler_hash": "441d490b75c2a3bcda7a0d1d1b06e5a59c00343aba99b883a82e471f92ce1cac",
+  "compiler_hash": "3e7fb3624c958769a4e167a463440586d416015c2cc6c52fa0d696ee5cbdaafb",
   "fixtures": {
     "tests/build/pr1110a_optional_growable_build.safe": {
       "pr1110a_optional_growable_build.adb": "edea57f7f04c1890732b861d79740c6b86dbea49247d4148e722aaf4c447f102",
@@ -293,9 +293,9 @@
       "pr1123a_binary_wraparound_build_line_map.json": "79d663d743ca653eb0237054adfa20be3963fc33522e95a195a4cf5e02b4a88b"
     },
     "tests/build/pr1123b_while_variant_patterns_build.safe": {
-      "pr1123b_while_variant_patterns_build.adb": "3fff3435d94c946afbf2c15eb0fdd8ecd566f7941d873a76a67f19bffbe2977d",
-      "pr1123b_while_variant_patterns_build.ads": "82b162234f18110905653d3ae40c81c57d78c47dc547215207e07447406591fd",
-      "pr1123b_while_variant_patterns_build_line_map.json": "ea763552ad4ce252ff67150ce91c857e2b3a862206d39c5108ad9c2c2282115b"
+      "pr1123b_while_variant_patterns_build.adb": "ab8421621e594bdabfd76681c5e0586a1007ab5cfc009767998f875c4af99273",
+      "pr1123b_while_variant_patterns_build.ads": "2d5e56ddfb7985a1fa8acee3ad8838c1484410bc9933811bd2cd9029c496a3ac",
+      "pr1123b_while_variant_patterns_build_line_map.json": "d26e8dee52554c85677173c3e20dcd4feb55cc842ee9ab0fedc607f099411ccc"
     },
     "tests/build/pr118c2_entry_build.safe": {
       "main.adb": "50641acff6114f530b052e2addbe1a8ad1b3ec3e57b8ba07ff78c9fa27e40289",

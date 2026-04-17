@@ -1728,22 +1728,16 @@ package body Safe_Frontend.Ada_Emit.Statements is
             end;
          end if;
       elsif Operator in ">" | ">=" then
-         --  Downward countdowns with two integer identifiers mirror the < / <=
-         --  path's bidirectional form. Literal-bound integer countdowns may
-         --  use any integer literal and track the left side only. Length
-         --  drains stay limited to > 0 / >= 1 because the runtime contracts
-         --  only expose empty-bound decrease facts.
+         --  Descending integer countdowns track the left side only. The right
+         --  side may be a literal or identifier; GNATprove verifies that the
+         --  left side strictly decreases, so no right-side monotonicity
+         --  assumption is introduced. Length drains stay limited to
+         --  > 0 / >= 1 because the runtime contracts only expose empty-bound
+         --  decrease facts.
          if Is_Integer_Ident (Condition.Left)
            and then Is_Integer_Ident (Condition.Right)
          then
-            --  Use one bidirectional shape for mutable and constant right
-            --  identifiers. The right side may be stable or fail to increase;
-            --  GNATprove still requires the left side's strict decrease.
-            return
-              "Increases => "
-              & FT.To_String (Condition.Right.Name)
-              & ", Decreases => "
-              & FT.To_String (Condition.Left.Name);
+            return "Decreases => " & FT.To_String (Condition.Left.Name);
          elsif Is_Integer_Ident (Condition.Left)
            and then Condition.Right /= null
            and then Condition.Right.Kind = CM.Expr_Int

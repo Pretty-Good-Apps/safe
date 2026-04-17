@@ -3423,11 +3423,12 @@ package body Safe_Frontend.Mir_Analyze is
               (Is_Integer_Ident (Condition.Right)
                or else Is_Length_Select (Condition.Right)));
       elsif UString_Value (Condition.Operator) in ">" | ">=" then
-         --  Downward countdowns with two integer identifiers mirror the < / <=
-         --  path's bidirectional form in the emitter. Literal-bound integer
-         --  countdowns may use any integer literal and track the left side
-         --  only. Length drains stay limited to > 0 / >= 1 because the
-         --  runtime contracts only expose empty-bound decrease facts.
+         --  Descending integer countdowns track the left side in the emitter.
+         --  The right side may be a literal or identifier; GNATprove verifies
+         --  that the left side strictly decreases, so this MIR gate does not
+         --  require or assume right-side monotonicity. Length drains stay
+         --  limited to > 0 / >= 1 because the runtime contracts only expose
+         --  empty-bound decrease facts.
          return
            (Is_Integer_Ident (Condition.Left)
             and then Is_Integer_Operand (Condition.Right))
