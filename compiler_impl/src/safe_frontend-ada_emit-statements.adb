@@ -4802,6 +4802,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                  return;
                               end if;
 
+                              --  Candidate discovery recurses through nested
+                              --  branches, but the per-iteration bound must
+                              --  cover the full enclosing for-of body.
                               Analyze_String_Growth_Statements
                                 (Item.Body_Stmts,
                                  Name_Image,
