@@ -1649,7 +1649,6 @@ package body Safe_Frontend.Ada_Emit.Statements is
       end Is_Constant_Ident;
 
       function Is_Integer_Operand (Expr : CM.Expr_Access) return Boolean is
-         Bound_Info : GM.Type_Descriptor := (others => <>);
       begin
          --  Keep mirrored with While_Variant_Derivable.Is_Integer_Operand.
          --  Identifier bounds are limited to constants so the emitted
@@ -1661,11 +1660,6 @@ package body Safe_Frontend.Ada_Emit.Statements is
          elsif Expr.Kind = CM.Expr_Ident and then Is_Integer_Ident (Expr) then
             if Is_Constant_Ident (Expr) then
                return True;
-            elsif not Lookup_Bound_Type (State, FT.To_String (Expr.Name), Bound_Info) then
-               Raise_Internal
-                 ("while-variant identifier `"
-                  & FT.To_String (Expr.Name)
-                  & "` is missing a binding during constant-bound emission");
             end if;
          end if;
 

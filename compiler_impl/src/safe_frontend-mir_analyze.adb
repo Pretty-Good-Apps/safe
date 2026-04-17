@@ -3486,8 +3486,9 @@ package body Safe_Frontend.Mir_Analyze is
             & " simple integer-bound `Lo < Hi` / `Lo <= Hi` conditions, literal-left"
             & " mirror forms like `0 < remaining` / `1 <= text.length`, countdown"
             & " guards like `remaining > 0`, `remaining >= 1`, `index > constant_bound`,"
-            & " or `index >= constant_bound`, and direct length guards like"
-            & " `values.length == N`, `text.length > 0`, or `text.length >= 1`."));
+            & " or `index >= constant_bound`, direct length guards like"
+            & " `values.length == N`, and string length guards like"
+            & " `text.length > 0` or `text.length >= 1` (strings only)."));
       Result.Notes.Append
         (FT.To_UString
            ("rewrite the loop to match one of those forms, or use a different construct whose termination proof does not depend on an emitted Loop_Variant."));
