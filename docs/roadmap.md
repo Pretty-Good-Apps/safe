@@ -3235,7 +3235,7 @@ gap, and PR11.22h.1c closes the final map-entry loop gap:
 | Fixture | Current reason | Expected direction |
 |---------|----------------|--------------------|
 | `tests/build/pr1110b_list_empty_build.safe` | Empty-list `pop_last` witness produced GNATprove no-effect / unused-assignment warnings under `--warnings=error` | Closed by PR11.22h.1a with narrow generated-warning suppression around the two synthetic trim branches |
-| `tests/build/pr213_map_entry_build.safe` | Former map-entry `for of` loop accumulator lacked generated loop facts for overflow proof | Closed by PR11.22h.1c with conservative generated accumulator headroom invariants for composite growable `for of` loops |
+| `tests/build/pr213_map_entry_build.safe` | Former map-entry `for of` loop accumulator lacked generated loop facts for overflow proof | Implementation closed by PR11.22h.1c with conservative generated accumulator headroom invariants for composite growable `for of` loops; PR11.23c reclassifies the fixture as #279 proof-expansion coverage |
 | `tests/build/pr227_shared_snapshot_order_build.safe` | Former shared snapshot ordering regression now proves at level 2 | Closed by PR11.22h.1a by promoting the fixture to the emitted-proof regression list |
 | `tests/build/pr228_shared_loop_exit_condition_build.safe` | Shared exit-condition loop lowered to a static `while true` shape whose variant proof lacked the original `count < limit` guard fact | Closed by PR11.22h.1b by preserving dynamic guards for variant-bearing `while` loops |
 
@@ -3402,7 +3402,7 @@ with optional emitter heuristics kept fail-closed.
 |---|---|---|
 | PR11.23a | #294 | Binary modular arithmetic wraparound proof coverage |
 | PR11.23b | #282 | Additional while-loop variant patterns |
-| PR11.23c | #279 | Conditional static-delta accumulator coverage |
+| PR11.23c | #279 | Conditional static-delta accumulator coverage via the existing map-entry fixture |
 | PR11.23d | #280 | Conditional string append growth invariants |
 | PR11.23e | #283 | Multiple independent accumulator invariants |
 | PR11.23f | #285 | Scoped sum/count relational invariants |
@@ -3413,6 +3413,15 @@ with optional emitter heuristics kept fail-closed.
 ### Dependency
 
 Follows PR11.22h.2. PR11.23 follows PR11.23i. PR12.1 follows PR11.23i.
+
+### PR11.23c Note
+
+PR11.23c is a coverage reclassification rather than a new emitter algorithm.
+Conservative accumulator headroom invariants for composite growable `for of`
+loops already make `tests/build/pr213_map_entry_build.safe` prove at level 2
+with conditional branch deltas of `1` and `10`. This slice moves that fixture
+into the PR11.23 proof-expansion manifest so #279 has direct issue-to-fixture
+traceability without duplicating proof-lane execution.
 
 ---
 
