@@ -94,7 +94,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
    procedure Add_Type_Binding
      (State     : in out Emit_State;
       Name      : String;
-      Type_Info : GM.Type_Descriptor) renames AI.Add_Type_Binding;
+      Type_Info : GM.Type_Descriptor;
+      Is_Constant : Boolean := False) renames AI.Add_Type_Binding;
    procedure Register_Type_Bindings
      (State        : in out Emit_State;
       Declarations : CM.Resolved_Object_Decl_Vectors.Vector) renames AI.Register_Type_Bindings;
@@ -108,6 +109,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
      (State     : Emit_State;
       Name      : String;
       Type_Info : out GM.Type_Descriptor) return Boolean renames AI.Lookup_Bound_Type;
+   function Lookup_Bound_Is_Constant
+     (State : Emit_State;
+      Name  : String) return Boolean renames AI.Lookup_Bound_Is_Constant;
    procedure Push_Cleanup_Frame (State : in out Emit_State) renames AI.Push_Cleanup_Frame;
    procedure Pop_Cleanup_Frame (State : in out Emit_State) renames AI.Pop_Cleanup_Frame;
    procedure Add_Cleanup_Item
@@ -1598,8 +1602,14 @@ package body Safe_Frontend.Ada_Emit.Statements is
       --  Mir_Analyze. The validator decides which guards are accepted; the
       --  emitter must produce the same variant shape for each accepted guard.
       function Resolved_Type_Info (Expr : CM.Expr_Access) return GM.Type_Descriptor is
+         Annotated_Info : constant GM.Type_Descriptor :=
+           Expr_Type_Info (Unit, Document, Expr);
          Bound_Info : GM.Type_Descriptor := (others => <>);
       begin
+         if Has_Text (Annotated_Info.Kind) then
+            return Annotated_Info;
+         end if;
+
          if Expr /= null
            and then Expr.Kind = CM.Expr_Ident
            and then Lookup_Bound_Type (State, FT.To_String (Expr.Name), Bound_Info)
@@ -1607,7 +1617,14 @@ package body Safe_Frontend.Ada_Emit.Statements is
             return Bound_Info;
          end if;
 
-         return Expr_Type_Info (Unit, Document, Expr);
+         if Expr /= null and then Expr.Kind = CM.Expr_Ident then
+            Raise_Internal
+              ("while-variant identifier `"
+               & FT.To_String (Expr.Name)
+               & "` is missing type information during Ada emission");
+         end if;
+
+         return Annotated_Info;
       end Resolved_Type_Info;
 
       function Is_Integer_Ident (Expr : CM.Expr_Access) return Boolean is
@@ -1617,17 +1634,27 @@ package body Safe_Frontend.Ada_Emit.Statements is
            and then Expr.Kind = CM.Expr_Ident
            and then
              Is_Integer_Type
-               (Unit, Document, Resolved_Type_Info (Expr));
+                 (Unit, Document, Resolved_Type_Info (Expr));
       end Is_Integer_Ident;
+
+      function Is_Constant_Ident (Expr : CM.Expr_Access) return Boolean is
+      begin
+         return
+           Expr /= null
+           and then Expr.Kind = CM.Expr_Ident
+           and then Lookup_Bound_Is_Constant (State, FT.To_String (Expr.Name));
+      end Is_Constant_Ident;
 
       function Is_Integer_Operand (Expr : CM.Expr_Access) return Boolean is
       begin
          --  Keep mirrored with While_Variant_Derivable.Is_Integer_Operand.
+         --  Identifier bounds are limited to constants so the emitted
+         --  left-side variant is not accepted for a moving lower bound.
          return
            Expr /= null
            and then
              (Expr.Kind = CM.Expr_Int
-              or else Is_Integer_Ident (Expr));
+              or else (Is_Constant_Ident (Expr) and then Is_Integer_Ident (Expr)));
       end Is_Integer_Operand;
 
       function Is_Length_Select (Expr : CM.Expr_Access) return Boolean is
@@ -1739,9 +1766,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
          end if;
       elsif Operator in ">" | ">=" then
          --  Descending integer countdowns track the left side only. The right
-         --  side may be a literal or identifier; GNATprove verifies that the
-         --  left side strictly decreases, so no right-side monotonicity
-         --  assumption is introduced. Length drains stay limited to
+         --  side may be a literal or constant identifier; mutable right-side
+         --  identifiers are rejected during MIR validation rather than left to
+         --  a downstream proof failure. Length drains stay limited to
          --  > 0 / >= 1 because the runtime contracts only expose empty-bound
          --  decrease facts.
          if Is_Integer_Ident (Condition.Left)

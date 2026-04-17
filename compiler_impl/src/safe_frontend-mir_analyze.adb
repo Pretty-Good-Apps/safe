@@ -490,6 +490,7 @@ package body Safe_Frontend.Mir_Analyze is
       Functions  : Function_Maps.Map) return Float_Interval;
    function While_Variant_Derivable
      (Condition : GM.Expr_Access;
+      Local_Meta : Local_Maps.Map;
       Var_Types : Type_Maps.Map;
       Type_Env  : Type_Maps.Map;
       Functions : Function_Maps.Map) return Boolean;
@@ -3326,6 +3327,7 @@ package body Safe_Frontend.Mir_Analyze is
 
    function While_Variant_Derivable
      (Condition : GM.Expr_Access;
+      Local_Meta : Local_Maps.Map;
       Var_Types : Type_Maps.Map;
       Type_Env  : Type_Maps.Map;
       Functions : Function_Maps.Map) return Boolean
@@ -3358,12 +3360,15 @@ package body Safe_Frontend.Mir_Analyze is
       function Is_Integer_Operand (Expr : GM.Expr_Access) return Boolean is
       begin
          --  Keep mirrored with Loop_Variant_Image.Is_Integer_Operand.
+         --  Identifier bounds are limited to constants so a descending
+         --  left-side variant does not admit a moving lower bound.
          return
            Expr /= null
            and then
              (Expr.Kind = GM.Expr_Int
               or else
               (Expr.Kind = GM.Expr_Ident
+               and then Is_Constant_Target (Expr, Local_Meta)
                and then Is_Integer_Type (Expr_Type (Expr, Var_Types, Type_Env, Functions))));
       end Is_Integer_Operand;
 
@@ -3425,11 +3430,11 @@ package body Safe_Frontend.Mir_Analyze is
                or else Is_Length_Select (Condition.Right)));
       elsif UString_Value (Condition.Operator) in ">" | ">=" then
          --  Descending integer countdowns track the left side in the emitter.
-         --  The right side may be a literal or identifier; GNATprove verifies
-         --  that the left side strictly decreases, so this MIR gate does not
-         --  require or assume right-side monotonicity. Length drains stay
-         --  limited to > 0 / >= 1 because the runtime contracts only expose
-         --  empty-bound decrease facts.
+         --  The right side may be a literal or constant identifier; mutable
+         --  right-side identifiers are rejected here rather than left to a
+         --  downstream proof failure. Length drains stay limited to > 0 / >= 1
+         --  because the runtime contracts only expose empty-bound decrease
+         --  facts.
          return
            (Is_Integer_Ident (Condition.Left)
             and then Is_Integer_Operand (Condition.Right))
@@ -3469,8 +3474,8 @@ package body Safe_Frontend.Mir_Analyze is
            ("supported while-loop proof shapes are structural `Cursor != null` traversal,"
             & " simple integer-bound `Lo < Hi` / `Lo <= Hi` conditions, literal-left"
             & " mirror forms like `0 < remaining` / `1 <= values.length`, countdown"
-            & " guards like `remaining > 0`, `remaining >= 1`, `index > lower_bound`,"
-            & " or `index >= lower_bound`, and direct length guards like"
+            & " guards like `remaining > 0`, `remaining >= 1`, `index > constant_bound`,"
+            & " or `index >= constant_bound`, and direct length guards like"
             & " `values.length == N`, `values.length > 0`, or `values.length >= 1`."));
       Result.Notes.Append
         (FT.To_UString
@@ -6303,6 +6308,7 @@ package body Safe_Frontend.Mir_Analyze is
                   if UString_Value (Block.Role) = "while_header"
                     and then not While_Variant_Derivable
                       (Block.Terminator.Condition,
+                       Local_Meta,
                        Var_Types,
                        Type_Env,
                        Functions)

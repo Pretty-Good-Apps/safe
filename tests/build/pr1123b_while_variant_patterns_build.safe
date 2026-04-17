@@ -66,15 +66,6 @@ package pr1123b_while_variant_patterns_build
 
       return remaining - 5;
 
-   function countdown_mutable_bound returns integer
-      var lower_bound : integer = 1;
-      var index : integer = 3;
-
-      while index >= lower_bound
-         index = index - 1;
-
-      return index;
-
    function mirror_int_countdown returns integer
       var remaining : integer = 3;
 
@@ -99,6 +90,5 @@ package pr1123b_while_variant_patterns_build
    print (countdown_inclusive_bound);
    print (countdown_strict_bound);
    print (countdown_strict_literal_bound);
-   print (countdown_mutable_bound);
    print (mirror_int_countdown);
    print (mirror_length_guard)
