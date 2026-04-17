@@ -1736,6 +1736,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
          if Is_Integer_Ident (Condition.Left)
            and then Is_Integer_Ident (Condition.Right)
          then
+            --  Use one bidirectional shape for mutable and constant right
+            --  identifiers; a constant right side is stable while the left
+            --  side supplies the strict decrease.
             return
               "Increases => "
               & FT.To_String (Condition.Right.Name)

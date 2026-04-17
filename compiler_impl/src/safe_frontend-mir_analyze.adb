@@ -3355,7 +3355,7 @@ package body Safe_Frontend.Mir_Analyze is
            and then Is_Integer_Type (Expr_Type (Expr, Var_Types, Type_Env, Functions));
       end Is_Integer_Ident;
 
-      function Is_Integer_Bound (Expr : GM.Expr_Access) return Boolean is
+      function Is_Integer_Operand (Expr : GM.Expr_Access) return Boolean is
       begin
          return
            Expr /= null
@@ -3364,7 +3364,7 @@ package body Safe_Frontend.Mir_Analyze is
               or else
               (Expr.Kind = GM.Expr_Ident
                and then Is_Integer_Type (Expr_Type (Expr, Var_Types, Type_Env, Functions))));
-      end Is_Integer_Bound;
+      end Is_Integer_Operand;
 
       function Is_Zero (Expr : GM.Expr_Access) return Boolean is
       begin
@@ -3414,16 +3414,14 @@ package body Safe_Frontend.Mir_Analyze is
             and then Condition.Left.Kind = GM.Expr_Null
             and then Flatten_Name (Condition.Right)'Length > 0);
       elsif UString_Value (Condition.Operator) in "<" | "<=" then
-         if Is_Integer_Ident (Condition.Left)
-           and then Is_Integer_Ident (Condition.Right)
-         then
-            return True;
-         end if;
          return
-           Is_Positive_Left_Mirror_Bound (UString_Value (Condition.Operator), Condition.Left)
-           and then
-             (Is_Integer_Ident (Condition.Right)
-              or else Is_Length_Select (Condition.Right));
+           (Is_Integer_Ident (Condition.Left)
+            and then Is_Integer_Ident (Condition.Right))
+           or else
+           (Is_Positive_Left_Mirror_Bound (UString_Value (Condition.Operator), Condition.Left)
+            and then
+              (Is_Integer_Ident (Condition.Right)
+               or else Is_Length_Select (Condition.Right)));
       elsif UString_Value (Condition.Operator) in ">" | ">=" then
          --  Downward countdowns with two integer identifiers mirror the < / <=
          --  path's bidirectional form in the emitter. Literal-bound integer
@@ -3432,7 +3430,7 @@ package body Safe_Frontend.Mir_Analyze is
          --  runtime contracts only expose empty-bound decrease facts.
          return
            (Is_Integer_Ident (Condition.Left)
-            and then Is_Integer_Bound (Condition.Right))
+            and then Is_Integer_Operand (Condition.Right))
            or else
            (Is_Length_Select (Condition.Left)
             and then Is_Positive_Right_Bound
