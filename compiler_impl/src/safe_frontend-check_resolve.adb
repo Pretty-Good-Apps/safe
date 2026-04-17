@@ -8107,10 +8107,16 @@ package body Safe_Frontend.Check_Resolve is
                   then
                      if not Is_Growable_Array_Type (Left_Type, Type_Env)
                        or else not Is_Growable_Array_Type (Right_Type, Type_Env)
-                       or else not Compatible_Type
-                         (Growable_Array_Element_Type (Left_Type, Type_Env),
-                          Growable_Array_Element_Type (Right_Type, Type_Env),
-                          Type_Env)
+                     then
+                        Raise_Diag
+                          (CM.Source_Frontend_Error
+                             (Path    => Path,
+                              Span    => Expr.Span,
+                              Message => "& operator requires growable arrays; fixed arrays do not support concatenation"));
+                     elsif not Compatible_Type
+                       (Growable_Array_Element_Type (Left_Type, Type_Env),
+                        Growable_Array_Element_Type (Right_Type, Type_Env),
+                        Type_Env)
                      then
                         Raise_Diag
                           (CM.Source_Frontend_Error

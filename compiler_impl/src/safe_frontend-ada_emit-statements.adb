@@ -4361,8 +4361,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
                            Required_Headroom : constant CM.Wide_Integer :=
                              Max_Delta_Wide * CM.Wide_Integer (Natural'Last);
                         begin
-                           return Required_Headroom <= Runtime_Wide_Last
-                             and then Required_Headroom <= Range_Width;
+                           return Required_Headroom <= Range_Width;
                         end;
                      end Growable_Accumulator_Headroom_OK;
 
@@ -4740,14 +4739,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
                         Max_Delta_Wide : constant CM.Wide_Integer :=
                           CM.Wide_Integer (Max_Delta);
                      begin
-                        if Max_Delta <= 0
-                          or else Max_Delta_Wide
-                            > Runtime_Wide_Last / CM.Wide_Integer (Natural'Last)
-                        then
-                           return False;
-                        end if;
-                        return Max_Delta_Wide * CM.Wide_Integer (Natural'Last)
-                          <= Runtime_Wide_Last;
+                        return Max_Delta > 0
+                          and then Max_Delta_Wide
+                            <= Runtime_Wide_Last / CM.Wide_Integer (Natural'Last);
                      end String_Growth_Accumulator_Headroom_OK;
 
                      function Contains_String_Growth_Accumulator (Name : String) return Boolean is
