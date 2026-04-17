@@ -3330,6 +3330,10 @@ package body Safe_Frontend.Mir_Analyze is
       Type_Env  : Type_Maps.Map;
       Functions : Function_Maps.Map) return Boolean
    is
+      --  Keep these recognizers in lockstep with Loop_Variant_Image in
+      --  Ada_Emit.Statements. The MIR gate decides which guards are accepted;
+      --  the emitter must produce the same variant shape for each accepted
+      --  guard.
       function Is_Length_Select (Expr : GM.Expr_Access) return Boolean is
          Prefix_Type : GM.Type_Descriptor;
       begin
@@ -3423,6 +3427,10 @@ package body Safe_Frontend.Mir_Analyze is
       elsif UString_Value (Condition.Operator) in ">" | ">=" then
          --  Downward countdowns derive a decreasing left-side variant; the
          --  existing < / <= two-identifier path keeps the bidirectional form.
+         --  Integer countdowns may use arbitrary literal or integer-name
+         --  lower bounds because GNATprove checks the left side strictly
+         --  decreases. Length drains stay limited to > 0 / >= 1 because the
+         --  runtime contracts only expose empty-bound decrease facts.
          return
            (Is_Integer_Ident (Condition.Left)
             and then Is_Integer_Bound (Condition.Right))

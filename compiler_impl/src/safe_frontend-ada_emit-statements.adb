@@ -1594,6 +1594,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
       Operator : constant String :=
         (if Condition = null then "" else Map_Operator (FT.To_String (Condition.Operator)));
 
+      --  Keep these recognizers in lockstep with While_Variant_Derivable in
+      --  Mir_Analyze. The validator decides which guards are accepted; the
+      --  emitter must produce the same variant shape for each accepted guard.
       function Is_Integer_Ident (Expr : CM.Expr_Access) return Boolean is
       begin
          return
@@ -1724,6 +1727,10 @@ package body Safe_Frontend.Ada_Emit.Statements is
       elsif Operator in ">" | ">=" then
          --  Downward countdowns intentionally track the moving left side only.
          --  The existing < / <= two-identifier path keeps the bidirectional form.
+         --  Integer countdowns may use arbitrary literal or integer-name
+         --  lower bounds because GNATprove checks the left side strictly
+         --  decreases. Length drains stay limited to > 0 / >= 1 because the
+         --  runtime contracts only expose empty-bound decrease facts.
          if Is_Integer_Ident (Condition.Left)
            and then Is_Integer_Bound (Condition.Right)
          then
