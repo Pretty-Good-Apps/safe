@@ -1602,7 +1602,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
          return
            Expr /= null
            and then Expr.Kind = CM.Expr_Ident
-           and then Is_Integer_Type (Unit, Document, FT.To_String (Expr.Type_Name));
+           and then
+             Is_Integer_Type
+               (Unit, Document, Expr_Type_Info (Unit, Document, Expr));
       end Is_Integer_Ident;
 
       function Is_Integer_Bound (Expr : CM.Expr_Access) return Boolean is
@@ -1613,7 +1615,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
              (Expr.Kind = CM.Expr_Int
               or else
               (Expr.Kind = CM.Expr_Ident
-               and then Is_Integer_Type (Unit, Document, FT.To_String (Expr.Type_Name))));
+               and then
+                 Is_Integer_Type
+                   (Unit, Document, Expr_Type_Info (Unit, Document, Expr))));
       end Is_Integer_Bound;
 
       function Is_Length_Select (Expr : CM.Expr_Access) return Boolean is
