@@ -3960,6 +3960,12 @@ package body Safe_Frontend.Ada_Emit.Statements is
                      package Growable_Accumulator_Vectors is new Ada.Containers.Vectors
                        (Index_Type   => Positive,
                         Element_Type => Growable_Accumulator_Info);
+                     type Exact_Counter_Info is record
+                        Name : FT.UString := FT.To_UString ("");
+                     end record;
+                     package Exact_Counter_Vectors is new Ada.Containers.Vectors
+                       (Index_Type   => Positive,
+                        Element_Type => Exact_Counter_Info);
                      type String_Growth_Accumulator_Info is record
                         Name          : FT.UString := FT.To_UString ("");
                         Instance_Name : FT.UString := FT.To_UString ("");
@@ -3973,6 +3979,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
                      Accumulator_Type_Images : FT.UString_Vectors.Vector;
                      Invalidated_Accumulator_Names : FT.UString_Vectors.Vector;
                      Growable_Accumulators : Growable_Accumulator_Vectors.Vector;
+                     Exact_Counters : Exact_Counter_Vectors.Vector;
                      String_Growth_Accumulators : String_Growth_Accumulator_Vectors.Vector;
                      Has_Top_Level_Loop_Invariant : Boolean := False;
 
@@ -4148,6 +4155,91 @@ package body Safe_Frontend.Ada_Emit.Statements is
                         return "";
                      end Target_Ident_Name;
 
+                     function Statement_Write_Count
+                       (Stmt : CM.Statement_Access;
+                        Name : String) return Natural;
+
+                     function Statements_Write_Count
+                       (Statements : CM.Statement_Access_Vectors.Vector;
+                        Name       : String) return Natural
+                     is
+                        Result : Natural := 0;
+                     begin
+                        if Name'Length = 0 then
+                           return 0;
+                        end if;
+
+                        for Nested of Statements loop
+                           Result := Result + Statement_Write_Count (Nested, Name);
+                        end loop;
+                        return Result;
+                     end Statements_Write_Count;
+
+                     function Statement_Write_Count
+                       (Stmt : CM.Statement_Access;
+                        Name : String) return Natural
+                     is
+                        Result : Natural := 0;
+                     begin
+                        if Stmt = null or else Name'Length = 0 then
+                           return 0;
+                        end if;
+
+                        case Stmt.Kind is
+                           when CM.Stmt_Assign =>
+                              if Target_Ident_Name (Stmt.Target) = Name
+                                or else Expr_Uses_Name (Stmt.Target, Name)
+                              then
+                                 Result := Result + 1;
+                              end if;
+
+                           when CM.Stmt_If =>
+                              Result := Result + Statements_Write_Count (Stmt.Then_Stmts, Name);
+                              for Part of Stmt.Elsifs loop
+                                 Result := Result + Statements_Write_Count (Part.Statements, Name);
+                              end loop;
+                              if Stmt.Has_Else then
+                                 Result := Result + Statements_Write_Count (Stmt.Else_Stmts, Name);
+                              end if;
+
+                           when CM.Stmt_Case =>
+                              for Arm of Stmt.Case_Arms loop
+                                 Result := Result + Statements_Write_Count (Arm.Statements, Name);
+                              end loop;
+
+                           when CM.Stmt_Match =>
+                              for Arm of Stmt.Match_Arms loop
+                                 Result := Result + Statements_Write_Count (Arm.Statements, Name);
+                              end loop;
+
+                           when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
+                              Result := Result + Statements_Write_Count (Stmt.Body_Stmts, Name);
+
+                           when CM.Stmt_Select =>
+                              for Arm of Stmt.Arms loop
+                                 case Arm.Kind is
+                                    when CM.Select_Arm_Channel =>
+                                       Result :=
+                                         Result + Statements_Write_Count
+                                           (Arm.Channel_Data.Statements,
+                                            Name);
+                                    when CM.Select_Arm_Delay =>
+                                       Result :=
+                                         Result + Statements_Write_Count
+                                           (Arm.Delay_Data.Statements,
+                                            Name);
+                                    when others =>
+                                       null;
+                                 end case;
+                              end loop;
+
+                           when others =>
+                              null;
+                        end case;
+
+                        return Result;
+                     end Statement_Write_Count;
+
                      function Accumulator_Value_Expr
                        (Expr : CM.Expr_Access) return CM.Expr_Access is
                      begin
@@ -4272,6 +4364,25 @@ package body Safe_Frontend.Ada_Emit.Statements is
 
                         return False;
                      end Supported_Accumulator_Assignment;
+
+                     function Supported_Exact_Counter_Assignment
+                       (Stmt : CM.Statement;
+                        Name : String) return Boolean
+                     is
+                        Value_Expr : constant CM.Expr_Access :=
+                          Accumulator_Value_Expr (Stmt.Value);
+                     begin
+                        return Target_Ident_Name (Stmt.Target) = Name
+                          and then Value_Expr /= null
+                          and then Value_Expr.Kind = CM.Expr_Binary
+                          and then FT.To_String (Value_Expr.Operator) = "+"
+                          and then
+                            ((Same_Target_Name (Value_Expr.Left, Name)
+                              and then Expr_Is_One (Value_Expr.Right))
+                             or else
+                               (Same_Target_Name (Value_Expr.Right, Name)
+                                and then Expr_Is_One (Value_Expr.Left)));
+                     end Supported_Exact_Counter_Assignment;
 
                      function Add_Step
                        (Left  : Long_Long_Integer;
@@ -4546,6 +4657,90 @@ package body Safe_Frontend.Ada_Emit.Statements is
                             Max_Delta  => Max_Delta));
                      end Add_Growable_Accumulator;
 
+                     function Contains_Exact_Counter (Name : String) return Boolean is
+                     begin
+                        for Info of Exact_Counters loop
+                           if FT.To_String (Info.Name) = Name then
+                              return True;
+                           end if;
+                        end loop;
+                        return False;
+                     end Contains_Exact_Counter;
+
+                     procedure Add_Exact_Counter (Name : String) is
+                     begin
+                        if Contains_Exact_Counter (Name) then
+                           return;
+                        end if;
+
+                        Exact_Counters.Append ((Name => FT.To_UString (Name)));
+                     end Add_Exact_Counter;
+
+                     function Top_Level_Exact_Counter_Assignments
+                       (Statements : CM.Statement_Access_Vectors.Vector;
+                        Name       : String) return Natural
+                     is
+                        Result : Natural := 0;
+                     begin
+                        if Name'Length = 0 then
+                           return 0;
+                        end if;
+
+                        for Nested of Statements loop
+                           if Nested /= null
+                             and then Nested.Kind = CM.Stmt_Assign
+                             and then Supported_Exact_Counter_Assignment
+                               (Nested.all,
+                                Name)
+                           then
+                              Result := Result + 1;
+                           end if;
+                        end loop;
+
+                        return Result;
+                     end Top_Level_Exact_Counter_Assignments;
+
+                     function Supported_Exact_Counter (Name : String) return Boolean is
+                     begin
+                        return not Statements_Declare_Name (Item.Body_Stmts, Name)
+                          and then Top_Level_Exact_Counter_Assignments
+                            (Item.Body_Stmts,
+                             Name) = 1
+                          and then Statements_Write_Count
+                            (Item.Body_Stmts,
+                             Name) = 1;
+                     end Supported_Exact_Counter;
+
+                     procedure Collect_Exact_Counters
+                       (Statements : CM.Statement_Access_Vectors.Vector)
+                     is
+                     begin
+                        for Nested of Statements loop
+                           if Nested /= null and then Nested.Kind = CM.Stmt_Assign then
+                              declare
+                                 Name_Image  : constant String :=
+                                   Target_Ident_Name (Nested.Target);
+                              begin
+                                 if Name_Image'Length > 0 then
+                                    declare
+                                       Target_Info : constant GM.Type_Descriptor :=
+                                         Expr_Type_Info (Unit, Document, Nested.Target);
+                                    begin
+                                       if Is_Integer_Type
+                                         (Unit,
+                                          Document,
+                                          Target_Info)
+                                         and then Supported_Exact_Counter (Name_Image)
+                                       then
+                                          Add_Exact_Counter (Name_Image);
+                                       end if;
+                                    end;
+                                 end if;
+                              end;
+                           end if;
+                        end loop;
+                     end Collect_Exact_Counters;
+
                      procedure Collect_Growable_Accumulators
                        (Statements : CM.Statement_Access_Vectors.Vector)
                      is
@@ -4666,6 +4861,39 @@ package body Safe_Frontend.Ada_Emit.Statements is
                           & Remaining_Image
                           & ");";
                      end Growable_Accumulator_Invariant;
+
+                     function Sum_Count_Relational_Invariant
+                       (Sum_Info   : Growable_Accumulator_Info;
+                        Count_Info : Exact_Counter_Info) return String
+                     is
+                        Sum_Name    : constant String := FT.To_String (Sum_Info.Name);
+                        Count_Name  : constant String := FT.To_String (Count_Info.Name);
+                        Delta_Image : constant String := Trim_Image (Sum_Info.Max_Delta);
+                        Count_Steps : constant String :=
+                          "(Safe_Runtime.Wide_Integer ("
+                          & Count_Name
+                          & ") - Safe_Runtime.Wide_Integer ("
+                          & Count_Name
+                          & "'Loop_Entry))";
+                     begin
+                        State.Needs_Safe_Runtime := True;
+                        return
+                          "pragma Loop_Invariant (Safe_Runtime.Wide_Integer ("
+                          & Count_Name
+                          & ") = Safe_Runtime.Wide_Integer ("
+                          & Count_Name
+                          & "'Loop_Entry) + (Safe_Runtime.Wide_Integer ("
+                          & Index_Name
+                          & ") - Safe_Runtime.Wide_Integer (1)) and then Safe_Runtime.Wide_Integer ("
+                          & Sum_Name
+                          & ") <= Safe_Runtime.Wide_Integer ("
+                          & Sum_Name
+                          & "'Loop_Entry) + Safe_Runtime.Wide_Integer ("
+                          & Delta_Image
+                          & ") * "
+                          & Count_Steps
+                          & ");";
+                     end Sum_Count_Relational_Invariant;
 
                      function Try_Static_String_Append_Step
                        (Stmt       : CM.Statement;
@@ -6105,6 +6333,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
                               end if;
                            elsif Iterable_Info.Growable then
                               Collect_Growable_Accumulators (Item.Body_Stmts);
+                              Collect_Exact_Counters (Item.Body_Stmts);
                               if not Growable_Accumulators.Is_Empty then
                                  Has_Top_Level_Loop_Invariant := True;
                                  for Candidate of Growable_Accumulators loop
@@ -6113,6 +6342,22 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                        Growable_Accumulator_Invariant (Candidate),
                                        Depth + 2);
                                  end loop;
+                                 if not Exact_Counters.Is_Empty then
+                                    for Sum_Candidate of Growable_Accumulators loop
+                                       if not Contains_Exact_Counter
+                                         (FT.To_String (Sum_Candidate.Name))
+                                       then
+                                          for Counter_Candidate of Exact_Counters loop
+                                             Append_Line
+                                               (Buffer,
+                                                Sum_Count_Relational_Invariant
+                                                  (Sum_Candidate,
+                                                   Counter_Candidate),
+                                                Depth + 2);
+                                          end loop;
+                                       end if;
+                                    end loop;
+                                 end if;
                               end if;
                               declare
                                  Invariant_Image : constant String := Static_Growable_Prefix_Sum_Invariant;
