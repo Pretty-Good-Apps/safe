@@ -4979,6 +4979,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
                           & "'Loop_Entry))";
                      begin
                         State.Needs_Safe_Runtime := True;
+                        --  This invariant is emitted before the loop body; the count conjunct
+                        --  intentionally describes the pre-increment value for this iteration.
                         return
                           "pragma Loop_Invariant (Safe_Runtime.Wide_Integer ("
                           & Count_Name
