@@ -4232,6 +4232,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
                         declare
                            Callee_Name : constant String :=
                              FT.Lowercase (CM.Flatten_Name (Call_Expr.Callee));
+                           Known_Callee_Found : Boolean := False;
                         begin
                            for Candidate of Unit.Subprograms loop
                               if FT.Lowercase (FT.To_String (Candidate.Name)) = Callee_Name
@@ -4241,7 +4242,10 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                      & "."
                                      & FT.To_String (Candidate.Name)) = Callee_Name
                               then
-                                 return Local_Params_Mutate_Name (Candidate.Params);
+                                 Known_Callee_Found := True;
+                                 if Local_Params_Mutate_Name (Candidate.Params) then
+                                    return True;
+                                 end if;
                               end if;
                            end loop;
 
@@ -4257,10 +4261,17 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                  if Imported_Name = Callee_Name
                                    or else Imported_Short = Callee_Name
                                  then
-                                    return Imported_Params_Mutate_Name (Imported.Params);
+                                    Known_Callee_Found := True;
+                                    if Imported_Params_Mutate_Name (Imported.Params) then
+                                       return True;
+                                    end if;
                                  end if;
                               end;
                            end loop;
+
+                           if Known_Callee_Found then
+                              return False;
+                           end if;
                         end;
 
                         --  Unknown calls may still mutate a name through an unsupported
@@ -4795,6 +4806,16 @@ package body Safe_Frontend.Ada_Emit.Statements is
                         end loop;
                         return False;
                      end Contains_Exact_Counter;
+
+                     function Has_Sum_Count_Relational_Candidate return Boolean is
+                     begin
+                        for Candidate of Growable_Accumulators loop
+                           if not Contains_Exact_Counter (FT.To_String (Candidate.Name)) then
+                              return True;
+                           end if;
+                        end loop;
+                        return False;
+                     end Has_Sum_Count_Relational_Candidate;
 
                      procedure Add_Exact_Counter (Name : String) is
                      begin
@@ -6501,7 +6522,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                        Growable_Accumulator_Invariant (Candidate),
                                        Depth + 2);
                                  end loop;
-                                 if not Exact_Counters.Is_Empty then
+                                 if not Exact_Counters.Is_Empty
+                                   and then Has_Sum_Count_Relational_Candidate
+                                 then
                                     --  Growable for-of headers are emitted as 1 .. Length;
                                     --  make that origin dependency explicit in the generated proof.
                                     Append_Line

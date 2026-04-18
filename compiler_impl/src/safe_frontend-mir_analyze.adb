@@ -3636,7 +3636,7 @@ package body Safe_Frontend.Mir_Analyze is
 
       procedure Add_Divisor (Divisor : Wide_Integer) is
       begin
-         if Divisor = 0 then
+         if Divisor = 0 or else Needs_Wide_Result then
             return;
          end if;
 
