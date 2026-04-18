@@ -105,6 +105,8 @@ Dependency chain:
 - PR11.23g follows PR11.23f (fixed-depth nested iteration invariant composition).
 - PR11.23h follows PR11.23g (auto-snapshot compound shared reads).
 - PR11.23i follows PR11.23h (clamp-style exported postconditions).
+- PR11.23j follows PR11.23i (post-sprint emitter analysis hardening:
+  centralized call-mutation classification and walker exhaustiveness).
 - PR11.23 follows PR11.23i (proof diagnostic mapping — Safe-native proof failure messages with source locations and fix guidance).
 - PR11.17–PR11.21 moved to PR14 series (deferred past all existing work; see PR14 below).
 
@@ -3412,7 +3414,10 @@ with optional emitter heuristics kept fail-closed.
 
 ### Dependency
 
-Follows PR11.22h.2. PR11.23 follows PR11.23i. PR12.1 follows PR11.23i.
+Follows PR11.22h.2. PR11.23j follows PR11.23i. PR12.1 follows
+PR11.23j. PR11.23 follows PR11.23i and may proceed independently of
+PR11.23j because diagnostic mapping rewrites proof output rather than
+changing emitter analysis heuristics.
 
 ### PR11.23c Note
 
@@ -3471,6 +3476,48 @@ checked when refactoring this helper.
 
 ---
 
+## PR11.23j: Post-Sprint Emitter Analysis Hardening
+
+Track #324 after the PR11.23a-i proof-expansion burn-down completes and before
+PR12.1 starts. This is not another in-sprint proof feature; it is an
+incidental-hardening pass over the emitter analyzers that PR11.23e-g left in a
+safe but duplicated state.
+
+### Scope
+
+- Centralize call/actual mutation classification behind one helper with explicit
+  `Mutates`, `Observes`, and `Unknown` outcomes.
+- Use formal modes (`mut`, `in out`, `out`) for known local/imported callees,
+  keep unknown callees fail-closed, and distinguish addressable container
+  references from observer attributes such as `.length` and `.capacity`.
+- Replace the partial classifiers currently split across `Call_Mutates_Name`,
+  `Statement_Write_Count`, `Root_Name`-based invalidation, and
+  `Invalidate_Static_Length`.
+- Harden recursive statement/expression walkers introduced or extended in
+  PR11.23e-g so new `Stmt_*` or `Expr_*` kinds do not silently fall through
+  optional proof heuristics.
+- Add regression fixtures proving observe-only calls/selects preserve useful
+  static-length facts while mutating calls still invalidate facts fail-closed.
+
+### Non-goals
+
+- Nested exact-counter recognition for sum/count relational invariants remains
+  deferred until a real nested-average pattern needs it.
+- Zero-step accumulator updates such as `accum = accum + 0` remain documented
+  fail-closed scope.
+- The double pass in `Prior_Local_Literal_Length` is performance-only and stays
+  out of scope unless measurement shows it is hot.
+- A broad PR12-era analysis-layer refactor remains separate from this bounded
+  hardening slice.
+
+### Dependency
+
+Follows PR11.23i. Precedes PR12.1. PR11.23 proof diagnostic mapping may proceed
+independently after PR11.23i because it is a proof-output UX milestone rather
+than an emitter-analysis milestone.
+
+---
+
 # PR12: Tooling and Developer Ergonomics
 
 The PR11 series delivers a language that is safe by construction. The PR12
@@ -3484,7 +3531,7 @@ that gap before the claims-hardening work begins.
 
 ## Dependency Chain
 
-- PR12.1 follows PR11.23i (compiled native `safe` CLI binary; PR11.23 can
+- PR12.1 follows PR11.23j (compiled native `safe` CLI binary; PR11.23 can
   proceed independently because proof diagnostic mapping does not define the
   native CLI ABI).
 - PR12.2 follows PR12.1 (single-archive distribution).
@@ -3529,9 +3576,9 @@ makes the distribution self-contained.
 
 ### Dependency
 
-Follows PR11.23i. PR11.23 may proceed in parallel after PR11.23i because
-it adapts proof-output presentation rather than changing the native CLI
-interface contract.
+Follows PR11.23j. PR11.23 may proceed in parallel after PR11.23i because it
+adapts proof-output presentation rather than changing the native CLI interface
+contract.
 
 ---
 
