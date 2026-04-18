@@ -4249,9 +4249,14 @@ package body Safe_Frontend.Ada_Emit.Statements is
                            end loop;
                         end;
 
-                        --  Unknown calls that mention the counter may mutate it through an
-                        --  unsupported signature path, so the exact-counter heuristic fails closed.
-                        return Expr_Uses_Name (Call_Expr, Name);
+                        --  Unknown calls may still mutate a name through an unsupported
+                        --  signature path, but only if that name is passed as an actual.
+                        for Actual of Call_Expr.Args loop
+                           if Actual_Targets_Name (Actual) then
+                              return True;
+                           end if;
+                        end loop;
+                        return False;
                      end Call_Mutates_Name;
 
                      function Statement_Write_Count
@@ -4292,6 +4297,11 @@ package body Safe_Frontend.Ada_Emit.Statements is
 
                            when CM.Stmt_Call =>
                               if Call_Mutates_Name (Stmt.Call, Name) then
+                                 Result := Result + 1;
+                              end if;
+
+                           when CM.Stmt_Receive | CM.Stmt_Try_Receive =>
+                              if Target_Ident_Name (Stmt.Target) = Name then
                                  Result := Result + 1;
                               end if;
 
