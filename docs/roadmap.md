@@ -3483,7 +3483,11 @@ original compound-condition shape and adds flat plus nested call-argument
 coverage in `tests/build/pr1123h_shared_call_argument_snapshot_build.safe`.
 Snapshotting remains scoped to statement contexts with a clear declaration
 insertion point and preserves one whole-root snapshot per shared object per
-statement.
+statement. The generalized assignment/call pass intentionally refreshes emitted
+hashes for adjacent shared-wrapper fixtures that contain shared reads in
+assignments or `print` calls, including `pr1112a_shared_task_build.safe`,
+`pr1112e_imported_shared_record_build.safe`, `pr1112a_shared_field_access.safe`,
+and `pr1112b_shared_snapshot.safe`.
 
 ---
 

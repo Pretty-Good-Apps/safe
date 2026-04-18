@@ -332,7 +332,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
       Target     : CM.Expr_Access;
       Value      : CM.Expr_Access;
       Depth      : Natural;
-      Rendered_Value_Image : String := "")
+      Rendered_Value_Image : String := "";
+      Has_Rendered_Value_Image : Boolean := False)
    ;
    procedure Append_Float_Narrowing_Checks
      (Buffer       : in out SU.Unbounded_String;
@@ -2652,14 +2653,18 @@ package body Safe_Frontend.Ada_Emit.Statements is
       Expr            : CM.Expr_Access;
       Statement_Index : Positive;
       Base_Image      : String) return Shared_Condition_Render
+   ;
+   procedure Apply_Shared_Condition_Replacements
+     (Rendered   : in out Shared_Condition_Render;
+      Base_Image : String)
+   ;
+   procedure Apply_Shared_Condition_Replacements
+     (Rendered   : in out Shared_Condition_Render;
+      Base_Image : String)
    is
-      Result : Shared_Condition_Render;
       Image  : SU.Unbounded_String := SU.To_Unbounded_String (Base_Image);
    begin
-      Collect_Shared_Condition_Snapshots
-        (Unit, Document, Expr, Statement_Index, Result);
-
-      for Replacement of Result.Replacements loop
+      for Replacement of Rendered.Replacements loop
          Image :=
            SU.To_Unbounded_String
              (Replace_All
@@ -2668,7 +2673,21 @@ package body Safe_Frontend.Ada_Emit.Statements is
                  FT.To_String (Replacement.Replacement_Image)));
       end loop;
 
-      Result.Image := FT.To_UString (SU.To_String (Image));
+      Rendered.Image := FT.To_UString (SU.To_String (Image));
+   end Apply_Shared_Condition_Replacements;
+
+   function Render_Shared_Condition_From_Image
+     (Unit            : CM.Resolved_Unit;
+      Document        : GM.Mir_Document;
+      Expr            : CM.Expr_Access;
+      Statement_Index : Positive;
+      Base_Image      : String) return Shared_Condition_Render
+   is
+      Result : Shared_Condition_Render;
+   begin
+      Collect_Shared_Condition_Snapshots
+        (Unit, Document, Expr, Statement_Index, Result);
+      Apply_Shared_Condition_Replacements (Result, Base_Image);
       return Result;
    end Render_Shared_Condition_From_Image;
 
@@ -3035,6 +3054,34 @@ package body Safe_Frontend.Ada_Emit.Statements is
                  Expr_Type_Info (Unit, Document, Actual.Prefix)));
       end Needs_Growable_Indexed_Copy_Back;
 
+      Target_Subprogram : CM.Resolved_Subprogram;
+      Needs_Copy_Back   : Boolean := False;
+
+      function Render_Call_From_Image
+        (Base_Image             : String;
+         Skip_Copy_Back_Actuals : Boolean) return Shared_Condition_Render
+      is
+         Result : Shared_Condition_Render;
+      begin
+         Collect_Shared_Condition_Snapshots
+           (Unit, Document, Call_Expr.Callee, Statement_Index, Result);
+
+         for Arg_Index in Call_Expr.Args.First_Index .. Call_Expr.Args.Last_Index loop
+            if not Skip_Copy_Back_Actuals
+              or else Arg_Index > Target_Subprogram.Params.Last_Index
+              or else not Needs_Growable_Indexed_Copy_Back
+                (Target_Subprogram.Params (Arg_Index),
+                 Call_Expr.Args (Arg_Index))
+            then
+               Collect_Shared_Condition_Snapshots
+                 (Unit, Document, Call_Expr.Args (Arg_Index), Statement_Index, Result);
+            end if;
+         end loop;
+
+         Apply_Shared_Condition_Replacements (Result, Base_Image);
+         return Result;
+      end Render_Call_From_Image;
+
       function Mutable_Actual_Temp_Name
         (Statement_Index : Positive;
          Arg_Index       : Positive) return String is
@@ -3079,8 +3126,6 @@ package body Safe_Frontend.Ada_Emit.Statements is
             Depth);
       end Append_Growable_Indexed_Writeback;
 
-      Target_Subprogram : CM.Resolved_Subprogram;
-      Needs_Copy_Back   : Boolean := False;
    begin
       if not Find_Called_Subprogram (Call_Expr, Target_Subprogram)
         or else Call_Expr = null
@@ -3161,12 +3206,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
             Call_Image := Call_Image & SU.To_Unbounded_String (")");
             declare
                Rendered : constant Shared_Condition_Render :=
-                 Render_Shared_Condition_From_Image
-                   (Unit,
-                    Document,
-                    Call_Expr,
-                    Statement_Index,
-                    SU.To_String (Call_Image));
+                 Render_Call_From_Image
+                   (SU.To_String (Call_Image),
+                    Skip_Copy_Back_Actuals => False);
             begin
                Append_Shared_Rendered_Statement (Buffer, Rendered, Depth);
             end;
@@ -3271,12 +3313,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
          Call_Image := Call_Image & SU.To_Unbounded_String (")");
          declare
             Rendered : constant Shared_Condition_Render :=
-              Render_Shared_Condition_From_Image
-                (Unit,
-                 Document,
-                 Call_Expr,
-                 Statement_Index,
-                 SU.To_String (Call_Image));
+              Render_Call_From_Image
+                (SU.To_String (Call_Image),
+                 Skip_Copy_Back_Actuals => True);
          begin
             Append_Shared_Rendered_Statement (Buffer, Rendered, Depth + 1);
          end;
@@ -8357,14 +8396,15 @@ package body Safe_Frontend.Ada_Emit.Statements is
       end Static_Integer_Assignment_Image;
 
       function Render_Shared_Value_From_Image
-        (Base_Image : String) return Shared_Condition_Render
+        (Base_Image  : String;
+         Source_Expr : CM.Expr_Access := Stmt.Value) return Shared_Condition_Render
       is
       begin
          return
            Render_Shared_Condition_From_Image
              (Unit,
               Document,
-              Stmt.Value,
+              Source_Expr,
               Statement_Index,
               Base_Image);
       end Render_Shared_Value_From_Image;
@@ -8585,7 +8625,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
                Stmt.Target,
                Stmt.Value,
                Line_Depth,
-               Rendered_Value_Image => FT.To_String (Rendered.Image));
+               Rendered_Value_Image => FT.To_String (Rendered.Image),
+               Has_Rendered_Value_Image => True);
 
             if not Rendered.Snapshots.Is_Empty then
                Append_Line (Buffer, "end;", Depth);
@@ -8625,7 +8666,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
                declare
                   Rendered : constant Shared_Condition_Render :=
                     Render_Shared_Value_From_Image
-                      (Render_Expr (Unit, Document, Stmt.Value.Inner, State));
+                      (Render_Expr (Unit, Document, Stmt.Value.Inner, State),
+                       Source_Expr => Stmt.Value.Inner);
                   Line_Depth : constant Natural :=
                     (if Rendered.Snapshots.Is_Empty then Depth else Depth + 1);
                begin
@@ -8651,10 +8693,12 @@ package body Safe_Frontend.Ada_Emit.Statements is
                end;
             else
                declare
+                  Static_Image : constant String :=
+                    Static_Integer_Assignment_Image;
                   Rendered : constant Shared_Condition_Render :=
                     Render_Shared_Value_From_Image
-                      ((if Static_Integer_Assignment_Image'Length > 0
-                        then Static_Integer_Assignment_Image
+                      ((if Static_Image'Length > 0
+                        then Static_Image
                         else Value_Image));
                begin
                   if Rendered.Snapshots.Is_Empty then
@@ -9616,7 +9660,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
       Target     : CM.Expr_Access;
       Value      : CM.Expr_Access;
       Depth      : Natural;
-      Rendered_Value_Image : String := "")
+      Rendered_Value_Image : String := "";
+      Has_Rendered_Value_Image : Boolean := False)
    is
       Target_Name : constant String := FT.To_String (Target.Type_Name);
       Target_Info : constant GM.Type_Descriptor :=
@@ -9625,7 +9670,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
         Render_Subtype_Indication (Unit, Document, Target_Info);
       Target_Image : constant String := Render_Expr (Unit, Document, Target, State);
       Wide_Image   : constant String :=
-        (if Rendered_Value_Image'Length > 0
+        (if Has_Rendered_Value_Image
          then Rendered_Value_Image
          else Render_Wide_Expr (Unit, Document, Value, State));
    begin
