@@ -4849,6 +4849,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                          and then Supported_Exact_Counter
                                            (Loop_Statements,
                                             Name_Image)
+                                         and then Growable_Accumulator_Headroom_OK
+                                           (Target_Info,
+                                            1)
                                        then
                                           Add_Exact_Counter (Name_Image);
                                        end if;
