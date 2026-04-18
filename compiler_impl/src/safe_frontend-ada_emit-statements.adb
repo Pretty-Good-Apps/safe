@@ -6478,20 +6478,25 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                        Depth + 2);
                                  end loop;
                                  if not Exact_Counters.Is_Empty then
-                                    for Sum_Candidate of Growable_Accumulators loop
-                                       if not Contains_Exact_Counter
-                                         (FT.To_String (Sum_Candidate.Name))
-                                       then
-                                          for Counter_Candidate of Exact_Counters loop
+                                    declare
+                                       Counter_Candidate : constant Exact_Counter_Info :=
+                                         Exact_Counters (Exact_Counters.First_Index);
+                                    begin
+                                       --  Every exact counter advances once per iteration, so one
+                                       --  counter is enough to prove each sum/count relation.
+                                       for Sum_Candidate of Growable_Accumulators loop
+                                          if not Contains_Exact_Counter
+                                            (FT.To_String (Sum_Candidate.Name))
+                                          then
                                              Append_Line
                                                (Buffer,
                                                 Sum_Count_Relational_Invariant
                                                   (Sum_Candidate,
                                                    Counter_Candidate),
                                                 Depth + 2);
-                                          end loop;
-                                       end if;
-                                    end loop;
+                                          end if;
+                                       end loop;
+                                    end;
                                  end if;
                               end if;
                               declare
