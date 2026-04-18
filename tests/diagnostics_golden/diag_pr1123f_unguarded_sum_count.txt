@@ -3,9 +3,9 @@ Source: tests/negative/neg_pr1123f_unguarded_sum_count.safe
 
 Expected diagnostic output:
 ------------------------------------------------------------------------
-neg_pr1123f_unguarded_sum_count.safe:20:18: error: divisor not provably nonzero
+neg_pr1123f_unguarded_sum_count.safe:21:18: error: divisor not provably nonzero
   |
-  | 20 |       return sum / count
+  | 21 |       return sum / count
   |    |                    ^~~~~
   |
   note: right operand 'count' has type integer (range -9_223_372_036_854_775_808 .. 9_223_372_036_854_775_807),

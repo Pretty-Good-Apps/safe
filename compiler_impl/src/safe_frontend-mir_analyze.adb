@@ -3644,7 +3644,7 @@ package body Safe_Frontend.Mir_Analyze is
             return;
          end if;
 
-         --  At most four candidate divisors are sampled, each adding two
+         --  At most four candidate divisors are sampled, each adding up to two
          --  numerator endpoints, so Values'Last must remain at least 8.
          pragma Assert (Value_Count + 2 <= Values'Last);
          Add_Quotient (Left.Low, Divisor);

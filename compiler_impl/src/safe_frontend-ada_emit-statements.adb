@@ -4287,6 +4287,68 @@ package body Safe_Frontend.Ada_Emit.Statements is
                         return False;
                      end Call_Mutates_Name;
 
+                     function Expr_Mutating_Call_Count
+                       (Expr : CM.Expr_Access;
+                        Name : String) return Natural
+                     is
+                        Result : Natural := 0;
+
+                        procedure Add_From (Child : CM.Expr_Access) is
+                        begin
+                           Result := Result + Expr_Mutating_Call_Count (Child, Name);
+                        end Add_From;
+                     begin
+                        if Expr = null or else Name'Length = 0 then
+                           return 0;
+                        end if;
+
+                        case Expr.Kind is
+                           when CM.Expr_Call =>
+                              if Call_Mutates_Name (Expr, Name) then
+                                 Result := Result + 1;
+                              end if;
+                              Add_From (Expr.Callee);
+                              for Item of Expr.Args loop
+                                 Add_From (Item);
+                              end loop;
+
+                           when CM.Expr_Select =>
+                              Add_From (Expr.Prefix);
+
+                           when CM.Expr_Resolved_Index =>
+                              Add_From (Expr.Prefix);
+                              for Item of Expr.Args loop
+                                 Add_From (Item);
+                              end loop;
+
+                           when CM.Expr_Conversion | CM.Expr_Annotated | CM.Expr_Unary =>
+                              Add_From (Expr.Inner);
+                              Add_From (Expr.Target);
+
+                           when CM.Expr_Binary =>
+                              Add_From (Expr.Left);
+                              Add_From (Expr.Right);
+
+                           when CM.Expr_Allocator =>
+                              Add_From (Expr.Value);
+
+                           when CM.Expr_Aggregate =>
+                              for Field of Expr.Fields loop
+                                 Add_From (Field.Expr);
+                              end loop;
+
+                           when CM.Expr_Tuple =>
+                              for Item of Expr.Elements loop
+                                 Add_From (Item);
+                              end loop;
+
+                           when others =>
+                              null;
+                        end case;
+
+                        return Result;
+                     end Expr_Mutating_Call_Count;
+
                      function Statement_Write_Count
                        (Stmt : CM.Statement_Access;
                         Name : String) return Natural;
@@ -4318,56 +4380,133 @@ package body Safe_Frontend.Ada_Emit.Statements is
                         end if;
 
                         case Stmt.Kind is
+                           when CM.Stmt_Object_Decl =>
+                              Result :=
+                                Result
+                                + Expr_Mutating_Call_Count
+                                    (Stmt.Decl.Initializer,
+                                     Name);
+
+                           when CM.Stmt_Destructure_Decl =>
+                              Result :=
+                                Result
+                                + Expr_Mutating_Call_Count
+                                    (Stmt.Destructure.Initializer,
+                                     Name);
+
                            when CM.Stmt_Assign =>
                               if Target_Ident_Name (Stmt.Target) = Name then
                                  Result := Result + 1;
                               end if;
+                              Result :=
+                                Result
+                                + Expr_Mutating_Call_Count (Stmt.Target, Name)
+                                + Expr_Mutating_Call_Count (Stmt.Value, Name);
 
                            when CM.Stmt_Call =>
-                              if Call_Mutates_Name (Stmt.Call, Name) then
-                                 Result := Result + 1;
-                              end if;
+                              Result :=
+                                Result + Expr_Mutating_Call_Count (Stmt.Call, Name);
 
                            when CM.Stmt_Receive | CM.Stmt_Try_Receive =>
                               if Target_Ident_Name (Stmt.Target) = Name then
                                  Result := Result + 1;
                               end if;
+                              Result :=
+                                Result
+                                + Expr_Mutating_Call_Count (Stmt.Channel_Name, Name)
+                                + Expr_Mutating_Call_Count (Stmt.Value, Name)
+                                + Expr_Mutating_Call_Count (Stmt.Target, Name)
+                                + Expr_Mutating_Call_Count (Stmt.Success_Var, Name);
 
                            when CM.Stmt_If =>
-                              Result := Result + Statements_Write_Count (Stmt.Then_Stmts, Name);
+                              Result :=
+                                Result
+                                + Expr_Mutating_Call_Count (Stmt.Condition, Name)
+                                + Statements_Write_Count (Stmt.Then_Stmts, Name);
                               for Part of Stmt.Elsifs loop
-                                 Result := Result + Statements_Write_Count (Part.Statements, Name);
+                                 Result :=
+                                   Result
+                                   + Expr_Mutating_Call_Count (Part.Condition, Name)
+                                   + Statements_Write_Count (Part.Statements, Name);
                               end loop;
                               if Stmt.Has_Else then
                                  Result := Result + Statements_Write_Count (Stmt.Else_Stmts, Name);
                               end if;
 
                            when CM.Stmt_Case =>
+                              Result :=
+                                Result
+                                + Expr_Mutating_Call_Count (Stmt.Case_Expr, Name);
                               for Arm of Stmt.Case_Arms loop
-                                 Result := Result + Statements_Write_Count (Arm.Statements, Name);
+                                 Result :=
+                                   Result
+                                   + Expr_Mutating_Call_Count (Arm.Choice, Name)
+                                   + Statements_Write_Count (Arm.Statements, Name);
                               end loop;
 
                            when CM.Stmt_Match =>
+                              Result :=
+                                Result
+                                + Expr_Mutating_Call_Count (Stmt.Match_Expr, Name);
                               for Arm of Stmt.Match_Arms loop
                                  Result := Result + Statements_Write_Count (Arm.Statements, Name);
                               end loop;
 
                            when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
-                              Result := Result + Statements_Write_Count (Stmt.Body_Stmts, Name);
+                              Result :=
+                                Result
+                                + Expr_Mutating_Call_Count (Stmt.Condition, Name)
+                                + Expr_Mutating_Call_Count
+                                    (Stmt.Loop_Range.Name_Expr,
+                                     Name)
+                                + Expr_Mutating_Call_Count
+                                    (Stmt.Loop_Range.Low_Expr,
+                                     Name)
+                                + Expr_Mutating_Call_Count
+                                    (Stmt.Loop_Range.High_Expr,
+                                     Name)
+                                + Expr_Mutating_Call_Count (Stmt.Loop_Iterable, Name)
+                                + Statements_Write_Count (Stmt.Body_Stmts, Name);
+
+                           when CM.Stmt_Exit =>
+                              Result :=
+                                Result
+                                + Expr_Mutating_Call_Count (Stmt.Condition, Name);
+
+                           when CM.Stmt_Return =>
+                              Result :=
+                                Result
+                                + Expr_Mutating_Call_Count (Stmt.Value, Name);
+
+                           when CM.Stmt_Send =>
+                              Result :=
+                                Result
+                                + Expr_Mutating_Call_Count (Stmt.Channel_Name, Name)
+                                + Expr_Mutating_Call_Count (Stmt.Value, Name)
+                                + Expr_Mutating_Call_Count (Stmt.Target, Name)
+                                + Expr_Mutating_Call_Count (Stmt.Success_Var, Name);
 
                            when CM.Stmt_Select =>
                               for Arm of Stmt.Arms loop
                                  case Arm.Kind is
                                     when CM.Select_Arm_Channel =>
                                        Result :=
-                                         Result + Statements_Write_Count
-                                           (Arm.Channel_Data.Statements,
-                                            Name);
+                                         Result
+                                         + Expr_Mutating_Call_Count
+                                             (Arm.Channel_Data.Channel_Name,
+                                              Name)
+                                         + Statements_Write_Count
+                                             (Arm.Channel_Data.Statements,
+                                              Name);
                                     when CM.Select_Arm_Delay =>
                                        Result :=
-                                         Result + Statements_Write_Count
-                                           (Arm.Delay_Data.Statements,
-                                            Name);
+                                         Result
+                                         + Expr_Mutating_Call_Count
+                                             (Arm.Delay_Data.Duration_Expr,
+                                              Name)
+                                         + Statements_Write_Count
+                                             (Arm.Delay_Data.Statements,
+                                              Name);
                                     when others =>
                                        null;
                                  end case;
