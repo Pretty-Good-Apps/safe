@@ -4578,15 +4578,29 @@ package body Safe_Frontend.Ada_Emit.Statements is
                         end Literal_Source;
                      begin
                         Length := 0;
+                        if Name'Length = 0
+                          or else Statements.Is_Empty
+                        then
+                           return False;
+                        end if;
+
+                        if Index > Statements.First_Index then
+                           for Candidate_Index in Statements.First_Index .. Index - 1 loop
+                              if Statement_Write_Count
+                                (Statements (Candidate_Index),
+                                 Name) > 0
+                              then
+                                 return False;
+                              end if;
+                           end loop;
+                        end if;
+
                         if Try_Static_Length (State, Name, Static_Length) then
                            Length := Long_Long_Integer (Static_Length);
                            return Length > 0;
                         end if;
 
-                        if Name'Length = 0
-                          or else Statements.Is_Empty
-                          or else Index = Statements.First_Index
-                        then
+                        if Index = Statements.First_Index then
                            return False;
                         end if;
 
@@ -5006,6 +5020,14 @@ package body Safe_Frontend.Ada_Emit.Statements is
                               False);
                            if Inner_Unsafe then
                               return False;
+                           end if;
+
+                           if Inner_Max_Step = 0 then
+                              if Statements_Use_Name (Loop_Stmt.Body_Stmts, Name) then
+                                 return False;
+                              end if;
+                              Step_Value := 0;
+                              return True;
                            end if;
 
                            return

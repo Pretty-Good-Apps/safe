@@ -3461,6 +3461,14 @@ independently analyzable, and arbitrary-depth nesting, dynamic inner lengths,
 and type-capacity inference stay out of scope. `tests/build/pr1123g_nested_iteration_build.safe`
 is the level-2 proof checkpoint for the shipped shape.
 
+The implementation also adds a progress upper-bound conjunct to the shared
+growable accumulator invariant helper. That clause is used by the nested
+composition proof, but it intentionally applies to all existing growable
+accumulator invariants. Snapshot churn in adjacent fixtures such as
+`pr213_map_entry_build.safe`, `pr1123e_multi_accumulator_build.safe`, and
+`pr1123f_sum_count_relational_build.safe` is therefore expected and should be
+checked when refactoring this helper.
+
 ---
 
 # PR12: Tooling and Developer Ergonomics
