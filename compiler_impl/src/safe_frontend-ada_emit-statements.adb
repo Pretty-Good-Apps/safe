@@ -2685,6 +2685,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
                   if FT.To_String (Existing.Snapshot_Name)
                     = FT.To_String (Snapshot.Snapshot_Name)
                   then
+                     --  Snapshot already retained; the caller records this
+                     --  additional field replacement against the shared
+                     --  declaration.
                      return True;
                   end if;
                end loop;
@@ -3150,8 +3153,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
          end if;
 
          --  The early fallback path renders without using this copy-back-aware pass.
-         --  Callees are subprogram references, so collect snapshots from value
-         --  actuals only.
+         --  Callees are subprogram references, so iterate only arguments here;
+         --  arguments with no shared getter call contribute no snapshots.
 
          for Arg_Index in Call_Expr.Args.First_Index .. Call_Expr.Args.Last_Index loop
             Collect_Shared_Condition_Snapshots
@@ -8605,6 +8608,31 @@ package body Safe_Frontend.Ada_Emit.Statements is
               Statement_Index,
               Base_Image);
       end Render_Shared_Value_From_Image;
+
+      procedure Require_Shared_Value_Replacements
+        (Base_Image  : String;
+         Context     : String;
+         Source_Expr : CM.Expr_Access := Stmt.Value)
+      is
+         Probe : Shared_Condition_Render;
+      begin
+         Collect_Shared_Condition_Snapshots
+           (Unit, Document, Source_Expr, Statement_Index, Probe);
+
+         for Replacement of Probe.Replacements loop
+            if Replace_All
+                (Base_Image,
+                 FT.To_String (Replacement.Call_Image),
+                 FT.To_String (Replacement.Replacement_Image))
+              = Base_Image
+            then
+               Raise_Internal
+                 ("shared snapshot replacement missing from rendered "
+                  & Context
+                  & " during Ada emission");
+            end if;
+         end loop;
+      end Require_Shared_Value_Replacements;
    begin
       if Suppress_Target_Static_Binding then
          --  Loop bodies are emitted once and reused at runtime, so do not
@@ -8872,6 +8900,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
                   Line_Depth : constant Natural :=
                     (if Rendered.Snapshots.Is_Empty then Depth else Depth + 1);
                begin
+                  Require_Shared_Value_Replacements
+                    (Combined_Image, "stable float interpolation");
+
                   Rewritten_Condition :=
                     SU.To_Unbounded_String
                       (Apply_Shared_Replacements_To_Image
