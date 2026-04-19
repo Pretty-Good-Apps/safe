@@ -29,6 +29,9 @@ jobs:
       )
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    concurrency:
+      group: claude-deep-audit-${{ github.event.pull_request.number || inputs.pr_number || github.run_id }}
+      cancel-in-progress: true
     steps:
       - name: Select audit ref
         id: audit-ref
@@ -115,7 +118,6 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ github.token }}
-          show_full_output: true
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ steps.audit-ref.outputs.pr_number }}
