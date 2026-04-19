@@ -2678,8 +2678,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
            and then Image (Image'First .. Image'First + Prefix'Length - 1) = Prefix;
       end Uses_Snapshot;
 
-      procedure Keep_Replacement_Snapshot
+      function Keep_Replacement_Snapshot
         (Replacement : Shared_Condition_Replacement)
+         return Boolean
       is
       begin
          for Snapshot of Rendered.Snapshots loop
@@ -2688,14 +2689,15 @@ package body Safe_Frontend.Ada_Emit.Statements is
                   if FT.To_String (Existing.Snapshot_Name)
                     = FT.To_String (Snapshot.Snapshot_Name)
                   then
-                     return;
+                     return True;
                   end if;
                end loop;
 
                Used_Snapshots.Append (Snapshot);
-               return;
+               return True;
             end if;
          end loop;
+         return False;
       end Keep_Replacement_Snapshot;
    begin
       for Replacement of Rendered.Replacements loop
@@ -2708,9 +2710,13 @@ package body Safe_Frontend.Ada_Emit.Statements is
                  FT.To_String (Replacement.Replacement_Image));
          begin
             if After /= Before then
-               Image := SU.To_Unbounded_String (After);
-               Used_Replacements.Append (Replacement);
-               Keep_Replacement_Snapshot (Replacement);
+               if Keep_Replacement_Snapshot (Replacement) then
+                  Image := SU.To_Unbounded_String (After);
+                  Used_Replacements.Append (Replacement);
+               else
+                  Raise_Internal
+                    ("shared snapshot replacement missing snapshot declaration during Ada emission");
+               end if;
             end if;
          end;
       end loop;
@@ -3102,8 +3108,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
                  Expr_Type_Info (Unit, Document, Actual.Prefix)));
       end Needs_Growable_Indexed_Copy_Back;
 
-      Target_Subprogram : CM.Resolved_Subprogram;
-      Needs_Copy_Back   : Boolean := False;
+      Target_Subprogram          : CM.Resolved_Subprogram;
+      Target_Subprogram_Resolved : Boolean := False;
+      Needs_Copy_Back            : Boolean := False;
 
       function Render_Call_From_Image
         (Base_Image             : String;
@@ -3111,8 +3118,12 @@ package body Safe_Frontend.Ada_Emit.Statements is
       is
          Result : Shared_Condition_Render;
       begin
-         --  Target_Subprogram is populated before this helper is called; the
-         --  early fallback path renders without using this copy-back-aware pass.
+         if not Target_Subprogram_Resolved then
+            Raise_Internal
+              ("call snapshot rendering requires a resolved target subprogram");
+         end if;
+
+         --  The early fallback path renders without using this copy-back-aware pass.
          --  Callees are subprogram references, so collect snapshots from value
          --  actuals only.
 
@@ -3177,7 +3188,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
       end Append_Growable_Indexed_Writeback;
 
    begin
-      if not Find_Called_Subprogram (Call_Expr, Target_Subprogram)
+      Target_Subprogram_Resolved := Find_Called_Subprogram (Call_Expr, Target_Subprogram);
+
+      if not Target_Subprogram_Resolved
         or else Call_Expr = null
         or else Call_Expr.Kind /= CM.Expr_Call
         or else Call_Expr.Args.Is_Empty
