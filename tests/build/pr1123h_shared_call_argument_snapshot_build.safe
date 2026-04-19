@@ -33,6 +33,10 @@ package pr1123h_shared_call_argument_snapshot_build
       if item < 40
          item = item + 1;
 
+   function touch_if_hot (item : mut small_value; temperature : integer)
+      if temperature > 0
+         item = item;
+
    probe.temperature = 72;
    probe.active = true;
    probe.label = "ready";
@@ -61,4 +65,5 @@ package pr1123h_shared_call_argument_snapshot_build
 
    --  Copy-back temp initialization/writeback also need snapshots.
    bump (values (probe.slot));
+   touch_if_hot (values (probe.slot), probe.temperature);
    print (values (2))

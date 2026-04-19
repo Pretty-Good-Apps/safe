@@ -3125,49 +3125,6 @@ package body Safe_Frontend.Ada_Emit.Statements is
       Target_Subprogram_Resolved : Boolean := False;
       Needs_Copy_Back            : Boolean := False;
 
-      type Copy_Back_Index_Image is record
-         Formal_Index : Positive;
-         Image        : FT.UString := FT.To_UString ("");
-      end record;
-
-      package Copy_Back_Index_Image_Vectors is new Ada.Containers.Vectors
-        (Index_Type   => Positive,
-         Element_Type => Copy_Back_Index_Image);
-
-      Copy_Back_Index_Images : Copy_Back_Index_Image_Vectors.Vector;
-
-      procedure Remember_Copy_Back_Index_Image
-        (Formal_Index : Positive;
-         Image        : String)
-      is
-      begin
-         for Existing of Copy_Back_Index_Images loop
-            if Existing.Formal_Index = Formal_Index then
-               Raise_Internal
-                 ("duplicate copy-back index image during Ada emission");
-            end if;
-         end loop;
-
-         Copy_Back_Index_Images.Append
-           ((Formal_Index => Formal_Index,
-             Image        => FT.To_UString (Image)));
-      end Remember_Copy_Back_Index_Image;
-
-      function Copy_Back_Index_Image_For
-        (Formal_Index : Positive) return String
-      is
-      begin
-         for Existing of Copy_Back_Index_Images loop
-            if Existing.Formal_Index = Formal_Index then
-               return FT.To_String (Existing.Image);
-            end if;
-         end loop;
-
-         Raise_Internal
-           ("copy-back index image missing during Ada emission");
-         return "";
-      end Copy_Back_Index_Image_For;
-
       function Has_Formal_For_Arg (Arg_Index : Positive) return Boolean is
       begin
          return
@@ -3224,45 +3181,10 @@ package body Safe_Frontend.Ada_Emit.Statements is
                 Ada.Strings.Both);
       end Mutable_Actual_Temp_Name;
 
-      Copy_Back_Snapshot_Index_Stride : constant Positive := 10_000;
-
-      function Copy_Back_Snapshot_Index (Formal_Index : Positive) return Positive is
-      begin
-         if Formal_Index >= Copy_Back_Snapshot_Index_Stride then
-            Raise_Internal
-              ("copy-back snapshot index exceeded supported formal count");
-         end if;
-         if Statement_Index
-           > (Positive'Last - Formal_Index) / Copy_Back_Snapshot_Index_Stride
-         then
-            Raise_Internal
-              ("copy-back snapshot statement index exceeded safe range");
-         end if;
-
-         return Statement_Index * Copy_Back_Snapshot_Index_Stride + Formal_Index;
-      end Copy_Back_Snapshot_Index;
-
-      function Render_Copy_Back_Index
-        (Actual       : CM.Expr_Access;
-         Formal_Index : Positive) return Shared_Condition_Render
-      is
-         Index_Expr : constant CM.Expr_Access :=
-           Actual.Args (Actual.Args.First_Index);
-      begin
-         return
-           Render_Shared_Condition_From_Image
-             (Unit,
-              Document,
-              Index_Expr,
-              Copy_Back_Snapshot_Index (Formal_Index),
-              Render_Expr (Unit, Document, Index_Expr, State));
-      end Render_Copy_Back_Index;
-
-      procedure Append_Growable_Indexed_Writeback
+      function Growable_Indexed_Writeback_Image
         (Actual       : CM.Expr_Access;
          Index_Image  : String;
-         Temp_Name    : String;
-         Depth        : Natural)
+         Temp_Name    : String) return String
       is
          Prefix_Info : constant GM.Type_Descriptor :=
            Base_Type
@@ -3271,24 +3193,16 @@ package body Safe_Frontend.Ada_Emit.Statements is
               Expr_Type_Info (Unit, Document, Actual.Prefix));
       begin
          State.Needs_Safe_Array_RT := True;
-         declare
-            Statement_Image : constant String :=
-              Array_Runtime_Instance_Name (Prefix_Info)
-              & ".Replace_Element ("
-              & Render_Expr (Unit, Document, Actual.Prefix, State)
-              & ", Integer ("
-              & Index_Image
-              & "), "
-              & Temp_Name
-              & ")";
-         begin
-            --  Reuse the pre-call copy-back index snapshot. Creating a fresh
-            --  writeback snapshot here would read shared state a second time
-            --  after the callee has run and could write back to a different
-            --  element.
-            Append_Line (Buffer, Statement_Image & ";", Depth);
-         end;
-      end Append_Growable_Indexed_Writeback;
+         return
+           Array_Runtime_Instance_Name (Prefix_Info)
+           & ".Replace_Element ("
+           & Render_Expr (Unit, Document, Actual.Prefix, State)
+           & ", Integer ("
+           & Index_Image
+           & "), "
+           & Temp_Name
+           & ")";
+      end Growable_Indexed_Writeback_Image;
 
    begin
       Target_Subprogram_Resolved := Find_Called_Subprogram (Call_Expr, Target_Subprogram);
@@ -3386,61 +3300,89 @@ package body Safe_Frontend.Ada_Emit.Statements is
          return;
       end if;
 
-      Append_Line (Buffer, "declare", Depth);
-      for Formal_Index in Target_Subprogram.Params.First_Index .. Target_Subprogram.Params.Last_Index loop
-         exit when Formal_Index > Call_Expr.Args.Last_Index;
-         if Needs_Growable_Indexed_Copy_Back
-           (Target_Subprogram.Params (Formal_Index),
-            Call_Expr.Args (Formal_Index))
-         then
-            declare
-               Actual     : constant CM.Expr_Access :=
-                 Call_Expr.Args (Formal_Index);
-               Formal     : constant CM.Symbol :=
-                 Target_Subprogram.Params (Formal_Index);
-               Temp_Name  : constant String :=
-                 Mutable_Actual_Temp_Name (Statement_Index, Formal_Index);
-               Index_Rendered : constant Shared_Condition_Render :=
-                 Render_Copy_Back_Index (Actual, Formal_Index);
-               Raw_Init_Image : constant String :=
-                 (if FT.To_String (Formal.Mode) = "out"
-                  then
-                    Default_Value_Expr
-                      (Unit,
-                       Document,
-                       Formal.Type_Info)
-                  else
-                    Render_Expr_For_Target_Type
-                      (Unit,
-                       Document,
-                       Actual,
-                       Formal.Type_Info,
-                       State));
-               Init_Image : constant String :=
-                 Apply_Shared_Replacements_To_Image
-                   (Raw_Init_Image, Index_Rendered.Replacements);
-               Declaration_Image : constant String :=
-                 Temp_Name
-                 & " : "
-                 & Render_Type_Name (Formal.Type_Info)
-                 & " := "
-                 & Init_Image
-                 & ";";
-            begin
-               Remember_Copy_Back_Index_Image
-                 (Formal_Index, FT.To_String (Index_Rendered.Image));
-               Append_Shared_Condition_Declarations
-                 (Buffer, Index_Rendered, Depth + 1);
-               Append_Line (Buffer, Declaration_Image, Depth + 1);
-            end;
-         end if;
-      end loop;
-      Append_Line (Buffer, "begin", Depth);
       declare
+         package Text_Vectors is new Ada.Containers.Vectors
+           (Index_Type   => Positive,
+            Element_Type => FT.UString);
+
+         Statement_Rendered : Shared_Condition_Render;
+         Temp_Declarations  : Text_Vectors.Vector;
+         Writebacks         : Text_Vectors.Vector;
          Call_Image : SU.Unbounded_String :=
            SU.To_Unbounded_String
              (Render_Expr (Unit, Document, Call_Expr.Callee, State) & " (");
+         Combined_Image : SU.Unbounded_String;
+
+         procedure Include_Image (Image : String) is
+         begin
+            if SU.Length (Combined_Image) > 0 then
+               Combined_Image := Combined_Image & SU.To_Unbounded_String (" ");
+            end if;
+            Combined_Image := Combined_Image & SU.To_Unbounded_String (Image);
+         end Include_Image;
       begin
+         --  Copy-back calls need one statement-level shared snapshot set:
+         --  index temp initialization, non-copy-back call arguments, and
+         --  post-call writeback must all see the same shared-root snapshot.
+         for Formal_Index in
+           Target_Subprogram.Params.First_Index .. Target_Subprogram.Params.Last_Index
+         loop
+            exit when Formal_Index > Call_Expr.Args.Last_Index;
+            if Needs_Growable_Indexed_Copy_Back
+              (Target_Subprogram.Params (Formal_Index),
+               Call_Expr.Args (Formal_Index))
+            then
+               declare
+                  Actual     : constant CM.Expr_Access :=
+                    Call_Expr.Args (Formal_Index);
+                  Formal     : constant CM.Symbol :=
+                    Target_Subprogram.Params (Formal_Index);
+                  Temp_Name  : constant String :=
+                    Mutable_Actual_Temp_Name (Statement_Index, Formal_Index);
+                  Index_Expr : constant CM.Expr_Access :=
+                    Actual.Args (Actual.Args.First_Index);
+                  Index_Image : constant String :=
+                    Render_Expr (Unit, Document, Index_Expr, State);
+                  Init_Image : constant String :=
+                    (if FT.To_String (Formal.Mode) = "out"
+                     then
+                       Default_Value_Expr
+                         (Unit,
+                          Document,
+                          Formal.Type_Info)
+                     else
+                       Render_Expr_For_Target_Type
+                         (Unit,
+                          Document,
+                          Actual,
+                          Formal.Type_Info,
+                          State));
+                  Declaration_Image : constant String :=
+                    Temp_Name
+                    & " : "
+                    & Render_Type_Name (Formal.Type_Info)
+                    & " := "
+                    & Init_Image
+                    & ";";
+                  Writeback_Image : constant String :=
+                    Growable_Indexed_Writeback_Image
+                      (Actual, Index_Image, Temp_Name);
+               begin
+                  Collect_Shared_Condition_Snapshots
+                    (Unit,
+                     Document,
+                     Index_Expr,
+                     Statement_Index,
+                     Statement_Rendered);
+                  Temp_Declarations.Append
+                    (FT.To_UString (Declaration_Image));
+                  Writebacks.Append (FT.To_UString (Writeback_Image));
+                  Include_Image (Declaration_Image);
+                  Include_Image (Writeback_Image);
+               end;
+            end if;
+         end loop;
+
          for Arg_Index in Call_Expr.Args.First_Index .. Call_Expr.Args.Last_Index loop
             declare
                Arg_Image   : SU.Unbounded_String;
@@ -3487,34 +3429,58 @@ package body Safe_Frontend.Ada_Emit.Statements is
                           State));
                end if;
 
+               if not
+                 (Has_Formal_For_Arg (Arg_Index)
+                  and then Needs_Growable_Indexed_Copy_Back
+                    (Target_Subprogram.Params (Arg_Index),
+                     Call_Expr.Args (Arg_Index)))
+               then
+                  Collect_Shared_Condition_Snapshots
+                    (Unit,
+                     Document,
+                     Call_Expr.Args (Arg_Index),
+                     Statement_Index,
+                     Statement_Rendered);
+               end if;
+
                Call_Image := Call_Image & Arg_Image;
             end;
          end loop;
          Call_Image := Call_Image & SU.To_Unbounded_String (")");
-         declare
-            Rendered : constant Shared_Condition_Render :=
-              Render_Call_From_Image
-                (SU.To_String (Call_Image),
-                 Skip_Copy_Back_Actuals => True);
-         begin
-            Append_Shared_Rendered_Statement (Buffer, Rendered, Depth + 1);
-         end;
-      end;
+         Include_Image (SU.To_String (Call_Image));
+         Apply_Shared_Condition_Replacements
+           (Statement_Rendered, SU.To_String (Combined_Image));
 
-      for Formal_Index in Target_Subprogram.Params.First_Index .. Target_Subprogram.Params.Last_Index loop
-         exit when Formal_Index > Call_Expr.Args.Last_Index;
-         if Needs_Growable_Indexed_Copy_Back
-           (Target_Subprogram.Params (Formal_Index),
-            Call_Expr.Args (Formal_Index))
-         then
-            Append_Growable_Indexed_Writeback
-              (Call_Expr.Args (Formal_Index),
-               Copy_Back_Index_Image_For (Formal_Index),
-               Mutable_Actual_Temp_Name (Statement_Index, Formal_Index),
+         Append_Line (Buffer, "declare", Depth);
+         Append_Shared_Condition_Declarations
+           (Buffer, Statement_Rendered, Depth + 1);
+         for Declaration_Image of Temp_Declarations loop
+            Append_Line
+              (Buffer,
+               Apply_Shared_Replacements_To_Image
+                 (FT.To_String (Declaration_Image),
+                  Statement_Rendered.Replacements),
                Depth + 1);
-         end if;
-      end loop;
-      Append_Line (Buffer, "end;", Depth);
+         end loop;
+         Append_Line (Buffer, "begin", Depth);
+         Append_Line
+           (Buffer,
+            Apply_Shared_Replacements_To_Image
+              (SU.To_String (Call_Image),
+               Statement_Rendered.Replacements)
+            & ";",
+            Depth + 1);
+         for Writeback_Image of Writebacks loop
+            Append_Line
+              (Buffer,
+               Apply_Shared_Replacements_To_Image
+                 (FT.To_String (Writeback_Image),
+                  Statement_Rendered.Replacements)
+               & ";",
+               Depth + 1);
+         end loop;
+         Append_Line (Buffer, "end;", Depth);
+      end;
    end Emit_Call_Statement;
 
    procedure Render_Statements
