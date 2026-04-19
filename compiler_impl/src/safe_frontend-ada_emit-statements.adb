@@ -3194,6 +3194,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
               Expr_Type_Info (Unit, Document, Actual.Prefix));
       begin
          State.Needs_Safe_Array_RT := True;
+         --  Keep Index_Image embedded literally: copy-back snapshot coverage
+         --  checks validate that any shared getter calls in the isolated index
+         --  render also appear in this enclosing writeback image.
          return
            Array_Runtime_Instance_Name (Prefix_Info)
            & ".Replace_Element ("
@@ -3231,10 +3234,14 @@ package body Safe_Frontend.Ada_Emit.Statements is
       end Require_Shared_Index_Replacements;
 
    begin
+      if Call_Expr = null then
+         Raise_Internal
+           ("call statement missing call expression during Ada emission");
+      end if;
+
       Target_Subprogram_Resolved := Find_Called_Subprogram (Call_Expr, Target_Subprogram);
 
       if not Target_Subprogram_Resolved
-        or else Call_Expr = null
         or else Call_Expr.Kind /= CM.Expr_Call
         or else Call_Expr.Args.Is_Empty
       then
@@ -3413,6 +3420,10 @@ package body Safe_Frontend.Ada_Emit.Statements is
                         Statement_Index,
                         Statement_Rendered);
 
+                     --  Keep the full indexed actual render tied to the same
+                     --  Index_Image substring: the replacement guard below
+                     --  relies on seeing each isolated index getter call in
+                     --  the enclosing initializer text.
                      if FT.To_String (Formal.Mode) /= "out" then
                         Require_Shared_Index_Replacements
                           (Index_Expr,
