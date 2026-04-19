@@ -3218,7 +3218,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
            & "_"
            & Ada.Strings.Fixed.Trim
                (Natural'Image (Natural (Arg_Index)),
-               Ada.Strings.Both);
+                Ada.Strings.Both);
       end Mutable_Actual_Temp_Name;
 
       function Mutable_Actual_Index_Temp_Name
@@ -3230,6 +3230,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
 
       function Growable_Indexed_Element_Image
         (Actual      : CM.Expr_Access;
+         Prefix_Image : String;
          Index_Image : String) return String
       is
          Prefix_Info : constant GM.Type_Descriptor :=
@@ -3242,7 +3243,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
          return
            Array_Runtime_Instance_Name (Prefix_Info)
            & ".Element ("
-           & Render_Expr (Unit, Document, Actual.Prefix, State)
+           & Prefix_Image
            & ", "
            & Index_Image
            & ")";
@@ -3250,6 +3251,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
 
       function Growable_Indexed_Writeback_Image
         (Actual       : CM.Expr_Access;
+         Prefix_Image : String;
          Index_Image  : String;
          Temp_Name    : String) return String
       is
@@ -3266,7 +3268,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
          return
            Array_Runtime_Instance_Name (Prefix_Info)
            & ".Replace_Element ("
-           & Render_Expr (Unit, Document, Actual.Prefix, State)
+           & Prefix_Image
            & ", Integer ("
            & Index_Image
            & "), "
@@ -3451,6 +3453,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
                   end if;
 
                   declare
+                     Prefix_Image : constant String :=
+                       Render_Expr (Unit, Document, Actual.Prefix, State);
                      Index_Image : constant String :=
                        Render_Expr (Unit, Document, Index_Expr, State);
                      Index_Declaration_Image : constant String :=
@@ -3460,7 +3464,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
                        & ");";
                      Actual_Value_Image : constant String :=
                        Growable_Indexed_Element_Image
-                         (Actual, Index_Temp_Name);
+                         (Actual, Prefix_Image, Index_Temp_Name);
                      Init_Image : constant String :=
                        (if FT.To_String (Formal.Mode) = "out"
                         then
@@ -3479,7 +3483,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
                        & ";";
                      Writeback_Image : constant String :=
                        Growable_Indexed_Writeback_Image
-                         (Actual, Index_Temp_Name, Temp_Name);
+                         (Actual, Prefix_Image, Index_Temp_Name, Temp_Name);
                   begin
                      --  Snapshot only the index expression. The prefix is the
                      --  mutable Replace_Element target; rewriting it to a
@@ -3876,13 +3880,6 @@ package body Safe_Frontend.Ada_Emit.Statements is
                             Item.Call.Args (Item.Call.Args.First_Index),
                             State)
                        & ")";
-                     Rendered : constant Shared_Condition_Render :=
-                       Render_Shared_Condition_From_Image
-                         (Unit,
-                          Document,
-                          Item.Call.Args (Item.Call.Args.First_Index),
-                          Index,
-                          Print_Image);
                   begin
                      State.Needs_Safe_IO := True;
                      Require_Shared_Replacements
@@ -3892,7 +3889,15 @@ package body Safe_Frontend.Ada_Emit.Statements is
                         Index,
                         Print_Image,
                         "print argument");
-                     Append_Shared_Rendered_Statement (Buffer, Rendered, Depth);
+                     Append_Shared_Rendered_Statement
+                       (Buffer,
+                        Render_Shared_Condition_From_Image
+                          (Unit,
+                           Document,
+                           Item.Call.Args (Item.Call.Args.First_Index),
+                           Index,
+                           Print_Image),
+                        Depth);
                   end;
                else
                   Emit_Call_Statement
