@@ -92,7 +92,7 @@ If the label does not exist yet, a repo admin should create it once:
 
 ```bash
 gh label create deep-audit --color B60205 \
-  --description "Trigger Claude heavy-audit workflow on this PR"
+  --description "Trigger Claude Deep Audit workflow on this PR"
 ```
 
 Invoke it manually against an open PR:
@@ -104,7 +104,8 @@ gh workflow run claude-audit.yml -f pr_number=<N>
 Invoke it manually against explicit paths on main:
 
 ```bash
-gh workflow run claude-audit.yml -f paths=compiler_impl/src/safe_frontend-mir_analyze.adb
+gh workflow run claude-audit.yml --ref main \
+  -f paths=compiler_impl/src/safe_frontend-mir_analyze.adb
 ```
 
 Deep Audit looks for fail-closed violations, walker exhaustiveness gaps,
