@@ -2717,6 +2717,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
                   Image := SU.To_Unbounded_String (After);
                   Used_Replacements.Append (Replacement);
                else
+                  --  If future replacement construction breaks the paired
+                  --  snapshot invariant, fail here instead of emitting a
+                  --  reference to an undeclared snapshot local.
                   Raise_Internal
                     ("shared snapshot replacement missing snapshot declaration during Ada emission");
                end if;
@@ -3128,6 +3131,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
       is
          Result : Shared_Condition_Render;
       begin
+         --  Keep this as a fail-fast runtime guard, not just an assertion:
+         --  future call sites must not render from an unresolved target.
          if not Target_Subprogram_Resolved then
             Raise_Internal
               ("call snapshot rendering requires a resolved target subprogram");
@@ -3167,6 +3172,18 @@ package body Safe_Frontend.Ada_Emit.Statements is
                (Natural'Image (Natural (Arg_Index)),
                 Ada.Strings.Both);
       end Mutable_Actual_Temp_Name;
+
+      Copy_Back_Snapshot_Index_Stride : constant Positive := 10_000;
+
+      function Copy_Back_Snapshot_Index (Formal_Index : Positive) return Positive is
+      begin
+         if Formal_Index >= Copy_Back_Snapshot_Index_Stride then
+            Raise_Internal
+              ("copy-back snapshot index exceeded supported formal count");
+         end if;
+
+         return Statement_Index * Copy_Back_Snapshot_Index_Stride + Formal_Index;
+      end Copy_Back_Snapshot_Index;
 
       procedure Append_Growable_Indexed_Writeback
         (Actual    : CM.Expr_Access;
@@ -3336,7 +3353,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
                    (Unit,
                     Document,
                     Call_Expr.Args (Formal_Index),
-                    Statement_Index + Formal_Index,
+                    Copy_Back_Snapshot_Index (Formal_Index),
                     Declaration_Image);
             begin
                Append_Shared_Condition_Declarations (Buffer, Rendered, Depth + 1);
