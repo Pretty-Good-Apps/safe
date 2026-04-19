@@ -1812,6 +1812,8 @@ package body Safe_Frontend.Ada_Emit.Proofs is
       function Is_Integer_Non_Boolean_Type (Info : GM.Type_Descriptor) return Boolean;
       function Is_Read_Only_Integer_Param (Param : CM.Symbol) return Boolean;
       function Is_Param_Name (Name : String) return Boolean;
+      function Is_Safe_Condition (Expr : CM.Expr_Access) return Boolean;
+      function Is_Safe_Return (Expr : CM.Expr_Access) return Boolean;
       function Safe_Condition_Image (Expr : CM.Expr_Access) return String;
       function Safe_Return_Image (Expr : CM.Expr_Access) return String;
       function Return_Statement_Image (Stmt : CM.Statement_Access) return String;
@@ -1848,88 +1850,84 @@ package body Safe_Frontend.Ada_Emit.Proofs is
          return False;
       end Is_Param_Name;
 
-      function Safe_Condition_Image (Expr : CM.Expr_Access) return String is
+      function Is_Safe_Condition (Expr : CM.Expr_Access) return Boolean is
          Operator : constant String :=
            (if Expr = null then "" else FT.To_String (Expr.Operator));
-         Left_Image  : SU.Unbounded_String;
-         Right_Image : SU.Unbounded_String;
       begin
          if Expr = null then
-            return "";
+            return False;
          end if;
 
          case Expr.Kind is
-            when CM.Expr_Int | CM.Expr_Bool =>
-               return Render_Expr (Unit, Document, Expr, State);
+            when CM.Expr_Int =>
+               return True;
             when CM.Expr_Ident =>
                if Is_Param_Name (FT.To_String (Expr.Name)) then
-                  return Render_Expr (Unit, Document, Expr, State);
+                  return True;
                end if;
             when CM.Expr_Unary =>
                if Operator in "not" | "+" | "-" then
-                  declare
-                     Inner_Image : constant String := Safe_Condition_Image (Expr.Inner);
-                  begin
-                     if Inner_Image'Length > 0 then
-                        return Render_Expr (Unit, Document, Expr, State);
-                     end if;
-                  end;
+                  return Is_Safe_Condition (Expr.Inner);
                end if;
             when CM.Expr_Binary =>
                if Operator in "<" | "<=" | ">" | ">=" | "=" | "==" | "/=" | "!="
                  | "and then" | "or else" | "+" | "-"
                then
-                  Left_Image := SU.To_Unbounded_String (Safe_Condition_Image (Expr.Left));
-                  Right_Image := SU.To_Unbounded_String (Safe_Condition_Image (Expr.Right));
-                  if SU.Length (Left_Image) > 0 and then SU.Length (Right_Image) > 0 then
-                     return Render_Expr (Unit, Document, Expr, State);
-                  end if;
+                  return Is_Safe_Condition (Expr.Left)
+                    and then Is_Safe_Condition (Expr.Right);
                end if;
             when others =>
                null;
          end case;
+
+         return False;
+      end Is_Safe_Condition;
+
+      function Is_Safe_Return (Expr : CM.Expr_Access) return Boolean is
+         Operator : constant String :=
+           (if Expr = null then "" else FT.To_String (Expr.Operator));
+      begin
+         if Expr = null then
+            return False;
+         end if;
+
+         case Expr.Kind is
+            when CM.Expr_Int =>
+               return True;
+            when CM.Expr_Ident =>
+               if Is_Param_Name (FT.To_String (Expr.Name)) then
+                  return True;
+               end if;
+            when CM.Expr_Unary =>
+               if Operator in "+" | "-" then
+                  return Is_Safe_Return (Expr.Inner);
+               end if;
+            when CM.Expr_Binary =>
+               if Operator in "+" | "-" then
+                  return Is_Safe_Return (Expr.Left)
+                    and then Is_Safe_Return (Expr.Right);
+               end if;
+            when others =>
+               null;
+         end case;
+
+         return False;
+      end Is_Safe_Return;
+
+      function Safe_Condition_Image (Expr : CM.Expr_Access) return String is
+      begin
+         if Is_Safe_Condition (Expr) then
+            return Render_Expr (Unit, Document, Expr, State);
+         end if;
 
          return "";
       end Safe_Condition_Image;
 
       function Safe_Return_Image (Expr : CM.Expr_Access) return String is
-         Operator : constant String :=
-           (if Expr = null then "" else FT.To_String (Expr.Operator));
-         Left_Image  : SU.Unbounded_String;
-         Right_Image : SU.Unbounded_String;
       begin
-         if Expr = null then
-            return "";
+         if Is_Safe_Return (Expr) then
+            return Render_Expr (Unit, Document, Expr, State);
          end if;
-
-         case Expr.Kind is
-            when CM.Expr_Int =>
-               return Render_Expr (Unit, Document, Expr, State);
-            when CM.Expr_Ident =>
-               if Is_Param_Name (FT.To_String (Expr.Name)) then
-                  return Render_Expr (Unit, Document, Expr, State);
-               end if;
-            when CM.Expr_Unary =>
-               if Operator in "+" | "-" then
-                  declare
-                     Inner_Image : constant String := Safe_Return_Image (Expr.Inner);
-                  begin
-                     if Inner_Image'Length > 0 then
-                        return Render_Expr (Unit, Document, Expr, State);
-                     end if;
-                  end;
-               end if;
-            when CM.Expr_Binary =>
-               if Operator in "+" | "-" then
-                  Left_Image := SU.To_Unbounded_String (Safe_Return_Image (Expr.Left));
-                  Right_Image := SU.To_Unbounded_String (Safe_Return_Image (Expr.Right));
-                  if SU.Length (Left_Image) > 0 and then SU.Length (Right_Image) > 0 then
-                     return Render_Expr (Unit, Document, Expr, State);
-                  end if;
-               end if;
-            when others =>
-               null;
-         end case;
 
          return "";
       end Safe_Return_Image;
