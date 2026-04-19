@@ -1799,6 +1799,7 @@ package body Safe_Frontend.Ada_Emit.Proofs is
         & ") * "
         & Trim_Wide_Image (Step_Limit);
    end Structural_Accumulator_Count_Total_Bound;
+
    function Render_Inferred_Result_Postcondition
      (Unit       : CM.Resolved_Unit;
       Document   : GM.Mir_Document;
@@ -1970,6 +1971,7 @@ package body Safe_Frontend.Ada_Emit.Proofs is
    begin
       if Function_Name'Length = 0
         or else not Subprogram.Has_Return_Type
+        or else Subprogram.Params.Is_Empty
         or else not Subprogram.Declarations.Is_Empty
         or else not Is_Integer_Non_Boolean_Type (Subprogram.Return_Type)
         or else
@@ -2624,6 +2626,8 @@ package body Safe_Frontend.Ada_Emit.Proofs is
         Render_Access_Param_Postcondition (Unit, Document, Subprogram, State);
       Inferred_Post_Image : constant String :=
         Render_Inferred_Result_Postcondition (Unit, Document, Subprogram, State);
+      --  The combined path is currently forward-looking: access postconditions
+      --  reject Stmt_If bodies today, while inferred result postconditions need one.
       Post_Image : constant String :=
         (if Inferred_Post_Image'Length > 0 and then Access_Post_Image'Length > 0
          then Inferred_Post_Image & " and then " & Access_Post_Image
