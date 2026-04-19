@@ -49,7 +49,7 @@ package pr1123h_shared_call_argument_snapshot_build
    nested_result = choose (is_hot (probe.temperature), probe.active);
    --  Stable float interpolation emits an if block from rendered subimages;
    --  shared reads in those subimages must be snapshot-localized too.
-   blended = long_float (probe.temperature) + long_float (probe.slot) * (long_float (probe.temperature) - long_float (probe.slot));
+   blended = long_float (probe.temperature) + long_float (probe.slot) * (long_float (probe.slot) - long_float (probe.temperature));
    if blended > 0.0
       condition_result = condition_result + 1;
 
