@@ -333,8 +333,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
       Target     : CM.Expr_Access;
       Value      : CM.Expr_Access;
       Depth      : Natural;
-      Rendered_Value_Image : String := "";
-      Has_Rendered_Value_Image : Boolean := False)
+      Rendered_Value_Image : String := "")
    ;
    procedure Append_Float_Narrowing_Checks
      (Buffer       : in out SU.Unbounded_String;
@@ -2702,6 +2701,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
       for Replacement of Rendered.Replacements loop
          declare
             Before : constant String := SU.To_String (Image);
+            --  Replacement images are snapshot-selected components. They must
+            --  not contain another getter call image, or sequential replacement
+            --  could double-substitute already rewritten Ada text.
             After  : constant String :=
               Replace_All
                 (Before,
@@ -8850,8 +8852,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
                Stmt.Target,
                Stmt.Value,
                Line_Depth,
-               Rendered_Value_Image => FT.To_String (Rendered.Image),
-               Has_Rendered_Value_Image => True);
+               Rendered_Value_Image => FT.To_String (Rendered.Image));
 
             if not Rendered.Snapshots.Is_Empty then
                Append_Line (Buffer, "end;", Depth);
@@ -9949,8 +9950,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
       Target     : CM.Expr_Access;
       Value      : CM.Expr_Access;
       Depth      : Natural;
-      Rendered_Value_Image : String := "";
-      Has_Rendered_Value_Image : Boolean := False)
+      Rendered_Value_Image : String := "")
    is
       Target_Name : constant String := FT.To_String (Target.Type_Name);
       Target_Info : constant GM.Type_Descriptor :=
@@ -9959,7 +9959,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
         Render_Subtype_Indication (Unit, Document, Target_Info);
       Target_Image : constant String := Render_Expr (Unit, Document, Target, State);
       Wide_Image   : constant String :=
-        (if Has_Rendered_Value_Image
+        (if Rendered_Value_Image'Length > 0
          then Rendered_Value_Image
          else Render_Wide_Expr (Unit, Document, Value, State));
    begin
