@@ -3205,25 +3205,24 @@ package body Safe_Frontend.Ada_Emit.Statements is
          Image      : String;
          Context    : String)
       is
-         Probe    : Shared_Condition_Render;
-         Expected : Ada.Containers.Count_Type;
+         Probe : Shared_Condition_Render;
       begin
          Collect_Shared_Condition_Snapshots
            (Unit, Document, Index_Expr, Statement_Index, Probe);
-         Expected := Probe.Replacements.Length;
 
-         if Expected = 0 then
-            return;
-         end if;
-
-         Apply_Shared_Condition_Replacements (Probe, Image);
-
-         if Probe.Replacements.Length /= Expected then
-            Raise_Internal
-              ("shared snapshot replacement missing from rendered "
-               & Context
-               & " during Ada emission");
-         end if;
+         for Replacement of Probe.Replacements loop
+            if Replace_All
+                (Image,
+                 FT.To_String (Replacement.Call_Image),
+                 FT.To_String (Replacement.Replacement_Image))
+              = Image
+            then
+               Raise_Internal
+                 ("shared snapshot replacement missing from rendered "
+                  & Context
+                  & " during Ada emission");
+            end if;
+         end loop;
       end Require_Shared_Index_Replacements;
 
    begin
