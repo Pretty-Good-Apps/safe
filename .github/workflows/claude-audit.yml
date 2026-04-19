@@ -17,7 +17,6 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  issues: write
 
 jobs:
   audit:
@@ -57,8 +56,11 @@ jobs:
               skip_reason="Deep Audit skipped: pr_number must be numeric."
               printf 'ref=%s\n' "$DEFAULT_BRANCH" >> "$GITHUB_OUTPUT"
             else
-              head_repo=$(gh api "repos/${REPOSITORY}/pulls/${INPUT_PR_NUMBER}" --jq '.head.repo.full_name')
-              if [ "$head_repo" != "$REPOSITORY" ]; then
+              if ! head_repo=$(gh api "repos/${REPOSITORY}/pulls/${INPUT_PR_NUMBER}" --jq '.head.repo.full_name' 2>/dev/null); then
+                run_claude=false
+                skip_reason="Deep Audit skipped: PR #${INPUT_PR_NUMBER} not found in ${REPOSITORY}."
+                printf 'ref=%s\n' "$DEFAULT_BRANCH" >> "$GITHUB_OUTPUT"
+              elif [ "$head_repo" != "$REPOSITORY" ]; then
                 run_claude=false
                 skip_reason="Deep Audit skipped: PR #${INPUT_PR_NUMBER} is from ${head_repo}; manual PR audits require same-repo branches."
                 printf 'ref=%s\n' "$DEFAULT_BRANCH" >> "$GITHUB_OUTPUT"
