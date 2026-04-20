@@ -2,12 +2,10 @@ with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Containers.Indefinite_Hashed_Sets;
 with Ada.Containers.Indefinite_Vectors;
 with Ada.Directories;
-with Ada.Exceptions;
 with Ada.Strings.Fixed;
 with Ada.Strings.Hash;
 with Ada.Strings.Unbounded;
 with Safe_Frontend.Builtin_Types;
-with Safe_Frontend.Check_Model;
 with Safe_Frontend.Name_Utils;
 with Safe_Frontend.Mir_Bronze;
 with Safe_Frontend.Mir_Json;
@@ -242,9 +240,6 @@ package body Safe_Frontend.Mir_Analyze is
       Sequence    : in out Natural);
    procedure Raise_Diag (Diagnostic : MD.Diagnostic);
 
-   function Contains
-     (Items : String_Sets.Set;
-      Value : String) return Boolean;
    function Override_Reason (Basename : String) return String;
    function UString_Value (Value : FT.UString) return String;
    function Has_Text (Value : FT.UString) return Boolean;
@@ -599,8 +594,6 @@ package body Safe_Frontend.Mir_Analyze is
      (Current    : in out State;
       Local_Names : FT.UString_Vectors.Vector;
       Owner_Vars : String_Sets.Set);
-   function Join_States
-     (States : State_Maps.Map) return State;
    function Join_Two_States
      (Left, Right : State) return State;
    function States_Equal
@@ -797,13 +790,6 @@ package body Safe_Frontend.Mir_Analyze is
       Raised_Diagnostic := Diagnostic;
       raise Diagnostic_Failure;
    end Raise_Diag;
-
-   function Contains
-     (Items : String_Sets.Set;
-      Value : String) return Boolean is
-   begin
-      return Items.Contains (Value);
-   end Contains;
 
    function Override_Reason (Basename : String) return String is
    begin
@@ -3744,7 +3730,6 @@ package body Safe_Frontend.Mir_Analyze is
       Name       : FT.UString := FT.To_UString ("");
       Values     : array (1 .. 4) of Wide_Integer;
       Max_Mod    : Wide_Integer;
-      Fact       : Access_Fact;
    begin
       if Expr = null then
          declare
@@ -4906,25 +4891,6 @@ package body Safe_Frontend.Mir_Analyze is
       Result.Returned := Left.Returned and then Right.Returned;
       return Result;
    end Join_Two_States;
-
-   function Join_States
-     (States : State_Maps.Map) return State
-   is
-      Cursor : State_Maps.Cursor := States.First;
-      Result : State;
-      First  : Boolean := True;
-   begin
-      while State_Maps.Has_Element (Cursor) loop
-         if First then
-            Result := State_Maps.Element (Cursor);
-            First := False;
-         else
-            Result := Join_Two_States (Result, State_Maps.Element (Cursor));
-         end if;
-         State_Maps.Next (Cursor);
-      end loop;
-      return Result;
-   end Join_States;
 
    function States_Equal
      (Left, Right : State) return Boolean is
