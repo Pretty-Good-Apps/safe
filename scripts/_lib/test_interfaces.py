@@ -6,6 +6,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
+from _lib.test_cli_workflows import CEILING_PRIORITY_FIXTURES
 from _lib.test_harness import (
     DIAGNOSTIC_EXIT_CODE,
     REPO_ROOT,
@@ -337,6 +338,35 @@ STATIC_INTERFACE_CASES = [
     ),
 ]
 
+INTERFACE_TARGET_BITS_FIXTURES = (
+    REPO_ROOT / "tests" / "interfaces" / "provider_types.safe",
+    REPO_ROOT / "tests" / "interfaces" / "client_types.safe",
+    REPO_ROOT / "tests" / "interfaces" / "provider_transitive_channel.safei.json",
+    REPO_ROOT / "tests" / "interfaces" / "client_transitive_channel_receive_only.safe",
+)
+
+
+def has_ceiling_priority_fixture(*paths: Path) -> bool:
+    return any(path in CEILING_PRIORITY_FIXTURES for path in paths)
+
+
+def ceiling_priority_interface_case_count() -> int:
+    return sum(
+        1
+        for _label, provider, client, _expected_returncode in INTERFACE_CASES
+        if has_ceiling_priority_fixture(provider, client)
+    ) + sum(
+        1
+        for _label, provider, client, _expected_message in INTERFACE_REJECT_CASES
+        if has_ceiling_priority_fixture(provider, client)
+    ) + sum(
+        1
+        for _label, safei, client, _expected_returncode in STATIC_INTERFACE_CASES
+        if has_ceiling_priority_fixture(safei, client)
+    ) + (
+        1 if has_ceiling_priority_fixture(*INTERFACE_TARGET_BITS_FIXTURES) else 0
+    )
+
 def run_interface_case(
     safec: Path,
     *,
@@ -557,11 +587,20 @@ def run_interface_target_bits_case(safec: Path) -> tuple[bool, str]:
 
 
 
-def run_interface_checks(safec: Path, *, temp_root: Path) -> RunCounts:
+def run_interface_checks(
+    safec: Path,
+    *,
+    temp_root: Path,
+    skip_ceiling_tests: bool = False,
+) -> RunCounts:
     passed = 0
+    skipped = 0
     failures: list[tuple[str, str]] = []
 
     for label, provider, client, expected_returncode in INTERFACE_CASES:
+        if skip_ceiling_tests and has_ceiling_priority_fixture(provider, client):
+            skipped += 1
+            continue
         passed += record_result(
             failures,
             f"{repo_rel(provider)} -> {repo_rel(client)}",
@@ -576,6 +615,9 @@ def run_interface_checks(safec: Path, *, temp_root: Path) -> RunCounts:
         )
 
     for label, provider, client, expected_message in INTERFACE_REJECT_CASES:
+        if skip_ceiling_tests and has_ceiling_priority_fixture(provider, client):
+            skipped += 1
+            continue
         passed += record_result(
             failures,
             f"{repo_rel(provider)} -> {repo_rel(client)}",
@@ -590,6 +632,9 @@ def run_interface_checks(safec: Path, *, temp_root: Path) -> RunCounts:
         )
 
     for label, safei, client, expected_returncode in STATIC_INTERFACE_CASES:
+        if skip_ceiling_tests and has_ceiling_priority_fixture(safei, client):
+            skipped += 1
+            continue
         passed += record_result(
             failures,
             f"{repo_rel(safei)} -> {repo_rel(client)}",
@@ -603,10 +648,16 @@ def run_interface_checks(safec: Path, *, temp_root: Path) -> RunCounts:
             ),
         )
 
-    return passed, 0, failures
+    return passed, skipped, failures
 
 
-def run_interface_target_bits_checks(safec: Path) -> RunCounts:
+def run_interface_target_bits_checks(
+    safec: Path,
+    *,
+    skip_ceiling_tests: bool = False,
+) -> RunCounts:
     failures: list[tuple[str, str]] = []
+    if skip_ceiling_tests and has_ceiling_priority_fixture(*INTERFACE_TARGET_BITS_FIXTURES):
+        return 0, 1, failures
     passed = record_result(failures, "interface target_bits", run_interface_target_bits_case(safec))
     return passed, 0, failures
