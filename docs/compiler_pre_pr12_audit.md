@@ -116,11 +116,11 @@ Commands run at `Audit SHA` (each command emits the total reported in the summar
 ```bash
 git rev-parse HEAD
 rg --version
-rg -c 'when others =>' compiler_impl/src compiler_impl/stdlib/ada | awk -F: '{sum += $NF} END {print sum + 0}'
-rg -c 'SPARK_Mode \(Off\)' compiler_impl/src compiler_impl/stdlib/ada | awk -F: '{sum += $NF} END {print sum + 0}'
-rg -c 'Raise_Unsupported' compiler_impl/src | awk -F: '{sum += $NF} END {print sum + 0}'
-rg -c 'pragma Assume|pragma Annotate \(GNATprove' compiler_impl/src compiler_impl/stdlib/ada | awk -F: '{sum += $NF} END {print sum + 0}'
-find samples \( -name '*canary*.safe' -o -name 'surface_tour.safe' \) -print | wc -l
+rg -c -g '*.adb' -g '*.ads' 'when others =>' compiler_impl/src compiler_impl/stdlib/ada companion | awk -F: '{sum += $NF} END {print sum + 0}'
+rg -c -g '*.adb' -g '*.ads' 'SPARK_Mode \(Off\)' compiler_impl/src compiler_impl/stdlib/ada companion | awk -F: '{sum += $NF} END {print sum + 0}'
+rg -c -g '*.adb' -g '*.ads' 'Raise_Unsupported' compiler_impl/src compiler_impl/stdlib/ada companion | awk -F: '{sum += $NF} END {print sum + 0}'
+rg -c -g '*.adb' -g '*.ads' 'pragma Assume|pragma Annotate \(GNATprove' compiler_impl/src compiler_impl/stdlib/ada companion | awk -F: '{sum += $NF} END {print sum + 0}'
+git ls-tree -r --name-only HEAD samples | awk '/(^|\/)([^\/]*canary[^\/]*\.safe|surface_tour\.safe)$/ {count++} END {print count + 0}'
 ```
 
 Summary:
@@ -131,7 +131,7 @@ Summary:
 | `SPARK_Mode (Off)` | 36 |
 | `Raise_Unsupported` | 38 |
 | `pragma Assume` / `pragma Annotate (GNATprove, ...)` | 1 |
-| Frozen canaries | 1 |
+| Frozen canaries | 0 |
 
 ### Baseline Details
 
@@ -188,6 +188,10 @@ compiler_impl/src/safe_frontend-ada_emit-internal.ads:2
 compiler_impl/src/safe_frontend-ada_emit-statements.adb:1
 ```
 
+The baseline commands include tracked Ada sources under `companion/` via
+`*.adb` / `*.ads` globs. No companion Ada source matched the baseline patterns
+at `Audit SHA`.
+
 ## Phase 0 - Scaffold And Baseline
 
 Status: complete.
@@ -237,6 +241,12 @@ None yet.
 
 Enforcement default: likely yes.
 
+Seed notes for sweep:
+
+- `compiler_impl/src/safe_frontend-ada_emit-channels.adb` contributes 26 of
+  the 36 `SPARK_Mode (Off)` hits and also has a `when others =>` arm. Join
+  this with Phase 1B findings before the Phase 2 channels deep dive.
+
 Findings:
 
 None yet.
@@ -252,6 +262,12 @@ None yet.
 ## Phase 1G - Spec Body Contract Drift
 
 Enforcement default: decide during sweep.
+
+Seed notes for sweep:
+
+- `compiler_impl/src/safe_frontend-ada_emit-internal.ads` contributes two
+  `Raise_Unsupported` hits. Treat spec-file raises as contract-drift candidates
+  rather than only as Phase 1F dead-code-after-raise body findings.
 
 Findings:
 
@@ -370,8 +386,12 @@ after minimized repros confirm distinct root causes.
 Captured at `Audit SHA`:
 
 ```text
-samples/showcase/surface_tour.safe
+No tracked canary files matched at `Audit SHA`.
 ```
+
+`samples/showcase/surface_tour.safe` was not present at `Audit SHA`, so it is
+not part of this pinned replay corpus. If it lands later, audit it after Phase 4
+or in the next cycle.
 
 ### Arithmetic And Classification Replay
 
