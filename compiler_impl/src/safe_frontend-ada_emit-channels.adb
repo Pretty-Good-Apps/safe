@@ -1,4 +1,3 @@
-with Ada.Containers;
 with Safe_Frontend.Ada_Emit.Statements;
 with Safe_Frontend.Ada_Emit.Types;
 
@@ -10,15 +9,7 @@ package body Safe_Frontend.Ada_Emit.Channels is
    use AET;
    use AES;
 
-   use type Ada.Containers.Count_Type;
-   use type CM.Expr_Access;
-   use type CM.Expr_Kind;
-   use type CM.Statement_Access;
-   use type CM.Statement_Kind;
-   use type CM.Discrete_Range_Kind;
-   use type CM.Select_Arm_Kind;
    use type FT.UString;
-   use type GM.Scalar_Value_Kind;
 
    function Channel_Uses_Environment_Task
      (Bronze : MB.Bronze_Result;
@@ -545,7 +536,6 @@ package body Safe_Frontend.Ada_Emit.Channels is
            (Buffer,
             Unit,
             Document,
-            State,
             AI.Heap_Helper_Shared,
             Wrapper_Name,
             Target_Text,
@@ -644,7 +634,6 @@ package body Safe_Frontend.Ada_Emit.Channels is
                  (Buffer,
                   Unit,
                   Document,
-                  State,
                   AI.Heap_Helper_Shared,
                   Wrapper_Name,
                   "Target.value",
@@ -738,7 +727,6 @@ package body Safe_Frontend.Ada_Emit.Channels is
            (Buffer,
             Unit,
             Document,
-            State,
             AI.Heap_Helper_Shared,
             Wrapper_Name,
             Info,
@@ -2405,7 +2393,6 @@ package body Safe_Frontend.Ada_Emit.Channels is
            (Buffer,
             Unit,
             Document,
-            State,
             AI.Heap_Helper_Channel,
             Name,
             Info,

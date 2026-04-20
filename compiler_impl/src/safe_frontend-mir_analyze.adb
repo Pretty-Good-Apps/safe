@@ -2,12 +2,10 @@ with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Containers.Indefinite_Hashed_Sets;
 with Ada.Containers.Indefinite_Vectors;
 with Ada.Directories;
-with Ada.Exceptions;
 with Ada.Strings.Fixed;
 with Ada.Strings.Hash;
 with Ada.Strings.Unbounded;
 with Safe_Frontend.Builtin_Types;
-with Safe_Frontend.Check_Model;
 with Safe_Frontend.Name_Utils;
 with Safe_Frontend.Mir_Bronze;
 with Safe_Frontend.Mir_Json;
@@ -144,13 +142,6 @@ package body Safe_Frontend.Mir_Analyze is
       Equivalent_Keys => "=",
       "="             => GM."=");
 
-   package Scope_Maps is new Ada.Containers.Indefinite_Hashed_Maps
-     (Key_Type        => String,
-      Element_Type    => GM.Scope_Entry,
-      Hash            => Ada.Strings.Hash,
-      Equivalent_Keys => "=",
-      "="             => GM."=");
-
    package Block_Maps is new Ada.Containers.Indefinite_Hashed_Maps
      (Key_Type        => String,
       Element_Type    => GM.Block_Entry,
@@ -220,8 +211,6 @@ package body Safe_Frontend.Mir_Analyze is
    use type GM.Terminator_Kind;
    use type GM.Ownership_Effect_Kind;
    use type GM.Expr_Access;
-   use type Access_Role_Kind;
-   use type Access_State_Kind;
    use type Ada.Containers.Count_Type;
    use type FT.UString;
 
@@ -244,9 +233,6 @@ package body Safe_Frontend.Mir_Analyze is
       Sequence    : in out Natural);
    procedure Raise_Diag (Diagnostic : MD.Diagnostic);
 
-   function Contains
-     (Items : String_Sets.Set;
-      Value : String) return Boolean;
    function Override_Reason (Basename : String) return String;
    function UString_Value (Value : FT.UString) return String;
    function Has_Text (Value : FT.UString) return Boolean;
@@ -405,7 +391,6 @@ package body Safe_Frontend.Mir_Analyze is
      (Expr          : GM.Expr_Access;
       Prefix_Type   : GM.Type_Descriptor;
       Index_Expr    : GM.Expr_Access;
-      Interval_Value : Interval;
       Var_Types     : Type_Maps.Map;
       Type_Env      : Type_Maps.Map;
       Functions     : Function_Maps.Map) return FT.UString_Vectors.Vector;
@@ -595,14 +580,11 @@ package body Safe_Frontend.Mir_Analyze is
       Entry_State : out State;
       Var_Types   : out Type_Maps.Map;
       Owner_Vars  : out String_Sets.Set;
-      Local_Meta  : out Local_Maps.Map;
-      Scope_Map   : out Scope_Maps.Map);
+      Local_Meta  : out Local_Maps.Map);
    procedure Invalidate_Scope_Exit
      (Current    : in out State;
       Local_Names : FT.UString_Vectors.Vector;
       Owner_Vars : String_Sets.Set);
-   function Join_States
-     (States : State_Maps.Map) return State;
    function Join_Two_States
      (Left, Right : State) return State;
    function States_Equal
@@ -799,13 +781,6 @@ package body Safe_Frontend.Mir_Analyze is
       Raised_Diagnostic := Diagnostic;
       raise Diagnostic_Failure;
    end Raise_Diag;
-
-   function Contains
-     (Items : String_Sets.Set;
-      Value : String) return Boolean is
-   begin
-      return Items.Contains (Value);
-   end Contains;
 
    function Override_Reason (Basename : String) return String is
    begin
@@ -1657,7 +1632,7 @@ package body Safe_Frontend.Mir_Analyze is
    function Highlight_Span
      (Expr : GM.Expr_Access) return FT.Source_Span
    is
-      Result   : FT.Source_Span := FT.Null_Span;
+      Result   : constant FT.Source_Span := FT.Null_Span;
       Op_Start : Positive;
    begin
       if Expr = null then
@@ -2120,7 +2095,6 @@ package body Safe_Frontend.Mir_Analyze is
      (Expr           : GM.Expr_Access;
       Prefix_Type    : GM.Type_Descriptor;
       Index_Expr     : GM.Expr_Access;
-      Interval_Value : Interval;
       Var_Types      : Type_Maps.Map;
       Type_Env       : Type_Maps.Map;
       Functions      : Function_Maps.Map) return FT.UString_Vectors.Vector
@@ -2709,7 +2683,7 @@ package body Safe_Frontend.Mir_Analyze is
       Type_Env   : Type_Maps.Map;
       Functions  : Function_Maps.Map) return Interval
    is
-      Prefix_Type : GM.Type_Descriptor := Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions);
+      Prefix_Type : constant GM.Type_Descriptor := Expr_Type (Expr.Prefix, Var_Types, Type_Env, Functions);
       Bounds      : Interval;
       Value       : Interval;
       Prefix_Name : FT.UString := FT.To_UString ("");
@@ -2806,7 +2780,7 @@ package body Safe_Frontend.Mir_Analyze is
             Result.Span := Expr.Span;
             Result.Has_Highlight_Span := True;
             Result.Highlight_Span := Expr.Span;
-            Result.Notes := Index_Notes (Expr, Prefix_Type, Expr.Indices (Expr.Indices.First_Index), (Low => INT64_LOW, High => INT64_HIGH, Excludes_Zero => False), Var_Types, Type_Env, Functions);
+            Result.Notes := Index_Notes (Expr, Prefix_Type, Expr.Indices (Expr.Indices.First_Index), Var_Types, Type_Env, Functions);
                   Result.Suggestions := Index_Suggestions (UString_Value (Prefix_Name), Prefix_Type, Expr.Indices (Expr.Indices.First_Index), Type_Env);
             Raise_Diag (Result);
          end;
@@ -2831,7 +2805,7 @@ package body Safe_Frontend.Mir_Analyze is
                   Result.Span := Expr.Span;
                   Result.Has_Highlight_Span := True;
                   Result.Highlight_Span := Expr.Span;
-                  Result.Notes := Index_Notes (Expr, Prefix_Type, Expr.Indices (Index), Value, Var_Types, Type_Env, Functions);
+                  Result.Notes := Index_Notes (Expr, Prefix_Type, Expr.Indices (Index), Var_Types, Type_Env, Functions);
                   Result.Suggestions := Index_Suggestions (UString_Value (Prefix_Name), Prefix_Type, Expr.Indices (Index), Type_Env);
                   Raise_Diag (Result);
                end;
@@ -3746,7 +3720,6 @@ package body Safe_Frontend.Mir_Analyze is
       Name       : FT.UString := FT.To_UString ("");
       Values     : array (1 .. 4) of Wide_Integer;
       Max_Mod    : Wide_Integer;
-      Fact       : Access_Fact;
    begin
       if Expr = null then
          declare
@@ -4083,9 +4056,9 @@ package body Safe_Frontend.Mir_Analyze is
       Left_Const  : Wide_Integer;
       Right_Real  : Real_Value;
       Op          : constant String := UString_Value (Expr.Operator);
-      Have_Right_Const : Boolean := Has_Constant_Value (Expr.Right, Current, Var_Types, Type_Env);
+      Have_Right_Const : constant Boolean := Has_Constant_Value (Expr.Right, Current, Var_Types, Type_Env);
       Have_Left_Const  : Boolean := Has_Constant_Value (Expr.Left, Current, Var_Types, Type_Env);
-      Have_Right_Real  : Boolean := Has_Real_Constant (Expr.Right, Current, Var_Types, Type_Env);
+      Have_Right_Real  : constant Boolean := Has_Real_Constant (Expr.Right, Current, Var_Types, Type_Env);
    begin
       if Left_Name /= ""
         and then Var_Types.Contains (Left_Name)
@@ -4586,15 +4559,11 @@ package body Safe_Frontend.Mir_Analyze is
       Entry_State : out State;
       Var_Types   : out Type_Maps.Map;
       Owner_Vars  : out String_Sets.Set;
-      Local_Meta  : out Local_Maps.Map;
-      Scope_Map   : out Scope_Maps.Map)
+      Local_Meta  : out Local_Maps.Map)
    is
    begin
       Var_Types := Graph_Var_Types (Graph, Type_Env);
       Local_Meta := Graph_Local_Meta (Graph);
-      for Scope of Graph.Scopes loop
-         Scope_Map.Include (UString_Value (Scope.Id), Scope);
-      end loop;
       for Local of Graph.Locals loop
          if Lower (UString_Value (Local.Type_Info.Kind)) = "access"
            and then Type_Access_Role (Var_Types.Element (UString_Value (Local.Name))) = Role_Owner
@@ -4908,25 +4877,6 @@ package body Safe_Frontend.Mir_Analyze is
       Result.Returned := Left.Returned and then Right.Returned;
       return Result;
    end Join_Two_States;
-
-   function Join_States
-     (States : State_Maps.Map) return State
-   is
-      Cursor : State_Maps.Cursor := States.First;
-      Result : State;
-      First  : Boolean := True;
-   begin
-      while State_Maps.Has_Element (Cursor) loop
-         if First then
-            Result := State_Maps.Element (Cursor);
-            First := False;
-         else
-            Result := Join_Two_States (Result, State_Maps.Element (Cursor));
-         end if;
-         State_Maps.Next (Cursor);
-      end loop;
-      return Result;
-   end Join_States;
 
    function States_Equal
      (Left, Right : State) return Boolean is
@@ -5377,7 +5327,6 @@ package body Safe_Frontend.Mir_Analyze is
       Diag        : MD.Diagnostic := Null_Diagnostic;
       Has_Diag    : Boolean;
       Interval_Value : Interval;
-      Float_Value : Float_Interval;
    begin
       if Expr = null or else Expr.Kind /= GM.Expr_Call or else not Functions.Contains (Name) then
          return Null_Diagnostic;
@@ -5452,16 +5401,21 @@ package body Safe_Frontend.Mir_Analyze is
                end if;
                goto Continue;
             elsif Is_Float_Type (Formal.Type_Info) then
-               Float_Value :=
-                 Eval_Float_Expr_With_Diag
-                   (Actual,
-                    Current,
-                    Var_Types,
-                    Type_Env,
-                    Functions,
-                    Formal.Type_Info,
-                    Has_Diag,
-                    Diag);
+               declare
+                  Float_Value : constant Float_Interval :=
+                    Eval_Float_Expr_With_Diag
+                      (Actual,
+                       Current,
+                       Var_Types,
+                       Type_Env,
+                       Functions,
+                       Formal.Type_Info,
+                       Has_Diag,
+                       Diag);
+                  pragma Unreferenced (Float_Value);
+               begin
+                  null;
+               end;
                if Has_Diag then
                   return Diag;
                end if;
@@ -5838,7 +5792,6 @@ package body Safe_Frontend.Mir_Analyze is
       Lender        : FT.UString := FT.To_UString ("");
       Source_Name   : FT.UString := FT.To_UString ("");
       Interval_Value : Interval;
-      Float_Value    : Float_Interval;
       Diag          : MD.Diagnostic := Null_Diagnostic;
       Has_Diag      : Boolean;
    begin
@@ -5888,16 +5841,21 @@ package body Safe_Frontend.Mir_Analyze is
          end if;
          return Null_Diagnostic;
       elsif Is_Float_Type (Return_Type) then
-         Float_Value :=
-           Eval_Float_Expr_With_Diag
-             (Expr,
-              Current,
-              Var_Types,
-              Type_Env,
-              Functions,
-              Return_Type,
-              Has_Diag,
-              Diag);
+         declare
+            Float_Value : constant Float_Interval :=
+              Eval_Float_Expr_With_Diag
+                (Expr,
+                 Current,
+                 Var_Types,
+                 Type_Env,
+                 Functions,
+                 Return_Type,
+                 Has_Diag,
+                 Diag);
+            pragma Unreferenced (Float_Value);
+         begin
+            null;
+         end;
          if Has_Diag then
             return Diag;
          end if;
@@ -6274,7 +6232,6 @@ package body Safe_Frontend.Mir_Analyze is
       Var_Types           : Type_Maps.Map;
       Owner_Vars          : String_Sets.Set;
       Local_Meta          : Local_Maps.Map;
-      Scope_Map           : Scope_Maps.Map;
       Block_Map           : Block_Maps.Map;
       Pending             : String_Vectors.Vector;
       In_States           : State_Maps.Map;
@@ -6282,8 +6239,7 @@ package body Safe_Frontend.Mir_Analyze is
       Loop_Header_Updates : Natural_Maps.Map;
       Sequence            : Natural := 0;
    begin
-      pragma Unreferenced (Scope_Map);
-      Initialize_Graph_Entry_State (Graph, Type_Env, Entry_State, Var_Types, Owner_Vars, Local_Meta, Scope_Map);
+      Initialize_Graph_Entry_State (Graph, Type_Env, Entry_State, Var_Types, Owner_Vars, Local_Meta);
       for Block of Graph.Blocks loop
          Block_Map.Include (UString_Value (Block.Id), Block);
       end loop;
@@ -6397,7 +6353,7 @@ package body Safe_Frontend.Mir_Analyze is
                   else
                      declare
                         True_State  : State := Refine_Condition (Current, Block.Terminator.Condition, True, Var_Types, Type_Env);
-                        False_State : State := Refine_Condition (Current, Block.Terminator.Condition, False, Var_Types, Type_Env);
+                        False_State : constant State := Refine_Condition (Current, Block.Terminator.Condition, False, Var_Types, Type_Env);
                      begin
                         if UString_Value (Block.Role) = "for_header"
                           and then Block.Has_Loop_Info

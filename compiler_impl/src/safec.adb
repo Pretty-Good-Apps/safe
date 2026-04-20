@@ -28,16 +28,6 @@ procedure Safec is
       return Ada.Command_Line.Argument (Index);
    end Argument;
 
-   function Find_Option (Name : String) return Natural is
-   begin
-      for Index in 1 .. Ada.Command_Line.Argument_Count loop
-         if Ada.Command_Line.Argument (Index) = Name then
-            return Index;
-         end if;
-      end loop;
-      return 0;
-   end Find_Option;
-
    function Has_Prefix (Value : String) return Boolean is
    begin
       return Value'Length > 0 and then Value (Value'First) = '-';

@@ -644,11 +644,6 @@ package body Safe_Frontend.Check_Resolve is
       return BT.Boolean_Type;
    end Default_Boolean;
 
-   function Default_Character return GM.Type_Descriptor is
-   begin
-      return BT.Character_Type;
-   end Default_Character;
-
    function Default_String return GM.Type_Descriptor is
    begin
       return BT.String_Type;
@@ -658,11 +653,6 @@ package body Safe_Frontend.Check_Resolve is
    begin
       return BT.Long_Float_Type;
    end Default_Float;
-
-   function Default_Duration return GM.Type_Descriptor is
-   begin
-      return BT.Duration_Type;
-   end Default_Duration;
 
    function Default_Task_Priority return Long_Long_Integer is
    begin
@@ -990,7 +980,6 @@ package body Safe_Frontend.Check_Resolve is
 
    function Specialize_Generic_Call
      (Expr      : CM.Expr_Access;
-      Var_Types : Type_Maps.Map;
       Functions : Function_Maps.Map;
       Type_Env  : Type_Maps.Map;
       Const_Env : Static_Value_Maps.Map;
@@ -1600,54 +1589,6 @@ package body Safe_Frontend.Check_Resolve is
            FT.Null_Span);
       return True;
    end Try_Result_Carrier_Success_Type;
-
-   function Expr_Contains_Try (Expr : CM.Expr_Access) return Boolean is
-   begin
-      if Expr = null then
-         return False;
-      elsif Expr.Kind = CM.Expr_Try then
-         return True;
-      end if;
-
-      case Expr.Kind is
-         when CM.Expr_Select | CM.Expr_Conversion | CM.Expr_Annotated | CM.Expr_Unary | CM.Expr_Try | CM.Expr_Some =>
-            return Expr_Contains_Try (Expr.Prefix)
-              or else Expr_Contains_Try (Expr.Inner);
-         when CM.Expr_Resolved_Index | CM.Expr_Call | CM.Expr_Apply =>
-            if Expr_Contains_Try (Expr.Prefix)
-              or else Expr_Contains_Try (Expr.Callee)
-            then
-               return True;
-            end if;
-            for Item of Expr.Args loop
-               if Expr_Contains_Try (Item) then
-                  return True;
-               end if;
-            end loop;
-            return False;
-         when CM.Expr_Binary =>
-            return Expr_Contains_Try (Expr.Left)
-              or else Expr_Contains_Try (Expr.Right);
-         when CM.Expr_Allocator =>
-            return Expr_Contains_Try (Expr.Value);
-         when CM.Expr_Aggregate =>
-            for Item of Expr.Fields loop
-               if Expr_Contains_Try (Item.Expr) then
-                  return True;
-               end if;
-            end loop;
-            return False;
-         when CM.Expr_Array_Literal | CM.Expr_Tuple =>
-            for Item of Expr.Elements loop
-               if Expr_Contains_Try (Item) then
-                  return True;
-               end if;
-            end loop;
-            return False;
-         when others =>
-            return False;
-      end case;
-   end Expr_Contains_Try;
 
    function Is_Bounded_String_Type
      (Info     : GM.Type_Descriptor;
@@ -4343,27 +4284,6 @@ package body Safe_Frontend.Check_Resolve is
       return False;
    end Scalar_Value_Compatible;
 
-   function Bool_Literal_Value
-     (Expr      : CM.Expr_Access;
-      Const_Env : Static_Value_Maps.Map;
-      Path      : String) return Boolean
-   is
-      Value : CM.Static_Value;
-   begin
-      if Try_Static_Value (Expr, Const_Env, Value)
-        and then Value.Kind = CM.Static_Value_Boolean
-      then
-         return Value.Bool_Value;
-      end if;
-
-      Raise_Diag
-        (CM.Source_Frontend_Error
-           (Path    => Path,
-            Span    => (if Expr = null then FT.Null_Span else Expr.Span),
-            Message => "boolean discriminant defaults must be boolean literals or constant references"));
-      return False;
-   end Bool_Literal_Value;
-
    function Resolve_Type
      (Name     : String;
       Type_Env : Type_Maps.Map;
@@ -4538,11 +4458,6 @@ package body Safe_Frontend.Check_Resolve is
       end;
    end Is_Lowered_Sum_Record;
 
-   function Is_Sum_Metadata_Type (Info : GM.Type_Descriptor) return Boolean is
-   begin
-      return not Info.Sum_Variants.Is_Empty or else Is_Lowered_Sum_Record (Info);
-   end Is_Sum_Metadata_Type;
-
    function Constructor_From_Sum_Variant
      (Sum_Type : GM.Type_Descriptor;
       Variant  : GM.Sum_Variant_Descriptor) return Sum_Constructor_Info
@@ -4598,24 +4513,6 @@ package body Safe_Frontend.Check_Resolve is
       end loop;
       return Result;
    end Tuple_Type_Name;
-
-   function Static_Value_Name_Component (Value : CM.Static_Value) return String is
-   begin
-      case Value.Kind is
-         when CM.Static_Value_Integer =>
-            return Sanitize_Type_Name_Component (CM.Wide_Integer'Image (Value.Int_Value));
-         when CM.Static_Value_Boolean =>
-            return (if Value.Bool_Value then "true" else "false");
-         when CM.Static_Value_Character =>
-            return Sanitize_Type_Name_Component (UString_Value (Value.Text));
-         when CM.Static_Value_Enum =>
-            return
-              Sanitize_Type_Name_Component
-                (UString_Value (Value.Type_Name) & "_" & UString_Value (Value.Text));
-         when others =>
-            return "value";
-      end case;
-   end Static_Value_Name_Component;
 
    function Make_Tuple_Type
      (Element_Types : FT.UString_Vectors.Vector;
@@ -7323,7 +7220,6 @@ package body Safe_Frontend.Check_Resolve is
                         Result :=
                           Specialize_Generic_Call
                             (Result,
-                             Var_Types,
                              Functions,
                              Type_Env,
                              Const_Env,
@@ -9756,7 +9652,6 @@ package body Safe_Frontend.Check_Resolve is
 
    function Specialize_Generic_Call
      (Expr      : CM.Expr_Access;
-      Var_Types : Type_Maps.Map;
       Functions : Function_Maps.Map;
       Type_Env  : Type_Maps.Map;
       Const_Env : Static_Value_Maps.Map;
@@ -10145,44 +10040,6 @@ package body Safe_Frontend.Check_Resolve is
       Result.Body_Stmts := Body_Stmts;
       return Result;
    end Synthetic_While_Stmt;
-
-   function Synthetic_For_Stmt
-     (Loop_Var  : String;
-      Low_Expr  : CM.Expr_Access;
-      High_Expr : CM.Expr_Access;
-      Body_Stmts : CM.Statement_Access_Vectors.Vector;
-      Span      : FT.Source_Span) return CM.Statement_Access
-   is
-      Result : constant CM.Statement_Access := new CM.Statement;
-   begin
-      Result.Kind := CM.Stmt_For;
-      Result.Is_Synthetic := True;
-      Result.Span := Span;
-      Result.Loop_Var := FT.To_UString (Loop_Var);
-      Result.Loop_Range.Kind := CM.Range_Explicit;
-      Result.Loop_Range.Span := Span;
-      Result.Loop_Range.Low_Expr := Low_Expr;
-      Result.Loop_Range.High_Expr := High_Expr;
-      Result.Body_Stmts := Body_Stmts;
-      return Result;
-   end Synthetic_For_Stmt;
-
-   function Synthetic_For_Of_Stmt
-     (Loop_Var      : String;
-      Loop_Iterable : CM.Expr_Access;
-      Body_Stmts    : CM.Statement_Access_Vectors.Vector;
-      Span          : FT.Source_Span) return CM.Statement_Access
-   is
-      Result : constant CM.Statement_Access := new CM.Statement;
-   begin
-      Result.Kind := CM.Stmt_For;
-      Result.Is_Synthetic := True;
-      Result.Span := Span;
-      Result.Loop_Var := FT.To_UString (Loop_Var);
-      Result.Loop_Iterable := Loop_Iterable;
-      Result.Body_Stmts := Body_Stmts;
-      return Result;
-   end Synthetic_For_Of_Stmt;
 
    function Synthetic_Exit_Stmt
      (Span       : FT.Source_Span;
@@ -11767,7 +11624,6 @@ package body Safe_Frontend.Check_Resolve is
       Current_Constants : Type_Maps.Map := Local_Constants;
       Current_Static_Constants : Static_Value_Maps.Map := Local_Static_Constants;
       Loop_Type      : GM.Type_Descriptor;
-      Decl_Type      : GM.Type_Descriptor;
       Channel_Type   : GM.Type_Descriptor;
       Success_Type   : GM.Type_Descriptor;
       Target_Type    : GM.Type_Descriptor;
@@ -14959,7 +14815,7 @@ package body Safe_Frontend.Check_Resolve is
                Record_Result          : GM.Type_Descriptor;
                Self_Name              : constant String := UString_Value (Decl.Name);
                Hidden_Target_Name     : constant String := Hidden_Reference_Target_Name (Self_Name);
-               Inferred_Reference     : Boolean :=
+               Inferred_Reference     : constant Boolean :=
                  Is_Admitted_Record_Family_Member
                    (Self_Name,
                     Family_By_Name,
@@ -17108,9 +16964,9 @@ package body Safe_Frontend.Check_Resolve is
       Reject_Shared_Wrapper_Name_Collisions;
 
       declare
-         Visible : Type_Maps.Map := Package_Vars;
+         Visible : constant Type_Maps.Map := Package_Vars;
          Visible_Constants : Type_Maps.Map;
-         Visible_Static_Constants : Static_Value_Maps.Map := Const_Env;
+         Visible_Static_Constants : constant Static_Value_Maps.Map := Const_Env;
       begin
          for Object_Decl of Result.Objects loop
             if Object_Decl.Is_Constant then
@@ -17300,7 +17156,7 @@ package body Safe_Frontend.Check_Resolve is
                Visible_Static_Constants : Static_Value_Maps.Map := Const_Env;
                Task_Item      : CM.Resolved_Task;
                Local_Decl     : CM.Resolved_Object_Decl;
-               Task_Index     : Natural := Natural (Result.Tasks.Length) + 1;
+               Task_Index     : constant Natural := Natural (Result.Tasks.Length) + 1;
             begin
                if UString_Value (Item.Task_Data.End_Name) /=
                  UString_Value (Item.Task_Data.Name)

@@ -1,7 +1,5 @@
 with Ada.Containers;
 with Ada.Strings.Fixed;
-with Ada.Strings.Unbounded;
-with Safe_Frontend.Ada_Emit.Internal;
 with Safe_Frontend.Builtin_Types;
 with Safe_Frontend.Name_Utils;
 
@@ -16,15 +14,9 @@ package body Safe_Frontend.Ada_Emit.Types is
    use type CM.Expr_Kind;
    use type CM.Statement_Access;
    use type CM.Statement_Kind;
-   use type CM.Discrete_Range_Kind;
    use type CM.Select_Arm_Kind;
    use type FT.UString;
    use type GM.Scalar_Value_Kind;
-
-   subtype Cleanup_Action is AI.Cleanup_Action;
-   subtype Cleanup_Item is AI.Cleanup_Item;
-   subtype Warning_Suppression_Array is AI.Warning_Suppression_Array;
-   subtype Warning_Restore_Array is AI.Warning_Restore_Array;
 
    procedure Raise_Internal (Message : String) renames AI.Raise_Internal;
    procedure Raise_Unsupported
@@ -34,7 +26,6 @@ package body Safe_Frontend.Ada_Emit.Types is
 
    function Has_Text (Item : FT.UString) return Boolean renames AI.Has_Text;
    function Trim_Image (Value : Long_Long_Integer) return String renames AI.Trim_Image;
-   function Trim_Wide_Image (Value : CM.Wide_Integer) return String renames AI.Trim_Wide_Image;
    function Indentation (Depth : Natural) return String renames AI.Indentation;
    procedure Append_Line
      (Buffer : in out SU.Unbounded_String;
@@ -44,93 +35,10 @@ package body Safe_Frontend.Ada_Emit.Types is
    function Contains_Name
      (Items : FT.UString_Vectors.Vector;
       Name  : String) return Boolean renames AI.Contains_Name;
-   procedure Add_Wide_Name
-     (State : in out Emit_State;
-      Name  : String) renames AI.Add_Wide_Name;
-   function Is_Wide_Name
-     (State : Emit_State;
-      Name  : String) return Boolean renames AI.Is_Wide_Name;
-   function Names_Use_Wide_Storage
-     (State : Emit_State;
-      Names : FT.UString_Vectors.Vector) return Boolean renames AI.Names_Use_Wide_Storage;
-   procedure Restore_Wide_Names
-     (State           : in out Emit_State;
-      Previous_Length : Ada.Containers.Count_Type) renames AI.Restore_Wide_Names;
-   procedure Push_Type_Binding_Frame (State : in out Emit_State) renames AI.Push_Type_Binding_Frame;
-   procedure Pop_Type_Binding_Frame (State : in out Emit_State) renames AI.Pop_Type_Binding_Frame;
-   procedure Add_Type_Binding
-     (State     : in out Emit_State;
-      Name      : String;
-      Type_Info : GM.Type_Descriptor;
-      Is_Constant : Boolean := False) renames AI.Add_Type_Binding;
-   procedure Register_Type_Bindings
-     (State        : in out Emit_State;
-      Declarations : CM.Resolved_Object_Decl_Vectors.Vector) renames AI.Register_Type_Bindings;
-   procedure Register_Type_Bindings
-     (State        : in out Emit_State;
-      Declarations : CM.Object_Decl_Vectors.Vector) renames AI.Register_Type_Bindings;
-   procedure Register_Param_Type_Bindings
-     (State  : in out Emit_State;
-      Params : CM.Symbol_Vectors.Vector) renames AI.Register_Param_Type_Bindings;
    function Lookup_Bound_Type
      (State     : Emit_State;
       Name      : String;
       Type_Info : out GM.Type_Descriptor) return Boolean renames AI.Lookup_Bound_Type;
-   procedure Push_Cleanup_Frame (State : in out Emit_State) renames AI.Push_Cleanup_Frame;
-   procedure Pop_Cleanup_Frame (State : in out Emit_State) renames AI.Pop_Cleanup_Frame;
-   procedure Add_Cleanup_Item
-     (State     : in out Emit_State;
-      Name      : String;
-      Type_Name : String;
-      Free_Proc : String := "";
-      Is_Constant : Boolean := False;
-      Always_Terminates_Suppression_OK : Boolean := False;
-      Action    : Cleanup_Action := AI.Cleanup_Deallocate) renames AI.Add_Cleanup_Item;
-   procedure Register_Cleanup_Items
-     (State        : in out Emit_State;
-      Declarations : CM.Resolved_Object_Decl_Vectors.Vector) renames AI.Register_Cleanup_Items;
-   procedure Register_Cleanup_Items
-     (State        : in out Emit_State;
-      Declarations : CM.Object_Decl_Vectors.Vector) renames AI.Register_Cleanup_Items;
-   procedure Render_Cleanup_Item
-     (Buffer : in out SU.Unbounded_String;
-      Item   : Cleanup_Item;
-      Depth  : Natural) renames AI.Render_Cleanup_Item;
-   procedure Render_Active_Cleanup
-     (Buffer    : in out SU.Unbounded_String;
-      State     : Emit_State;
-      Depth     : Natural;
-      Skip_Name : String := "") renames AI.Render_Active_Cleanup;
-   procedure Render_Current_Cleanup_Frame
-     (Buffer : in out SU.Unbounded_String;
-      State  : Emit_State;
-      Depth  : Natural) renames AI.Render_Current_Cleanup_Frame;
-   function Has_Active_Cleanup_Items (State : Emit_State) return Boolean renames AI.Has_Active_Cleanup_Items;
-   procedure Render_Cleanup
-     (Buffer       : in out SU.Unbounded_String;
-      Declarations : CM.Resolved_Object_Decl_Vectors.Vector;
-      Depth        : Natural) renames AI.Render_Cleanup;
-   function Statement_Falls_Through (Item : CM.Statement_Access) return Boolean renames AI.Statement_Falls_Through;
-   function Statements_Fall_Through (Statements : CM.Statement_Access_Vectors.Vector) return Boolean renames AI.Statements_Fall_Through;
-   function Statement_Contains_Exit (Item : CM.Statement_Access) return Boolean renames AI.Statement_Contains_Exit;
-   function Statements_Contain_Exit (Statements : CM.Statement_Access_Vectors.Vector) return Boolean renames AI.Statements_Contain_Exit;
-   procedure Append_Gnatprove_Warning_Suppression
-     (Buffer  : in out SU.Unbounded_String;
-      Pattern : String;
-      Reason  : String;
-      Depth   : Natural) renames AI.Append_Gnatprove_Warning_Suppression;
-   procedure Append_Gnatprove_Warning_Restore
-     (Buffer  : in out SU.Unbounded_String;
-      Pattern : String;
-      Depth   : Natural) renames AI.Append_Gnatprove_Warning_Restore;
-   procedure Append_Gnatprove_Warning_Suppressions
-     (Buffer   : in out SU.Unbounded_String;
-      Warnings : Warning_Suppression_Array;
-      Depth    : Natural) renames AI.Append_Gnatprove_Warning_Suppressions;
-   procedure Append_Gnatprove_Warning_Restores
-     (Buffer   : in out SU.Unbounded_String;
-      Warnings : Warning_Restore_Array;
-      Depth    : Natural) renames AI.Append_Gnatprove_Warning_Restores;
    procedure Append_Initialization_Warning_Suppression
      (Buffer : in out SU.Unbounded_String;
       Depth  : Natural) renames AI.Append_Initialization_Warning_Suppression;
@@ -143,30 +51,6 @@ package body Safe_Frontend.Ada_Emit.Types is
    procedure Append_Local_Warning_Restore
      (Buffer : in out SU.Unbounded_String;
       Depth  : Natural) renames AI.Append_Local_Warning_Restore;
-   procedure Append_Channel_Staged_Call_Warning_Suppression
-     (Buffer : in out SU.Unbounded_String;
-      Depth  : Natural) renames AI.Append_Channel_Staged_Call_Warning_Suppression;
-   procedure Append_Channel_Staged_Call_Warning_Restore
-     (Buffer : in out SU.Unbounded_String;
-      Depth  : Natural) renames AI.Append_Channel_Staged_Call_Warning_Restore;
-   procedure Append_Task_Assignment_Warning_Suppression
-     (Buffer : in out SU.Unbounded_String;
-      Depth  : Natural) renames AI.Append_Task_Assignment_Warning_Suppression;
-   procedure Append_Task_Assignment_Warning_Restore
-     (Buffer : in out SU.Unbounded_String;
-      Depth  : Natural) renames AI.Append_Task_Assignment_Warning_Restore;
-   procedure Append_Task_If_Warning_Suppression
-     (Buffer : in out SU.Unbounded_String;
-      Depth  : Natural) renames AI.Append_Task_If_Warning_Suppression;
-   procedure Append_Task_If_Warning_Restore
-     (Buffer : in out SU.Unbounded_String;
-      Depth  : Natural) renames AI.Append_Task_If_Warning_Restore;
-   procedure Append_Task_Channel_Call_Warning_Suppression
-     (Buffer : in out SU.Unbounded_String;
-      Depth  : Natural) renames AI.Append_Task_Channel_Call_Warning_Suppression;
-   procedure Append_Task_Channel_Call_Warning_Restore
-     (Buffer : in out SU.Unbounded_String;
-      Depth  : Natural) renames AI.Append_Task_Channel_Call_Warning_Restore;
 
    function Starts_With (Text : String; Prefix : String) return Boolean renames AI.Starts_With;
    function Sanitized_Helper_Name (Name : String) return String;
@@ -179,10 +63,7 @@ package body Safe_Frontend.Ada_Emit.Types is
       Name      : String;
       Type_Info : out GM.Type_Descriptor) return Boolean;
    function Local_Free_Helper_Name (Info : GM.Type_Descriptor) return String;
-   function For_Of_Helper_Base_Name
-     (Unit     : CM.Resolved_Unit;
-      Document : GM.Mir_Document;
-      Info     : GM.Type_Descriptor) return String;
+   function For_Of_Helper_Base_Name (Info : GM.Type_Descriptor) return String;
    function Local_Dispose_Helper_Name (Info : GM.Type_Descriptor) return String;
    function Local_Ownership_Runtime_Name (Info : GM.Type_Descriptor) return String;
    function Array_Runtime_Default_Element_Name (Info : GM.Type_Descriptor) return String;
@@ -226,7 +107,6 @@ package body Safe_Frontend.Ada_Emit.Types is
      (Buffer      : in out SU.Unbounded_String;
       Unit        : CM.Resolved_Unit;
       Document    : GM.Mir_Document;
-      State       : in out Emit_State;
       Family      : Heap_Helper_Family_Kind;
       Scope_Name  : String;
       Base        : GM.Type_Descriptor;
@@ -1471,8 +1351,11 @@ package body Safe_Frontend.Ada_Emit.Types is
       Document : GM.Mir_Document;
       Info     : GM.Type_Descriptor) return String
    is
+      --  Keep the full type-context signature to match the exported for-of
+      --  helper-name API used across emitter children.
+      pragma Unreferenced (Unit, Document);
    begin
-      return For_Of_Helper_Base_Name (Unit, Document, Info) & "_Copy";
+      return For_Of_Helper_Base_Name (Info) & "_Copy";
    end For_Of_Copy_Helper_Name;
 
    function For_Of_Free_Helper_Name
@@ -1480,8 +1363,11 @@ package body Safe_Frontend.Ada_Emit.Types is
       Document : GM.Mir_Document;
       Info     : GM.Type_Descriptor) return String
    is
+      --  Keep the full type-context signature to match the exported for-of
+      --  helper-name API used across emitter children.
+      pragma Unreferenced (Unit, Document);
    begin
-      return For_Of_Helper_Base_Name (Unit, Document, Info) & "_Free";
+      return For_Of_Helper_Base_Name (Info) & "_Free";
    end For_Of_Free_Helper_Name;
 
    function Needs_Generated_Heap_Helper
@@ -1505,13 +1391,15 @@ package body Safe_Frontend.Ada_Emit.Types is
       Document  : GM.Mir_Document;
       Info      : GM.Type_Descriptor) return String
    is
-      pragma Unreferenced (Document);
+      --  Shared/channel helper names do not need the resolved unit today, but
+      --  callers use one heap-helper naming API for all helper families.
+      pragma Unreferenced (Unit, Document);
    begin
       case Family is
          when AI.Heap_Helper_Shared | AI.Heap_Helper_Channel =>
             return Scope_Name & "_" & Sanitized_Helper_Name (Render_Type_Name (Info));
          when AI.Heap_Helper_For_Of =>
-            return For_Of_Helper_Base_Name (Unit, Document, Info);
+            return For_Of_Helper_Base_Name (Info);
       end case;
    end Heap_Helper_Base_Name;
 
@@ -1541,7 +1429,6 @@ package body Safe_Frontend.Ada_Emit.Types is
      (Buffer     : in out SU.Unbounded_String;
       Unit       : CM.Resolved_Unit;
       Document   : GM.Mir_Document;
-      State      : in out Emit_State;
       Family     : Heap_Helper_Family_Kind;
       Scope_Name : String;
       Target_Text : String;
@@ -2936,7 +2823,6 @@ package body Safe_Frontend.Ada_Emit.Types is
            (Buffer,
             Unit,
             Document,
-            State,
             AI.Heap_Helper_For_Of,
             "",
             Info,
@@ -3578,11 +3464,7 @@ package body Safe_Frontend.Ada_Emit.Types is
       return "Free_" & Sanitized_Helper_Name (FT.To_String (Info.Name));
    end Local_Free_Helper_Name;
 
-   function For_Of_Helper_Base_Name
-     (Unit     : CM.Resolved_Unit;
-      Document : GM.Mir_Document;
-      Info     : GM.Type_Descriptor) return String
-   is
+   function For_Of_Helper_Base_Name (Info : GM.Type_Descriptor) return String is
    begin
       return "For_Of_" & Sanitized_Helper_Name (Render_Type_Name (Info));
    end For_Of_Helper_Base_Name;
@@ -3646,7 +3528,6 @@ package body Safe_Frontend.Ada_Emit.Types is
      (Buffer      : in out SU.Unbounded_String;
       Unit        : CM.Resolved_Unit;
       Document    : GM.Mir_Document;
-      State       : in out Emit_State;
       Family      : Heap_Helper_Family_Kind;
       Scope_Name  : String;
       Info        : GM.Type_Descriptor;
@@ -3665,7 +3546,6 @@ package body Safe_Frontend.Ada_Emit.Types is
               (Buffer,
                Unit,
                Document,
-               State,
                Family,
                Scope_Name,
                "Target (Index)",
@@ -3684,7 +3564,6 @@ package body Safe_Frontend.Ada_Emit.Types is
               (Buffer,
                Unit,
                Document,
-               State,
                Family,
                Scope_Name,
                Base,
@@ -3702,7 +3581,6 @@ package body Safe_Frontend.Ada_Emit.Types is
                        (Buffer,
                         Unit,
                         Document,
-                        State,
                         Family,
                         Scope_Name,
                         "Target." & FT.To_String (Field.Name),
@@ -3736,7 +3614,6 @@ package body Safe_Frontend.Ada_Emit.Types is
                     (Buffer,
                      Unit,
                      Document,
-                     State,
                      Family,
                      Scope_Name,
                      "Target." & Tuple_Field_Name (Positive (Index)),
@@ -4561,7 +4438,6 @@ package body Safe_Frontend.Ada_Emit.Types is
      (Buffer      : in out SU.Unbounded_String;
       Unit        : CM.Resolved_Unit;
       Document    : GM.Mir_Document;
-      State       : in out Emit_State;
       Family      : Heap_Helper_Family_Kind;
       Scope_Name  : String;
       Base        : GM.Type_Descriptor;
@@ -4580,7 +4456,6 @@ package body Safe_Frontend.Ada_Emit.Types is
                  (Buffer,
                   Unit,
                   Document,
-                  State,
                   Family,
                   Scope_Name,
                   Target_Prefix & FT.To_String (Field.Name),
@@ -4634,7 +4509,6 @@ package body Safe_Frontend.Ada_Emit.Types is
                              (Buffer,
                               Unit,
                               Document,
-                              State,
                               Family,
                               Scope_Name,
                               Target_Prefix & FT.To_String (Variant_Field.Name),

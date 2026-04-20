@@ -273,7 +273,6 @@ private package Safe_Frontend.Ada_Emit.Types is
      (Buffer     : in out SU.Unbounded_String;
       Unit       : CM.Resolved_Unit;
       Document   : GM.Mir_Document;
-      State      : in out Emit_State;
       Family     : Heap_Helper_Family_Kind;
       Scope_Name : String;
       Target_Text : String;
@@ -300,7 +299,6 @@ private package Safe_Frontend.Ada_Emit.Types is
      (Buffer      : in out SU.Unbounded_String;
       Unit        : CM.Resolved_Unit;
       Document    : GM.Mir_Document;
-      State       : in out Emit_State;
       Family      : Heap_Helper_Family_Kind;
       Scope_Name  : String;
       Info        : GM.Type_Descriptor;

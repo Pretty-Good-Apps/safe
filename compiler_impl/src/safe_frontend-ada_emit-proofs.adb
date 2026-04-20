@@ -18,10 +18,8 @@ package body Safe_Frontend.Ada_Emit.Proofs is
    use type CM.Expr_Kind;
    use type CM.Statement_Access;
    use type CM.Statement_Kind;
-   use type CM.Discrete_Range_Kind;
    use type CM.Select_Arm_Kind;
    use type FT.UString;
-   use type GM.Scalar_Value_Kind;
 
    function Render_Subprogram_Params
      (Unit       : CM.Resolved_Unit;
@@ -553,21 +551,31 @@ package body Safe_Frontend.Ada_Emit.Proofs is
                         Wrapper_Name := Expr.Callee.Prefix.Name;
                         Selector_Name := Expr.Callee.Selector;
                      elsif Expr.Callee.Kind = CM.Expr_Ident then
-                        if Try_Shared_Public_Helper
-                          (FT.To_String (Expr.Callee.Name),
-                           Wrapper_Name,
-                           Selector_Name)
-                        then
+                        --  The helper lookup's out parameters are the useful result;
+                        --  the Wrapper_Name length check below handles misses.
+                        declare
+                           Helper_Found : constant Boolean :=
+                             Try_Shared_Public_Helper
+                               (FT.To_String (Expr.Callee.Name),
+                                Wrapper_Name,
+                                Selector_Name);
+                           pragma Unreferenced (Helper_Found);
+                        begin
                            null;
-                        end if;
+                        end;
                      elsif Expr.Callee.Kind = CM.Expr_Select then
-                        if Try_Shared_Public_Helper
-                          (CM.Flatten_Name (Expr.Callee),
-                           Wrapper_Name,
-                           Selector_Name)
-                        then
+                        --  The helper lookup's out parameters are the useful result;
+                        --  the Wrapper_Name length check below handles misses.
+                        declare
+                           Helper_Found : constant Boolean :=
+                             Try_Shared_Public_Helper
+                               (CM.Flatten_Name (Expr.Callee),
+                                Wrapper_Name,
+                                Selector_Name);
+                           pragma Unreferenced (Helper_Found);
+                        begin
                            null;
-                        end if;
+                        end;
                      end if;
 
                      if FT.To_String (Wrapper_Name)'Length > 0 then
