@@ -9,13 +9,11 @@ with Safe_Frontend.Ada_Emit.Proofs;
 with Safe_Frontend.Ada_Emit.Statements;
 with Safe_Frontend.Ada_Emit.Types;
 with Safe_Frontend.Builtin_Types;
-with Safe_Frontend.Name_Utils;
 
 package body Safe_Frontend.Ada_Emit is
    package SU renames Ada.Strings.Unbounded;
    package AI renames Safe_Frontend.Ada_Emit.Internal;
    package BT renames Safe_Frontend.Builtin_Types;
-   package FNU renames Safe_Frontend.Name_Utils;
    package AET renames Safe_Frontend.Ada_Emit.Types;
    package AEX renames Safe_Frontend.Ada_Emit.Expressions;
    package AES renames Safe_Frontend.Ada_Emit.Statements;
@@ -39,19 +37,11 @@ package body Safe_Frontend.Ada_Emit is
      "pragma Partition_Elaboration_Policy(Sequential);" & ASCII.LF
      & "pragma Profile(Jorvik);" & ASCII.LF;
 
-   subtype Cleanup_Action is AI.Cleanup_Action;
-   subtype Cleanup_Item is AI.Cleanup_Item;
    subtype Emit_State is AI.Emit_State;
    subtype Emit_Context is AI.Emit_Context;
-   subtype Warning_Suppression_Array is AI.Warning_Suppression_Array;
-   subtype Warning_Restore_Array is AI.Warning_Restore_Array;
-   subtype Heap_Helper_Family_Kind is AI.Heap_Helper_Family_Kind;
 
    function Gnat_Adc_Text return String is
      (Gnat_Adc_Contents);
-
-   function Sanitize_Type_Name_Component (Value : String) return String
-     renames FNU.Sanitize_Type_Name_Component;
 
    function Has_Text (Item : FT.UString) return Boolean renames AI.Has_Text;
    function Trim_Image (Value : Long_Long_Integer) return String renames AI.Trim_Image;
@@ -62,107 +52,21 @@ package body Safe_Frontend.Ada_Emit is
      (Buffer : in out SU.Unbounded_String;
       Text   : String := "";
       Depth  : Natural := 0) renames AI.Append_Line;
-   function Join_Names (Items : FT.UString_Vectors.Vector) return String renames AI.Join_Names;
    function Contains_Name
      (Items : FT.UString_Vectors.Vector;
       Name  : String) return Boolean renames AI.Contains_Name;
-   procedure Add_Wide_Name
-     (State : in out Emit_State;
-      Name  : String) renames AI.Add_Wide_Name;
-   function Is_Wide_Name
-     (State : Emit_State;
-      Name  : String) return Boolean renames AI.Is_Wide_Name;
-   function Names_Use_Wide_Storage
-     (State : Emit_State;
-      Names : FT.UString_Vectors.Vector) return Boolean renames AI.Names_Use_Wide_Storage;
-   procedure Restore_Wide_Names
-     (State           : in out Emit_State;
-      Previous_Length : Ada.Containers.Count_Type) renames AI.Restore_Wide_Names;
    procedure Bind_Static_Length
      (State  : in out Emit_State;
       Name   : String;
       Length : Natural) renames AI.Bind_Static_Length;
-   function Try_Static_Length
-     (State  : Emit_State;
-      Name   : String;
-      Length : out Natural) return Boolean renames AI.Try_Static_Length;
-   procedure Restore_Static_Length_Bindings
-     (State           : in out Emit_State;
-      Previous_Length : Ada.Containers.Count_Type) renames AI.Restore_Static_Length_Bindings;
-   procedure Invalidate_Static_Length
-     (State : in out Emit_State;
-      Name  : String) renames AI.Invalidate_Static_Length;
    procedure Bind_Static_Integer
      (State : in out Emit_State;
       Name  : String;
       Value : Long_Long_Integer) renames AI.Bind_Static_Integer;
-   procedure Invalidate_Static_Integer
-     (State : in out Emit_State;
-      Name  : String) renames AI.Invalidate_Static_Integer;
    procedure Bind_Static_String
      (State : in out Emit_State;
       Name  : String;
       Image : String) renames AI.Bind_Static_String;
-   function Has_Static_Integer_Tracking
-     (State : Emit_State;
-      Name  : String) return Boolean renames AI.Has_Static_Integer_Tracking;
-   function Try_Static_Integer_Binding
-     (State : Emit_State;
-      Name  : String;
-      Value : out Long_Long_Integer) return Boolean renames AI.Try_Static_Integer_Binding;
-   procedure Restore_Static_Integer_Bindings
-     (State           : in out Emit_State;
-      Previous_Length : Ada.Containers.Count_Type) renames AI.Restore_Static_Integer_Bindings;
-   procedure Push_Type_Binding_Frame (State : in out Emit_State) renames AI.Push_Type_Binding_Frame;
-   procedure Pop_Type_Binding_Frame (State : in out Emit_State) renames AI.Pop_Type_Binding_Frame;
-   procedure Add_Type_Binding
-     (State     : in out Emit_State;
-      Name      : String;
-      Type_Info : GM.Type_Descriptor;
-      Is_Constant : Boolean := False) renames AI.Add_Type_Binding;
-   procedure Register_Type_Bindings
-     (State        : in out Emit_State;
-      Declarations : CM.Resolved_Object_Decl_Vectors.Vector) renames AI.Register_Type_Bindings;
-   procedure Register_Type_Bindings
-     (State        : in out Emit_State;
-      Declarations : CM.Object_Decl_Vectors.Vector) renames AI.Register_Type_Bindings;
-   procedure Register_Param_Type_Bindings
-     (State  : in out Emit_State;
-      Params : CM.Symbol_Vectors.Vector) renames AI.Register_Param_Type_Bindings;
-   function Lookup_Bound_Type
-     (State     : Emit_State;
-      Name      : String;
-      Type_Info : out GM.Type_Descriptor) return Boolean renames AI.Lookup_Bound_Type;
-   procedure Push_Cleanup_Frame (State : in out Emit_State) renames AI.Push_Cleanup_Frame;
-   procedure Pop_Cleanup_Frame (State : in out Emit_State) renames AI.Pop_Cleanup_Frame;
-   procedure Add_Cleanup_Item
-     (State     : in out Emit_State;
-      Name      : String;
-      Type_Name : String;
-      Free_Proc : String := "";
-      Is_Constant : Boolean := False;
-      Always_Terminates_Suppression_OK : Boolean := False;
-      Action    : Cleanup_Action := AI.Cleanup_Deallocate) renames AI.Add_Cleanup_Item;
-   procedure Register_Cleanup_Items
-     (State        : in out Emit_State;
-      Declarations : CM.Resolved_Object_Decl_Vectors.Vector) renames AI.Register_Cleanup_Items;
-   procedure Register_Cleanup_Items
-     (State        : in out Emit_State;
-      Declarations : CM.Object_Decl_Vectors.Vector) renames AI.Register_Cleanup_Items;
-   procedure Render_Cleanup_Item
-     (Buffer : in out SU.Unbounded_String;
-      Item   : Cleanup_Item;
-      Depth  : Natural) renames AI.Render_Cleanup_Item;
-   procedure Render_Active_Cleanup
-     (Buffer : in out SU.Unbounded_String;
-      State  : Emit_State;
-      Depth  : Natural;
-      Skip_Name : String := "") renames AI.Render_Active_Cleanup;
-   procedure Render_Current_Cleanup_Frame
-     (Buffer : in out SU.Unbounded_String;
-      State  : Emit_State;
-      Depth  : Natural) renames AI.Render_Current_Cleanup_Frame;
-   function Has_Active_Cleanup_Items (State : Emit_State) return Boolean renames AI.Has_Active_Cleanup_Items;
 
    procedure Collect_Select_Dispatcher_Names
      (Statements : CM.Statement_Access_Vectors.Vector;
@@ -174,24 +78,12 @@ package body Safe_Frontend.Ada_Emit is
    procedure Collect_Select_Delay_Timer_Names
      (Statements : CM.Statement_Access_Vectors.Vector;
       Names      : in out FT.UString_Vectors.Vector) renames AES.Collect_Select_Delay_Timer_Names;
-   procedure Collect_Select_Dispatcher_Names_For_Channel
-     (Statements   : CM.Statement_Access_Vectors.Vector;
-      Channel_Name : String;
-      Names        : in out FT.UString_Vectors.Vector) renames AES.Collect_Select_Dispatcher_Names_For_Channel;
-
-   function Is_Access_Type (Info : GM.Type_Descriptor) return Boolean renames AI.Is_Access_Type;
    function Is_Owner_Access (Info : GM.Type_Descriptor) return Boolean renames AI.Is_Owner_Access;
 
    function Is_Bounded_String_Type
      (Info : GM.Type_Descriptor) return Boolean renames AET.Is_Bounded_String_Type;
    function Bounded_String_Instance_Name
-     (Bound : Natural) return String renames AET.Bounded_String_Instance_Name;
-   function Bounded_String_Instance_Name
      (Info : GM.Type_Descriptor) return String renames AET.Bounded_String_Instance_Name;
-   function Bounded_String_Type_Name
-     (Bound : Natural) return String renames AET.Bounded_String_Type_Name;
-   function Bounded_String_Type_Name
-     (Info : GM.Type_Descriptor) return String renames AET.Bounded_String_Type_Name;
 
    procedure Register_Bounded_String_Type
      (State : in out Emit_State;
@@ -205,114 +97,16 @@ package body Safe_Frontend.Ada_Emit is
       Document : GM.Mir_Document;
       Info     : GM.Type_Descriptor) return Boolean renames AET.Is_Growable_Array_Type;
 
-   function Sanitized_Helper_Name (Name : String) return String renames AI.Sanitized_Helper_Name;
-
-   function Needs_Generated_For_Of_Helper
-     (Unit     : CM.Resolved_Unit;
-      Document : GM.Mir_Document;
-      Info     : GM.Type_Descriptor) return Boolean renames AET.Needs_Generated_For_Of_Helper;
-
-   function For_Of_Copy_Helper_Name
-     (Unit     : CM.Resolved_Unit;
-      Document : GM.Mir_Document;
-      Info     : GM.Type_Descriptor) return String renames AET.For_Of_Copy_Helper_Name;
-   function For_Of_Free_Helper_Name
-     (Unit     : CM.Resolved_Unit;
-      Document : GM.Mir_Document;
-      Info     : GM.Type_Descriptor) return String renames AET.For_Of_Free_Helper_Name;
-   function Needs_Generated_Heap_Helper
-     (Unit     : CM.Resolved_Unit;
-      Document : GM.Mir_Document;
-      Info     : GM.Type_Descriptor) return Boolean renames AET.Needs_Generated_Heap_Helper;
-   function Heap_Helper_Base_Name
-     (Family    : Heap_Helper_Family_Kind;
-      Scope_Name : String;
-      Unit      : CM.Resolved_Unit;
-      Document  : GM.Mir_Document;
-      Info      : GM.Type_Descriptor) return String renames AET.Heap_Helper_Base_Name;
-   function Heap_Copy_Helper_Name
-     (Family    : Heap_Helper_Family_Kind;
-      Scope_Name : String;
-      Unit      : CM.Resolved_Unit;
-      Document  : GM.Mir_Document;
-      Info      : GM.Type_Descriptor) return String renames AET.Heap_Copy_Helper_Name;
-   function Heap_Free_Helper_Name
-     (Family    : Heap_Helper_Family_Kind;
-      Scope_Name : String;
-      Unit      : CM.Resolved_Unit;
-      Document  : GM.Mir_Document;
-      Info      : GM.Type_Descriptor) return String renames AET.Heap_Free_Helper_Name;
-
-   procedure Append_Heap_Copy_Value
-     (Buffer     : in out SU.Unbounded_String;
-      Unit       : CM.Resolved_Unit;
-      Document   : GM.Mir_Document;
-      State      : in out Emit_State;
-      Family     : Heap_Helper_Family_Kind;
-      Scope_Name : String;
-      Target_Text : String;
-      Source_Text : String;
-      Info       : GM.Type_Descriptor;
-      Depth      : Natural) renames AET.Append_Heap_Copy_Value;
-   procedure Append_Heap_Free_Value
-     (Buffer     : in out SU.Unbounded_String;
-      Unit       : CM.Resolved_Unit;
-      Document   : GM.Mir_Document;
-      State      : in out Emit_State;
-      Family     : Heap_Helper_Family_Kind;
-      Scope_Name : String;
-      Target_Text : String;
-      Info       : GM.Type_Descriptor;
-      Depth      : Natural) renames AET.Append_Heap_Free_Value;
-
-   function Try_Static_String_Binding
-     (State : Emit_State;
-      Name  : String;
-      Image : out SU.Unbounded_String) return Boolean renames AI.Try_Static_String_Binding;
-
-   procedure Restore_Static_String_Bindings
-     (State           : in out Emit_State;
-      Previous_Length : Ada.Containers.Count_Type) renames AI.Restore_Static_String_Bindings;
-
-   procedure Clear_All_Static_Bindings (State : in out Emit_State) renames AI.Clear_All_Static_Bindings;
-
    function Render_Expr_For_Target_Type
      (Unit        : CM.Resolved_Unit;
       Document    : GM.Mir_Document;
       Expr        : CM.Expr_Access;
       Target_Info : GM.Type_Descriptor;
       State       : in out Emit_State) return String renames AEX.Render_Expr_For_Target_Type;
-   function Render_Type_Name
-     (Info : GM.Type_Descriptor) return String renames AET.Render_Type_Name;
-   function Render_Type_Name_From_Text
-     (Unit      : CM.Resolved_Unit;
-      Document  : GM.Mir_Document;
-      Name_Text : String;
-      State     : in out Emit_State) return String renames AET.Render_Type_Name_From_Text;
    function Render_Subtype_Indication
      (Unit     : CM.Resolved_Unit;
      Document : GM.Mir_Document;
      Info     : GM.Type_Descriptor) return String renames AET.Render_Subtype_Indication;
-   function Render_Param_Type_Name
-     (Unit     : CM.Resolved_Unit;
-      Document : GM.Mir_Document;
-      Info     : GM.Type_Descriptor) return String renames AET.Render_Param_Type_Name;
-   function Render_Type_Name
-     (Unit     : CM.Resolved_Unit;
-      Document : GM.Mir_Document;
-      Name     : String) return String renames AET.Render_Type_Name;
-   function Default_Value_Expr
-     (Type_Name : String) return String renames AET.Default_Value_Expr;
-   function Default_Value_Expr
-     (Unit     : CM.Resolved_Unit;
-      Document : GM.Mir_Document;
-      Info     : GM.Type_Descriptor) return String renames AET.Default_Value_Expr;
-   function Default_Value_Expr
-     (Info : GM.Type_Descriptor) return String renames AET.Default_Value_Expr;
-   function Needs_Explicit_Default_Initializer
-     (Unit     : CM.Resolved_Unit;
-      Document : GM.Mir_Document;
-      Info     : GM.Type_Descriptor) return Boolean renames AET.Needs_Explicit_Default_Initializer;
 
    procedure Collect_Synthetic_Types
      (Unit     : CM.Resolved_Unit;
@@ -372,81 +166,13 @@ package body Safe_Frontend.Ada_Emit is
       Document : GM.Mir_Document;
       Expr     : CM.Expr_Access;
       State    : in out Emit_State) return String renames AEX.Render_Expr;
-   function Render_Print_Argument
-     (Unit     : CM.Resolved_Unit;
-      Document : GM.Mir_Document;
-      Expr     : CM.Expr_Access;
-      State    : in out Emit_State) return String renames AEX.Render_Print_Argument;
-
-   function Uses_Wide_Value
-     (Unit     : CM.Resolved_Unit;
-      Document : GM.Mir_Document;
-      State    : Emit_State;
-      Expr     : CM.Expr_Access) return Boolean renames AEX.Uses_Wide_Value;
-
-   function Render_Channel_Send_Value
-     (Unit         : CM.Resolved_Unit;
-      Document     : GM.Mir_Document;
-      State        : in out Emit_State;
-      Channel_Expr : CM.Expr_Access;
-      Value        : CM.Expr_Access) return String renames AEX.Render_Channel_Send_Value;
-
-   function Render_Wide_Expr
-     (Unit     : CM.Resolved_Unit;
-      Document : GM.Mir_Document;
-      Expr     : CM.Expr_Access;
-      State    : in out Emit_State) return String renames AEX.Render_Wide_Expr;
-   function Render_Wide_Expr_With_Target_Substitution
-     (Unit          : CM.Resolved_Unit;
-      Document      : GM.Mir_Document;
-      Expr          : CM.Expr_Access;
-      Target        : CM.Expr_Access;
-      Replacement   : String;
-      State         : in out Emit_State;
-      Supported     : in out Boolean) return String renames AEX.Render_Wide_Expr_With_Target_Substitution;
-
    function Render_Object_Decl_Text
      (Unit     : CM.Resolved_Unit;
-      Document : GM.Mir_Document;
-      State    : in out Emit_State;
-      Decl     : CM.Resolved_Object_Decl;
-      Local_Context : Boolean := False;
-      Defer_Initializer : Boolean := False) return String renames AES.Render_Object_Decl_Text;
-   function Render_Object_Decl_Text
-     (Unit     : CM.Resolved_Unit;
-      Document : GM.Mir_Document;
-      State    : in out Emit_State;
-      Decl     : CM.Object_Decl;
-      Local_Context : Boolean := False;
-      Defer_Initializer : Boolean := False) return String renames AES.Render_Object_Decl_Text;
-
-   function Render_Expr_With_Target_Substitution
-     (Unit          : CM.Resolved_Unit;
-      Document      : GM.Mir_Document;
-      Expr          : CM.Expr_Access;
-      Target        : CM.Expr_Access;
-      Replacement   : String;
-      State         : in out Emit_State;
-      Supported     : in out Boolean) return String renames AEX.Render_Expr_With_Target_Substitution;
-   function Render_Expr_With_Old_Substitution
-     (Unit          : CM.Resolved_Unit;
-      Document      : GM.Mir_Document;
-      Expr          : CM.Expr_Access;
-      Target        : CM.Expr_Access;
-      State         : in out Emit_State;
-      Supported     : in out Boolean) return String renames AEX.Render_Expr_With_Old_Substitution;
-
-   function Statement_Contains_Exit
-     (Item : CM.Statement_Access) return Boolean renames AI.Statement_Contains_Exit;
-
-   function Statements_Contain_Exit
-     (Statements : CM.Statement_Access_Vectors.Vector) return Boolean renames AI.Statements_Contain_Exit;
-
-   function Statement_Falls_Through
-     (Item : CM.Statement_Access) return Boolean renames AI.Statement_Falls_Through;
-
-   function Statements_Fall_Through
-     (Statements : CM.Statement_Access_Vectors.Vector) return Boolean renames AI.Statements_Fall_Through;
+     Document : GM.Mir_Document;
+     State    : in out Emit_State;
+     Decl     : CM.Resolved_Object_Decl;
+     Local_Context : Boolean := False;
+     Defer_Initializer : Boolean := False) return String renames AES.Render_Object_Decl_Text;
 
    procedure Append_Gnatprove_Warning_Suppression
      (Buffer  : in out SU.Unbounded_String;
@@ -459,16 +185,6 @@ package body Safe_Frontend.Ada_Emit is
       Pattern : String;
       Depth   : Natural) renames AI.Append_Gnatprove_Warning_Restore;
 
-   procedure Append_Gnatprove_Warning_Suppressions
-     (Buffer   : in out SU.Unbounded_String;
-      Warnings : Warning_Suppression_Array;
-      Depth    : Natural) renames AI.Append_Gnatprove_Warning_Suppressions;
-
-   procedure Append_Gnatprove_Warning_Restores
-     (Buffer   : in out SU.Unbounded_String;
-      Warnings : Warning_Restore_Array;
-      Depth    : Natural) renames AI.Append_Gnatprove_Warning_Restores;
-
    procedure Append_Local_Warning_Suppression
      (Buffer : in out SU.Unbounded_String;
       Depth  : Natural) renames AI.Append_Local_Warning_Suppression;
@@ -477,65 +193,6 @@ package body Safe_Frontend.Ada_Emit is
      (Buffer : in out SU.Unbounded_String;
       Depth  : Natural) renames AI.Append_Local_Warning_Restore;
 
-   procedure Append_Initialization_Warning_Suppression
-     (Buffer : in out SU.Unbounded_String;
-      Depth  : Natural) renames AI.Append_Initialization_Warning_Suppression;
-
-   procedure Append_Initialization_Warning_Restore
-     (Buffer : in out SU.Unbounded_String;
-      Depth  : Natural) renames AI.Append_Initialization_Warning_Restore;
-
-   procedure Append_Channel_Staged_Call_Warning_Suppression
-     (Buffer : in out SU.Unbounded_String;
-      Depth  : Natural) renames AI.Append_Channel_Staged_Call_Warning_Suppression;
-
-   procedure Append_Channel_Staged_Call_Warning_Restore
-     (Buffer : in out SU.Unbounded_String;
-      Depth  : Natural) renames AI.Append_Channel_Staged_Call_Warning_Restore;
-
-   procedure Append_Task_Assignment_Warning_Suppression
-     (Buffer : in out SU.Unbounded_String;
-      Depth  : Natural) renames AI.Append_Task_Assignment_Warning_Suppression;
-
-   procedure Append_Task_Assignment_Warning_Restore
-     (Buffer : in out SU.Unbounded_String;
-      Depth  : Natural) renames AI.Append_Task_Assignment_Warning_Restore;
-
-   procedure Append_Task_If_Warning_Suppression
-     (Buffer : in out SU.Unbounded_String;
-      Depth  : Natural) renames AI.Append_Task_If_Warning_Suppression;
-
-   procedure Append_Task_If_Warning_Restore
-     (Buffer : in out SU.Unbounded_String;
-      Depth  : Natural) renames AI.Append_Task_If_Warning_Restore;
-
-   procedure Append_Task_Channel_Call_Warning_Suppression
-     (Buffer : in out SU.Unbounded_String;
-      Depth  : Natural) renames AI.Append_Task_Channel_Call_Warning_Suppression;
-
-   procedure Append_Task_Channel_Call_Warning_Restore
-     (Buffer : in out SU.Unbounded_String;
-      Depth  : Natural) renames AI.Append_Task_Channel_Call_Warning_Restore;
-
-   procedure Render_Cleanup
-     (Buffer       : in out SU.Unbounded_String;
-      Declarations : CM.Resolved_Object_Decl_Vectors.Vector;
-      Depth        : Natural) renames AI.Render_Cleanup;
-
-   procedure Render_Cleanup
-     (Buffer       : in out SU.Unbounded_String;
-      Declarations : CM.Object_Decl_Vectors.Vector;
-      Depth        : Natural) renames AI.Render_Cleanup;
-
-   procedure Render_Statements
-     (Buffer     : in out SU.Unbounded_String;
-      Unit       : CM.Resolved_Unit;
-      Document   : GM.Mir_Document;
-      Statements : CM.Statement_Access_Vectors.Vector;
-      State      : in out Emit_State;
-      Depth      : Natural;
-      Return_Type : String := "";
-      In_Loop    : Boolean := False) renames AES.Render_Statements;
    procedure Render_Required_Statement_Suite
      (Buffer      : in out SU.Unbounded_String;
       Unit        : CM.Resolved_Unit;
@@ -545,11 +202,6 @@ package body Safe_Frontend.Ada_Emit is
       Depth       : Natural;
       Return_Type : String := "";
       In_Loop     : Boolean := False) renames AES.Render_Required_Statement_Suite;
-
-   function Apply_Name_Replacements
-     (Text       : String;
-      From_Names : FT.UString_Vectors.Vector;
-      To_Names   : FT.UString_Vectors.Vector) return String renames AEX.Apply_Name_Replacements;
 
    function Unit_File_Stem (Unit_Name : String) return String is
       Result : String := Unit_Name;
