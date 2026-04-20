@@ -375,6 +375,14 @@ Findings:
 
 None yet.
 
+### safe_frontend-ada_emit-proofs.adb
+
+Owner: TBD.
+
+Findings:
+
+None yet.
+
 ## Phase 3 - Canary And Cross-Cutting Replay
 
 Replay only the Phase 0 frozen canary corpus. Classify failures into existing
