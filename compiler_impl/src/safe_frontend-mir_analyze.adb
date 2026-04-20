@@ -398,7 +398,6 @@ package body Safe_Frontend.Mir_Analyze is
      (Expr          : GM.Expr_Access;
       Prefix_Type   : GM.Type_Descriptor;
       Index_Expr    : GM.Expr_Access;
-      Interval_Value : Interval;
       Var_Types     : Type_Maps.Map;
       Type_Env      : Type_Maps.Map;
       Functions     : Function_Maps.Map) return FT.UString_Vectors.Vector;
@@ -2104,7 +2103,6 @@ package body Safe_Frontend.Mir_Analyze is
      (Expr           : GM.Expr_Access;
       Prefix_Type    : GM.Type_Descriptor;
       Index_Expr     : GM.Expr_Access;
-      Interval_Value : Interval;
       Var_Types      : Type_Maps.Map;
       Type_Env       : Type_Maps.Map;
       Functions      : Function_Maps.Map) return FT.UString_Vectors.Vector
@@ -2790,7 +2788,7 @@ package body Safe_Frontend.Mir_Analyze is
             Result.Span := Expr.Span;
             Result.Has_Highlight_Span := True;
             Result.Highlight_Span := Expr.Span;
-            Result.Notes := Index_Notes (Expr, Prefix_Type, Expr.Indices (Expr.Indices.First_Index), (Low => INT64_LOW, High => INT64_HIGH, Excludes_Zero => False), Var_Types, Type_Env, Functions);
+            Result.Notes := Index_Notes (Expr, Prefix_Type, Expr.Indices (Expr.Indices.First_Index), Var_Types, Type_Env, Functions);
                   Result.Suggestions := Index_Suggestions (UString_Value (Prefix_Name), Prefix_Type, Expr.Indices (Expr.Indices.First_Index), Type_Env);
             Raise_Diag (Result);
          end;
@@ -2815,7 +2813,7 @@ package body Safe_Frontend.Mir_Analyze is
                   Result.Span := Expr.Span;
                   Result.Has_Highlight_Span := True;
                   Result.Highlight_Span := Expr.Span;
-                  Result.Notes := Index_Notes (Expr, Prefix_Type, Expr.Indices (Index), Value, Var_Types, Type_Env, Functions);
+                  Result.Notes := Index_Notes (Expr, Prefix_Type, Expr.Indices (Index), Var_Types, Type_Env, Functions);
                   Result.Suggestions := Index_Suggestions (UString_Value (Prefix_Name), Prefix_Type, Expr.Indices (Index), Type_Env);
                   Raise_Diag (Result);
                end;

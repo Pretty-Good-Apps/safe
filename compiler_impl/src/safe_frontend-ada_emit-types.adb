@@ -63,10 +63,7 @@ package body Safe_Frontend.Ada_Emit.Types is
       Name      : String;
       Type_Info : out GM.Type_Descriptor) return Boolean;
    function Local_Free_Helper_Name (Info : GM.Type_Descriptor) return String;
-   function For_Of_Helper_Base_Name
-     (Unit     : CM.Resolved_Unit;
-      Document : GM.Mir_Document;
-      Info     : GM.Type_Descriptor) return String;
+   function For_Of_Helper_Base_Name (Info : GM.Type_Descriptor) return String;
    function Local_Dispose_Helper_Name (Info : GM.Type_Descriptor) return String;
    function Local_Ownership_Runtime_Name (Info : GM.Type_Descriptor) return String;
    function Array_Runtime_Default_Element_Name (Info : GM.Type_Descriptor) return String;
@@ -110,7 +107,6 @@ package body Safe_Frontend.Ada_Emit.Types is
      (Buffer      : in out SU.Unbounded_String;
       Unit        : CM.Resolved_Unit;
       Document    : GM.Mir_Document;
-      State       : in out Emit_State;
       Family      : Heap_Helper_Family_Kind;
       Scope_Name  : String;
       Base        : GM.Type_Descriptor;
@@ -1355,8 +1351,11 @@ package body Safe_Frontend.Ada_Emit.Types is
       Document : GM.Mir_Document;
       Info     : GM.Type_Descriptor) return String
    is
+      --  Keep the full type-context signature to match the exported for-of
+      --  helper-name API used across emitter children.
+      pragma Unreferenced (Unit, Document);
    begin
-      return For_Of_Helper_Base_Name (Unit, Document, Info) & "_Copy";
+      return For_Of_Helper_Base_Name (Info) & "_Copy";
    end For_Of_Copy_Helper_Name;
 
    function For_Of_Free_Helper_Name
@@ -1364,8 +1363,11 @@ package body Safe_Frontend.Ada_Emit.Types is
       Document : GM.Mir_Document;
       Info     : GM.Type_Descriptor) return String
    is
+      --  Keep the full type-context signature to match the exported for-of
+      --  helper-name API used across emitter children.
+      pragma Unreferenced (Unit, Document);
    begin
-      return For_Of_Helper_Base_Name (Unit, Document, Info) & "_Free";
+      return For_Of_Helper_Base_Name (Info) & "_Free";
    end For_Of_Free_Helper_Name;
 
    function Needs_Generated_Heap_Helper
@@ -1389,13 +1391,15 @@ package body Safe_Frontend.Ada_Emit.Types is
       Document  : GM.Mir_Document;
       Info      : GM.Type_Descriptor) return String
    is
-      pragma Unreferenced (Document);
+      --  Shared/channel helper names do not need the resolved unit today, but
+      --  callers use one heap-helper naming API for all helper families.
+      pragma Unreferenced (Unit, Document);
    begin
       case Family is
          when AI.Heap_Helper_Shared | AI.Heap_Helper_Channel =>
             return Scope_Name & "_" & Sanitized_Helper_Name (Render_Type_Name (Info));
          when AI.Heap_Helper_For_Of =>
-            return For_Of_Helper_Base_Name (Unit, Document, Info);
+            return For_Of_Helper_Base_Name (Info);
       end case;
    end Heap_Helper_Base_Name;
 
@@ -1425,7 +1429,6 @@ package body Safe_Frontend.Ada_Emit.Types is
      (Buffer     : in out SU.Unbounded_String;
       Unit       : CM.Resolved_Unit;
       Document   : GM.Mir_Document;
-      State      : in out Emit_State;
       Family     : Heap_Helper_Family_Kind;
       Scope_Name : String;
       Target_Text : String;
@@ -2820,7 +2823,6 @@ package body Safe_Frontend.Ada_Emit.Types is
            (Buffer,
             Unit,
             Document,
-            State,
             AI.Heap_Helper_For_Of,
             "",
             Info,
@@ -3462,11 +3464,7 @@ package body Safe_Frontend.Ada_Emit.Types is
       return "Free_" & Sanitized_Helper_Name (FT.To_String (Info.Name));
    end Local_Free_Helper_Name;
 
-   function For_Of_Helper_Base_Name
-     (Unit     : CM.Resolved_Unit;
-      Document : GM.Mir_Document;
-      Info     : GM.Type_Descriptor) return String
-   is
+   function For_Of_Helper_Base_Name (Info : GM.Type_Descriptor) return String is
    begin
       return "For_Of_" & Sanitized_Helper_Name (Render_Type_Name (Info));
    end For_Of_Helper_Base_Name;
@@ -3530,7 +3528,6 @@ package body Safe_Frontend.Ada_Emit.Types is
      (Buffer      : in out SU.Unbounded_String;
       Unit        : CM.Resolved_Unit;
       Document    : GM.Mir_Document;
-      State       : in out Emit_State;
       Family      : Heap_Helper_Family_Kind;
       Scope_Name  : String;
       Info        : GM.Type_Descriptor;
@@ -3549,7 +3546,6 @@ package body Safe_Frontend.Ada_Emit.Types is
               (Buffer,
                Unit,
                Document,
-               State,
                Family,
                Scope_Name,
                "Target (Index)",
@@ -3568,7 +3564,6 @@ package body Safe_Frontend.Ada_Emit.Types is
               (Buffer,
                Unit,
                Document,
-               State,
                Family,
                Scope_Name,
                Base,
@@ -3586,7 +3581,6 @@ package body Safe_Frontend.Ada_Emit.Types is
                        (Buffer,
                         Unit,
                         Document,
-                        State,
                         Family,
                         Scope_Name,
                         "Target." & FT.To_String (Field.Name),
@@ -3620,7 +3614,6 @@ package body Safe_Frontend.Ada_Emit.Types is
                     (Buffer,
                      Unit,
                      Document,
-                     State,
                      Family,
                      Scope_Name,
                      "Target." & Tuple_Field_Name (Positive (Index)),
@@ -4445,7 +4438,6 @@ package body Safe_Frontend.Ada_Emit.Types is
      (Buffer      : in out SU.Unbounded_String;
       Unit        : CM.Resolved_Unit;
       Document    : GM.Mir_Document;
-      State       : in out Emit_State;
       Family      : Heap_Helper_Family_Kind;
       Scope_Name  : String;
       Base        : GM.Type_Descriptor;
@@ -4464,7 +4456,6 @@ package body Safe_Frontend.Ada_Emit.Types is
                  (Buffer,
                   Unit,
                   Document,
-                  State,
                   Family,
                   Scope_Name,
                   Target_Prefix & FT.To_String (Field.Name),
@@ -4518,7 +4509,6 @@ package body Safe_Frontend.Ada_Emit.Types is
                              (Buffer,
                               Unit,
                               Document,
-                              State,
                               Family,
                               Scope_Name,
                               Target_Prefix & FT.To_String (Variant_Field.Name),

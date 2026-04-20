@@ -980,7 +980,6 @@ package body Safe_Frontend.Check_Resolve is
 
    function Specialize_Generic_Call
      (Expr      : CM.Expr_Access;
-      Var_Types : Type_Maps.Map;
       Functions : Function_Maps.Map;
       Type_Env  : Type_Maps.Map;
       Const_Env : Static_Value_Maps.Map;
@@ -7221,7 +7220,6 @@ package body Safe_Frontend.Check_Resolve is
                         Result :=
                           Specialize_Generic_Call
                             (Result,
-                             Var_Types,
                              Functions,
                              Type_Env,
                              Const_Env,
@@ -9654,7 +9652,6 @@ package body Safe_Frontend.Check_Resolve is
 
    function Specialize_Generic_Call
      (Expr      : CM.Expr_Access;
-      Var_Types : Type_Maps.Map;
       Functions : Function_Maps.Map;
       Type_Env  : Type_Maps.Map;
       Const_Env : Static_Value_Maps.Map;
