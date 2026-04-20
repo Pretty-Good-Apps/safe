@@ -111,16 +111,16 @@ the proposed mechanism, such as grep-based CI, GNAT warning policy, or future
 
 ## Baseline Counts
 
-Commands run at `Audit SHA`:
+Commands run at `Audit SHA` (each command emits the total reported in the summary):
 
 ```bash
 git rev-parse HEAD
 rg --version
-rg -c 'when others =>' compiler_impl/src compiler_impl/stdlib/ada
-rg -c 'SPARK_Mode \(Off\)' compiler_impl/src compiler_impl/stdlib/ada
-rg -c 'Raise_Unsupported' compiler_impl/src
-rg -c 'pragma Assume|pragma Annotate \(GNATprove' compiler_impl/src compiler_impl/stdlib/ada
-find samples \( -name '*canary*.safe' -o -name 'surface_tour.safe' \) -print | sort
+rg -c 'when others =>' compiler_impl/src compiler_impl/stdlib/ada | awk -F: '{sum += $NF} END {print sum + 0}'
+rg -c 'SPARK_Mode \(Off\)' compiler_impl/src compiler_impl/stdlib/ada | awk -F: '{sum += $NF} END {print sum + 0}'
+rg -c 'Raise_Unsupported' compiler_impl/src | awk -F: '{sum += $NF} END {print sum + 0}'
+rg -c 'pragma Assume|pragma Annotate \(GNATprove' compiler_impl/src compiler_impl/stdlib/ada | awk -F: '{sum += $NF} END {print sum + 0}'
+find samples \( -name '*canary*.safe' -o -name 'surface_tour.safe' \) -print | wc -l
 ```
 
 Summary:
