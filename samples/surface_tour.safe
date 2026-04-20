@@ -1,0 +1,258 @@
+-- Single-file surface tour for the current Safe checkout.
+-- Cross-package `with` import flows live in `tests/interfaces/`; this sample
+-- focuses on the broad single-unit surface in one runnable program.
+
+package surface_tour
+
+   subtype tally is integer (0 to 500);
+   subtype bonus is integer (0 to 100);
+   subtype tiny_digit is integer (0 to 9);
+   subtype slot is integer (1 to 3);
+
+   type waypoint is (alpha, bravo, gamma);
+   type opcode is binary (8);
+   type name_table is array (waypoint) of string (5);
+   type fixed_window is array (slot) of tally;
+   type int_trace is array of tally;
+
+   public type scoreable is interface
+      function (self : scoreable) label returns string;
+
+   public type pair of (l, r) is record
+      left  : l;
+      right : r;
+
+   public function identity of t (value : t) returns t
+      return value;
+
+   type mission is record
+      code   : opcode;
+      stop   : waypoint;
+      note   : string;
+      points : tally;
+
+   type packet (stop : waypoint = alpha) is record
+      case stop
+         when alpha
+            alpha_bonus : tally;
+         when bravo
+            bravo_bonus : tally;
+         when gamma
+            delta_bonus : tally;
+
+   type audit_state is record
+      total : tally;
+      stop  : waypoint;
+      note  : string (5);
+      maybe : optional tally;
+
+   type route_node;
+   type route_tail;
+
+   type route_node is record
+      value     : tally;
+      next_tail : route_tail;
+
+   type route_tail is record
+      value     : tally;
+      next_node : route_node;
+
+   channel event_ch : (waypoint, tally) capacity 1;
+   shared audit : audit_state = (total = 16, stop = alpha, note = "stand", maybe = none);
+
+   function (self : mission) rank returns tally
+      return self.points;
+
+   function (self : mission) label returns string
+      return self.note;
+
+   function (self : mut mission) advance (extra : tally)
+      self.points = self.points + extra;
+
+   function labeled_as of t with t: scoreable (item : t; expected : string) returns boolean
+      return item.label () == expected;
+
+   function final_slot (values : fixed_window) returns (boolean, tally)
+      return (true, values (slot.last));
+
+   function decode (code : opcode; digit : tiny_digit) returns (result, integer)
+      shifted : opcode = code << 1;
+
+      if digit == 7
+         case shifted
+            when opcode (6)
+               return (ok (), 17);
+            when opcode (2)
+               return (ok (), 11);
+            when others
+               return (fail ("bad-code"), 0);
+
+      return (fail ("bad-digit"), 0);
+
+   function combined_decode (digit : tiny_digit) returns (result, integer)
+      var first : integer = try decode (opcode (3), digit)
+      var second : integer = try decode (opcode (1), digit)
+
+      if first == 17 and then second == 11
+         return (ok (), 28)
+
+      return (fail ("bad-pair"), 0)
+
+   function mission_bonus returns tally
+      lead : mission = (code = opcode (3), stop = gamma, note = "delta", points = 18);
+      reserve : mission = (code = opcode (1), stop = bravo, note = "bravo", points = 12);
+      copied : mission = identity of mission (lead);
+      picked : pair of (waypoint, tally) = (left = copied.stop, right = reserve.points);
+      combined : tally = 0;
+
+      lead.advance (2);
+      if labeled_as of mission (copied, "delta") and then lead.rank () == 20 and then picked.left == gamma and then picked.right == 12
+         combined = lead.points + picked.right;
+         return combined;
+      else
+         return 0;
+
+   function decode_bonus returns tally
+      matched_ok : boolean = false;
+
+      match decode (opcode (3), 7)
+         when ok (value)
+            matched_ok = value == 17;
+         when fail (err)
+            if err.ok
+               matched_ok = false;
+            else
+               matched_ok = false;
+
+      match combined_decode (7)
+         when ok (value)
+            if matched_ok and then value == 28
+               return 45;
+            return 0;
+         when fail (err)
+            if err.ok
+               return 99;
+            else
+               return 0;
+
+   function packet_bonus returns tally
+      chosen : packet = (stop = bravo, bravo_bonus = 9);
+
+      if chosen.stop == bravo
+         return 9;
+      else
+         return 0;
+
+   function collection_bonus returns tally
+      names : name_table = ("alpha", "bravo", "delta");
+      fixed : fixed_window = (2, 4, 6);
+      widened : int_trace = fixed;
+      narrowed : fixed_window = [2, 4, 6];
+      var scores : list of tally = [tally (names (alpha).length), tally (names (bravo).length)];
+      var lookup : map of (string, tally);
+      var removed : optional tally;
+      (found, echoed) : (boolean, tally) = final_slot (narrowed);
+      copied_scores : list of tally = identity of list of tally ([tally (names (alpha).length), tally (names (bravo).length), echoed]);
+      copied_removed : optional tally;
+      alpha_points : optional tally;
+      bravo_points : optional tally;
+      delta_points : optional tally;
+      total : tally = 0;
+      map_total : tally = 0;
+      stop_count : tally = 0;
+      final_total : tally;
+
+      scores.append (echoed);
+      removed = scores.pop_last ();
+      scores.append (fixed (1) + fixed (2));
+      copied_removed = identity of optional tally (removed);
+
+      if copied_scores.length < 1
+         return 0;
+      lookup.set ("alpha", copied_scores (1));
+      lookup.set ("bravo", 3);
+      if copied_removed.present
+         lookup.set ("delta", copied_removed.value);
+
+      for item of widened
+         if total <= 80 and then item <= 20
+            total = total + item;
+
+      for stop in waypoint
+         if names (stop).length == 5
+            stop_count = stop_count + 1;
+
+      alpha_points = lookup.get ("alpha");
+      bravo_points = lookup.get ("bravo");
+      delta_points = lookup.get ("delta");
+      if alpha_points.present and then bravo_points.present and then delta_points.present
+         if alpha_points.value <= 20 and then bravo_points.value <= 20
+            map_total = alpha_points.value + bravo_points.value;
+         if map_total <= 40 and then delta_points.value <= 20
+            map_total = map_total + delta_points.value;
+
+      if found and then echoed == 6 and then names (alpha).length == 5 and then scores.length >= slot.last and then copied_scores.length >= slot.last and then scores (slot.last) == 6 and then copied_scores (slot.last) == 6 and then copied_removed.present and then copied_removed.value <= 20 and then alpha_points.present and then bravo_points.present and then delta_points.present and then total <= 60 and then map_total <= 60 and then stop_count <= 3
+         final_total = total + map_total + stop_count + copied_removed.value;
+         return final_total;
+      else
+         return 0;
+
+   function raise_node (item : mut not null route_node)
+      item.value = item.value + 1;
+
+   function recursive_bonus returns tally
+      head : not null route_node = (value = 4, next_tail = null);
+      mirror : route_node = null;
+
+      raise_node (head);
+      mirror = head;
+      if mirror != null and then mirror.value == 5 and then mirror.next_tail == null
+         return mirror.value;
+      else
+         return 0;
+
+   courier_sent : boolean = false;
+   courier_bonus : tally = 0;
+   payload : (waypoint, tally) = (alpha, 0);
+   audit_snapshot : audit_state = audit;
+   audit_total_snapshot : tally = 0;
+   audit_bonus_snapshot : tally = 0;
+   mission_part : tally = 0;
+   decode_part : tally = 0;
+   packet_part : tally = 0;
+   collection_part : tally = 0;
+   recursive_part : tally = 0;
+   final_score : tally = 0;
+   lead : mission = (code = opcode (3), stop = gamma, note = "delta", points = 18);
+
+   audit.stop = gamma;
+   audit.note = "ready";
+   audit.maybe = some (tally (7));
+   send event_ch, (gamma, 9), courier_sent;
+
+   if courier_sent
+      receive event_ch, payload
+      if payload.1 == gamma
+         courier_bonus = payload.2;
+   else
+      courier_bonus = 0;
+
+   audit_snapshot = audit;
+   if audit_snapshot.maybe.present and then audit_snapshot.stop == gamma and then audit_snapshot.note == "ready"
+      audit_total_snapshot = audit_snapshot.total;
+      audit_bonus_snapshot = audit_snapshot.maybe.value;
+      if courier_bonus <= 420 and then audit_total_snapshot <= 80
+         courier_bonus = courier_bonus + audit_total_snapshot;
+      if courier_bonus <= 420 and then audit_bonus_snapshot <= 80
+         courier_bonus = courier_bonus + audit_bonus_snapshot;
+
+   mission_part = mission_bonus ();
+   decode_part = decode_bonus ();
+   packet_part = packet_bonus ();
+   collection_part = collection_bonus ();
+   recursive_part = recursive_bonus ();
+
+   if mission_part <= 80 and then decode_part <= 80 and then packet_part <= 80 and then collection_part <= 80 and then recursive_part <= 80 and then courier_bonus <= 80
+      final_score = mission_part + decode_part + packet_part + collection_part + recursive_part + courier_bonus;
+   print (lead.label ());
+   print (final_score)
