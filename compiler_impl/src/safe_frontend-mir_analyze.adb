@@ -220,8 +220,6 @@ package body Safe_Frontend.Mir_Analyze is
    use type GM.Terminator_Kind;
    use type GM.Ownership_Effect_Kind;
    use type GM.Expr_Access;
-   use type Access_Role_Kind;
-   use type Access_State_Kind;
    use type Ada.Containers.Count_Type;
    use type FT.UString;
 

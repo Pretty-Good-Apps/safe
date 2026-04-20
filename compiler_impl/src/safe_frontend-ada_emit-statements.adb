@@ -1,8 +1,6 @@
 with Ada.Containers;
 with Ada.Containers.Vectors;
 with Ada.Strings.Fixed;
-with Ada.Strings.Unbounded;
-with Safe_Frontend.Ada_Emit.Internal;
 with Safe_Frontend.Ada_Emit.Types;
 with Safe_Frontend.Ada_Emit.Expressions;
 
@@ -17,7 +15,6 @@ package body Safe_Frontend.Ada_Emit.Statements is
    use type CM.Discrete_Range_Kind;
    use type CM.Select_Arm_Kind;
    use type FT.UString;
-   use type GM.Scalar_Value_Kind;
 
    subtype Cleanup_Action is AI.Cleanup_Action;
    subtype Cleanup_Item is AI.Cleanup_Item;

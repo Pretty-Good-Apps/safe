@@ -18,10 +18,8 @@ package body Safe_Frontend.Ada_Emit.Proofs is
    use type CM.Expr_Kind;
    use type CM.Statement_Access;
    use type CM.Statement_Kind;
-   use type CM.Discrete_Range_Kind;
    use type CM.Select_Arm_Kind;
    use type FT.UString;
-   use type GM.Scalar_Value_Kind;
 
    function Render_Subprogram_Params
      (Unit       : CM.Resolved_Unit;

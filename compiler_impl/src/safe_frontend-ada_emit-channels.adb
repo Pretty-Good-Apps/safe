@@ -10,15 +10,7 @@ package body Safe_Frontend.Ada_Emit.Channels is
    use AET;
    use AES;
 
-   use type Ada.Containers.Count_Type;
-   use type CM.Expr_Access;
-   use type CM.Expr_Kind;
-   use type CM.Statement_Access;
-   use type CM.Statement_Kind;
-   use type CM.Discrete_Range_Kind;
-   use type CM.Select_Arm_Kind;
    use type FT.UString;
-   use type GM.Scalar_Value_Kind;
 
    function Channel_Uses_Environment_Task
      (Bronze : MB.Bronze_Result;

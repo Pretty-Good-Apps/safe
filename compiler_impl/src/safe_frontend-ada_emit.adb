@@ -33,10 +33,7 @@ package body Safe_Frontend.Ada_Emit is
    use type CM.Expr_Kind;
    use type CM.Statement_Access;
    use type CM.Statement_Kind;
-   use type CM.Discrete_Range_Kind;
-   use type CM.Select_Arm_Kind;
    use type FT.UString;
-   use type GM.Scalar_Value_Kind;
 
    Gnat_Adc_Contents : constant String :=
      "pragma Partition_Elaboration_Policy(Sequential);" & ASCII.LF
