@@ -293,7 +293,7 @@ Matrix shape:
 | Assignment | scalar, heap-backed, shared-root, indexed target | local vs global root; same-root alias; empty slice | emit proof-safe assignment or explicit unsupported diagnostic |
 | Procedure call | pure observer, local mutator, package/global effect, unknown | value actual vs `mut` actual; imported vs local callee | preserve effect summary or fail closed with source diagnostic |
 | Loop | static range, dynamic range, while variant | empty range; one element; max/min integer bounds | emit variant/invariant or reject before emission |
-| Case/match/select | exhaustive, defaulted, unsupported arm shape | missing branch; nonstable scrutinee; channel readiness | emit explicit branch lowering or reject before emission |
+| Case/match/select | exhaustive, defaulted, unsupported arm shape | missing branch; non-stable scrutinee; channel readiness | emit explicit branch lowering or reject before emission |
 | Raise_Unsupported path | unsupported node kind | every fallback after unconditional raise | no dead code after raise; diagnostic preserves source context |
 
 Each deep dive should list:
