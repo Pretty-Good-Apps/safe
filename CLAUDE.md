@@ -67,6 +67,8 @@ to force the tests when diagnosing container capabilities.
   `scripts/_lib/proof_inventory.py`.
 - The embedded/Jorvik evidence lane is the repo-local
   `scripts/run_embedded_smoke.py --target stm32f4 --suite concurrency` flow.
+- Ada Language Server is recommended for Ada editor integration, but is not
+  part of CI or the required repo workflow.
 - `docs/roadmap.md` is the current roadmap file.
 - Keep `compiler/translation_rules.md` and `compiler/ast_schema.json` aligned
   with compiler-facing documentation changes.

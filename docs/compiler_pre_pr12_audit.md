@@ -110,6 +110,35 @@ For enforcement proposals, label the follow-up issue `infrastructure` and name
 the proposed mechanism, such as grep-based CI, GNAT warning policy, or future
 `safec` warning support.
 
+## GNAT Tool Adoption Notes
+
+Tracked adoption/evaluation work:
+
+- GNATcoverage (`gnatcov`): #338 tracks a reporting-only CI coverage artifact
+  with no initial threshold gate.
+- GNATprove `--mode=check`: #339 tracks a fast-fail CI legality step separate
+  from the full proof lane.
+- `gnatstack`: #340 tracks per-task stack-usage reporting and budget checks in
+  the embedded smoke lane.
+- CodePeer / GNAT SAS: #341 tracks the commercial-license and scope decision.
+
+Tools considered and not filed as standalone issues:
+
+- GNATcheck: already treated as a separate adoption plan; no duplicate audit
+  issue is created here.
+- `gnatmetric`: fold baseline numbers into Phase 0 audit scaffolding rather than
+  tracking a standalone issue.
+- `gnatpp`: skip for now because it overlaps with and may conflict with existing
+  `-gnaty*` style rules; calibration cost is not justified.
+- `gnatdoc`: skip because Safe has a curated docs structure; generated Ada API
+  docs add little value at this stage.
+- `gnattest`: skip because Safe already has a fixture-based harness; migration
+  cost is not justified.
+- `libadalang` / `lal-refactor`: defer until GNATcheck or simpler checks prove
+  insufficient for custom walker or exhaustiveness checks.
+- Ada Language Server: treat as a developer-environment recommendation, not a
+  CI or audit tracking item.
+
 ## Baseline Counts
 
 Commands run at `Audit SHA` (each command emits the total reported in the summary).
