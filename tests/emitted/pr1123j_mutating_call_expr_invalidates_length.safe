@@ -1,0 +1,15 @@
+package pr1123j_mutating_call_expr_invalidates_length
+
+   subtype factor is integer (0 to 6);
+
+   function grow (items : mut list of factor) returns integer
+      append (items, 6)
+      return items.length
+
+   function measured_length returns integer
+      var ys : list of factor = [4, 5, 6]
+      var seen : integer = grow (ys)
+
+      return ys.length
+
+   print (measured_length)

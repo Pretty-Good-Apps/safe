@@ -1,0 +1,13 @@
+package pr1123j_observe_only_preserves_length
+
+   subtype factor is integer (0 to 6);
+
+   function show_lengths returns integer
+      var ys : list of factor = [4, 5, 6]
+
+      print (ys.length)
+      print (ys.length)
+
+      return 0
+
+   print (show_lengths)

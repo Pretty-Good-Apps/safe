@@ -401,6 +401,7 @@ EMITTED_PROOF_REGRESSION_FIXTURES = [
     "tests/build/pr212_string_literal_build.safe",
     "tests/build/pr223_provider_enum.safe",
     "tests/build/pr223_imported_enum_comparison_build.safe",
+    "tests/build/pr1123j_known_mutating_call_length_build.safe",
     "tests/build/pr226_remainder_boolean_build.safe",
     "tests/build/pr227_public_shared_snapshot_order_build.safe",
     "tests/build/pr227_shared_snapshot_order_build.safe",
