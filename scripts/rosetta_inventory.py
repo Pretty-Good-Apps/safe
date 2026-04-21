@@ -162,6 +162,7 @@ REVIEW_SAMPLE_ANCHOR_TITLES = (
     "Hello world/Graphical",
     "Bitmap",
 )
+REVIEW_SAMPLE_ANCHOR_TITLE_SET = frozenset(REVIEW_SAMPLE_ANCHOR_TITLES)
 
 PORTED_SAMPLE_TITLE_ALIASES = {
     "samples/rosetta/arithmetic/collatz_bounded.safe": "Hailstone sequence",
@@ -772,7 +773,7 @@ def validate_sample_consistency(records: Iterable[InventoryRecord]) -> None:
         if record is None:
             missing.append(f"{sample_path} -> {title} (missing task record)")
             continue
-        if record.bucket != "1" or record.subbucket != "(none)" or record.porting_status != "ported":
+        if record.porting_status != "ported":
             missing.append(
                 f"{sample_path} -> {title} (bucket={record.bucket}, sub={record.subbucket}, porting={record.porting_status})"
             )
@@ -839,7 +840,10 @@ def gh_paginated_arrays(argv: list[str]) -> list[Any]:
             index += 1
         if index >= len(payload):
             break
-        value, end = decoder.raw_decode(payload, index)
+        try:
+            value, end = decoder.raw_decode(payload, index)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(f"{' '.join(argv)} returned invalid JSON: {exc}") from exc
         if not isinstance(value, list):
             raise RuntimeError(f"{' '.join(argv)} returned a non-array page")
         values.extend(value)
@@ -945,7 +949,12 @@ def fetch_project_items(project_number: int, *, owner: str, field_map: dict[str,
     return items
 
 
-def plan_sync(records: Iterable[InventoryRecord], existing_items: Iterable[ProjectItem]) -> SyncPlan:
+def plan_sync(
+    records: Iterable[InventoryRecord],
+    existing_items: Iterable[ProjectItem],
+    *,
+    parent_issue: int,
+) -> SyncPlan:
     desired_by_url = {record.url: record for record in records}
     rosetta_items: dict[str, ProjectItem] = {}
     missing: list[ProjectItem] = []
@@ -955,7 +964,7 @@ def plan_sync(records: Iterable[InventoryRecord], existing_items: Iterable[Proje
     unchanged = 0
 
     for item in existing_items:
-        if item.content_type == "Issue" and item.issue_number == DEFAULT_PARENT_ISSUE_NUMBER:
+        if item.content_type == "Issue" and item.issue_number == parent_issue:
             continue
         url = item.rosetta_url
         if url is None:
@@ -1324,30 +1333,7 @@ def build_review_sample(records: Iterable[InventoryRecord]) -> list[InventoryRec
 
 
 def review_result_placeholder(record: InventoryRecord) -> str:
-    title = record.title
-    if title == "Hello world/Text":
-        return "confirmed"
-    if title == "100 doors":
-        return "confirmed"
-    if title == "Church numerals":
-        return "confirmed"
-    if title == "Higher-order functions":
-        return "confirmed"
-    if title == "Monads/List monad":
-        return "confirmed"
-    if title == "Add a variable to a class instance at runtime":
-        return "confirmed"
-    if title == "Append a record to the end of a text file":
-        return "confirmed"
-    if title == "URL encoding":
-        return "confirmed"
-    if title == "Regular expressions":
-        return "confirmed"
-    if title == "Hello world/Graphical":
-        return "confirmed"
-    if title == "Bitmap":
-        return "confirmed"
-    return "pending-review"
+    return "confirmed" if record.title in REVIEW_SAMPLE_ANCHOR_TITLE_SET else "pending-review"
 
 
 def review_rationale(record: InventoryRecord) -> str:
@@ -1426,7 +1412,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"rosetta_inventory: ERROR: {exc}", file=sys.stderr)
         return 1
 
-    plan = plan_sync(records, existing_items)
+    plan = plan_sync(records, existing_items, parent_issue=args.parent_issue)
     if args.limit:
         plan = SyncPlan(
             creates=plan.creates,

@@ -2,9 +2,32 @@
 
 from __future__ import annotations
 
+import subprocess
+
 import rosetta_inventory as inventory
 
 from _lib.test_harness import RunCounts, record_result
+
+
+def make_record(
+    title: str,
+    *,
+    bucket: str = "1",
+    subbucket: str = "(none)",
+    porting_status: str = "not-started",
+) -> inventory.InventoryRecord:
+    return inventory.InventoryRecord(
+        title=title,
+        url=inventory.title_to_url(title),
+        extract="",
+        bucket=bucket,
+        subbucket=subbucket,
+        matched_rule="default",
+        difficulty="trivial",
+        rosetta_category=inventory.title_to_rosetta_category(title),
+        features=("functions",),
+        porting_status=porting_status,
+    )
 
 
 def run_classification_case() -> tuple[bool, str]:
@@ -251,6 +274,74 @@ def run_title_helpers_case() -> tuple[bool, str]:
     return True, ""
 
 
+def run_sample_consistency_case() -> tuple[bool, str]:
+    records = [make_record(title, porting_status="ported") for title in sorted(set(inventory.PORTED_SAMPLE_TITLE_ALIASES.values()))]
+    # Future ported samples do not need to stay in bucket 1; the invariant is that aliased imports are marked ported.
+    records[0] = make_record(records[0].title, bucket="2", subbucket="2a", porting_status="ported")
+    try:
+        inventory.validate_sample_consistency(records)
+    except RuntimeError as exc:
+        return False, f"ported sample consistency rejected a non-bucket-1 ported task: {exc}"
+
+    broken_records = list(records)
+    broken_records[0] = make_record(broken_records[0].title, bucket="2", subbucket="2a", porting_status="not-started")
+    try:
+        inventory.validate_sample_consistency(broken_records)
+    except RuntimeError:
+        return True, ""
+    return False, "ported sample consistency accepted a non-ported aliased sample"
+
+
+def run_gh_paginated_arrays_case() -> tuple[bool, str]:
+    original_run_capture = inventory.run_capture
+
+    def fake_run_capture(argv: list[str]) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(argv, 0, stdout="[] not-json", stderr="")
+
+    inventory.run_capture = fake_run_capture
+    try:
+        try:
+            inventory.gh_paginated_arrays(["gh", "api", "/example"])
+        except RuntimeError as exc:
+            if "returned invalid JSON" not in str(exc):
+                return False, f"unexpected JSON decode error text: {exc}"
+            return True, ""
+        return False, "gh_paginated_arrays accepted malformed JSON"
+    finally:
+        inventory.run_capture = original_run_capture
+
+
+def run_plan_sync_parent_issue_case() -> tuple[bool, str]:
+    desired_records = [make_record("Factorial")]
+    parent_issue_item = inventory.ProjectItem(
+        item_id="PVTI_parent",
+        content_type="Issue",
+        title="Rosetta inventory tracking",
+        body="**Rosetta URL:** https://rosettacode.org/wiki/Tracking_only\n",
+        field_values={},
+        issue_number=999,
+    )
+
+    plan = inventory.plan_sync(desired_records, [parent_issue_item], parent_issue=999)
+    if plan.missing:
+        return False, f"parent issue override should be ignored, found missing items: {plan.missing!r}"
+
+    plan = inventory.plan_sync(desired_records, [parent_issue_item], parent_issue=347)
+    if len(plan.missing) != 1 or plan.missing[0].issue_number != 999:
+        return False, f"non-parent issue should remain in missing set, got {plan.missing!r}"
+    return True, ""
+
+
+def run_review_placeholder_case() -> tuple[bool, str]:
+    confirmed = inventory.review_result_placeholder(make_record("Hello world/Text"))
+    if confirmed != "confirmed":
+        return False, f"expected anchor title to be confirmed, got {confirmed!r}"
+    pending = inventory.review_result_placeholder(make_record("Factorial"))
+    if pending != "pending-review":
+        return False, f"expected non-anchor title to be pending-review, got {pending!r}"
+    return True, ""
+
+
 def run_review_sample_case() -> tuple[bool, str]:
     anchor_buckets = {
         "Hello world/Text": ("1", "(none)"),
@@ -321,6 +412,10 @@ def run_rosetta_inventory_checks() -> RunCounts:
         ("body round-trip", run_body_roundtrip_case),
         ("sample mapping", run_sample_mapping_case),
         ("title helpers", run_title_helpers_case),
+        ("sample consistency", run_sample_consistency_case),
+        ("gh pagination errors", run_gh_paginated_arrays_case),
+        ("plan sync parent issue", run_plan_sync_parent_issue_case),
+        ("review placeholder", run_review_placeholder_case),
         ("review sample", run_review_sample_case),
     ]
     for label, case in cases:
