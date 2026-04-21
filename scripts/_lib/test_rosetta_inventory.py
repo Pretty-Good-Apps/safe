@@ -269,7 +269,7 @@ def run_title_helpers_case() -> tuple[bool, str]:
     trimmed = inventory.classification_extract(
         "Read JSON from https://example.com/spec.json and display it."
     )
-    if "https://" in trimmed or "example.com" in trimmed:
+    if trimmed != "Read JSON from and display it.":
         return False, f"inline URL was not stripped from extract {trimmed!r}"
     return True, ""
 
@@ -383,8 +383,9 @@ def run_review_sample_case() -> tuple[bool, str]:
             )
 
     sample = inventory.build_review_sample(records)
-    if len(sample) != 50:
-        return False, f"expected 50 review-sample records, got {len(sample)}"
+    expected_sample_count = sum(inventory.REVIEW_SAMPLE_QUOTAS.values())
+    if len(sample) != expected_sample_count:
+        return False, f"expected {expected_sample_count} review-sample records, got {len(sample)}"
 
     counts = inventory.bucket_summary(sample)
     for bucket_key, expected in inventory.REVIEW_SAMPLE_QUOTAS.items():

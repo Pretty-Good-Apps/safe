@@ -1388,11 +1388,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"rosetta_inventory: ERROR: {exc}", file=sys.stderr)
         return 1
 
-    records = inventory_records_for_tasks(raw_tasks, ported_urls=ported_urls)
-    if args.limit:
-        records = records[: args.limit]
+    full_records = inventory_records_for_tasks(raw_tasks, ported_urls=ported_urls)
+    records = full_records[: args.limit] if args.limit else full_records
     try:
-        validate_sample_consistency(records if args.limit == 0 else inventory_records_for_tasks(raw_tasks, ported_urls=ported_urls))
+        validate_sample_consistency(full_records)
     except RuntimeError as exc:
         print(f"rosetta_inventory: ERROR: {exc}", file=sys.stderr)
         return 1
