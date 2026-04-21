@@ -133,6 +133,41 @@ EMITTED_SHAPE_CASES = [
         REPO_ROOT / "tests" / "emitted" / "pr1123j_observe_only_preserves_length.safe",
         ["Safe_growable_array_factor_RT.Length (ys)"],
     ),
+    (
+        "partial-if-overwrite-keeps-init-warning",
+        REPO_ROOT / "tests" / "emitted" / "pr344_if_partial_overwrite.safe",
+        [
+            'pragma Warnings (GNATprove, Off, "initialization of", Reason => "generated local initialization is intentional");',
+        ],
+    ),
+    (
+        "if-condition-read-blocks-init-warning-suppression",
+        REPO_ROOT / "tests" / "emitted" / "pr344_if_condition_reads_name.safe",
+        [
+            'pragma Warnings (GNATprove, Off, "initialization of", Reason => "generated local initialization is intentional");',
+        ],
+    ),
+    (
+        "loop-between-decl-and-overwrite-keeps-init-warning",
+        REPO_ROOT / "tests" / "emitted" / "pr344_loop_blocks_suppression.safe",
+        [
+            'pragma Warnings (GNATprove, Off, "initialization of", Reason => "generated local initialization is intentional");',
+        ],
+    ),
+    (
+        "shadowing-declaration-blocks-init-warning-suppression",
+        REPO_ROOT / "tests" / "emitted" / "pr344_shadowing_decl_blocks_suppression.safe",
+        [
+            'pragma Warnings (GNATprove, Off, "initialization of", Reason => "generated local initialization is intentional");',
+        ],
+    ),
+    (
+        "unrelated-control-flow-blocks-init-warning-suppression",
+        REPO_ROOT / "tests" / "emitted" / "pr344_unrelated_control_flow_blocks_suppression.safe",
+        [
+            'pragma Warnings (GNATprove, Off, "initialization of", Reason => "generated local initialization is intentional");',
+        ],
+    ),
 ]
 
 EMITTED_REQUIRED_SHAPE_CASES = [
@@ -242,6 +277,22 @@ EMITTED_REQUIRED_SHAPE_CASES = [
         REPO_ROOT / "tests" / "emitted" / "pr1123j_mutating_call_expr_invalidates_length.safe",
         [
             "return Long_Long_Integer (Safe_growable_array_factor_RT.Length (ys));",
+        ],
+    ),
+    (
+        "if-all-branches-overwrite-suppresses-init-warning",
+        REPO_ROOT / "tests" / "emitted" / "pr344_if_all_branches_overwrite.safe",
+        [
+            'pragma Warnings (GNATprove, Off, "initialization of", Reason => "generated local initialization is intentional");',
+            'pragma Warnings (GNATprove, On, "initialization of");',
+        ],
+    ),
+    (
+        "case-all-arms-overwrite-suppresses-init-warning",
+        REPO_ROOT / "tests" / "emitted" / "pr344_case_all_arms_overwrite.safe",
+        [
+            'pragma Warnings (GNATprove, Off, "initialization of", Reason => "generated local initialization is intentional");',
+            'pragma Warnings (GNATprove, On, "initialization of");',
         ],
     ),
     (
