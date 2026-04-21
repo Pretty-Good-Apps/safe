@@ -103,6 +103,11 @@ BUILD_SUCCESS_CASES = [
         False,
     ),
     (
+        REPO_ROOT / "tests" / "build" / "pr1123j_known_mutating_call_length_build.safe",
+        "3\n4\n0\n",
+        False,
+    ),
+    (
         REPO_ROOT / "tests" / "build" / "pr223_imported_enum_comparison_build.safe",
         "1\n",
         False,
