@@ -870,6 +870,56 @@ package body Safe_Frontend.Ada_Emit.Statements is
      (Statements : CM.Statement_Access_Vectors.Vector;
       Name       : String) return Boolean;
 
+   function Statement_Blocks_Overwrite_Scan
+     (Statement : CM.Statement_Access) return Boolean
+   is
+   begin
+      if Statement = null then
+         return False;
+      end if;
+
+      case Statement.Kind is
+         when CM.Stmt_Unknown =>
+            return True;
+         when CM.Stmt_Object_Decl =>
+            return False;
+         when CM.Stmt_Destructure_Decl =>
+            return False;
+         when CM.Stmt_Assign =>
+            return False;
+         when CM.Stmt_Call =>
+            return False;
+         when CM.Stmt_Return =>
+            return True;
+         when CM.Stmt_If =>
+            return True;
+         when CM.Stmt_Case =>
+            return True;
+         when CM.Stmt_While =>
+            return True;
+         when CM.Stmt_For =>
+            return True;
+         when CM.Stmt_Loop =>
+            return True;
+         when CM.Stmt_Exit =>
+            return True;
+         when CM.Stmt_Send =>
+            return False;
+         when CM.Stmt_Receive =>
+            return False;
+         when CM.Stmt_Try_Send =>
+            return True;
+         when CM.Stmt_Try_Receive =>
+            return False;
+         when CM.Stmt_Match =>
+            return True;
+         when CM.Stmt_Select =>
+            return True;
+         when CM.Stmt_Delay =>
+            return False;
+      end case;
+   end Statement_Blocks_Overwrite_Scan;
+
    function Statement_Overwrites_Name_Before_Read
      (Statement : CM.Statement_Access;
       Name      : String) return Boolean
@@ -971,15 +1021,19 @@ package body Safe_Frontend.Ada_Emit.Statements is
    is
    begin
       --  Scans left-to-right until the first statement that mentions Name.
-      --  Irrelevant statements are skipped. The first mention must be an
-      --  unconditional overwrite-before-read in the supported subset.
+      --  Irrelevant straight-line statements are skipped, but unrelated
+      --  control-flow barriers fail closed because they may bypass a later
+      --  overwrite. The first mention must be an unconditional overwrite-
+      --  before-read in the supported subset.
       if Name'Length = 0 or else Statements.Is_Empty then
          return False;
       end if;
 
       for Item of Statements loop
          if not Statement_Uses_Name (Item, Name) then
-            null;
+            if Statement_Blocks_Overwrite_Scan (Item) then
+               return False;
+            end if;
          else
             return Statement_Overwrites_Name_Before_Read (Item, Name);
          end if;

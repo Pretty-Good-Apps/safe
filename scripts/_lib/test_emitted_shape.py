@@ -161,6 +161,13 @@ EMITTED_SHAPE_CASES = [
             'pragma Warnings (GNATprove, Off, "initialization of", Reason => "generated local initialization is intentional");',
         ],
     ),
+    (
+        "unrelated-control-flow-blocks-init-warning-suppression",
+        REPO_ROOT / "tests" / "emitted" / "pr344_unrelated_control_flow_blocks_suppression.safe",
+        [
+            'pragma Warnings (GNATprove, Off, "initialization of", Reason => "generated local initialization is intentional");',
+        ],
+    ),
 ]
 
 EMITTED_REQUIRED_SHAPE_CASES = [
