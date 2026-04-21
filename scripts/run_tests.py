@@ -17,6 +17,7 @@ from _lib import (
     test_interfaces,
     test_proof_cli,
     test_proof_diagnostics,
+    test_rosetta_inventory,
 )
 from _lib.test_harness import (
     Failure,
@@ -67,6 +68,7 @@ def main() -> int:
     add_counts(test_fixtures.run_basic_fixture_checks(safec))
     add_counts(test_proof_cli.run_internal_proof_checks())
     add_counts(test_proof_diagnostics.run_proof_diagnostic_checks())
+    add_counts(test_rosetta_inventory.run_rosetta_inventory_checks())
 
     with tempfile.TemporaryDirectory(prefix="safe-tests-") as temp_root_str:
         temp_root = Path(temp_root_str)
