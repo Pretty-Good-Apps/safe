@@ -1,13 +1,16 @@
 name: CI
 on:
+  merge_group:
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'merge_group' }}
 
 env:
   PYTHONHASHSEED: "0"
@@ -17,6 +20,10 @@ env:
 jobs:
   test:
     name: Test
+    if: >
+      github.event_name == 'merge_group' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 30
     steps:
@@ -30,6 +37,10 @@ jobs:
 
   prove:
     name: Prove
+    if: >
+      github.event_name == 'merge_group' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 30
     steps:
@@ -42,6 +53,10 @@ jobs:
 
   embedded:
     name: Embedded
+    if: >
+      github.event_name == 'merge_group' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -88,3 +103,94 @@ jobs:
           tar xf "${archive}" -C "${renode_root}" --strip-components=1
           echo "${renode_root}" >> "${GITHUB_PATH}"
       - run: python3 scripts/run_embedded_smoke.py --target stm32f4 --suite concurrency
+
+  main-ci-alarm:
+    name: Main-CI-Alarm
+    if: >
+      always() &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    needs: [test, prove, embedded]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: File deduplicated alarm issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SHA: ${{ github.sha }}
+          TEST_RESULT: ${{ needs.test.result }}
+          PROVE_RESULT: ${{ needs.prove.result }}
+          EMBEDDED_RESULT: ${{ needs.embedded.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          declare -a failed_jobs=()
+
+          if [[ "$TEST_RESULT" == "failure" ]]; then
+            failed_jobs+=("Test")
+          fi
+          if [[ "$PROVE_RESULT" == "failure" ]]; then
+            failed_jobs+=("Prove")
+          fi
+          if [[ "$EMBEDDED_RESULT" == "failure" ]]; then
+            failed_jobs+=("Embedded")
+          fi
+
+          if [[ ${#failed_jobs[@]} -eq 0 ]]; then
+            echo "No failing main CI jobs."
+            exit 0
+          fi
+
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+          for job_name in "${failed_jobs[@]}"; do
+            title="Main CI regression: ${job_name}"
+
+            # Only dedupe against open issues. If a prior regression was fixed
+            # and closed, a later recurrence should open a fresh issue.
+            if gh issue list \
+              --repo "$GITHUB_REPOSITORY" \
+              --state open \
+              --limit 200 \
+              --json title \
+              --jq '.[].title' \
+              | grep -Fxq "$title"
+            then
+              echo "Open alarm already exists for ${job_name}."
+              continue
+            fi
+
+            label_args=(--label bug --label infrastructure)
+            if [[ "$job_name" == "Prove" ]]; then
+              label_args+=(--label proof-surface-boundary)
+            else
+              label_args+=(--label compile)
+            fi
+
+            body_file="$(mktemp)"
+            printf '%s\n' \
+              'Post-merge CI failed on `main`.' \
+              '' \
+              "- Job: \`${job_name}\`" \
+              "- Commit: \`${GITHUB_SHA}\`" \
+              "- Run: ${run_url}" \
+              '' \
+              'This job already passed the merge-queue gate for the merge candidate. A failure' \
+              'here indicates merge-queue escape, infrastructure drift, or a race/inconsistency' \
+              'worth investigation.' \
+              > "${body_file}"
+
+            gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$title" \
+              "${label_args[@]}" \
+              --body-file "${body_file}"
+
+            rm -f "${body_file}"
+          done
