@@ -858,7 +858,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
       --  Returns True iff local lowering will emit an initializer at this
       --  declaration site, whether explicit or compiler-generated. The
       --  overwrite-before-read suppression is only sound when an initializer
-      --  actually exists in the emitted Ada.
+      --  actually exists in the emitted Ada. Keep this in sync with
+      --  Render_Object_Declaration's Emit_Initializer computation below.
       return
         (Decl.Has_Initializer and then not Suppress_Explicit_Null_Init)
         or else Needs_Explicit_Default_Init
@@ -922,11 +923,14 @@ package body Safe_Frontend.Ada_Emit.Statements is
          when CM.Stmt_Case =>
             if Expr_Uses_Name (Statement.Case_Expr, Name)
               or else Statement.Case_Arms.Is_Empty
+              or else not Statement.Case_Arms
+                (Statement.Case_Arms.Last_Index).Is_Others
             then
                return False;
             end if;
-            --  Case statements reaching emission are exhaustive: the parser
-            --  currently requires a final `when others` arm.
+            --  Case statements currently reach emission only with a final
+            --  `when others` arm; keep the local check above fail-closed if
+            --  that parser rule is ever relaxed.
             for Arm of Statement.Case_Arms loop
                if Expr_Uses_Name (Arm.Choice, Name)
                  or else not Statements_Overwrite_Name_Before_Read
@@ -4134,7 +4138,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
                   if not Suppress_Initialization_Warnings
                     and then Decl_Emits_Local_Initializer (Unit, Document, Item.Decl)
                   then
-                     Suppress_Initialization_Warnings := True;
+                     Suppress_Initialization_Warnings :=
+                       not Item.Decl.Names.Is_Empty;
                      for Name of Item.Decl.Names loop
                         if not Statements_Overwrite_Name_Before_Read
                           (Tail, FT.To_String (Name))
