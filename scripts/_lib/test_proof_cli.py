@@ -278,6 +278,28 @@ def run_proof_eval_invalid_mode_case() -> tuple[bool, str]:
     return False, "invalid proof mode unexpectedly succeeded"
 
 
+def run_proof_eval_check_mode_custom_switches_case() -> tuple[bool, str]:
+    toolchain = proof_eval.ProofToolchain(
+        safec=SAFE_CLI,
+        alr="alr",
+        gnatprove="gnatprove",
+        env={},
+    )
+    try:
+        proof_eval.run_gnatprove_project(
+            project_dir=REPO_ROOT,
+            project_file="demo.gpr",
+            toolchain=toolchain,
+            proof_mode="check",
+            prove_switches=["--dummy"],
+        )
+    except ValueError as exc:
+        if str(exc) != "prove_switches is not supported in check mode":
+            return False, f"unexpected check-mode switches error {exc!r}"
+        return True, ""
+    return False, "check mode unexpectedly accepted custom prove switches"
+
+
 
 def run_internal_proof_checks() -> RunCounts:
     passed = 0
@@ -288,6 +310,11 @@ def run_internal_proof_checks() -> RunCounts:
     passed += record_result(failures, "proof-eval-check-mode-success", run_proof_eval_check_mode_success_case())
     passed += record_result(failures, "proof-eval-check-mode-failure", run_proof_eval_check_mode_failure_case())
     passed += record_result(failures, "proof-eval-invalid-mode", run_proof_eval_invalid_mode_case())
+    passed += record_result(
+        failures,
+        "proof-eval-check-mode-custom-switches",
+        run_proof_eval_check_mode_custom_switches_case(),
+    )
     return passed, 0, failures
 
 

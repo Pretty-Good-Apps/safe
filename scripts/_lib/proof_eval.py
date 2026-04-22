@@ -544,6 +544,8 @@ def run_gnatprove_project(
 ) -> tuple[bool, str]:
     summary_path = project_dir / "obj" / "gnatprove" / "gnatprove.out"
     if proof_mode == "check":
+        if prove_switches is not None:
+            raise ValueError("prove_switches is not supported in check mode")
         gnatprove_stages = [("check", CHECK_SWITCHES)]
     elif proof_mode == "prove":
         gnatprove_stages = [
