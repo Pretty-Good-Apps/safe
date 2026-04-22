@@ -258,10 +258,8 @@ def literal_keyword(
     skip_title_suffixes: Iterable[str] = (),
 ) -> Keyword:
     escaped = re.escape(literal)
-    # `re.escape("a b")` has produced both `"a\\ b"` and `"a b"` across
-    # Python builds. Normalize either spelling before widening spaces to `\s+`.
-    escaped = escaped.replace(r"\ ", " ")
-    escaped = escaped.replace(" ", r"\s+")
+    # Some Python builds emit `"a\\ b"` here while others emit `"a b"`.
+    escaped = re.sub(r"(?:\\ )| ", r"\\s+", escaped)
     if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 _/\-.:+]*", literal):
         pattern = rf"\b{escaped}\b"
     else:
@@ -605,9 +603,15 @@ def request_json(params: dict[str, str], *, throttle_seconds: float, last_reques
     )
     try:
         with urlopen(request, timeout=60) as response:
-            payload = json.load(response)
+            raw_payload = response.read()
+        payload = json.loads(raw_payload)
     except (HTTPError, URLError) as exc:
         raise RuntimeError(f"rosetta api request failed: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        snippet = raw_payload[:200].decode("utf-8", errors="replace")
+        raise RuntimeError(
+            f"rosetta api request returned invalid JSON for {request.full_url}: {exc}; snippet={snippet!r}"
+        ) from exc
     last_request_at[0] = time.monotonic()
     return payload
 
@@ -1347,7 +1351,7 @@ def build_delta_comment(category_size: int, task_count: int, fetched_at: str) ->
         <!-- rosetta-inventory:category-delta -->
         `scripts/rosetta_inventory.py` fetched `{task_count}` live Programming Tasks at `{fetched_at}`.
 
-        The Rosetta category reports `categoryinfo.size = {category_size}`, for a delta of `{delta}` after title-based draft filtering.
+        The Rosetta category reports `categoryinfo.size = {category_size}`, for a delta of `{delta}` because `categoryinfo.size` counts all category members, while this script fetches only `cmtype=page` results and then applies title-based draft filtering.
         """
     ).strip()
 

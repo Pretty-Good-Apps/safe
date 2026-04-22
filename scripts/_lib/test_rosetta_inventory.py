@@ -486,6 +486,35 @@ def run_fetch_live_task_count_case() -> tuple[bool, str]:
         inventory.request_json = original_request_json
 
 
+def run_request_json_decode_case() -> tuple[bool, str]:
+    original_urlopen = inventory.urlopen
+
+    class FakeResponse:
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return b"<html>not json</html>"
+
+    def fake_urlopen(request, timeout: int = 60) -> FakeResponse:
+        return FakeResponse()
+
+    inventory.urlopen = fake_urlopen
+    try:
+        try:
+            inventory.request_json({"action": "query"}, throttle_seconds=0.0, last_request_at=[0.0])
+        except RuntimeError as exc:
+            if "returned invalid JSON" not in str(exc):
+                return False, f"unexpected request_json decode error text: {exc}"
+            return True, ""
+        return False, "request_json accepted an invalid JSON payload"
+    finally:
+        inventory.urlopen = original_urlopen
+
+
 def run_literal_keyword_case() -> tuple[bool, str]:
     keyword = inventory.literal_keyword("fixed length records", "fixed length records")
     if not keyword.regex.search("fixed   length\trecords"):
@@ -503,6 +532,13 @@ def run_text_value_raw_case() -> tuple[bool, str]:
     except RuntimeError:
         return True, ""
     return False, "text_value_raw accepted an invalid payload shape"
+
+
+def run_delta_comment_case() -> tuple[bool, str]:
+    comment = inventory.build_delta_comment(100, 97, "2026-04-22T00:00:00Z")
+    if "cmtype=page" not in comment or "title-based draft filtering" not in comment:
+        return False, f"delta comment is missing the fetch/filter explanation: {comment!r}"
+    return True, ""
 
 
 def run_issue_comment_marker_case() -> tuple[bool, str]:
@@ -754,8 +790,10 @@ def run_rosetta_inventory_checks() -> RunCounts:
         ("fetch project fields", run_fetch_project_fields_case),
         ("fetch project items", run_fetch_project_items_case),
         ("fetch live task count", run_fetch_live_task_count_case),
+        ("request json decode", run_request_json_decode_case),
         ("literal keyword", run_literal_keyword_case),
         ("text value raw", run_text_value_raw_case),
+        ("delta comment", run_delta_comment_case),
         ("issue comment marker", run_issue_comment_marker_case),
         ("sync project counts", run_sync_project_count_case),
         ("review placeholder", run_review_placeholder_case),
