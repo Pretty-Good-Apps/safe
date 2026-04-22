@@ -361,48 +361,47 @@ def run_plan_sync_parent_issue_case() -> tuple[bool, str]:
 
 def run_fetch_project_fields_case() -> tuple[bool, str]:
     original_gh_json = inventory.gh_json
-    original_gh_paginated_arrays = inventory.gh_paginated_arrays
     captured: dict[str, list[str]] = {}
 
     def fake_gh_json(argv: list[str]) -> dict[str, object]:
-        return {"id": "PVT_kwDOA"}
-
-    def fake_gh_paginated_arrays(argv: list[str]) -> list[dict[str, object]]:
-        captured["argv"] = list(argv)
-        names = (
-            "Bucket",
-            "Sub-bucket",
-            "Porting Status",
-            "Difficulty",
-            "Rosetta Category",
-            "Rosetta URL",
-            "Features Used",
-        )
-        return [
-            {
-                "name": name,
-                "node_id": f"field-{index}",
-                "id": str(100 + index),
-                "data_type": "single_select" if index < 4 else "text",
-                "options": [{"name": {"raw": "1"}, "id": "option-1"}] if name == "Bucket" else [],
+        if argv[:4] == ["gh", "project", "view", "5"]:
+            return {"id": "PVT_kwDOA"}
+        if argv[:4] == ["gh", "project", "field-list", "5"]:
+            captured["argv"] = list(argv)
+            names = (
+                "Bucket",
+                "Sub-bucket",
+                "Porting Status",
+                "Difficulty",
+                "Rosetta Category",
+                "Rosetta URL",
+                "Features Used",
+            )
+            return {
+                "fields": [
+                    {
+                        "name": name,
+                        "id": f"field-{index}",
+                        "type": "ProjectV2SingleSelectField" if index < 4 else "ProjectV2Field",
+                        "options": [{"name": {"raw": "1"}, "id": "option-1"}] if name == "Bucket" else [],
+                    }
+                    for index, name in enumerate(names, start=1)
+                ]
             }
-            for index, name in enumerate(names, start=1)
-        ]
+        raise AssertionError(f"unexpected gh_json argv: {argv!r}")
 
     inventory.gh_json = fake_gh_json
-    inventory.gh_paginated_arrays = fake_gh_paginated_arrays
     try:
         project_id, fields = inventory.fetch_project_fields(5, owner="berkeleynerd")
     finally:
         inventory.gh_json = original_gh_json
-        inventory.gh_paginated_arrays = original_gh_paginated_arrays
 
     if project_id != "PVT_kwDOA":
         return False, f"unexpected project id {project_id!r}"
-    if "--paginate" not in captured.get("argv", []):
-        return False, f"fetch_project_fields did not request pagination: {captured.get('argv')!r}"
-    if f"X-GitHub-Api-Version: {inventory.GITHUB_API_VERSION}" not in captured.get("argv", []):
-        return False, f"fetch_project_fields did not use the stable API version: {captured.get('argv')!r}"
+    if captured.get("argv", [])[:4] != ["gh", "project", "field-list", "5"]:
+        return False, f"fetch_project_fields did not use gh project field-list: {captured.get('argv')!r}"
+    if "--limit" not in captured.get("argv", []) or str(inventory.PROJECT_FIELD_FETCH_LIMIT) not in captured.get("argv", []):
+        return False, f"fetch_project_fields did not request the configured field limit: {captured.get('argv')!r}"
     if sorted(fields) != [
         "Bucket",
         "Difficulty",
@@ -417,37 +416,34 @@ def run_fetch_project_fields_case() -> tuple[bool, str]:
 
 
 def run_fetch_project_items_case() -> tuple[bool, str]:
-    original_gh_paginated_arrays = inventory.gh_paginated_arrays
+    original_gh_json = inventory.gh_json
     captured: dict[str, list[str]] = {}
 
-    def fake_gh_paginated_arrays(argv: list[str]) -> list[dict[str, object]]:
+    def fake_gh_json(argv: list[str]) -> dict[str, object]:
         captured["argv"] = list(argv)
-        return [
-            {
-                "node_id": "PVTI_test",
-                "content_type": "DraftIssue",
-                "content": {"node_id": "DI_test", "title": "Factorial", "body": "body"},
-                "fields": [
-                    {"name": "Bucket", "data_type": "single_select", "value": {"name": {"raw": "1"}}},
-                    {"name": "Porting Status", "data_type": "single_select", "value": {"name": "ported"}},
-                    {"name": "Rosetta URL", "data_type": "text", "value": {"raw": "https://rosettacode.org/wiki/Factorial"}},
-                    {"name": "Features Used", "data_type": "text", "value": "functions, loops"},
-                ],
-            }
-        ]
+        return {
+            "items": [
+                {
+                    "id": "PVTI_test",
+                    "bucket": "1",
+                    "porting Status": "ported",
+                    "rosetta URL": "https://rosettacode.org/wiki/Factorial",
+                    "features Used": "functions, loops",
+                    "content": {"id": "DI_test", "type": "DraftIssue", "title": "Factorial", "body": "body"},
+                }
+            ]
+        }
 
-    inventory.gh_paginated_arrays = fake_gh_paginated_arrays
+    inventory.gh_json = fake_gh_json
     try:
         items = inventory.fetch_project_items(5, owner="berkeleynerd")
     finally:
-        inventory.gh_paginated_arrays = original_gh_paginated_arrays
+        inventory.gh_json = original_gh_json
 
-    if "--paginate" not in captured.get("argv", []):
-        return False, f"fetch_project_items did not request pagination: {captured.get('argv')!r}"
-    if f"X-GitHub-Api-Version: {inventory.GITHUB_API_VERSION}" not in captured.get("argv", []):
-        return False, f"fetch_project_items did not use the stable API version: {captured.get('argv')!r}"
-    if any("fields=" in arg for arg in captured.get("argv", [])):
-        return False, f"fetch_project_items still requested dead fields filtering: {captured.get('argv')!r}"
+    if captured.get("argv", [])[:4] != ["gh", "project", "item-list", "5"]:
+        return False, f"fetch_project_items did not use gh project item-list: {captured.get('argv')!r}"
+    if "--limit" not in captured.get("argv", []) or str(inventory.PROJECT_ITEM_FETCH_LIMIT) not in captured.get("argv", []):
+        return False, f"fetch_project_items did not request the configured item limit: {captured.get('argv')!r}"
     if len(items) != 1:
         return False, f"expected one parsed project item, got {items!r}"
     item = items[0]
@@ -458,6 +454,13 @@ def run_fetch_project_items_case() -> tuple[bool, str]:
         "Features Used": "functions, loops",
     }:
         return False, f"unexpected parsed field values {item.field_values!r}"
+    return True, ""
+
+
+def run_literal_keyword_case() -> tuple[bool, str]:
+    keyword = inventory.literal_keyword("fixed length records", "fixed length records")
+    if not keyword.regex.search("fixed   length\trecords"):
+        return False, "literal_keyword did not treat whitespace in multi-word literals flexibly"
     return True, ""
 
 
@@ -715,6 +718,7 @@ def run_rosetta_inventory_checks() -> RunCounts:
         ("plan sync parent issue", run_plan_sync_parent_issue_case),
         ("fetch project fields", run_fetch_project_fields_case),
         ("fetch project items", run_fetch_project_items_case),
+        ("literal keyword", run_literal_keyword_case),
         ("text value raw", run_text_value_raw_case),
         ("issue comment marker", run_issue_comment_marker_case),
         ("sync project counts", run_sync_project_count_case),

@@ -34,6 +34,8 @@ HTTP_THROTTLE_SECONDS = 1.0
 GRAPHQL_BATCH_SIZE = 20
 CATEGORY_MEMBER_BATCH_SIZE = 500
 EXTRACT_BATCH_SIZE = 20
+PROJECT_FIELD_FETCH_LIMIT = 100
+PROJECT_ITEM_FETCH_LIMIT = 5000
 GITHUB_API_VERSION = "2022-11-28"
 BODY_URL_RE = re.compile(r"^\*\*Rosetta URL:\*\*\s+(\S+)\s*$", re.MULTILINE)
 WHITESPACE_RE = re.compile(r"\s+")
@@ -89,7 +91,6 @@ class InventoryRecord:
 class ProjectField:
     name: str
     field_id: str
-    rest_id: int
     kind: str
     option_ids: dict[str, str]
 
@@ -257,7 +258,8 @@ def literal_keyword(
     skip_title_suffixes: Iterable[str] = (),
 ) -> Keyword:
     escaped = re.escape(literal)
-    escaped = escaped.replace(r"\ ", r"\s+")
+    escaped = escaped.replace(r"\ ", " ")
+    escaped = escaped.replace(" ", r"\s+")
     if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 _/\-.:+]*", literal):
         pattern = rf"\b{escaped}\b"
     else:
@@ -911,29 +913,45 @@ def text_value_raw(value: Any) -> str:
     raise RuntimeError(f"unexpected text payload shape: {value!r}")
 
 
+def project_item_field_value(item: dict[str, Any], field_name: str) -> str | None:
+    for key in (field_name, field_name[:1].lower() + field_name[1:]):
+        value = item.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return None
+
+
 def fetch_project_fields(project_number: int, *, owner: str) -> tuple[str, dict[str, ProjectField]]:
     payload = gh_json(["gh", "project", "view", str(project_number), "--owner", owner, "--format", "json"])
     project_id = payload["id"]
-    fields_payload = gh_paginated_arrays(
+    fields_payload = gh_json(
         [
             "gh",
-            "api",
-            "--paginate",
-            f"/users/{owner}/projectsV2/{project_number}/fields",
-            "-H",
-            "Accept: application/vnd.github+json",
-            "-H",
-            f"X-GitHub-Api-Version: {GITHUB_API_VERSION}",
+            "project",
+            "field-list",
+            str(project_number),
+            "--owner",
+            owner,
+            "--limit",
+            str(PROJECT_FIELD_FETCH_LIMIT),
+            "--format",
+            "json",
         ]
     )
+    listed_fields = fields_payload.get("fields", [])
+    total_count = fields_payload.get("totalCount")
+    if isinstance(total_count, int) and total_count > len(listed_fields):
+        raise RuntimeError(
+            f"project {project_number} field list truncated at {len(listed_fields)} items; "
+            f"increase PROJECT_FIELD_FETCH_LIMIT above {total_count}"
+        )
     fields: dict[str, ProjectField] = {}
-    for field in fields_payload:
+    for field in listed_fields:
         option_ids = {text_value_raw(option["name"]): option["id"] for option in field.get("options", [])}
         fields[field["name"]] = ProjectField(
             name=field["name"],
-            field_id=field["node_id"],
-            rest_id=int(field["id"]),
-            kind=field["data_type"],
+            field_id=field["id"],
+            kind="single_select" if field["type"] == "ProjectV2SingleSelectField" else "text",
             option_ids=option_ids,
         )
     required = {
@@ -952,41 +970,51 @@ def fetch_project_fields(project_number: int, *, owner: str) -> tuple[str, dict[
 
 
 def fetch_project_items(project_number: int, *, owner: str) -> list[ProjectItem]:
-    payload = gh_paginated_arrays(
+    payload = gh_json(
         [
             "gh",
-            "api",
-            "--paginate",
-            f"/users/{owner}/projectsV2/{project_number}/items?per_page=100",
-            "-H",
-            "Accept: application/vnd.github+json",
-            "-H",
-            f"X-GitHub-Api-Version: {GITHUB_API_VERSION}",
+            "project",
+            "item-list",
+            str(project_number),
+            "--owner",
+            owner,
+            "--limit",
+            str(PROJECT_ITEM_FETCH_LIMIT),
+            "--format",
+            "json",
         ]
     )
+    listed_items = payload.get("items", [])
+    total_count = payload.get("totalCount")
+    if isinstance(total_count, int) and total_count > len(listed_items):
+        raise RuntimeError(
+            f"project {project_number} item list truncated at {len(listed_items)} items; "
+            f"increase PROJECT_ITEM_FETCH_LIMIT above {total_count}"
+        )
     items: list[ProjectItem] = []
-    for item in payload:
+    required_fields = (
+        "Bucket",
+        "Sub-bucket",
+        "Porting Status",
+        "Difficulty",
+        "Rosetta Category",
+        "Rosetta URL",
+        "Features Used",
+    )
+    for item in listed_items:
         content = item["content"]
-        content_type = item["content_type"]
+        content_type = content["type"]
         if content_type not in {"DraftIssue", "Issue"}:
             continue
         field_values: dict[str, str] = {}
-        for field_value in item.get("fields", []):
-            field_name = field_value.get("name")
-            if not field_name:
-                continue
-            value = field_value.get("value")
-            if value is None:
-                continue
-            if field_value["data_type"] == "single_select":
-                field_values[field_name] = text_value_raw(value["name"])
-            elif field_value["data_type"] == "text":
-                field_values[field_name] = text_value_raw(value)
+        for field_name in required_fields:
+            if value := project_item_field_value(item, field_name):
+                field_values[field_name] = value
         items.append(
             ProjectItem(
-                item_id=item["node_id"],
+                item_id=item["id"],
                 content_type=content_type,
-                draft_issue_id=content.get("node_id") if content_type == "DraftIssue" else None,
+                draft_issue_id=content.get("id") if content_type == "DraftIssue" else None,
                 issue_number=content.get("number"),
                 title=content["title"],
                 body=content.get("body", ""),
