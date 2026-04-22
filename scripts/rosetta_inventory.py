@@ -1241,7 +1241,7 @@ def apply_field_updates(
 }}"""
             )
         gh_graphql("mutation {\n" + "\n".join(parts) + "\n}")
-        if batch_index == 1 or batch_index == len(batches) or batch_index % 20 == 0:
+        if batch_index == 1 or batch_index == len(batches) or batch_index % 10 == 0:
             print(
                 f"rosetta_inventory: applied field batch {batch_index}/{len(batches)}",
                 flush=True,
