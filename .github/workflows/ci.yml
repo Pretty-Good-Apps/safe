@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'merge_group' }}
+  cancel-in-progress: ${{ github.event_name == 'workflow_dispatch' }}
 
 env:
   PYTHONHASHSEED: "0"
@@ -147,6 +147,50 @@ jobs:
             exit 0
           fi
 
+          ensure_label() {
+            local name="$1"
+            local color="$2"
+
+            if gh label create \
+              --repo "$GITHUB_REPOSITORY" \
+              "$name" \
+              --color "$color" \
+              --force >/dev/null 2>&1
+            then
+              return 0
+            fi
+
+            echo "warning: failed to ensure label '$name'; continuing without it" >&2
+            return 1
+          }
+
+          has_available_label() {
+            local wanted="$1"
+            local label
+
+            for label in "${available_labels[@]}"; do
+              if [[ "$label" == "$wanted" ]]; then
+                return 0
+              fi
+            done
+
+            return 1
+          }
+
+          declare -a available_labels=()
+          for spec in \
+            "bug:d73a4a" \
+            "infrastructure:5319e7" \
+            "compile:0052cc" \
+            "proof-surface-boundary:0e8a16"
+          do
+            label_name="${spec%%:*}"
+            label_color="${spec#*:}"
+            if ensure_label "$label_name" "$label_color"; then
+              available_labels+=("$label_name")
+            fi
+          done
+
           run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
           for job_name in "${failed_jobs[@]}"; do
@@ -157,7 +201,7 @@ jobs:
             if gh issue list \
               --repo "$GITHUB_REPOSITORY" \
               --state open \
-              --limit 200 \
+              --limit 1000 \
               --json title \
               --jq '.[].title' \
               | grep -Fxq "$title"
@@ -166,11 +210,21 @@ jobs:
               continue
             fi
 
-            label_args=(--label bug --label infrastructure)
+            label_args=()
+            if has_available_label bug; then
+              label_args+=(--label bug)
+            fi
+            if has_available_label infrastructure; then
+              label_args+=(--label infrastructure)
+            fi
             if [[ "$job_name" == "Prove" ]]; then
-              label_args+=(--label proof-surface-boundary)
+              if has_available_label proof-surface-boundary; then
+                label_args+=(--label proof-surface-boundary)
+              fi
             else
-              label_args+=(--label compile)
+              if has_available_label compile; then
+                label_args+=(--label compile)
+              fi
             fi
 
             body_file="$(mktemp)"
