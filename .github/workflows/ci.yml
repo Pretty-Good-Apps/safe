@@ -55,7 +55,7 @@ jobs:
       - if: github.event_name == 'pull_request'
         run: python3 scripts/run_proofs.py --mode=check
       - if: github.event_name != 'pull_request'
-        run: python3 scripts/run_proofs.py
+        run: python3 scripts/run_proofs.py --level=2
 
   embedded:
     name: Embedded

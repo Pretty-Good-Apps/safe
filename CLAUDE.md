@@ -52,6 +52,9 @@ python3 scripts/snapshot_emitted_ada.py --check
     full sweep on PR pushes
 - Full repo CI runs on merge-queue candidates, manual `workflow_dispatch`, and
   pushes to `main`.
+- The repo proof runner defaults to GNATprove level 1 for local push-time
+  automation. The CI `Prove` gate runs `python3 scripts/run_proofs.py
+  --level=2` on merge-queue candidates and on `main`.
 - The merge queue is the only full pre-merge repo gate. `Test`, `Prove`, and
   `Embedded` must all pass there before code lands; a failure kicks the queued
   PR back out without merging.
@@ -63,6 +66,9 @@ python3 scripts/snapshot_emitted_ada.py --check
   `ci.yml` and continue to run on PR events.
 - The contributor pre-commit hook is the primary author-side gate. It should
   run the full local verification path before a branch is pushed.
+- That local proof pass is intentionally lighter than the merge gate: it uses
+  `scripts/run_proofs.py` at level 1, while the merge-queue / `main` gate is
+  level 2.
 - Skipping the pre-commit hook with `--no-verify` does not avoid validation; it
   only delays failure feedback from local push time to merge-queue time.
 - Merge queue protection on `main` is load-bearing. Direct merges to `main`
