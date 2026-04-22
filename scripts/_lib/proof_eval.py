@@ -927,6 +927,7 @@ def run_source_proof(
 
 
 __all__ = [
+    "CHECK_SWITCHES",
     "FLOW_SWITCHES",
     "PROVE_SWITCHES",
     "ProofRunResult",
