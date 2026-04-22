@@ -300,6 +300,30 @@ def run_proof_eval_check_mode_custom_switches_case() -> tuple[bool, str]:
     return False, "check mode unexpectedly accepted custom prove switches"
 
 
+def run_source_proof_check_mode_custom_switches_case() -> tuple[bool, str]:
+    toolchain = proof_eval.ProofToolchain(
+        safec=SAFE_CLI,
+        alr="alr",
+        gnatprove="gnatprove",
+        env={},
+    )
+    with tempfile.TemporaryDirectory(prefix="safe-proof-root-") as proof_root_str:
+        try:
+            proof_eval.run_source_proof(
+                toolchain=toolchain,
+                source=PROVE_SINGLE_SUCCESS_SOURCE,
+                proof_root=Path(proof_root_str),
+                run_check=False,
+                proof_mode="check",
+                prove_switches=["--dummy"],
+            )
+        except ValueError as exc:
+            if str(exc) != "prove_switches is not supported in check mode":
+                return False, f"unexpected source-proof switches error {exc!r}"
+            return True, ""
+    return False, "run_source_proof unexpectedly accepted custom prove switches"
+
+
 
 def run_internal_proof_checks() -> RunCounts:
     passed = 0
@@ -314,6 +338,11 @@ def run_internal_proof_checks() -> RunCounts:
         failures,
         "proof-eval-check-mode-custom-switches",
         run_proof_eval_check_mode_custom_switches_case(),
+    )
+    passed += record_result(
+        failures,
+        "source-proof-check-mode-custom-switches",
+        run_source_proof_check_mode_custom_switches_case(),
     )
     return passed, 0, failures
 

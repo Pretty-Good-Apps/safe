@@ -790,6 +790,9 @@ def run_source_proof(
         stage="check" if run_check else "emit",
     )
 
+    if proof_mode == "check" and prove_switches is not None:
+        raise ValueError("prove_switches is not supported in check mode")
+
     paths = prepare_proof_root(proof_root)
     dependency_error = ensure_interface_dependencies(
         toolchain=toolchain,
