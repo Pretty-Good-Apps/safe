@@ -117,8 +117,32 @@ The repository has three Claude review workflows:
   for latent surrounding-code issues, not normal PR review.
 
 When a PR should trigger the guarded Claude review/security workflows, the PR
-head branch must live in `berkeleynerd/safe`. Fork PRs do not satisfy the
+head branch must live in `Pretty-Good-Apps/safe`. Fork PRs do not satisfy the
 same-repo guard and should not be used as the primary review path.
+
+The review and security workflows intentionally do not check out PR code into
+their privileged jobs. If a checkout is needed to satisfy workflow tooling, it
+must be a trusted checkout of `main`, not the PR merge ref or PR head. They
+inspect PR state through GitHub metadata and `gh pr diff` / `gh pr view`
+instead, so PR content is handled as untrusted data rather than executed
+workspace state.
+
+The `@claude` interactive workflow is comment-only. It can inspect PR metadata
+and reply on the PR, but it is not allowed to check out or execute PR code. If
+an `@claude` request needs code changes or command execution, handle it through
+a local agent run or a normal PR update instead of the comment workflow.
+
+The interactive workflow keeps the triggering `@claude ...` comment as the user
+request. Static guardrails belong in the Claude CLI system prompt layer, not in
+the action `prompt:` field.
+
+The workflow `--allowedTools` entries intentionally narrow access to specific
+`gh pr ...` subcommands, but those wildcards do not sanitize shell arguments by
+themselves. Behavioral prompt/system-prompt guardrails remain load-bearing.
+
+The trusted inline-comment MCP capability used by the security workflow comes
+from the pinned `anthropics/claude-code-action` bundle and should be re-audited
+whenever that action SHA changes.
 
 Preferred publishing flow:
 
@@ -126,7 +150,7 @@ Preferred publishing flow:
 git push upstream HEAD:refs/heads/<branch-name>
 ```
 
-Then open the PR from `berkeleynerd:<branch-name>` to `main`. If development
+Then open the PR from `Pretty-Good-Apps:<branch-name>` to `main`. If development
 started on a fork branch, mirror the branch to `upstream` before opening the
 review PR.
 
