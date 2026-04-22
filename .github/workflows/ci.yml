@@ -160,12 +160,9 @@ jobs:
               return 0
             fi
 
-            if gh label list \
+            if gh label view \
               --repo "$GITHUB_REPOSITORY" \
-              --limit 200 \
-              --json name \
-              --jq '.[].name' \
-              | grep -Fxq "$name"
+              "$name" >/dev/null 2>&1
             then
               return 0
             fi
