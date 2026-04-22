@@ -44,11 +44,17 @@ python3 scripts/snapshot_emitted_ada.py --check
 
 ## CI Structure
 
-- `.github/workflows/ci.yml` does not run on ordinary PR events.
+- `.github/workflows/ci.yml` runs on PR events, merge-queue candidates, manual
+  `workflow_dispatch`, and pushes to `main`.
+- PR events are intentionally fast:
+  - `Prove` runs `python3 scripts/run_proofs.py --mode=check`
+  - `Test` and `Embedded` report deferred fast-lane status and do not run the
+    full sweep on PR pushes
 - Full repo CI runs on merge-queue candidates, manual `workflow_dispatch`, and
   pushes to `main`.
 - The merge queue is the only full pre-merge repo gate. `Test`, `Prove`, and
-  `Embedded` must all pass there before code lands.
+  `Embedded` must all pass there before code lands; a failure kicks the queued
+  PR back out without merging.
 - After merge, `main` reruns the same full `Test`, `Prove`, and `Embedded`
   lanes.
 - If a post-merge `main` CI lane fails, CI opens one deduplicated alarm issue

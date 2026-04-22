@@ -41,6 +41,11 @@ FLOW_SWITCHES = [
     "--warnings=error",
 ]
 
+CHECK_SWITCHES = [
+    "--mode=check",
+    "--warnings=error",
+]
+
 
 def prove_switches_for_level(level: int) -> list[str]:
     if level == 1:
@@ -533,14 +538,22 @@ def run_gnatprove_project(
     project_dir: Path,
     project_file: str,
     toolchain: ProofToolchain,
+    proof_mode: str = "prove",
     prove_switches: list[str] | None = None,
     command_timeout: int | None = None,
 ) -> tuple[bool, str]:
     summary_path = project_dir / "obj" / "gnatprove" / "gnatprove.out"
-    for mode, switches in (
-        ("flow", FLOW_SWITCHES),
-        ("prove", PROVE_SWITCHES if prove_switches is None else prove_switches),
-    ):
+    if proof_mode == "check":
+        gnatprove_stages = [("check", CHECK_SWITCHES)]
+    elif proof_mode == "prove":
+        gnatprove_stages = [
+            ("flow", FLOW_SWITCHES),
+            ("prove", PROVE_SWITCHES if prove_switches is None else prove_switches),
+        ]
+    else:
+        raise ValueError(f"unsupported proof mode: {proof_mode}")
+
+    for mode, switches in gnatprove_stages:
         completed = run_command(
             [
                 toolchain.alr,
@@ -555,6 +568,10 @@ def run_gnatprove_project(
             env=toolchain.env,
             timeout=command_timeout,
         )
+        if proof_mode == "check":
+            if completed.returncode != 0:
+                return False, f"{mode} failed: {first_message(completed)}"
+            continue
         try:
             rows = parse_gnatprove_summary(summary_path)
         except (FileNotFoundError, RuntimeError) as exc:
@@ -760,6 +777,7 @@ def run_source_proof(
     source: Path,
     proof_root: Path,
     run_check: bool,
+    proof_mode: str = "prove",
     prove_switches: list[str] | None = None,
     command_timeout: int | None = None,
 ) -> ProofRunResult:
@@ -831,10 +849,17 @@ def run_source_proof(
     adc_path = paths["ada"] / "gnat.adc"
     summary_path = paths["ada"] / "obj" / "gnatprove" / "gnatprove.out"
 
-    for mode, switches in (
-        ("flow", FLOW_SWITCHES),
-        ("prove", PROVE_SWITCHES if prove_switches is None else prove_switches),
-    ):
+    if proof_mode == "check":
+        gnatprove_stages = [("prove-check", "check", CHECK_SWITCHES)]
+    elif proof_mode == "prove":
+        gnatprove_stages = [
+            ("flow", "flow", FLOW_SWITCHES),
+            ("prove", "prove", PROVE_SWITCHES if prove_switches is None else prove_switches),
+        ]
+    else:
+        raise ValueError(f"unsupported proof mode: {proof_mode}")
+
+    for stage_name, detail_name, switches in gnatprove_stages:
         argv = [
             toolchain.alr,
             "exec",
@@ -852,29 +877,34 @@ def run_source_proof(
             env=toolchain.env,
             timeout=command_timeout,
         )
-        result.stage = mode
+        result.stage = stage_name
         record_gnatprove_stage_output(
             result,
-            mode,
+            stage_name,
             completed,
             ada_dir=paths["ada"],
             line_maps=line_maps,
         )
+        if proof_mode == "check":
+            if completed.returncode != 0:
+                result.detail = f"{detail_name} failed: {first_message(completed)}"
+                return result
+            continue
         try:
             rows = parse_gnatprove_summary(summary_path)
         except (FileNotFoundError, RuntimeError) as exc:
             result.detail = (
-                f"{mode} failed: {first_message(completed)}"
+                f"{detail_name} failed: {first_message(completed)}"
                 if completed.returncode != 0
-                else f"{mode} summary error: {exc}"
+                else f"{detail_name} summary error: {exc}"
             )
             return result
 
         total_row = rows["Total"]
         if not allow_clean_nonzero_gnatprove_exit(completed, total_row):
-            result.detail = f"{mode} failed: {first_message(completed)}"
+            result.detail = f"{detail_name} failed: {first_message(completed)}"
             return result
-        if mode == "flow":
+        if detail_name == "flow":
             result.flow_summary = total_row
         else:
             result.prove_summary = total_row

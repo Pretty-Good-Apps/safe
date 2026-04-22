@@ -1,5 +1,7 @@
 name: CI
 on:
+  pull_request:
+    branches: [main]
   merge_group:
     types: [checks_requested]
   push:
@@ -21,28 +23,28 @@ env:
 jobs:
   test:
     name: Test
-    if: >
-      github.event_name == 'merge_group' ||
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    runs-on: ubuntu-24.04-arm
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+      - name: PR fast-lane placeholder
+        if: github.event_name == 'pull_request'
+        run: 'echo "PR fast lane: full Test sweep is deferred to the merge queue."'
+      - if: github.event_name != 'pull_request'
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - if: github.event_name != 'pull_request'
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: "3.12"
-      - uses: ./.github/actions/setup-alire
-      - run: python3 scripts/run_tests.py
-      - run: python3 scripts/run_samples.py
+      - if: github.event_name != 'pull_request'
+        uses: ./.github/actions/setup-alire
+      - if: github.event_name != 'pull_request'
+        run: python3 scripts/run_tests.py
+      - if: github.event_name != 'pull_request'
+        run: python3 scripts/run_samples.py
 
   prove:
     name: Prove
-    if: >
-      github.event_name == 'merge_group' ||
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    runs-on: ubuntu-24.04-arm
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -50,23 +52,29 @@ jobs:
         with:
           python-version: "3.12"
       - uses: ./.github/actions/setup-alire
-      - run: python3 scripts/run_proofs.py
+      - if: github.event_name == 'pull_request'
+        run: python3 scripts/run_proofs.py --mode=check
+      - if: github.event_name != 'pull_request'
+        run: python3 scripts/run_proofs.py
 
   embedded:
     name: Embedded
-    if: >
-      github.event_name == 'merge_group' ||
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+      - name: PR fast-lane placeholder
+        if: github.event_name == 'pull_request'
+        run: 'echo "PR fast lane: full Embedded sweep is deferred to the merge queue."'
+      - if: github.event_name != 'pull_request'
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - if: github.event_name != 'pull_request'
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: "3.12"
-      - uses: ./.github/actions/setup-alire
-      - name: Install host gprbuild
+      - if: github.event_name != 'pull_request'
+        uses: ./.github/actions/setup-alire
+      - if: github.event_name != 'pull_request'
+        name: Install host gprbuild
         shell: bash
         run: |
           set -euo pipefail
@@ -78,7 +86,8 @@ jobs:
             exit 1
           fi
           echo "${host_gprbuild_root}/bin" >> "${GITHUB_PATH}"
-      - name: Install ARM cross toolchain
+      - if: github.event_name != 'pull_request'
+        name: Install ARM cross toolchain
         shell: bash
         run: |
           set -euo pipefail
@@ -90,7 +99,8 @@ jobs:
             exit 1
           fi
           echo "${arm_toolchain_root}/bin" >> "${GITHUB_PATH}"
-      - name: Install Renode portable
+      - if: github.event_name != 'pull_request'
+        name: Install Renode portable
         shell: bash
         run: |
           set -euo pipefail
@@ -103,7 +113,8 @@ jobs:
           printf '%s  %s\n' "${renode_sha256}" "${archive}" | sha256sum -c -
           tar xf "${archive}" -C "${renode_root}" --strip-components=1
           echo "${renode_root}" >> "${GITHUB_PATH}"
-      - run: python3 scripts/run_embedded_smoke.py --target stm32f4 --suite concurrency
+      - if: github.event_name != 'pull_request'
+        run: python3 scripts/run_embedded_smoke.py --target stm32f4 --suite concurrency
 
   main-ci-alarm:
     name: Main-CI-Alarm
