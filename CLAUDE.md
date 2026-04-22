@@ -115,9 +115,11 @@ head branch must live in `Pretty-Good-Apps/safe`. Fork PRs do not satisfy the
 same-repo guard and should not be used as the primary review path.
 
 The review and security workflows intentionally do not check out PR code into
-their privileged jobs. They inspect PR state through GitHub metadata and
-`gh pr diff` / `gh pr view` instead, so PR content is handled as untrusted
-data rather than executed workspace state.
+their privileged jobs. If a checkout is needed to satisfy workflow tooling, it
+must be a trusted checkout of `main`, not the PR merge ref or PR head. They
+inspect PR state through GitHub metadata and `gh pr diff` / `gh pr view`
+instead, so PR content is handled as untrusted data rather than executed
+workspace state.
 
 The `@claude` interactive workflow is comment-only. It can inspect PR metadata
 and reply on the PR, but it is not allowed to check out or execute PR code. If
