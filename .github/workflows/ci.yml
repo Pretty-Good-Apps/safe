@@ -209,7 +209,7 @@ jobs:
               --repo "$GITHUB_REPOSITORY" \
               --state open \
               --search "\"${title}\" in:title" \
-              --limit 1 \
+              --limit 50 \
               --json title \
               --jq '.[].title' \
               | grep -Fxq "$title"
