@@ -1055,7 +1055,12 @@ def plan_sync(
         if url is None:
             continue
         if url in rosetta_items:
-            raise RuntimeError(f"duplicate Project 5 item for Rosetta URL {url}")
+            existing_item = rosetta_items[url]
+            raise RuntimeError(
+                f"duplicate Project 5 item for Rosetta URL {url} "
+                f"(existing item_id={existing_item.item_id!r}, new item_id={item.item_id!r}); "
+                "manually delete one duplicate item from the project and re-run"
+            )
         rosetta_items[url] = item
 
     for url, record in desired_by_url.items():
@@ -1197,7 +1202,7 @@ def apply_field_updates(
     field_map: dict[str, ProjectField],
     field_updates: list[FieldUpdate],
 ) -> None:
-    batches = list(batched(field_updates, GRAPHQL_BATCH_SIZE * 3))
+    batches = list(batched(field_updates, GRAPHQL_BATCH_SIZE))
     for batch_index, batch in enumerate(batches, start=1):
         parts: list[str] = []
         for index, update in enumerate(batch):
@@ -1323,20 +1328,19 @@ def post_issue_comment(repo: str, issue_number: int, body: str) -> None:
 def ensure_issue_comment(repo: str, issue_number: int, body: str, *, dry_run: bool) -> None:
     existing = load_issue_comments(repo, issue_number)
     marker = comment_marker(body)
+    if marker is None:
+        raise AssertionError("ensure_issue_comment expects a marker-bearing body")
     for comment in existing:
-        if marker is None and comment.body == body:
+        if comment_marker(comment.body) == marker and comment.body == body:
             return
-        if marker is not None and comment_marker(comment.body) == marker and comment.body == body:
+    for comment in existing:
+        if comment_marker(comment.body) != marker:
+            continue
+        if dry_run:
+            print(f"would update issue comment {comment.comment_id} on issue #{issue_number}:\n{body}\n")
             return
-    if marker is not None:
-        for comment in existing:
-            if comment_marker(comment.body) != marker:
-                continue
-            if dry_run:
-                print(f"would update issue comment {comment.comment_id} on issue #{issue_number}:\n{body}\n")
-                return
-            update_issue_comment(comment.comment_id, body)
-            return
+        update_issue_comment(comment.comment_id, body)
+        return
     if dry_run:
         print(f"would comment on issue #{issue_number}:\n{body}\n")
         return
