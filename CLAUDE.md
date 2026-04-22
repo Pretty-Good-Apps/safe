@@ -42,16 +42,6 @@ python3 scripts/snapshot_emitted_ada.py --check
 - Supported: local Linux and Ubuntu-based CI
 - Unsupported: macOS and Windows
 
-## Codex Workspace
-
-Some Codex/container workspaces report `RLIMIT_RTPRIO=0`, which prevents the
-Ada runtime from setting real-time priorities for ceiling-priority task and
-channel fixtures. `scripts/run_tests.py` and `scripts/run_samples.py` default
-to `SAFE_SKIP_CEILING_TESTS=auto`, which skips those fixtures only when the
-preflight detects no real-time-priority allowance. Use a local VM or CI to
-exercise the full ceiling-priority lane, or set `SAFE_SKIP_CEILING_TESTS=never`
-to force the tests when diagnosing container capabilities.
-
 ## Guidance
 
 - The repo-local wrapper CLI in `scripts/safe_cli.py` supports:
@@ -93,6 +83,20 @@ The repository has three Claude review workflows:
   security and proof-integrity concerns.
 - Claude Deep Audit is on-demand and audits whole files around a change. It is
   for latent surrounding-code issues, not normal PR review.
+
+When a PR should trigger the guarded Claude review/security workflows, the PR
+head branch must live in `berkeleynerd/safe`. Fork PRs do not satisfy the
+same-repo guard and should not be used as the primary review path.
+
+Preferred publishing flow:
+
+```bash
+git push upstream HEAD:refs/heads/<branch-name>
+```
+
+Then open the PR from `berkeleynerd:<branch-name>` to `main`. If development
+started on a fork branch, mirror the branch to `upstream` before opening the
+review PR.
 
 Invoke Claude Deep Audit on a PR by adding the `deep-audit` label:
 

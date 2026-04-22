@@ -177,9 +177,6 @@ package body Safe_Frontend.Ada_Emit.Statements is
    function Unit_Runtime_Assigns_Name
      (Unit : CM.Resolved_Unit;
       Name : String) return Boolean;
-   function Block_Declarations_Immediately_Overwritten
-     (Declarations : CM.Object_Decl_Vectors.Vector;
-      Statements   : CM.Statement_Access_Vectors.Vector) return Boolean;
    function Channel_Copy_Helper_Name
      (Channel_Item : CM.Resolved_Channel_Decl) return String;
    function Channel_Free_Helper_Name
@@ -336,6 +333,302 @@ package body Safe_Frontend.Ada_Emit.Statements is
    function Lookup_Channel
      (Unit : CM.Resolved_Unit;
       Name : String) return CM.Resolved_Channel_Decl renames AI.Lookup_Channel;
+   type Call_Actual_Effect is
+     (Call_Actual_Observes,
+      Call_Actual_Mutates,
+      Call_Actual_Unknown);
+
+   function Mode_Writes_Actual (Mode : String) return Boolean is
+   begin
+      return Mode in "mut" | "in out" | "out";
+   end Mode_Writes_Actual;
+
+   function Unwrapped_Call_Actual
+     (Actual : CM.Expr_Access) return CM.Expr_Access
+   is
+   begin
+      if Actual /= null
+        and then Actual.Kind in CM.Expr_Annotated | CM.Expr_Conversion
+        and then Actual.Inner /= null
+      then
+         return Unwrapped_Call_Actual (Actual.Inner);
+      end if;
+
+      return Actual;
+   end Unwrapped_Call_Actual;
+
+   function Is_Observer_Attribute_Actual
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Actual   : CM.Expr_Access) return Boolean
+   is
+      Unwrapped : constant CM.Expr_Access := Unwrapped_Call_Actual (Actual);
+      Selector  : constant String :=
+        (if Unwrapped /= null and then Unwrapped.Kind = CM.Expr_Select
+         then FT.Lowercase (FT.To_String (Unwrapped.Selector))
+         else "");
+   begin
+      if Unwrapped = null
+        or else Unwrapped.Kind /= CM.Expr_Select
+        or else Unwrapped.Prefix = null
+        or else Selector not in "length" | "capacity"
+        or else Root_Name (Unwrapped.Prefix)'Length = 0
+        or else not Has_Text (Unwrapped.Prefix.Type_Name)
+      then
+         return False;
+      end if;
+
+      declare
+         Prefix_Info : GM.Type_Descriptor := (others => <>);
+      begin
+         if not Type_Info_From_Name
+           (Unit,
+            Document,
+            FT.To_String (Unwrapped.Prefix.Type_Name),
+            Prefix_Info)
+         then
+            return False;
+         end if;
+
+         declare
+            Prefix_Kind : constant String :=
+              FT.Lowercase (FT.To_String (Prefix_Info.Kind));
+         begin
+            return
+              (Selector = "length" and then Prefix_Kind in "string" | "array")
+              or else
+              (Selector = "capacity"
+               and then Is_Growable_Array_Type (Unit, Document, Prefix_Info));
+         end;
+      end;
+   end Is_Observer_Attribute_Actual;
+
+   function Classify_Call_Actual
+     (Unit      : CM.Resolved_Unit;
+      Document  : GM.Mir_Document;
+      Call_Expr : CM.Expr_Access;
+      Actual    : CM.Expr_Access) return Call_Actual_Effect
+   is
+      function Call_Actual_Index return Natural is
+      begin
+         if Call_Expr = null or else Call_Expr.Args.Is_Empty then
+            return 0;
+         end if;
+
+         for Position in Call_Expr.Args.First_Index .. Call_Expr.Args.Last_Index loop
+            if Call_Expr.Args (Position) = Actual then
+               return Position;
+            end if;
+         end loop;
+         return 0;
+      end Call_Actual_Index;
+
+      function Local_Param_Effect
+        (Params      : CM.Symbol_Vectors.Vector;
+         Param_Index : Positive) return Call_Actual_Effect
+      is
+      begin
+         if Params.Is_Empty or else Param_Index > Params.Last_Index then
+            return Call_Actual_Unknown;
+         end if;
+
+         if Mode_Writes_Actual (FT.To_String (Params (Param_Index).Mode)) then
+            return Call_Actual_Mutates;
+         end if;
+         return Call_Actual_Observes;
+      end Local_Param_Effect;
+
+      function Imported_Param_Effect
+        (Params      : GM.Local_Vectors.Vector;
+         Param_Index : Positive) return Call_Actual_Effect
+      is
+      begin
+         if Params.Is_Empty or else Param_Index > Params.Last_Index then
+            return Call_Actual_Unknown;
+         end if;
+
+         if Mode_Writes_Actual (FT.To_String (Params (Param_Index).Mode)) then
+            return Call_Actual_Mutates;
+         end if;
+         return Call_Actual_Observes;
+      end Imported_Param_Effect;
+
+      Actual_Root : constant String := Root_Name (Unwrapped_Call_Actual (Actual));
+      Param_Index : constant Natural := Call_Actual_Index;
+      Known_Callee_Found : Boolean := False;
+   begin
+      if Actual_Root'Length = 0
+        or else Is_Observer_Attribute_Actual (Unit, Document, Actual)
+      then
+         return Call_Actual_Observes;
+      end if;
+
+      if Call_Expr = null
+        or else Call_Expr.Kind /= CM.Expr_Call
+        or else Call_Expr.Callee = null
+        or else Param_Index = 0
+      then
+         return Call_Actual_Unknown;
+      end if;
+
+      declare
+         Callee_Name : constant String :=
+           FT.Lowercase (CM.Flatten_Name (Call_Expr.Callee));
+      begin
+         for Candidate of Unit.Subprograms loop
+            if FT.Lowercase (FT.To_String (Candidate.Name)) = Callee_Name
+              or else
+                FT.Lowercase
+                  (FT.To_String (Unit.Package_Name)
+                   & "."
+                   & FT.To_String (Candidate.Name)) = Callee_Name
+            then
+               Known_Callee_Found := True;
+               if Local_Param_Effect (Candidate.Params, Param_Index) =
+                    Call_Actual_Mutates
+               then
+                  return Call_Actual_Mutates;
+               end if;
+            end if;
+         end loop;
+
+         for Imported of Unit.Imported_Subprograms loop
+            declare
+               Imported_Name  : constant String :=
+                 FT.Lowercase (FT.To_String (Imported.Name));
+               Imported_Short : constant String :=
+                 FT.Lowercase
+                   (AET.Synthetic_Type_Tail_Name
+                      (FT.To_String (Imported.Name)));
+            begin
+               if Imported_Name = Callee_Name
+                 or else Imported_Short = Callee_Name
+               then
+                  Known_Callee_Found := True;
+                  if Imported_Param_Effect (Imported.Params, Param_Index) =
+                       Call_Actual_Mutates
+                  then
+                     return Call_Actual_Mutates;
+                  end if;
+               end if;
+            end;
+         end loop;
+      end;
+
+      if Known_Callee_Found then
+         return Call_Actual_Observes;
+      end if;
+
+      return Call_Actual_Unknown;
+   end Classify_Call_Actual;
+
+   procedure Invalidate_Static_Length_Tracking
+     (State : in out Emit_State;
+      Name  : String)
+   is
+      Previous_Length : Natural := 0;
+   begin
+      if Name'Length = 0 then
+         return;
+      end if;
+
+      if Try_Static_Length (State, Name, Previous_Length) then
+         for Position in 1 .. Previous_Length loop
+            Invalidate_Static_Integer
+              (State,
+               Static_Element_Binding_Name (Name, Position));
+         end loop;
+      end if;
+
+      Invalidate_Static_Length (State, Name);
+   end Invalidate_Static_Length_Tracking;
+
+   procedure Invalidate_Mutated_Call_Actual_Lengths
+     (State : in out Emit_State;
+      Unit  : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Expr  : CM.Expr_Access)
+   is
+      procedure Visit (Item : CM.Expr_Access);
+
+      procedure Invalidate_Actual (Actual : CM.Expr_Access) is
+         Actual_Root : constant String := Root_Name (Unwrapped_Call_Actual (Actual));
+      begin
+         if Actual_Root'Length > 0 then
+            Invalidate_Static_Length_Tracking (State, Actual_Root);
+         end if;
+      end Invalidate_Actual;
+
+      procedure Visit (Item : CM.Expr_Access) is
+      begin
+         if Item = null then
+            return;
+         end if;
+
+         case Item.Kind is
+            when CM.Expr_Unknown
+               | CM.Expr_Int
+               | CM.Expr_Real
+               | CM.Expr_String
+               | CM.Expr_Bool
+               | CM.Expr_Enum_Literal
+               | CM.Expr_Null
+               | CM.Expr_Ident
+               | CM.Expr_None
+               | CM.Expr_Subtype_Indication =>
+               null;
+
+            when CM.Expr_Select =>
+               Visit (Item.Prefix);
+
+            when CM.Expr_Resolved_Index | CM.Expr_Apply =>
+               Visit (Item.Prefix);
+               Visit (Item.Callee);
+               for Arg of Item.Args loop
+                  Visit (Arg);
+               end loop;
+
+            when CM.Expr_Call =>
+               Visit (Item.Callee);
+               for Arg of Item.Args loop
+                  case Classify_Call_Actual (Unit, Document, Item, Arg) is
+                     when Call_Actual_Observes =>
+                        null;
+                     when Call_Actual_Mutates | Call_Actual_Unknown =>
+                        Invalidate_Actual (Arg);
+                  end case;
+                  Visit (Arg);
+               end loop;
+
+            when CM.Expr_Conversion
+               | CM.Expr_Annotated
+               | CM.Expr_Unary
+               | CM.Expr_Some
+               | CM.Expr_Try =>
+               Visit (Item.Inner);
+               Visit (Item.Target);
+
+            when CM.Expr_Binary =>
+               Visit (Item.Left);
+               Visit (Item.Right);
+
+            when CM.Expr_Allocator =>
+               Visit (Item.Value);
+
+            when CM.Expr_Aggregate =>
+               for Field of Item.Fields loop
+                  Visit (Field.Expr);
+               end loop;
+
+            when CM.Expr_Array_Literal | CM.Expr_Tuple =>
+               for Element of Item.Elements loop
+                  Visit (Element);
+               end loop;
+         end case;
+      end Visit;
+   begin
+      Visit (Expr);
+   end Invalidate_Mutated_Call_Actual_Lengths;
 
    function Expr_Uses_Name
      (Expr : CM.Expr_Access;
@@ -347,11 +640,25 @@ package body Safe_Frontend.Ada_Emit.Statements is
       end if;
 
       case Expr.Kind is
+         when CM.Expr_Unknown =>
+            return True;
+         when CM.Expr_Int
+            | CM.Expr_Real
+            | CM.Expr_String
+            | CM.Expr_Bool
+            | CM.Expr_Enum_Literal
+            | CM.Expr_Null
+            | CM.Expr_None
+            | CM.Expr_Subtype_Indication =>
+            return False;
          when CM.Expr_Ident =>
             return FT.To_String (Expr.Name) = Name;
          when CM.Expr_Select =>
             return Expr_Uses_Name (Expr.Prefix, Name);
-         when CM.Expr_Resolved_Index =>
+         when CM.Expr_Resolved_Index | CM.Expr_Call | CM.Expr_Apply =>
+            if Expr_Uses_Name (Expr.Callee, Name) then
+               return True;
+            end if;
             if Expr_Uses_Name (Expr.Prefix, Name) then
                return True;
             end if;
@@ -361,17 +668,11 @@ package body Safe_Frontend.Ada_Emit.Statements is
                end if;
             end loop;
             return False;
-         when CM.Expr_Call =>
-            if Expr_Uses_Name (Expr.Callee, Name) then
-               return True;
-            end if;
-            for Item of Expr.Args loop
-               if Expr_Uses_Name (Item, Name) then
-                  return True;
-               end if;
-            end loop;
-            return False;
-         when CM.Expr_Conversion | CM.Expr_Annotated | CM.Expr_Unary =>
+         when CM.Expr_Conversion
+            | CM.Expr_Annotated
+            | CM.Expr_Unary
+            | CM.Expr_Some
+            | CM.Expr_Try =>
             return
               Expr_Uses_Name (Expr.Inner, Name)
               or else Expr_Uses_Name (Expr.Target, Name);
@@ -388,17 +689,133 @@ package body Safe_Frontend.Ada_Emit.Statements is
                end if;
             end loop;
             return False;
-         when CM.Expr_Tuple =>
+         when CM.Expr_Array_Literal | CM.Expr_Tuple =>
             for Item of Expr.Elements loop
                if Expr_Uses_Name (Item, Name) then
                   return True;
                end if;
             end loop;
             return False;
-         when others =>
-            return False;
       end case;
    end Expr_Uses_Name;
+
+   function Statement_Uses_Name
+     (Statement : CM.Statement_Access;
+      Name      : String) return Boolean
+   is
+      function Declares_Name
+        (Names : FT.UString_Vectors.Vector) return Boolean
+      is
+      begin
+         for Declared_Name of Names loop
+            if FT.To_String (Declared_Name) = Name then
+               return True;
+            end if;
+         end loop;
+         return False;
+      end Declares_Name;
+   begin
+      if Statement = null or else Name'Length = 0 then
+         return False;
+      end if;
+
+      case Statement.Kind is
+         when CM.Stmt_Unknown =>
+            return True;
+         when CM.Stmt_Object_Decl =>
+            return Declares_Name (Statement.Decl.Names)
+              or else Expr_Uses_Name (Statement.Decl.Initializer, Name);
+         when CM.Stmt_Destructure_Decl =>
+            return Declares_Name (Statement.Destructure.Names)
+              or else Expr_Uses_Name (Statement.Destructure.Initializer, Name);
+         when CM.Stmt_Assign =>
+            return
+              Expr_Uses_Name (Statement.Target, Name)
+              or else Expr_Uses_Name (Statement.Value, Name);
+         when CM.Stmt_Call =>
+            return Expr_Uses_Name (Statement.Call, Name);
+         when CM.Stmt_Return =>
+            return Expr_Uses_Name (Statement.Value, Name);
+         when CM.Stmt_If =>
+            if Expr_Uses_Name (Statement.Condition, Name)
+              or else Statements_Use_Name (Statement.Then_Stmts, Name)
+            then
+               return True;
+            end if;
+            for Part of Statement.Elsifs loop
+               if Expr_Uses_Name (Part.Condition, Name)
+                 or else Statements_Use_Name (Part.Statements, Name)
+               then
+                  return True;
+               end if;
+            end loop;
+            return
+              Statement.Has_Else
+              and then Statements_Use_Name (Statement.Else_Stmts, Name);
+         when CM.Stmt_Case =>
+            if Expr_Uses_Name (Statement.Case_Expr, Name) then
+               return True;
+            end if;
+            for Arm of Statement.Case_Arms loop
+               if Expr_Uses_Name (Arm.Choice, Name)
+                 or else Statements_Use_Name (Arm.Statements, Name)
+               then
+                  return True;
+               end if;
+            end loop;
+            return False;
+         when CM.Stmt_Match =>
+            if Expr_Uses_Name (Statement.Match_Expr, Name) then
+               return True;
+            end if;
+            for Arm of Statement.Match_Arms loop
+               if Statements_Use_Name (Arm.Statements, Name) then
+                  return True;
+               end if;
+            end loop;
+            return False;
+         when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
+            return
+              Expr_Uses_Name (Statement.Condition, Name)
+              or else Expr_Uses_Name (Statement.Loop_Range.Name_Expr, Name)
+              or else Expr_Uses_Name (Statement.Loop_Range.Low_Expr, Name)
+              or else Expr_Uses_Name (Statement.Loop_Range.High_Expr, Name)
+              or else Expr_Uses_Name (Statement.Loop_Iterable, Name)
+              or else Statements_Use_Name (Statement.Body_Stmts, Name);
+         when CM.Stmt_Exit =>
+            return Expr_Uses_Name (Statement.Condition, Name);
+         when CM.Stmt_Send | CM.Stmt_Receive | CM.Stmt_Try_Receive =>
+            return
+              Expr_Uses_Name (Statement.Channel_Name, Name)
+              or else Expr_Uses_Name (Statement.Value, Name)
+              or else Expr_Uses_Name (Statement.Target, Name)
+              or else Expr_Uses_Name (Statement.Success_Var, Name);
+         when CM.Stmt_Try_Send =>
+            Raise_Internal ("unreachable: try_send rejected by resolver");
+         when CM.Stmt_Select =>
+            for Arm of Statement.Arms loop
+               case Arm.Kind is
+                  when CM.Select_Arm_Channel =>
+                     if Expr_Uses_Name (Arm.Channel_Data.Channel_Name, Name)
+                       or else Statements_Use_Name (Arm.Channel_Data.Statements, Name)
+                     then
+                        return True;
+                     end if;
+                  when CM.Select_Arm_Delay =>
+                     if Expr_Uses_Name (Arm.Delay_Data.Duration_Expr, Name)
+                       or else Statements_Use_Name (Arm.Delay_Data.Statements, Name)
+                     then
+                        return True;
+                     end if;
+                  when CM.Select_Arm_Unknown =>
+                     return True;
+               end case;
+            end loop;
+            return False;
+         when CM.Stmt_Delay =>
+            return Expr_Uses_Name (Statement.Value, Name);
+      end case;
+   end Statement_Uses_Name;
 
    function Statements_Use_Name
      (Statements : CM.Statement_Access_Vectors.Vector;
@@ -410,116 +827,220 @@ package body Safe_Frontend.Ada_Emit.Statements is
       end if;
 
       for Item of Statements loop
-         if Item = null then
-            null;
-         else
-            case Item.Kind is
-               when CM.Stmt_Object_Decl =>
-                  if Expr_Uses_Name (Item.Decl.Initializer, Name) then
-                     return True;
-                  end if;
-               when CM.Stmt_Destructure_Decl =>
-                  if Expr_Uses_Name (Item.Destructure.Initializer, Name) then
-                     return True;
-                  end if;
-               when CM.Stmt_Assign =>
-                  if Expr_Uses_Name (Item.Target, Name)
-                    or else Expr_Uses_Name (Item.Value, Name)
-                  then
-                     return True;
-                  end if;
-               when CM.Stmt_Call =>
-                  if Expr_Uses_Name (Item.Call, Name) then
-                     return True;
-                  end if;
-               when CM.Stmt_Return =>
-                  if Expr_Uses_Name (Item.Value, Name) then
-                     return True;
-                  end if;
-               when CM.Stmt_If =>
-                  if Expr_Uses_Name (Item.Condition, Name)
-                    or else Statements_Use_Name (Item.Then_Stmts, Name)
-                  then
-                     return True;
-                  end if;
-                  for Part of Item.Elsifs loop
-                     if Expr_Uses_Name (Part.Condition, Name)
-                       or else Statements_Use_Name (Part.Statements, Name)
-                     then
-                        return True;
-                     end if;
-                  end loop;
-                  if Item.Has_Else
-                    and then Statements_Use_Name (Item.Else_Stmts, Name)
-                  then
-                     return True;
-                  end if;
-               when CM.Stmt_Case =>
-                  if Expr_Uses_Name (Item.Case_Expr, Name) then
-                     return True;
-                  end if;
-                  for Arm of Item.Case_Arms loop
-                     if Expr_Uses_Name (Arm.Choice, Name)
-                       or else Statements_Use_Name (Arm.Statements, Name)
-                     then
-                        return True;
-                     end if;
-                  end loop;
-               when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
-                  if Expr_Uses_Name (Item.Condition, Name)
-                    or else Expr_Uses_Name (Item.Loop_Range.Name_Expr, Name)
-                    or else Expr_Uses_Name (Item.Loop_Range.Low_Expr, Name)
-                    or else Expr_Uses_Name (Item.Loop_Range.High_Expr, Name)
-                    or else Expr_Uses_Name (Item.Loop_Iterable, Name)
-                    or else Statements_Use_Name (Item.Body_Stmts, Name)
-                  then
-                     return True;
-                  end if;
-               when CM.Stmt_Exit =>
-                  if Expr_Uses_Name (Item.Condition, Name) then
-                     return True;
-                  end if;
-               when CM.Stmt_Send | CM.Stmt_Receive | CM.Stmt_Try_Receive =>
-                  if Expr_Uses_Name (Item.Channel_Name, Name)
-                    or else Expr_Uses_Name (Item.Value, Name)
-                    or else Expr_Uses_Name (Item.Target, Name)
-                    or else Expr_Uses_Name (Item.Success_Var, Name)
-                  then
-                     return True;
-                  end if;
-               when CM.Stmt_Try_Send =>
-                  Raise_Internal ("unreachable: try_send rejected by resolver");
-               when CM.Stmt_Select =>
-                  for Arm of Item.Arms loop
-                     case Arm.Kind is
-                        when CM.Select_Arm_Channel =>
-                           if Expr_Uses_Name (Arm.Channel_Data.Channel_Name, Name)
-                             or else Statements_Use_Name (Arm.Channel_Data.Statements, Name)
-                           then
-                              return True;
-                           end if;
-                        when CM.Select_Arm_Delay =>
-                           if Expr_Uses_Name (Arm.Delay_Data.Duration_Expr, Name)
-                             or else Statements_Use_Name (Arm.Delay_Data.Statements, Name)
-                           then
-                              return True;
-                           end if;
-                        when others =>
-                           null;
-                     end case;
-                  end loop;
-               when CM.Stmt_Delay =>
-                  if Expr_Uses_Name (Item.Value, Name) then
-                     return True;
-                  end if;
-               when others =>
-                  null;
-            end case;
+         if Statement_Uses_Name (Item, Name) then
+            return True;
          end if;
       end loop;
 
       return False;
    end Statements_Use_Name;
+
+   function Decl_Emits_Local_Initializer
+     (Unit     : CM.Resolved_Unit;
+      Document : GM.Mir_Document;
+      Decl     : CM.Object_Decl) return Boolean
+   is
+      Suppress_Explicit_Null_Init : constant Boolean :=
+        Decl.Initializer /= null
+        and then Decl.Initializer.Kind = CM.Expr_Null
+        and then not Decl.Is_Constant
+        and then AI.Is_Owner_Access (Decl.Type_Info);
+      Implicit_Heap_Default_Init : constant Boolean :=
+        Decl.Initializer = null
+        and then not Decl.Is_Constant
+        and then not AI.Is_Owner_Access (Decl.Type_Info)
+        and then Has_Heap_Value_Type (Unit, Document, Decl.Type_Info);
+      Needs_Explicit_Default_Init : constant Boolean :=
+        Decl.Has_Implicit_Default_Init
+        and then Decl.Initializer = null
+        and then Needs_Explicit_Default_Initializer (Unit, Document, Decl.Type_Info);
+   begin
+      --  Returns True iff local lowering will emit an initializer at this
+      --  declaration site, whether explicit or compiler-generated. The
+      --  overwrite-before-read suppression is only sound when an initializer
+      --  actually exists in the emitted Ada. Keep this in sync with
+      --  Render_Object_Declaration's Emit_Initializer computation below.
+      return
+        (Decl.Has_Initializer and then not Suppress_Explicit_Null_Init)
+        or else Needs_Explicit_Default_Init
+        or else Implicit_Heap_Default_Init;
+   end Decl_Emits_Local_Initializer;
+
+   function Statements_Overwrite_Name_Before_Read
+     (Statements : CM.Statement_Access_Vectors.Vector;
+      Name       : String) return Boolean;
+
+   function Statement_Blocks_Overwrite_Scan
+     (Statement : CM.Statement_Access) return Boolean
+   is
+   begin
+      if Statement = null then
+         return False;
+      end if;
+
+      case Statement.Kind is
+         when CM.Stmt_Unknown =>
+            return True;
+         when CM.Stmt_Object_Decl =>
+            return False;
+         when CM.Stmt_Destructure_Decl =>
+            return False;
+         when CM.Stmt_Assign =>
+            return False;
+         when CM.Stmt_Call =>
+            return False;
+         when CM.Stmt_Return =>
+            return True;
+         when CM.Stmt_If =>
+            return True;
+         when CM.Stmt_Case =>
+            return True;
+         when CM.Stmt_While =>
+            return True;
+         when CM.Stmt_For =>
+            return True;
+         when CM.Stmt_Loop =>
+            return True;
+         when CM.Stmt_Exit =>
+            return True;
+         when CM.Stmt_Send =>
+            return False;
+         when CM.Stmt_Receive =>
+            return False;
+         when CM.Stmt_Try_Send =>
+            return True;
+         when CM.Stmt_Try_Receive =>
+            return False;
+         when CM.Stmt_Match =>
+            return True;
+         when CM.Stmt_Select =>
+            return True;
+         when CM.Stmt_Delay =>
+            return False;
+      end case;
+   end Statement_Blocks_Overwrite_Scan;
+
+   function Statement_Overwrites_Name_Before_Read
+     (Statement : CM.Statement_Access;
+      Name      : String) return Boolean
+   is
+   begin
+      --  Returns True iff this statement unconditionally overwrites Name
+      --  before reading it. Unsupported control flow, partial-path writes,
+      --  or any read/call involving Name fail closed.
+      if Statement = null or else Name'Length = 0 then
+         return False;
+      end if;
+
+      case Statement.Kind is
+         when CM.Stmt_Unknown =>
+            return False;
+         when CM.Stmt_Object_Decl =>
+            return False;
+         when CM.Stmt_Destructure_Decl =>
+            return False;
+         when CM.Stmt_Assign =>
+            return Statement.Target /= null
+              and then Statement.Target.Kind = CM.Expr_Ident
+              and then FT.To_String (Statement.Target.Name) = Name
+              and then not Expr_Uses_Name (Statement.Value, Name);
+         when CM.Stmt_Call =>
+            --  Do not consult call-mutation classification here. Even a call
+            --  that eventually mutates Name may read it first, so overwrite-
+            --  before-read remains unprovable at this site.
+            return False;
+         when CM.Stmt_Return =>
+            return False;
+         when CM.Stmt_If =>
+            if Expr_Uses_Name (Statement.Condition, Name)
+              or else not Statements_Overwrite_Name_Before_Read
+                (Statement.Then_Stmts, Name)
+            then
+               return False;
+            end if;
+            for Part of Statement.Elsifs loop
+               if Expr_Uses_Name (Part.Condition, Name)
+                 or else not Statements_Overwrite_Name_Before_Read
+                   (Part.Statements, Name)
+               then
+                  return False;
+               end if;
+            end loop;
+            return
+              Statement.Has_Else
+              and then Statements_Overwrite_Name_Before_Read
+                (Statement.Else_Stmts, Name);
+         when CM.Stmt_Case =>
+            if Expr_Uses_Name (Statement.Case_Expr, Name)
+              or else Statement.Case_Arms.Is_Empty
+              or else not Statement.Case_Arms
+                (Statement.Case_Arms.Last_Index).Is_Others
+            then
+               return False;
+            end if;
+            --  Case statements currently reach emission only with a final
+            --  `when others` arm; keep the local check above fail-closed if
+            --  that parser rule is ever relaxed.
+            for Arm of Statement.Case_Arms loop
+               if Expr_Uses_Name (Arm.Choice, Name)
+                 or else not Statements_Overwrite_Name_Before_Read
+                   (Arm.Statements, Name)
+               then
+                  return False;
+               end if;
+            end loop;
+            return True;
+         when CM.Stmt_While =>
+            return False;
+         when CM.Stmt_For =>
+            return False;
+         when CM.Stmt_Loop =>
+            return False;
+         when CM.Stmt_Exit =>
+            return False;
+         when CM.Stmt_Send =>
+            return False;
+         when CM.Stmt_Receive =>
+            return False;
+         when CM.Stmt_Try_Send =>
+            return False;
+         when CM.Stmt_Try_Receive =>
+            return False;
+         when CM.Stmt_Match =>
+            return False;
+         when CM.Stmt_Select =>
+            return False;
+         when CM.Stmt_Delay =>
+            return False;
+      end case;
+   end Statement_Overwrites_Name_Before_Read;
+
+   function Statements_Overwrite_Name_Before_Read
+     (Statements : CM.Statement_Access_Vectors.Vector;
+      Name       : String) return Boolean
+   is
+   begin
+      --  Scans left-to-right until the first statement that mentions Name.
+      --  Irrelevant straight-line statements are skipped, but unrelated
+      --  control-flow barriers fail closed because they may bypass a later
+      --  overwrite. The first mention must be an unconditional overwrite-
+      --  before-read in the supported subset.
+      if Name'Length = 0 or else Statements.Is_Empty then
+         return False;
+      end if;
+
+      for Item of Statements loop
+         if not Statement_Uses_Name (Item, Name) then
+            if Statement_Blocks_Overwrite_Scan (Item) then
+               return False;
+            end if;
+         else
+            return Statement_Overwrites_Name_Before_Read (Item, Name);
+         end if;
+      end loop;
+
+      return False;
+   end Statements_Overwrite_Name_Before_Read;
 
    function Select_Dispatcher_Name
      (Stmt : CM.Statement_Access) return String
@@ -3667,10 +4188,21 @@ package body Safe_Frontend.Ada_Emit.Statements is
                   Static_Length       : Natural := 0;
                begin
                   Block_Declarations.Append (Item.Decl);
-                  Suppress_Initialization_Warnings :=
-                    State.Task_Body_Depth > 0
-                    or else Block_Declarations_Immediately_Overwritten
-                      (Block_Declarations, Tail);
+                  Suppress_Initialization_Warnings := State.Task_Body_Depth > 0;
+                  if not Suppress_Initialization_Warnings
+                    and then Decl_Emits_Local_Initializer (Unit, Document, Item.Decl)
+                  then
+                     Suppress_Initialization_Warnings :=
+                       not Item.Decl.Names.Is_Empty;
+                     for Name of Item.Decl.Names loop
+                        if not Statements_Overwrite_Name_Before_Read
+                          (Tail, FT.To_String (Name))
+                        then
+                           Suppress_Initialization_Warnings := False;
+                           exit;
+                        end if;
+                     end loop;
+                  end if;
                   Collect_Wide_Locals
                     (Unit,
                      Document,
@@ -3723,6 +4255,11 @@ package body Safe_Frontend.Ada_Emit.Statements is
                      Append_Initialization_Warning_Restore
                        (Buffer, Depth + 1);
                   end if;
+                  Invalidate_Mutated_Call_Actual_Lengths
+                    (State,
+                     Unit,
+                     Document,
+                     Item.Decl.Initializer);
                   Append_Line (Buffer, "begin", Depth);
                   Render_Required_Statement_Suite
                     (Buffer,
@@ -3810,6 +4347,11 @@ package body Safe_Frontend.Ada_Emit.Statements is
                         end if;
                      end;
                   end loop;
+                  Invalidate_Mutated_Call_Actual_Lengths
+                    (State,
+                     Unit,
+                     Document,
+                     Item.Destructure.Initializer);
                   Append_Line (Buffer, "begin", Depth);
                   Render_Required_Statement_Suite
                     (Buffer,
@@ -3832,6 +4374,10 @@ package body Safe_Frontend.Ada_Emit.Statements is
                end if;
                Append_Assignment
                  (Buffer, Unit, Document, State, Item.all, Index, Depth, In_Loop);
+               Invalidate_Mutated_Call_Actual_Lengths
+                 (State, Unit, Document, Item.Target);
+               Invalidate_Mutated_Call_Actual_Lengths
+                 (State, Unit, Document, Item.Value);
                if In_Loop then
                   Append_Integer_Loop_Invariant
                     (Buffer, Unit, Document, State, Item.Target, Depth);
@@ -3878,17 +4424,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
                   Emit_Call_Statement
                     (Buffer, Unit, Document, Item.Call, Index, State, Depth);
                end if;
-               if Item.Call /= null and then Item.Call.Kind = CM.Expr_Call then
-                  for Actual of Item.Call.Args loop
-                     declare
-                        Actual_Root : constant String := Root_Name (Actual);
-                     begin
-                        if Actual_Root'Length > 0 then
-                           Invalidate_Static_Length (State, Actual_Root);
-                        end if;
-                     end;
-                  end loop;
-               end if;
+               Invalidate_Mutated_Call_Actual_Lengths
+                 (State, Unit, Document, Item.Call);
             when CM.Stmt_Return =>
                if Item.Value /= null and then Has_Active_Cleanup_Items (State) then
                   Append_Return_With_Cleanup
@@ -4439,6 +4976,8 @@ package body Safe_Frontend.Ada_Emit.Statements is
                               null;
                            else
                               case Nested.Kind is
+                                 when CM.Stmt_Unknown =>
+                                    return True;
                                  when CM.Stmt_Object_Decl =>
                                     for Decl_Name of Nested.Decl.Names loop
                                        if FT.To_String (Decl_Name) = Name then
@@ -4508,11 +5047,19 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                              then
                                                 return True;
                                              end if;
-                                          when others =>
-                                             null;
+                                          when CM.Select_Arm_Unknown =>
+                                             return True;
                                        end case;
                                     end loop;
-                                 when others =>
+                                 when CM.Stmt_Assign
+                                    | CM.Stmt_Call
+                                    | CM.Stmt_Return
+                                    | CM.Stmt_Exit
+                                    | CM.Stmt_Send
+                                    | CM.Stmt_Receive
+                                    | CM.Stmt_Try_Send
+                                    | CM.Stmt_Try_Receive
+                                    | CM.Stmt_Delay =>
                                     null;
                               end case;
                            end if;
@@ -4584,133 +5131,29 @@ package body Safe_Frontend.Ada_Emit.Statements is
                         return "";
                      end Target_Ident_Name;
 
-                     function Mode_Writes_Actual (Mode : String) return Boolean is
-                     begin
-                        return Mode in "mut" | "in out" | "out";
-                     end Mode_Writes_Actual;
-
                      function Call_Mutates_Name
                        (Call_Expr : CM.Expr_Access;
                         Name      : String) return Boolean
                      is
-                        function Unwrapped_Actual_Target
-                          (Actual : CM.Expr_Access) return CM.Expr_Access
-                        is
-                        begin
-                           if Actual /= null
-                             and then Actual.Kind in CM.Expr_Annotated | CM.Expr_Conversion
-                             and then Actual.Inner /= null
-                           then
-                              return Unwrapped_Actual_Target (Actual.Inner);
-                           end if;
-
-                           return Actual;
-                        end Unwrapped_Actual_Target;
-
-                        function Actual_Targets_Name (Actual : CM.Expr_Access) return Boolean is
-                        begin
-                           return Root_Name (Unwrapped_Actual_Target (Actual)) = Name;
-                        end Actual_Targets_Name;
-
-                        function Local_Params_Mutate_Name
-                          (Params : CM.Symbol_Vectors.Vector) return Boolean
-                        is
-                        begin
-                           if Params.Is_Empty or else Call_Expr.Args.Is_Empty then
-                              return False;
-                           end if;
-
-                           for Formal_Index in Params.First_Index .. Params.Last_Index loop
-                              exit when Formal_Index > Call_Expr.Args.Last_Index;
-                              if Mode_Writes_Actual (FT.To_String (Params (Formal_Index).Mode))
-                                and then Actual_Targets_Name (Call_Expr.Args (Formal_Index))
-                              then
-                                 return True;
-                              end if;
-                           end loop;
-                           return False;
-                        end Local_Params_Mutate_Name;
-
-                        function Imported_Params_Mutate_Name
-                          (Params : GM.Local_Vectors.Vector) return Boolean
-                        is
-                        begin
-                           if Params.Is_Empty or else Call_Expr.Args.Is_Empty then
-                              return False;
-                           end if;
-
-                           for Formal_Index in Params.First_Index .. Params.Last_Index loop
-                              exit when Formal_Index > Call_Expr.Args.Last_Index;
-                              if Mode_Writes_Actual (FT.To_String (Params (Formal_Index).Mode))
-                                and then Actual_Targets_Name (Call_Expr.Args (Formal_Index))
-                              then
-                                 return True;
-                              end if;
-                           end loop;
-                           return False;
-                        end Imported_Params_Mutate_Name;
                      begin
-                        if Call_Expr = null
-                          or else Call_Expr.Kind /= CM.Expr_Call
-                          or else Call_Expr.Callee = null
-                          or else Name'Length = 0
-                        then
+                        --  Callers pass Expr_Call nodes here. Unknown or
+                        --  mismatched callee classifications are treated as
+                        --  mutating so static facts are invalidated
+                        --  conservatively.
+                        if Call_Expr = null or else Name'Length = 0 then
                            return False;
                         end if;
 
-                        declare
-                           Callee_Name : constant String :=
-                             FT.Lowercase (CM.Flatten_Name (Call_Expr.Callee));
-                           Known_Callee_Found : Boolean := False;
-                        begin
-                           for Candidate of Unit.Subprograms loop
-                              if FT.Lowercase (FT.To_String (Candidate.Name)) = Callee_Name
-                                or else
-                                  FT.Lowercase
-                                    (FT.To_String (Unit.Package_Name)
-                                     & "."
-                                     & FT.To_String (Candidate.Name)) = Callee_Name
-                              then
-                                 Known_Callee_Found := True;
-                                 if Local_Params_Mutate_Name (Candidate.Params) then
-                                    return True;
-                                 end if;
-                              end if;
-                           end loop;
-
-                           for Imported of Unit.Imported_Subprograms loop
-                              declare
-                                 Imported_Name  : constant String :=
-                                   FT.Lowercase (FT.To_String (Imported.Name));
-                                 Imported_Short : constant String :=
-                                   FT.Lowercase
-                                     (AET.Synthetic_Type_Tail_Name
-                                        (FT.To_String (Imported.Name)));
-                              begin
-                                 if Imported_Name = Callee_Name
-                                   or else Imported_Short = Callee_Name
-                                 then
-                                    Known_Callee_Found := True;
-                                    if Imported_Params_Mutate_Name (Imported.Params) then
-                                       return True;
-                                    end if;
-                                 end if;
-                              end;
-                           end loop;
-
-                           if Known_Callee_Found then
-                              return False;
-                           end if;
-                        end;
-
-                        --  Unknown calls may still mutate a name through an unsupported
-                        --  signature path, but only if that name is passed as an actual.
-                        --  Without a signature, fail closed even though the actual may be
-                        --  observe-only; suppressing an optional invariant is safer than
-                        --  assuming a call cannot mutate the counter.
                         for Actual of Call_Expr.Args loop
-                           if Actual_Targets_Name (Actual) then
-                              return True;
+                           if Root_Name (Unwrapped_Call_Actual (Actual)) = Name then
+                              case Classify_Call_Actual
+                                (Unit, Document, Call_Expr, Actual)
+                              is
+                                 when Call_Actual_Observes =>
+                                    null;
+                                 when Call_Actual_Mutates | Call_Actual_Unknown =>
+                                    return True;
+                              end case;
                            end if;
                         end loop;
                         return False;
@@ -4732,8 +5175,31 @@ package body Safe_Frontend.Ada_Emit.Statements is
                         end if;
 
                         case Expr.Kind is
+                           when CM.Expr_Unknown =>
+                              Result := Result + 1;
+
+                           when CM.Expr_Int
+                              | CM.Expr_Real
+                              | CM.Expr_String
+                              | CM.Expr_Bool
+                              | CM.Expr_Enum_Literal
+                              | CM.Expr_Null
+                              | CM.Expr_Ident
+                              | CM.Expr_None
+                              | CM.Expr_Subtype_Indication =>
+                              null;
+
                            when CM.Expr_Call =>
                               if Call_Mutates_Name (Expr, Name) then
+                                 Result := Result + 1;
+                              end if;
+                              Add_From (Expr.Callee);
+                              for Item of Expr.Args loop
+                                 Add_From (Item);
+                              end loop;
+
+                           when CM.Expr_Apply =>
+                              if Expr_Uses_Name (Expr, Name) then
                                  Result := Result + 1;
                               end if;
                               Add_From (Expr.Callee);
@@ -4750,7 +5216,11 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                  Add_From (Item);
                               end loop;
 
-                           when CM.Expr_Conversion | CM.Expr_Annotated | CM.Expr_Unary =>
+                           when CM.Expr_Conversion
+                              | CM.Expr_Annotated
+                              | CM.Expr_Unary
+                              | CM.Expr_Some
+                              | CM.Expr_Try =>
                               Add_From (Expr.Inner);
                               Add_From (Expr.Target);
 
@@ -4766,13 +5236,10 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                  Add_From (Field.Expr);
                               end loop;
 
-                           when CM.Expr_Tuple =>
+                           when CM.Expr_Array_Literal | CM.Expr_Tuple =>
                               for Item of Expr.Elements loop
                                  Add_From (Item);
                               end loop;
-
-                           when others =>
-                              null;
                         end case;
 
                         return Result;
@@ -4809,6 +5276,17 @@ package body Safe_Frontend.Ada_Emit.Statements is
                         end if;
 
                         case Stmt.Kind is
+                           when CM.Stmt_Unknown =>
+                              if Expr_Uses_Name (Stmt.Condition, Name)
+                                or else Expr_Uses_Name (Stmt.Target, Name)
+                                or else Expr_Uses_Name (Stmt.Value, Name)
+                                or else Expr_Uses_Name (Stmt.Call, Name)
+                                or else Expr_Uses_Name (Stmt.Channel_Name, Name)
+                                or else Expr_Uses_Name (Stmt.Success_Var, Name)
+                              then
+                                 Result := Result + 1;
+                              end if;
+
                            when CM.Stmt_Object_Decl =>
                               Result :=
                                 Result
@@ -4907,7 +5385,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                 Result
                                 + Expr_Mutating_Call_Count (Stmt.Value, Name);
 
-                           when CM.Stmt_Send =>
+                           when CM.Stmt_Send | CM.Stmt_Try_Send =>
                               Result :=
                                 Result
                                 + Expr_Mutating_Call_Count (Stmt.Channel_Name, Name)
@@ -4936,13 +5414,14 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                          + Statements_Write_Count
                                              (Arm.Delay_Data.Statements,
                                               Name);
-                                    when others =>
-                                       null;
+                                    when CM.Select_Arm_Unknown =>
+                                       Result := Result + 1;
                                  end case;
                               end loop;
 
-                           when others =>
-                              null;
+                           when CM.Stmt_Delay =>
+                              Result :=
+                                Result + Expr_Mutating_Call_Count (Stmt.Value, Name);
                         end case;
 
                         return Result;
@@ -5459,6 +5938,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
                         end if;
 
                         case Stmt.Kind is
+                           when CM.Stmt_Unknown =>
+                              Unsafe := True;
+
                            when CM.Stmt_Assign =>
                               if Target_Ident_Name (Stmt.Target) = Name then
                                  if Supported_Accumulator_Assignment
@@ -5570,12 +6052,33 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                  Unsafe := True;
                               end if;
 
-                           when others =>
-                              if Statements_Use_Name (Stmt.Body_Stmts, Name)
-                                or else Expr_Uses_Name (Stmt.Target, Name)
+                           when CM.Stmt_While | CM.Stmt_Loop =>
+                              if Loop_Touches_Accumulator (Stmt.all) then
+                                 Unsafe := True;
+                              end if;
+
+                           when CM.Stmt_Call =>
+                              if Expr_Uses_Name (Stmt.Call, Name) then
+                                 Unsafe := True;
+                              end if;
+
+                           when CM.Stmt_Return | CM.Stmt_Delay =>
+                              if Expr_Uses_Name (Stmt.Value, Name) then
+                                 Unsafe := True;
+                              end if;
+
+                           when CM.Stmt_Exit =>
+                              if Expr_Uses_Name (Stmt.Condition, Name) then
+                                 Unsafe := True;
+                              end if;
+
+                           when CM.Stmt_Send
+                              | CM.Stmt_Receive
+                              | CM.Stmt_Try_Send
+                              | CM.Stmt_Try_Receive =>
+                              if Expr_Uses_Name (Stmt.Channel_Name, Name)
                                 or else Expr_Uses_Name (Stmt.Value, Name)
-                                or else Expr_Uses_Name (Stmt.Call, Name)
-                                or else Expr_Uses_Name (Stmt.Channel_Name, Name)
+                                or else Expr_Uses_Name (Stmt.Target, Name)
                                 or else Expr_Uses_Name (Stmt.Success_Var, Name)
                               then
                                  Unsafe := True;
@@ -8494,31 +8997,6 @@ package body Safe_Frontend.Ada_Emit.Statements is
 
       return False;
    end Unit_Runtime_Assigns_Name;
-
-   function Block_Declarations_Immediately_Overwritten
-     (Declarations : CM.Object_Decl_Vectors.Vector;
-      Statements   : CM.Statement_Access_Vectors.Vector) return Boolean
-   is
-   begin
-      if Declarations.Is_Empty or else Statements.Is_Empty then
-         return False;
-      end if;
-
-      for Decl of Declarations loop
-         if Decl.Is_Constant or else Decl.Initializer = null then
-            return False;
-         end if;
-         for Name of Decl.Names loop
-            if not Statements_Immediately_Overwrite_Name
-              (Statements, FT.To_String (Name))
-            then
-               return False;
-            end if;
-         end loop;
-      end loop;
-
-      return True;
-   end Block_Declarations_Immediately_Overwritten;
 
    function Channel_Copy_Helper_Name
      (Channel_Item : CM.Resolved_Channel_Decl) return String is
