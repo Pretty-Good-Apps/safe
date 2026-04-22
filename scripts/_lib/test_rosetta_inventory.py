@@ -298,7 +298,10 @@ def run_title_helpers_case() -> tuple[bool, str]:
 
 def run_sample_consistency_case() -> tuple[bool, str]:
     baseline_records = [make_record(title, porting_status="ported") for title in sorted(set(inventory.PORTED_SAMPLE_TITLE_ALIASES.values()))]
-    inventory.validate_sample_consistency(baseline_records)
+    try:
+        inventory.validate_sample_consistency(baseline_records)
+    except RuntimeError as exc:
+        return False, str(exc)
 
     # The current aliased Rosetta imports are intentionally the Bucket 1/(none) sample set tracked by #347.
     records = list(baseline_records)
@@ -656,7 +659,10 @@ def run_review_sample_case() -> tuple[bool, str]:
             )
         )
 
-    sample = inventory.build_review_sample(records)
+    try:
+        sample = inventory.build_review_sample(records)
+    except RuntimeError as exc:
+        return False, f"review sample generation failed unexpectedly: {exc}"
     if len(sample) != sum(inventory.REVIEW_SAMPLE_QUOTAS.values()):
         return False, (
             "review sample count diverged from REVIEW_SAMPLE_QUOTAS: "
@@ -673,7 +679,10 @@ def run_review_sample_case() -> tuple[bool, str]:
         if anchor_title not in sample_titles:
             return False, f"review sample missing anchor {anchor_title!r}"
 
-    markdown = inventory.build_review_sample_markdown(records)
+    try:
+        markdown = inventory.build_review_sample_markdown(records)
+    except RuntimeError as exc:
+        return False, f"review sample markdown generation failed unexpectedly: {exc}"
     if "**1/(none)**" not in markdown or "**3/(none)**" not in markdown or "**4/(none)**" not in markdown:
         return False, "review sample markdown is missing expected bucket sections"
     if "result: `confirmed`" not in markdown:
