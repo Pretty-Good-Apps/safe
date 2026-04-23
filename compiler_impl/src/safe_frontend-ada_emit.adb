@@ -331,7 +331,7 @@ package body Safe_Frontend.Ada_Emit is
          end if;
 
          case Expr.Kind is
-            when CM.Expr_Call =>
+            when CM.Expr_Call | CM.Expr_Apply =>
                if Call_Name_Matches then
                   return True;
                end if;
@@ -360,6 +360,8 @@ package body Safe_Frontend.Ada_Emit is
                return
                  Is_Public_Shared_Helper_Call (Expr.Inner, Root_Name)
                  or else Is_Public_Shared_Helper_Call (Expr.Target, Root_Name);
+            when CM.Expr_Some | CM.Expr_Try =>
+               return Is_Public_Shared_Helper_Call (Expr.Inner, Root_Name);
             when CM.Expr_Binary =>
                return
                  Is_Public_Shared_Helper_Call (Expr.Left, Root_Name)
@@ -386,7 +388,23 @@ package body Safe_Frontend.Ada_Emit is
                   end if;
                end loop;
                return False;
-            when others =>
+            when CM.Expr_Array_Literal =>
+               for Item of Expr.Elements loop
+                  if Is_Public_Shared_Helper_Call (Item, Root_Name) then
+                     return True;
+                  end if;
+               end loop;
+               return False;
+            when CM.Expr_Unknown
+               | CM.Expr_Int
+               | CM.Expr_Real
+               | CM.Expr_String
+               | CM.Expr_Bool
+               | CM.Expr_Enum_Literal
+               | CM.Expr_Null
+               | CM.Expr_Ident
+               | CM.Expr_None
+               | CM.Expr_Subtype_Indication =>
                return False;
          end case;
       end Is_Public_Shared_Helper_Call;
@@ -522,7 +540,7 @@ package body Safe_Frontend.Ada_Emit is
       end if;
 
       case Expr.Kind is
-         when CM.Expr_Call =>
+         when CM.Expr_Call | CM.Expr_Apply =>
             if Call_Name_Uses_Public_Shared_Helper then
                return True;
             end if;
@@ -551,6 +569,8 @@ package body Safe_Frontend.Ada_Emit is
             return
               Expr_Uses_Public_Shared_Helper (Expr.Inner)
               or else Expr_Uses_Public_Shared_Helper (Expr.Target);
+         when CM.Expr_Some | CM.Expr_Try =>
+            return Expr_Uses_Public_Shared_Helper (Expr.Inner);
          when CM.Expr_Binary =>
             return
               Expr_Uses_Public_Shared_Helper (Expr.Left)
@@ -577,7 +597,23 @@ package body Safe_Frontend.Ada_Emit is
                end if;
             end loop;
             return False;
-         when others =>
+         when CM.Expr_Array_Literal =>
+            for Item of Expr.Elements loop
+               if Expr_Uses_Public_Shared_Helper (Item) then
+                  return True;
+               end if;
+            end loop;
+            return False;
+         when CM.Expr_Unknown
+            | CM.Expr_Int
+            | CM.Expr_Real
+            | CM.Expr_String
+            | CM.Expr_Bool
+            | CM.Expr_Enum_Literal
+            | CM.Expr_Null
+            | CM.Expr_Ident
+            | CM.Expr_None
+            | CM.Expr_Subtype_Indication =>
             return False;
       end case;
    end Expr_Uses_Public_Shared_Helper;
@@ -593,6 +629,10 @@ package body Safe_Frontend.Ada_Emit is
             case Item.Kind is
                when CM.Stmt_Object_Decl =>
                   if Expr_Uses_Public_Shared_Helper (Item.Decl.Initializer) then
+                     return True;
+                  end if;
+               when CM.Stmt_Destructure_Decl =>
+                  if Expr_Uses_Public_Shared_Helper (Item.Destructure.Initializer) then
                      return True;
                   end if;
                when CM.Stmt_Assign =>
@@ -632,6 +672,18 @@ package body Safe_Frontend.Ada_Emit is
                      return True;
                   end if;
                   for Arm of Item.Case_Arms loop
+                     if Expr_Uses_Public_Shared_Helper (Arm.Choice) then
+                        return True;
+                     end if;
+                     if Statements_Use_Public_Shared_Helper (Arm.Statements) then
+                        return True;
+                     end if;
+                  end loop;
+               when CM.Stmt_Match =>
+                  if Expr_Uses_Public_Shared_Helper (Item.Match_Expr) then
+                     return True;
+                  end if;
+                  for Arm of Item.Match_Arms loop
                      if Statements_Use_Public_Shared_Helper (Arm.Statements) then
                         return True;
                      end if;
@@ -648,8 +700,53 @@ package body Safe_Frontend.Ada_Emit is
                   then
                      return True;
                   end if;
-               when others =>
-                  null;
+               when CM.Stmt_Loop =>
+                  if Statements_Use_Public_Shared_Helper (Item.Body_Stmts) then
+                     return True;
+                  end if;
+               when CM.Stmt_Select =>
+                  for Arm of Item.Arms loop
+                     case Arm.Kind is
+                        when CM.Select_Arm_Channel =>
+                           if Expr_Uses_Public_Shared_Helper
+                                (Arm.Channel_Data.Channel_Name)
+                             or else Statements_Use_Public_Shared_Helper
+                                (Arm.Channel_Data.Statements)
+                           then
+                              return True;
+                           end if;
+                        when CM.Select_Arm_Delay =>
+                           if Expr_Uses_Public_Shared_Helper
+                                (Arm.Delay_Data.Duration_Expr)
+                             or else Statements_Use_Public_Shared_Helper
+                                (Arm.Delay_Data.Statements)
+                           then
+                              return True;
+                           end if;
+                        when CM.Select_Arm_Unknown =>
+                           return True;
+                     end case;
+                  end loop;
+               when CM.Stmt_Send
+                  | CM.Stmt_Receive
+                  | CM.Stmt_Try_Receive =>
+                  if Expr_Uses_Public_Shared_Helper (Item.Channel_Name)
+                    or else Expr_Uses_Public_Shared_Helper (Item.Value)
+                    or else Expr_Uses_Public_Shared_Helper (Item.Target)
+                    or else Expr_Uses_Public_Shared_Helper (Item.Success_Var)
+                  then
+                     return True;
+                  end if;
+               when CM.Stmt_Delay =>
+                  if Expr_Uses_Public_Shared_Helper (Item.Value) then
+                     return True;
+                  end if;
+               when CM.Stmt_Exit =>
+                  if Expr_Uses_Public_Shared_Helper (Item.Condition) then
+                     return True;
+                  end if;
+               when CM.Stmt_Unknown | CM.Stmt_Try_Send =>
+                  return True;
             end case;
          end if;
       end loop;
