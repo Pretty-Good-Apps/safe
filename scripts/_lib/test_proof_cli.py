@@ -960,15 +960,12 @@ def run_cross_tool_cache_consistency_case() -> tuple[bool, str]:
         return fake_cached_proof_runner(**kwargs)
 
     def require_matching_cache_signatures(
-        left_index: int,
-        right_index: int,
         *,
         label: str,
     ) -> tuple[bool, str]:
-        if len(cache_call_signatures) <= max(left_index, right_index):
-            return False, f"{label} did not record both cache calls"
-        left = cache_call_signatures[left_index]
-        right = cache_call_signatures[right_index]
+        if len(cache_call_signatures) != 2:
+            return False, f"{label} recorded {len(cache_call_signatures)} cache calls"
+        left, right = cache_call_signatures
         if left != right:
             return False, f"{label} passed mismatched cache signatures {left!r} != {right!r}"
         return True, ""
@@ -998,14 +995,11 @@ def run_cross_tool_cache_consistency_case() -> tuple[bool, str]:
         return False, f"run_proofs did not report cache hit after safe prove {run_proofs_stdout!r}"
     if run_proofs_stderr:
         return False, f"unexpected stderr {run_proofs_stderr!r}"
-    ok, detail = require_matching_cache_signatures(
-        0,
-        1,
-        label="safe prove -> run_proofs",
-    )
+    ok, detail = require_matching_cache_signatures(label="safe prove -> run_proofs")
     if not ok:
         return False, detail
 
+    cache_call_signatures.clear()
     clear_project_artifacts(source)
     run_proofs_returncode, run_proofs_stdout, run_proofs_stderr = run_run_proofs_subset(
         ["--level", "1"],
@@ -1027,11 +1021,7 @@ def run_cross_tool_cache_consistency_case() -> tuple[bool, str]:
         return False, f"safe prove after run_proofs failed: {safe_prove_cached_stderr or safe_prove_cached_stdout}"
     if summary_path.stat().st_mtime_ns != summary_mtime:
         return False, "safe prove did not reuse run_proofs cache"
-    ok, detail = require_matching_cache_signatures(
-        2,
-        3,
-        label="run_proofs -> safe prove",
-    )
+    ok, detail = require_matching_cache_signatures(label="run_proofs -> safe prove")
     if not ok:
         return False, detail
     return True, ""
