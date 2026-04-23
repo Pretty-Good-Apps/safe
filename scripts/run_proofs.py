@@ -301,13 +301,7 @@ def main() -> int:
     prove_switches = None if proof_mode == "check" else prove_switches_for_level(args.level)
     passed_label = "checked" if proof_mode == "check" else "proved"
     companion_action = "checking" if proof_mode == "check" else "proving"
-    use_cache = False
-    if proof_mode == "prove":
-        use_cache = True
-        if args.no_cache:
-            use_cache = False
-        elif args.cache:
-            use_cache = True
+    use_cache = proof_mode == "prove" and not args.no_cache
 
     try:
         validate_manifests()
