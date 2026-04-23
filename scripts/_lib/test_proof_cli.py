@@ -884,6 +884,47 @@ def run_run_proofs_default_cache_case() -> tuple[bool, str]:
     return True, ""
 
 
+def run_run_proofs_explicit_cache_case() -> tuple[bool, str]:
+    source = PROVE_SINGLE_SUCCESS_SOURCE
+    fixture = repo_rel(source)
+    clear_project_artifacts(source)
+    summary_path = safe_prove_summary_path(source, target_bits=64)
+
+    first_returncode, first_stdout, first_stderr = run_run_proofs_subset(
+        ["--cache", "--level", "1"],
+        fixtures=[fixture],
+        use_real_toolchain=False,
+        fake_cached_source_proof=fake_cached_proof_runner,
+    )
+    if first_returncode != 0:
+        return False, f"explicit-cache run_proofs failed: {first_stderr or first_stdout}"
+    if "[run_proofs] cache reuse enabled (--no-cache to disable)" not in first_stdout:
+        return False, f"missing cache banner in stdout {first_stdout!r}"
+    if "PR11.8a checkpoint: 1 proved, 0 cached, 0 failed" not in first_stdout:
+        return False, f"unexpected first explicit-cache summary {first_stdout!r}"
+    if first_stderr:
+        return False, f"unexpected stderr {first_stderr!r}"
+    if not summary_path.exists():
+        return False, f"missing proof summary {summary_path}"
+    summary_mtime = summary_path.stat().st_mtime_ns
+
+    second_returncode, second_stdout, second_stderr = run_run_proofs_subset(
+        ["--cache", "--level", "1"],
+        fixtures=[fixture],
+        use_real_toolchain=False,
+        fake_cached_source_proof=fake_cached_proof_runner,
+    )
+    if second_returncode != 0:
+        return False, f"cached explicit-cache run_proofs failed: {second_stderr or second_stdout}"
+    if summary_path.stat().st_mtime_ns != summary_mtime:
+        return False, "explicit-cache run_proofs reran GNATprove"
+    if "PR11.8a checkpoint: 0 proved, 1 cached, 0 failed" not in second_stdout:
+        return False, f"unexpected cached explicit-cache summary {second_stdout!r}"
+    if second_stderr:
+        return False, f"unexpected stderr {second_stderr!r}"
+    return True, ""
+
+
 def run_cross_tool_cache_consistency_case() -> tuple[bool, str]:
     source = PROVE_SINGLE_SUCCESS_SOURCE
     fixture = repo_rel(source)
@@ -1003,6 +1044,7 @@ def run_safe_prove_success_checks() -> RunCounts:
             run_safe_prove_single_case(source),
         )
     passed += record_result(failures, "run_proofs default cache", run_run_proofs_default_cache_case())
+    passed += record_result(failures, "run_proofs explicit cache", run_run_proofs_explicit_cache_case())
     passed += record_result(
         failures,
         "cross-tool proof cache consistency",
