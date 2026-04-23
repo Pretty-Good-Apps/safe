@@ -638,8 +638,10 @@ def run_prepare_proof_toolchain_version_normalization_case() -> tuple[bool, str]
             env: dict[str, str] | None = None,
             timeout: int | None = None,
         ) -> subprocess.CompletedProcess[str]:
-            del cwd, env, timeout
-            if argv != ["gnatprove", "--version"]:
+            del env, timeout
+            if cwd != proof_eval.COMPILER_ROOT:
+                raise AssertionError(f"unexpected cwd {cwd!r}")
+            if argv != ["alr", "exec", "--", "gnatprove", "--version"]:
                 raise AssertionError(f"unexpected command {argv!r}")
             return subprocess.CompletedProcess(
                 argv,
@@ -683,8 +685,10 @@ def run_prepare_proof_toolchain_version_probe_failure_case() -> tuple[bool, str]
             env: dict[str, str] | None = None,
             timeout: int | None = None,
         ) -> subprocess.CompletedProcess[str]:
-            del cwd, env, timeout
-            if argv != ["gnatprove", "--version"]:
+            del env, timeout
+            if cwd != proof_eval.COMPILER_ROOT:
+                raise AssertionError(f"unexpected cwd {cwd!r}")
+            if argv != ["alr", "exec", "--", "gnatprove", "--version"]:
                 raise AssertionError(f"unexpected command {argv!r}")
             return subprocess.CompletedProcess(argv, 1, "", "probe failed\n")
 

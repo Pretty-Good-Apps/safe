@@ -211,6 +211,9 @@ def normalize_version_text(completed: subprocess.CompletedProcess[str]) -> str:
     return "\n".join(lines)
 
 
+def gnatprove_command(alr: str, gnatprove: str, *args: str) -> list[str]:
+    return [alr, "exec", "--", gnatprove, *args]
+
 
 def record_gnatprove_stage_output(
     result: ProofRunResult,
@@ -271,7 +274,11 @@ def prepare_proof_toolchain(
     tool_env = os.environ.copy() if env is None else env.copy()
     alr = find_command("alr", ALR_FALLBACK)
     gnatprove = find_command("gnatprove", GNATPROVE_FALLBACK)
-    version_completed = run_command([gnatprove, "--version"], cwd=REPO_ROOT, env=tool_env)
+    version_completed = run_command(
+        gnatprove_command(alr, gnatprove, "--version"),
+        cwd=COMPILER_ROOT,
+        env=tool_env,
+    )
     gnatprove_version = normalize_version_text(version_completed)
     if version_completed.returncode != 0:
         raise RuntimeError(f"failed to capture gnatprove --version: {first_message(version_completed)}")
@@ -581,15 +588,7 @@ def run_gnatprove_project(
 
     for mode, switches in gnatprove_stages:
         completed = run_command(
-            [
-                toolchain.alr,
-                "exec",
-                "--",
-                toolchain.gnatprove,
-                "-P",
-                project_file,
-                *switches,
-            ],
+            gnatprove_command(toolchain.alr, toolchain.gnatprove, "-P", project_file, *switches),
             cwd=project_dir,
             env=toolchain.env,
             timeout=command_timeout,
@@ -607,7 +606,6 @@ def run_gnatprove_project(
         if not allow_clean_nonzero_gnatprove_exit(completed, rows["Total"]):
             return False, f"{mode} failed: {first_message(completed)}"
     return True, ""
-
 
 
 def tool_identity(value: str) -> str:
@@ -734,10 +732,7 @@ def run_cached_source_proof(
         ("prove", PROVE_SWITCHES if prove_switches is None else prove_switches),
     ):
         argv = [
-            toolchain.alr,
-            "exec",
-            "--",
-            toolchain.gnatprove,
+            *gnatprove_command(toolchain.alr, toolchain.gnatprove),
             "-P",
             str(project_paths["gpr"]),
             *switches,
@@ -892,10 +887,7 @@ def run_source_proof(
 
     for stage_name, detail_name, switches in gnatprove_stages:
         argv = [
-            toolchain.alr,
-            "exec",
-            "--",
-            toolchain.gnatprove,
+            *gnatprove_command(toolchain.alr, toolchain.gnatprove),
             "-P",
             str(gpr_path),
             *switches,
