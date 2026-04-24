@@ -85,7 +85,7 @@ PROVE_SWITCHES = prove_switches_for_level(2)
 SummaryCell = dict[str, int | str]
 SummaryRow = dict[str, SummaryCell]
 SummaryTable = dict[str, SummaryRow]
-WITH_CLAUSE_RE = re.compile(r"^with\s+(.+);$", re.IGNORECASE)
+WITH_CLAUSE_RE = re.compile(r"^with\s+(.+?)$", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
