@@ -366,6 +366,13 @@ package body Safe_Frontend.Check_Emit is
    is
       Assocs : String_Vectors.Vector;
    begin
+      if not Arg_Names.Is_Empty
+        and then Natural (Arg_Names.Length) /= Natural (Args.Length)
+      then
+         raise Program_Error with
+           "argument name vector length mismatch during AST emission";
+      end if;
+
       if not Args.Is_Empty then
          for Index in Args.First_Index .. Args.Last_Index loop
             declare

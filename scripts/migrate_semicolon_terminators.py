@@ -179,9 +179,10 @@ def print_summary(label: str, result: Scan) -> None:
 
 
 def print_findings(items: Iterable[Semicolon], *, limit: int = 20) -> None:
+    items = list(items)
     for index, item in enumerate(items):
         if index >= limit:
-            print(f"... {sum(1 for _ in items) - limit} more")
+            print(f"... {len(items) - limit} more")
             break
         suffix = f": {item.message}" if item.message else ""
         print(f"{display_path(item.path)}:{item.line}:{item.col}: {item.kind}{suffix}")

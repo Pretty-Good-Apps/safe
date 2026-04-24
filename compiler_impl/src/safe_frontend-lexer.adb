@@ -187,7 +187,7 @@ package body Safe_Frontend.Lexer is
                return Text (Probe) = Ada.Characters.Latin_1.LF;
             end if;
          end loop;
-         return True;
+         return False;
       end Backslash_Is_Continuation;
 
       procedure Consume_Backslash_Continuation is
