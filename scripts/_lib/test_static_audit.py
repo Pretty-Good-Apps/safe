@@ -473,7 +473,8 @@ def run_parser_resolver_when_others_marker_case(path: Path) -> tuple[bool, str]:
     Expected form:
         when others =>
            --  when-others-ok: <rationale>
-    Inline marker comments on the arrow line are rejected by the multiline rule.
+    The marker must appear on the following nonblank line; inline arrow-line
+    markers are stripped as Ada comments before validation.
     """
     failures: list[str] = []
     lines = path.read_text(encoding="utf-8").splitlines()

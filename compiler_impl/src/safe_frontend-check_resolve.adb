@@ -8281,8 +8281,10 @@ package body Safe_Frontend.Check_Resolve is
             | CM.Expr_Null
             | CM.Expr_Ident
             | CM.Expr_None
-            | CM.Expr_Try
             | CM.Expr_Subtype_Indication =>
+            null;
+         when CM.Expr_Try =>
+            --  Rejected by the pre-case guard above; no child traversal remains.
             null;
       end case;
    end Reject_Non_Executable_Try;
@@ -15901,8 +15903,11 @@ package body Safe_Frontend.Check_Resolve is
                | CM.Stmt_Try_Receive
                | CM.Stmt_Send
                | CM.Stmt_Try_Send
-               | CM.Stmt_Delay
-               | CM.Stmt_Match =>
+               | CM.Stmt_Delay =>
+               null;
+            when CM.Stmt_Match =>
+               --  Task bodies are normalized before this pass; match arms desugar
+               --  to if/case branches checked above.
                null;
          end case;
       end loop;
