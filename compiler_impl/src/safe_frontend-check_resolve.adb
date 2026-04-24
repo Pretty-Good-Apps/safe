@@ -8224,9 +8224,13 @@ package body Safe_Frontend.Check_Resolve is
             | CM.Expr_Enum_Literal
             | CM.Expr_Null
             | CM.Expr_Ident
-            | CM.Expr_Apply
             | CM.Expr_None
             | CM.Expr_Subtype_Indication =>
+            null;
+         when CM.Expr_Apply =>
+            --  Normalize_Expr resolves applies to calls, indexes, or conversions before
+            --  this post-normalization boundary check; residual applies have no PR11.2
+            --  boundary work here.
             null;
       end case;
    end Validate_Pr112_Expr_Boundaries;
@@ -15981,8 +15985,10 @@ package body Safe_Frontend.Check_Resolve is
                | CM.Stmt_Exit
                | CM.Stmt_Send
                | CM.Stmt_Try_Send
-               | CM.Stmt_Delay
-               | CM.Stmt_Match =>
+               | CM.Stmt_Delay =>
+               null;
+            when CM.Stmt_Match =>
+               --  Unit-scope recursion for match arms is validated in check_parse.
                null;
          end case;
       end loop;
