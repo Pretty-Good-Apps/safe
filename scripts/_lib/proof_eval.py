@@ -85,7 +85,14 @@ PROVE_SWITCHES = prove_switches_for_level(2)
 SummaryCell = dict[str, int | str]
 SummaryRow = dict[str, SummaryCell]
 SummaryTable = dict[str, SummaryRow]
-WITH_CLAUSE_RE = re.compile(r"^with\s+(.+);$", re.IGNORECASE)
+# Keep legacy semicolon terminators out of this scanner; migration checks catch them.
+WITH_CLAUSE_RE = re.compile(
+    r"^with\s+"
+    r"([A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)*"
+    r"(?:\s*,\s*[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)*)*)"
+    r"\s*(?:--.*)?$",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)

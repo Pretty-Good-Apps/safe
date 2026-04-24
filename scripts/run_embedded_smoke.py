@@ -250,11 +250,11 @@ def write_jorvik_probe_source(path: Path) -> None:
         """
         package embedded_jorvik_probe
 
-           public subtype result_value is integer (1 to 1);
-           public channel result_ch : result_value capacity 1;
+           public subtype result_value is integer (1 to 1)
+           public channel result_ch : result_value capacity 1
 
            task worker with priority = 10, sends result_ch
-              sent : boolean = false;
+              sent : boolean = false
               loop
                  send result_ch, 1, sent
                  if not sent

@@ -23,6 +23,7 @@ from _lib.proof_eval import (
 )
 from _lib.proof_inventory import EMITTED_PROOF_COVERED_PATHS, iter_proof_coverage_paths
 from _lib.test_harness import (
+    LOCAL_WITH_RE,
     REPO_ROOT,
     SAFE_CLI,
     RunCounts,
@@ -358,6 +359,41 @@ def run_proof_eval_clean_nonzero_case() -> tuple[bool, str]:
     }
     if not allow_clean_nonzero_gnatprove_exit(completed, total_row):
         return False, "expected info-only nonzero GNATprove exit to be accepted"
+    return True, ""
+
+
+def run_with_clause_scanner_trailing_comment_case() -> tuple[bool, str]:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        source = Path(temp_dir) / "client.safe"
+        source.write_text(
+            "with Provider -- local provider\n"
+            "with Ada.Text_IO, Other_Unit.Sub -- imported units\n"
+            "package Client is\n"
+            "end Client\n",
+            encoding="utf-8",
+        )
+        expected = ["Provider", "Ada.Text_IO", "Other_Unit.Sub"]
+        scanners = (
+            ("proof_eval", proof_eval.leading_with_dependencies),
+            ("project_cache", project_cache.leading_with_dependencies),
+        )
+        for label, scanner in scanners:
+            actual = scanner(source)
+            if actual != expected:
+                return False, f"{label} dependencies {actual!r}; expected {expected!r}"
+
+        legacy = Path(temp_dir) / "legacy.safe"
+        legacy.write_text("with Legacy;\npackage Legacy_Client is\nend Legacy_Client\n", encoding="utf-8")
+        for label, scanner in scanners:
+            actual = scanner(legacy)
+            if actual:
+                return False, f"{label} accepted legacy semicolon with clause: {actual!r}"
+
+    local_match = LOCAL_WITH_RE.match("with Provider -- local provider")
+    if local_match is None or local_match.group(1) != "Provider":
+        return False, "test harness local with scanner did not accept a trailing comment"
+    if LOCAL_WITH_RE.match("with Provider;") is not None:
+        return False, "test harness local with scanner accepted a legacy semicolon"
     return True, ""
 
 
@@ -1171,6 +1207,11 @@ def run_internal_proof_checks() -> RunCounts:
     passed += record_result(failures, "proof-inventory-coverage", run_proof_inventory_coverage_case())
     passed += record_result(failures, "proof-eval-message-priority", run_proof_eval_message_priority_case())
     passed += record_result(failures, "proof-eval-clean-nonzero", run_proof_eval_clean_nonzero_case())
+    passed += record_result(
+        failures,
+        "with-clause-scanner-trailing-comment",
+        run_with_clause_scanner_trailing_comment_case(),
+    )
     passed += record_result(
         failures,
         "prepare-proof-toolchain-version-normalization",
