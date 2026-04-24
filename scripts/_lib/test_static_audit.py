@@ -460,7 +460,21 @@ def _first_nonblank_line_after(lines: list[str], index: int) -> tuple[int, str] 
     return None
 
 
+def _comment_payload(line: str) -> str | None:
+    stripped = line.strip()
+    if not stripped.startswith("--"):
+        return None
+    return stripped[2:].lstrip()
+
+
 def run_parser_resolver_when_others_marker_case(path: Path) -> tuple[bool, str]:
+    """Require retained catch-alls to use a next-line rationale marker.
+
+    Expected form:
+        when others =>
+           --  when-others-ok: <rationale>
+    Inline marker comments on the arrow line are rejected by the multiline rule.
+    """
     failures: list[str] = []
     lines = path.read_text(encoding="utf-8").splitlines()
     rel = path.relative_to(REPO_ROOT)
@@ -480,10 +494,11 @@ def run_parser_resolver_when_others_marker_case(path: Path) -> tuple[bool, str]:
             continue
 
         marker_line = _first_nonblank_line_after(lines, index)
-        if (
-            marker_line is None
-            or not marker_line[1].strip().startswith("--")
-            or WHEN_OTHERS_OK_MARKER not in marker_line[1]
+        marker_payload = (
+            _comment_payload(marker_line[1]) if marker_line is not None else None
+        )
+        if marker_payload is None or not marker_payload.startswith(
+            WHEN_OTHERS_OK_MARKER
         ):
             failures.append(
                 f"{rel}:{line_no}: retained `when others` lacks "
