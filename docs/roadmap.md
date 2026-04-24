@@ -479,14 +479,15 @@ control-flow spelling changes have settled.
 
 | Syntax Proposal | Summary |
 |-----------------|---------|
-| Optional Semicolons | Parser-side omitted statement terminators for executable statement sequences |
+| Logical-line terminators | Landed in the #367 atomic grammar overhaul; trailing/removable semicolons are rejected |
 | `var` Declarations | Statement-local variable declarations (from Statement Labels, Loop Labels, and `var` Declarations proposal) |
 
 ### Deliverables
 
-- Parser-side statement terminator handling bounded to executable statement
-  sequences, with declaration semicolons and `end when;` arm separators still
-  explicit.
+- Parser-side terminator handling now applies across package items,
+  declarations, and statements. A semicolon is only a same-logical-line
+  separator; formal parameter lists and sum payload field lists retain
+  structural semicolon separators.
 - Additive statement-local `var` support plus retained legacy
   `Name : Type [= Expr]` statement-local declarations, with a scoped legality
   model that does not accidentally broaden task or block semantics.
@@ -4512,7 +4513,7 @@ surface. This keeps the emitter/proof story from drifting too far behind the
 accepted language.
 
 **Admit likely syntax winners first** — PR11.4 and PR11.5 front-load the
-lowest-risk syntax changes (`returns`, `else if`, optional semicolons, and
+lowest-risk syntax changes (`returns`, `else if`, logical-line terminators, and
 possibly `var`) so the most plausible admissions stabilize early.
 
 **Whitespace cutover after lower-risk sugar** — PR11.6 lands indentation-based
@@ -4709,7 +4710,7 @@ would be implemented.
 | Emitter-Based Container Instantiation | PR11.10 (compiler-driven instantiation) and PR11.11 (user-defined generics) |
 | Unified Integer Type | PR11.8 (single `integer` with inline range constraints, replaces three-tier model) |
 | Discriminant-Constrained Dispatch | Post-PR11.11 (v1.0 baseline decision) |
-| Optional Semicolons | PR11.5 |
+| Logical-line Terminators | PR11.5, finalized by the #367 atomic grammar overhaul |
 | `else if` Keyword | PR11.4 |
 | Simplified Predefined Type Names | Superseded by PR11.8 unified `integer`; `short` and `byte` are not admitted |
 | String Interpolation | Deferred indefinitely / proposal-only |
