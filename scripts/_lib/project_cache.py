@@ -15,7 +15,7 @@ from .pr111_language_eval import executable_name, safe_build_main_text
 from .proof_diagnostics import mirror_with_clauses_into_emitted_unit_files
 
 CACHE_VERSION = 2
-PROOF_RESULT_CACHE_VERSION = 2
+PROOF_RESULT_CACHE_VERSION = 3
 PROOF_FINGERPRINT_VERSION = 2
 STDLIB_ADA_DIR = REPO_ROOT / "compiler_impl" / "stdlib" / "ada"
 WITH_CLAUSE_RE = re.compile(r"^with\s+(.+);$", re.IGNORECASE)
@@ -271,7 +271,12 @@ def cached_proof_result(
     target_bits: int = 64,
 ) -> dict | None:
     cache = load_proof_result_cache(target_bits=target_bits)
-    entry = cache["proofs"].get(source_key(source))
+    source_entries = cache["proofs"].get(source_key(source))
+    if not isinstance(source_entries, dict):
+        return None
+    entry = source_entries.get(fingerprint)
+    if entry is None and source_entries.get("fingerprint") == fingerprint:
+        entry = source_entries
     if entry and entry.get("fingerprint") == fingerprint and entry.get("passed") is True:
         return entry
     return None
@@ -286,7 +291,11 @@ def record_cached_proof_result(
     target_bits: int = 64,
 ) -> None:
     cache = load_proof_result_cache(target_bits=target_bits)
-    cache["proofs"][source_key(source)] = {
+    source_entries = cache["proofs"].setdefault(source_key(source), {})
+    if not isinstance(source_entries, dict) or "fingerprint" in source_entries:
+        source_entries = {}
+        cache["proofs"][source_key(source)] = source_entries
+    source_entries[fingerprint] = {
         "fingerprint": fingerprint,
         "passed": True,
         "flow_summary": flow_summary,
