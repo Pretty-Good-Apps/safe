@@ -976,6 +976,12 @@ package body Safe_Frontend.Mir_Bronze is
                   Walk_Subexpr (Field.Expr);
                end loop;
             end if;
+         when GM.Expr_Array_Literal | GM.Expr_Tuple =>
+            if not Expr.Elements.Is_Empty then
+               for Item of Expr.Elements loop
+                  Walk_Subexpr (Item);
+               end loop;
+            end if;
          when GM.Expr_Call =>
             Callee := FT.To_UString (Flatten_Name (Expr.Callee));
             if UString_Value (Callee) /= ""
@@ -1054,7 +1060,14 @@ package body Safe_Frontend.Mir_Bronze is
                   Walk_Subexpr (Arg);
                end loop;
             end if;
-         when others =>
+         when GM.Expr_Unknown =>
+            Raise_Internal ("unknown MIR expression during bronze summary");
+         when GM.Expr_Int
+            | GM.Expr_Real
+            | GM.Expr_String
+            | GM.Expr_Bool
+            | GM.Expr_Enum_Literal
+            | GM.Expr_Null =>
             null;
       end case;
    end Walk_Expr;
@@ -1438,7 +1451,9 @@ package body Safe_Frontend.Mir_Bronze is
                      Op.Span);
                when GM.Op_Delay =>
                   Walk (Op.Value);
-               when others =>
+               when GM.Op_Unknown =>
+                  Raise_Internal ("unknown MIR operation during bronze summary");
+               when GM.Op_Scope_Enter | GM.Op_Scope_Exit =>
                   null;
             end case;
          end loop;
@@ -1454,21 +1469,27 @@ package body Safe_Frontend.Mir_Bronze is
             when GM.Terminator_Select =>
                if not Block.Terminator.Arms.Is_Empty then
                   for Arm of Block.Terminator.Arms loop
-                     if Arm.Kind = GM.Select_Arm_Channel then
-                        Result.Direct_Channels.Include
-                          (UString_Value (Arm.Channel_Data.Channel_Name));
-                        Result.Direct_Receives.Include
-                          (UString_Value (Arm.Channel_Data.Channel_Name));
-                        Note_Use_Span
-                          (UString_Value (Arm.Channel_Data.Channel_Name),
-                           Arm.Channel_Data.Span,
-                           Result.Use_Spans);
-                     elsif Arm.Kind = GM.Select_Arm_Delay then
-                        Walk (Arm.Delay_Data.Duration_Expr);
-                     end if;
+                     case Arm.Kind is
+                        when GM.Select_Arm_Channel =>
+                           Result.Direct_Channels.Include
+                             (UString_Value (Arm.Channel_Data.Channel_Name));
+                           Result.Direct_Receives.Include
+                             (UString_Value (Arm.Channel_Data.Channel_Name));
+                           Note_Use_Span
+                             (UString_Value (Arm.Channel_Data.Channel_Name),
+                              Arm.Channel_Data.Span,
+                              Result.Use_Spans);
+                        when GM.Select_Arm_Delay =>
+                           Walk (Arm.Delay_Data.Duration_Expr);
+                        when GM.Select_Arm_Unknown =>
+                           Raise_Internal
+                             ("unknown MIR select arm during bronze summary");
+                     end case;
                   end loop;
                end if;
-            when others =>
+            when GM.Terminator_Unknown =>
+               Raise_Internal ("unknown MIR terminator during bronze summary");
+            when GM.Terminator_Jump =>
                null;
          end case;
       end loop;

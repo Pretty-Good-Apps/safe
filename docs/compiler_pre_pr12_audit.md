@@ -2,10 +2,10 @@
 
 Tracking issue: https://github.com/berkeleynerd/safe/issues/332
 Project board: https://github.com/users/berkeleynerd/projects/4/views/1
-Audit SHA: `e5a57f1d8f3056646634f9a2ff8108926b1452e4`
+Audit SHA: `5450c30406e5535cab772e511e1ec326217f16f1`
 Audit doc ref: `main`
 Ripgrep: `ripgrep 15.1.0 (rev af60c2de9d)`
-Next action: Phase 1A - fail-closed walker fall-through sweep.
+Next action: Phase 1B - when-others exhaustiveness.
 
 This is the canonical working record for the pre-PR12.1 Safe compiler audit.
 The code under audit is pinned at `Audit SHA`; this document remains a living
@@ -145,20 +145,29 @@ Commands run at `Audit SHA` (each command emits the total reported in the summar
 Check out `Audit SHA` before running the `rg` commands.
 
 ```bash
-git rev-parse e5a57f1d8f3056646634f9a2ff8108926b1452e4
+git rev-parse 5450c30406e5535cab772e511e1ec326217f16f1
 rg --version
 rg -c -g '*.adb' -g '*.ads' 'when others =>' compiler_impl/src compiler_impl/stdlib/ada companion | awk -F: '{sum += $NF} END {print sum + 0}'
 rg -c -g '*.adb' -g '*.ads' 'SPARK_Mode \(Off\)' compiler_impl/src compiler_impl/stdlib/ada companion | awk -F: '{sum += $NF} END {print sum + 0}'
 rg -c -g '*.adb' -g '*.ads' 'Raise_Unsupported' compiler_impl/src compiler_impl/stdlib/ada companion | awk -F: '{sum += $NF} END {print sum + 0}'
 rg -c -g '*.adb' -g '*.ads' 'pragma Assume|pragma Annotate \(GNATprove' compiler_impl/src compiler_impl/stdlib/ada companion | awk -F: '{sum += $NF} END {print sum + 0}'
-git ls-tree -r --name-only e5a57f1d8f3056646634f9a2ff8108926b1452e4 samples | awk '/(^|\/)([^\/]*canary[^\/]*\.safe|surface_tour\.safe)$/ {count++} END {print count + 0}'
+git ls-tree -r --name-only 5450c30406e5535cab772e511e1ec326217f16f1 samples | awk '/(^|\/)([^\/]*canary[^\/]*\.safe|surface_tour\.safe)$/ {count++} END {print count + 0}'
 ```
+
+Pin refresh note: Phase 1A intentionally advanced the audit pin from
+`e5a57f1d8f3056646634f9a2ff8108926b1452e4` to
+`5450c30406e5535cab772e511e1ec326217f16f1` because PR #346 and PR #348
+landed the post-sprint walker hardening before the audit sweep began. The
+Phase 1A sweep therefore audits current `main`, records those changes as
+confirmed/protected, and uses the new static manifest as the durable regression
+guard. The `when others =>` count remains Phase 1B input; Phase 1A only gates
+walker-relevant fall-throughs and is not expected to eliminate all catch-alls.
 
 Summary:
 
 | Pattern | Total |
 | --- | ---: |
-| `when others =>` | 183 |
+| `when others =>` | 172 |
 | `SPARK_Mode (Off)` | 36 |
 | `Raise_Unsupported` | 38 |
 | `pragma Assume` / `pragma Annotate (GNATprove, ...)` | 1 |
@@ -179,14 +188,14 @@ compiler_impl/src/safe_frontend-mir_json.adb:1
 compiler_impl/src/safe_frontend-mir_analyze.adb:19
 compiler_impl/src/safe_frontend-driver.adb:7
 compiler_impl/src/safe_frontend-check_emit.adb:11
-compiler_impl/src/safe_frontend-ada_emit-statements.adb:31
+compiler_impl/src/safe_frontend-ada_emit-statements.adb:22
 compiler_impl/src/safe_frontend-ada_emit-internal.adb:3
 compiler_impl/src/safe_frontend-ada_emit-types.adb:9
 compiler_impl/src/safe_frontend-json.adb:1
 compiler_impl/src/safe_frontend-check_parse.adb:4
 compiler_impl/src/safe_frontend-ada_emit-channels.adb:1
 compiler_impl/src/safe_frontend-mir_write.adb:6
-compiler_impl/src/safe_frontend-check_resolve.adb:48
+compiler_impl/src/safe_frontend-check_resolve.adb:46
 ```
 
 `SPARK_Mode (Off)`:
@@ -242,11 +251,87 @@ Deliverables:
 
 ## Phase 1A - Fail-Closed Walker Fall-Through
 
-Enforcement default: likely yes.
+Status: complete.
+
+Enforcement default: yes.
+
+Gate: `scripts/_lib/test_static_audit.py`, run by `scripts/run_tests.py`.
+
+Mechanism:
+
+- Regex-based V1 manifest over audited `case <expr>.Kind is` walker blocks.
+- Permissive V1 semantics: only entries named in `AUDITED_WALKER_CASES` are
+  enforced. New walkers must be added to the manifest by review discipline until
+  a stricter discovery gate is justified.
+- The gate is syntactic. It prevents audited walkers from regressing to silent
+  `when others => null`, `return False`, `return 0`, or `Empty_Vector`
+  fall-throughs, but fixture snapshots and proof checks remain the behavioral
+  regression guard.
+- The gate currently covers case-block walkers. If a future audited walker
+  dispatches on kind with an `if` / `elsif` ladder, extend the gate before
+  manifesting that walker.
 
 Findings:
 
-None yet.
+- Phase 1A confirmed and locked in the post-pin walker hardening from PR #346
+  and PR #348.
+- Phase 1A also hardened additional audited walkers that still had silent
+  defaults or incomplete traversal after the pin refresh.
+- The two remaining silent defaults in the manifest are intentional and carry
+  explicit reasons below.
+- The audit baseline `when others =>` count remains the Phase 1B input at the
+  refreshed `Audit SHA`; Phase 1A only resolves walker-relevant fall-throughs
+  and does not re-baseline the global catch-all count.
+- The post-Phase-1A worktree has fewer catch-alls because resolved walker
+  defaults were removed; Phase 1B should reconcile those against the manifest
+  before sweeping the remaining global catch-alls.
+
+### Phase 1A Manifest Summary
+
+| Manifest entry | Outcome |
+| --- | --- |
+| `emit-statements.invalidate-mutated-call-actual-lengths.visit` | Confirmed prior hardening; manifest-gated. |
+| `emit-statements.expr-uses-name` | Confirmed PR #346 hardening; manifest-gated. |
+| `emit-statements.statement-uses-name` | Confirmed PR #346 hardening; manifest-gated. |
+| `emit-statements.statement-blocks-overwrite-scan` | Confirmed post-pin hardening; manifest-gated. |
+| `emit-statements.statement-overwrites-name-before-read` | Confirmed PR #348 hardening; manifest-gated. |
+| `emit-statements.walk-statement-structure.statement` | Hardened in Phase 1A; manifest-gated. |
+| `emit-statements.walk-statement-structure.select-arm` | Hardened in Phase 1A; manifest-gated. |
+| `emit-statements.statements-declare-name` | Confirmed PR #346 hardening; manifest-gated. |
+| `emit-statements.expr-mutating-call-count` | Confirmed PR #346 hardening; manifest-gated. |
+| `emit-statements.statement-write-count` | Confirmed PR #346 hardening; manifest-gated. |
+| `emit-statements.counted-while-expr-contains-call` | Hardened in Phase 1A; manifest-gated. |
+| `emit-statements.counted-while-analyze-statement` | Hardened in Phase 1A; manifest-gated. |
+| `emit-statements.counted-while-select-arm` | Hardened in Phase 1A; manifest-gated. |
+| `emit-statements.shared-condition-needs-snapshot` | Hardened in Phase 1A; manifest-gated. |
+| `emit-statements.shared-condition-collect-snapshots` | Hardened in Phase 1A; manifest-gated. |
+| `emit-statements.analyze-accumulator-statement` | Confirmed PR #346 hardening; manifest-gated. |
+| `emit-statements.collect-growable-accumulators` | Hardened in Phase 1A; manifest-gated. |
+| `emit-statements.analyze-string-growth-statement` | Confirmed post-pin hardening; manifest-gated. |
+| `emit-statements.collect-string-growth-accumulators` | Hardened in Phase 1A; manifest-gated. |
+| `emit-statements.collect-string-accumulators` | Hardened in Phase 1A; manifest-gated. |
+| `emit-proofs.subprogram-uses-global-name.statements` | Hardened in Phase 1A; manifest-gated. |
+| `emit-proofs.subprogram-uses-global-name.select-arm` | Hardened in Phase 1A; manifest-gated. |
+| `emit-proofs.render-global-aspect.expr` | Hardened in Phase 1A; manifest-gated. |
+| `emit-proofs.render-global-aspect.statements` | Hardened in Phase 1A; manifest-gated. |
+| `emit-proofs.render-global-aspect.select-arm` | Hardened in Phase 1A; manifest-gated. |
+| `emit-proofs.access-param-precondition.expr-special-case` | Allowed silent default; generic child traversal follows for every expression field. |
+| `emit-proofs.access-param-precondition.statements` | Hardened in Phase 1A; manifest-gated. |
+| `emit-proofs.access-param-precondition.select-arm` | Hardened in Phase 1A; manifest-gated. |
+| `emit-proofs.recursive-variant.expr` | Hardened in Phase 1A; manifest-gated. |
+| `emit-proofs.recursive-variant.statements` | Hardened in Phase 1A; manifest-gated. |
+| `emit-proofs.recursive-variant.select-arm-expression` | Hardened in Phase 1A; manifest-gated. |
+| `emit-proofs.structural-traversal-accumulator.statements` | Allowed silent default; `return False` disables structural traversal lowering. |
+| `emit.public-shared-helper.expr-local` | Hardened in Phase 1A; manifest-gated. |
+| `emit.public-shared-helper.expr` | Hardened in Phase 1A; manifest-gated. |
+| `emit.public-shared-helper.statements` | Hardened in Phase 1A; manifest-gated. |
+| `emit.public-shared-helper.select-arm` | Hardened in Phase 1A; manifest-gated. |
+| `emit-internal.statement-contains-exit` | Hardened in Phase 1A; manifest-gated. |
+| `emit-internal.statement-falls-through` | Hardened in Phase 1A; manifest-gated. |
+| `mir-bronze.walk-expr` | Hardened in Phase 1A; manifest-gated. |
+| `mir-bronze.summary-for-op` | Hardened in Phase 1A; manifest-gated. |
+| `mir-bronze.summary-for-terminator` | Hardened in Phase 1A; manifest-gated. |
+| `mir-bronze.summary-for-select-arm` | Hardened in Phase 1A; manifest-gated. |
 
 ## Phase 1B - When-Others Exhaustiveness
 
@@ -456,7 +541,7 @@ None yet.
 Run:
 
 ```bash
-git log e5a57f1d8f3056646634f9a2ff8108926b1452e4..main -- compiler_impl/src/ compiler_impl/stdlib/ada/ companion/ docs/ tests/ samples/
+git log 5450c30406e5535cab772e511e1ec326217f16f1..main -- compiler_impl/src/ compiler_impl/stdlib/ada/ companion/ docs/ tests/ samples/
 ```
 
 Classify each changed path as:

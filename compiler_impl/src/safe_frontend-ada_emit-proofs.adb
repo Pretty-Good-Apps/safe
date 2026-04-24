@@ -256,14 +256,21 @@ package body Safe_Frontend.Ada_Emit.Proofs is
                            when CM.Select_Arm_Delay =>
                               Collect_Call_Names_From_Expr (Arm.Delay_Data.Duration_Expr, Calls);
                               Collect_Call_Names_From_Statements (Arm.Delay_Data.Statements, Calls);
-                           when others =>
+                           when CM.Select_Arm_Unknown =>
                               null;
                         end case;
                      end loop;
                   when CM.Stmt_Delay =>
                      Collect_Call_Names_From_Expr (Item.Value, Calls);
-                  when others =>
+                  when CM.Stmt_Unknown =>
                      null;
+                  when CM.Stmt_Exit =>
+                     Collect_Call_Names_From_Expr (Item.Condition, Calls);
+                  when CM.Stmt_Match =>
+                     Collect_Call_Names_From_Expr (Item.Match_Expr, Calls);
+                     for Arm of Item.Match_Arms loop
+                        Collect_Call_Names_From_Statements (Arm.Statements, Calls);
+                     end loop;
                end case;
             end if;
          end loop;
@@ -536,7 +543,7 @@ package body Safe_Frontend.Ada_Emit.Proofs is
                for Arg of Expr.Args loop
                   Collect_Shared_From_Expr (Arg, Reads, Writes);
                end loop;
-            when CM.Expr_Call =>
+            when CM.Expr_Call | CM.Expr_Apply =>
                if Expr.Callee /= null then
                   declare
                      Wrapper_Name  : FT.UString := FT.To_UString ("");
@@ -592,12 +599,17 @@ package body Safe_Frontend.Ada_Emit.Proofs is
                for Arg of Expr.Args loop
                   Collect_Shared_From_Expr (Arg, Reads, Writes);
                end loop;
-            when CM.Expr_Conversion | CM.Expr_Annotated | CM.Expr_Unary =>
+            when CM.Expr_Conversion
+               | CM.Expr_Annotated =>
                Collect_Shared_From_Expr (Expr.Inner, Reads, Writes);
                Collect_Shared_From_Expr (Expr.Target, Reads, Writes);
+            when CM.Expr_Unary | CM.Expr_Some | CM.Expr_Try =>
+               Collect_Shared_From_Expr (Expr.Inner, Reads, Writes);
             when CM.Expr_Binary =>
                Collect_Shared_From_Expr (Expr.Left, Reads, Writes);
                Collect_Shared_From_Expr (Expr.Right, Reads, Writes);
+            when CM.Expr_Allocator =>
+               Collect_Shared_From_Expr (Expr.Value, Reads, Writes);
             when CM.Expr_Aggregate =>
                for Field of Expr.Fields loop
                   Collect_Shared_From_Expr (Field.Expr, Reads, Writes);
@@ -606,7 +618,15 @@ package body Safe_Frontend.Ada_Emit.Proofs is
                for Item of Expr.Elements loop
                   Collect_Shared_From_Expr (Item, Reads, Writes);
                end loop;
-            when others =>
+            when CM.Expr_Unknown
+               | CM.Expr_Int
+               | CM.Expr_Real
+               | CM.Expr_String
+               | CM.Expr_Bool
+               | CM.Expr_Enum_Literal
+               | CM.Expr_Null
+               | CM.Expr_None
+               | CM.Expr_Subtype_Indication =>
                null;
          end case;
       end Collect_Shared_From_Expr;
@@ -644,6 +664,7 @@ package body Safe_Frontend.Ada_Emit.Proofs is
                   when CM.Stmt_Case =>
                      Collect_Shared_From_Expr (Item.Case_Expr, Reads, Writes);
                      for Arm of Item.Case_Arms loop
+                        Collect_Shared_From_Expr (Arm.Choice, Reads, Writes);
                         Collect_Shared_From_Statements (Arm.Statements, Reads, Writes);
                      end loop;
                   when CM.Stmt_While =>
@@ -683,11 +704,13 @@ package body Safe_Frontend.Ada_Emit.Proofs is
                            when CM.Select_Arm_Delay =>
                               Collect_Shared_From_Expr (Arm.Delay_Data.Duration_Expr, Reads, Writes);
                               Collect_Shared_From_Statements (Arm.Delay_Data.Statements, Reads, Writes);
-                           when others =>
+                           when CM.Select_Arm_Unknown =>
                               null;
                         end case;
                      end loop;
-                  when others =>
+                  when CM.Stmt_Exit =>
+                     Collect_Shared_From_Expr (Item.Condition, Reads, Writes);
+                  when CM.Stmt_Unknown =>
                      null;
                end case;
             end if;
@@ -1436,13 +1459,20 @@ package body Safe_Frontend.Ada_Emit.Proofs is
                            when CM.Select_Arm_Delay =>
                               Collect_Expr (Arm.Delay_Data.Duration_Expr);
                               Collect (Arm.Delay_Data.Statements);
-                           when others =>
+                           when CM.Select_Arm_Unknown =>
                               null;
                         end case;
                      end loop;
                   when CM.Stmt_Delay =>
                      Collect_Expr (Item.Value);
-                  when others =>
+                  when CM.Stmt_Match =>
+                     Collect_Expr (Item.Match_Expr);
+                     for Arm of Item.Match_Arms loop
+                        Collect (Arm.Statements);
+                     end loop;
+                  when CM.Stmt_Exit =>
+                     Collect_Expr (Item.Condition);
+                  when CM.Stmt_Unknown =>
                      null;
                end case;
             end if;
@@ -2748,10 +2778,27 @@ package body Safe_Frontend.Ada_Emit.Proofs is
                   end if;
                when CM.Expr_Select =>
                   return Variant_From_Expr (Expr.Prefix);
-               when CM.Expr_Apply
-                  | CM.Expr_Resolved_Index
-                  | CM.Expr_Tuple
-                  | CM.Expr_Array_Literal =>
+               when CM.Expr_Apply =>
+                  declare
+                     Callee_Result : constant String := Variant_From_Expr (Expr.Callee);
+                  begin
+                     if Callee_Result'Length > 0 then
+                        return Callee_Result;
+                     end if;
+                  end;
+
+                  if not Expr.Args.Is_Empty then
+                     for Arg of Expr.Args loop
+                        declare
+                           Arg_Result : constant String := Variant_From_Expr (Arg);
+                        begin
+                           if Arg_Result'Length > 0 then
+                              return Arg_Result;
+                           end if;
+                        end;
+                     end loop;
+                  end if;
+               when CM.Expr_Resolved_Index =>
                   if not Expr.Args.Is_Empty then
                      for Arg of Expr.Args loop
                         declare
@@ -2765,8 +2812,12 @@ package body Safe_Frontend.Ada_Emit.Proofs is
                   end if;
                when CM.Expr_Conversion
                   | CM.Expr_Annotated
-                  | CM.Expr_Unary =>
+                  | CM.Expr_Unary
+                  | CM.Expr_Some
+                  | CM.Expr_Try =>
                   return Variant_From_Expr (Expr.Inner);
+               when CM.Expr_Allocator =>
+                  return Variant_From_Expr (Expr.Value);
                when CM.Expr_Aggregate =>
                   for Field of Expr.Fields loop
                      declare
@@ -2786,7 +2837,26 @@ package body Safe_Frontend.Ada_Emit.Proofs is
                      end if;
                   end;
                   return Variant_From_Expr (Expr.Right);
-               when others =>
+               when CM.Expr_Tuple | CM.Expr_Array_Literal =>
+                  for Element of Expr.Elements loop
+                     declare
+                        Element_Result : constant String := Variant_From_Expr (Element);
+                     begin
+                        if Element_Result'Length > 0 then
+                           return Element_Result;
+                        end if;
+                     end;
+                  end loop;
+               when CM.Expr_Unknown
+                  | CM.Expr_Int
+                  | CM.Expr_Real
+                  | CM.Expr_String
+                  | CM.Expr_Bool
+                  | CM.Expr_Enum_Literal
+                  | CM.Expr_Null
+                  | CM.Expr_Ident
+                  | CM.Expr_None
+                  | CM.Expr_Subtype_Indication =>
                   null;
             end case;
 
@@ -2954,14 +3024,43 @@ package body Safe_Frontend.Ada_Emit.Proofs is
                                   ((case Arm.Kind is
                                      when CM.Select_Arm_Channel => Arm.Channel_Data.Statements,
                                      when CM.Select_Arm_Delay => Arm.Delay_Data.Statements,
-                                     when others => CM.Statement_Access_Vectors.Empty_Vector));
+                                     when CM.Select_Arm_Unknown =>
+                                       CM.Statement_Access_Vectors.Empty_Vector));
                            begin
                               if Arm_Result'Length > 0 then
                                  return Arm_Result;
                               end if;
                            end;
                         end loop;
-                     when others =>
+                     when CM.Stmt_Match =>
+                        declare
+                           Expr_Result : constant String :=
+                             Variant_From_Expr (Item.Match_Expr);
+                        begin
+                           if Expr_Result'Length > 0 then
+                              return Expr_Result;
+                           end if;
+                        end;
+                        for Arm of Item.Match_Arms loop
+                           declare
+                              Arm_Result : constant String :=
+                                Variant_From_Statements (Arm.Statements);
+                           begin
+                              if Arm_Result'Length > 0 then
+                                 return Arm_Result;
+                              end if;
+                           end;
+                        end loop;
+                     when CM.Stmt_Exit =>
+                        declare
+                           Condition_Result : constant String :=
+                             Variant_From_Expr (Item.Condition);
+                        begin
+                           if Condition_Result'Length > 0 then
+                              return Condition_Result;
+                           end if;
+                        end;
+                     when CM.Stmt_Unknown =>
                         null;
                   end case;
                end if;

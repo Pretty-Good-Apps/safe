@@ -160,6 +160,8 @@ package body Safe_Frontend.Ada_Emit.Internal is
             return FT.To_String (Expr.Name);
          when CM.Expr_Select | CM.Expr_Resolved_Index =>
             return Root_Name (Expr.Prefix);
+         when CM.Expr_Annotated =>
+            return Root_Name (Expr.Inner);
          when others =>
             return "";
       end case;
@@ -1262,7 +1264,41 @@ package body Safe_Frontend.Ada_Emit.Internal is
             return False;
          when CM.Stmt_Loop | CM.Stmt_While | CM.Stmt_For =>
             return Statements_Contain_Exit (Item.Body_Stmts);
-         when others =>
+         when CM.Stmt_Match =>
+            for Arm of Item.Match_Arms loop
+               if Statements_Contain_Exit (Arm.Statements) then
+                  return True;
+               end if;
+            end loop;
+            return False;
+         when CM.Stmt_Select =>
+            for Arm of Item.Arms loop
+               case Arm.Kind is
+                  when CM.Select_Arm_Channel =>
+                     if Statements_Contain_Exit (Arm.Channel_Data.Statements) then
+                        return True;
+                     end if;
+                  when CM.Select_Arm_Delay =>
+                     if Statements_Contain_Exit (Arm.Delay_Data.Statements) then
+                        return True;
+                     end if;
+                  when CM.Select_Arm_Unknown =>
+                     return True;
+               end case;
+            end loop;
+            return False;
+         when CM.Stmt_Unknown =>
+            return True;
+         when CM.Stmt_Object_Decl
+            | CM.Stmt_Destructure_Decl
+            | CM.Stmt_Assign
+            | CM.Stmt_Call
+            | CM.Stmt_Return
+            | CM.Stmt_Send
+            | CM.Stmt_Receive
+            | CM.Stmt_Try_Send
+            | CM.Stmt_Try_Receive
+            | CM.Stmt_Delay =>
             return False;
       end case;
    end Statement_Contains_Exit;
@@ -1310,7 +1346,42 @@ package body Safe_Frontend.Ada_Emit.Internal is
             return False;
          when CM.Stmt_Loop =>
             return Statements_Contain_Exit (Item.Body_Stmts);
-         when others =>
+         when CM.Stmt_Match =>
+            for Arm of Item.Match_Arms loop
+               if Statements_Fall_Through (Arm.Statements) then
+                  return True;
+               end if;
+            end loop;
+            return False;
+         when CM.Stmt_Select =>
+            for Arm of Item.Arms loop
+               case Arm.Kind is
+                  when CM.Select_Arm_Channel =>
+                     if Statements_Fall_Through (Arm.Channel_Data.Statements) then
+                        return True;
+                     end if;
+                  when CM.Select_Arm_Delay =>
+                     if Statements_Fall_Through (Arm.Delay_Data.Statements) then
+                        return True;
+                     end if;
+                  when CM.Select_Arm_Unknown =>
+                     return True;
+               end case;
+            end loop;
+            return False;
+         when CM.Stmt_Unknown
+            | CM.Stmt_Object_Decl
+            | CM.Stmt_Destructure_Decl
+            | CM.Stmt_Assign
+            | CM.Stmt_Call
+            | CM.Stmt_While
+            | CM.Stmt_For
+            | CM.Stmt_Exit
+            | CM.Stmt_Send
+            | CM.Stmt_Receive
+            | CM.Stmt_Try_Send
+            | CM.Stmt_Try_Receive
+            | CM.Stmt_Delay =>
             return True;
       end case;
    end Statement_Falls_Through;

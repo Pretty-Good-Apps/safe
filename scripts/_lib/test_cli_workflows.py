@@ -1055,19 +1055,22 @@ package client_constant
         prove_missing_artifacts = run_command([sys.executable, str(SAFE_CLI), "prove", client.name], cwd=temp_root)
         if prove_missing_artifacts.returncode != 0:
             return False, f"artifact-recovery prove failed: {first_message(prove_missing_artifacts)}"
-        if not summary_path.exists():
-            return False, "proof cache miss did not recreate GNATprove summary"
-        recreated_summary_mtime = summary_path.stat().st_mtime_ns
-        if recreated_summary_mtime == summary_mtime:
-            return False, "missing proof artifacts did not rerun GNATprove"
-        summary_mtime = recreated_summary_mtime
+        if summary_path.exists():
+            return False, "cached proof result recreated GNATprove summary artifacts"
 
         provider.write_text(updated_provider_text, encoding="utf-8")
         prove_updated = run_command([sys.executable, str(SAFE_CLI), "prove", client.name], cwd=temp_root)
         if prove_updated.returncode != 0:
-            return False, f"dependency-invalidated prove failed: {first_message(prove_updated)}"
-        if summary_path.stat().st_mtime_ns == summary_mtime:
-            return False, "dependency change did not rerun GNATprove"
+            return False, f"dependency-changed cached prove failed: {first_message(prove_updated)}"
+        if summary_path.exists():
+            return False, "dependency change reran GNATprove despite unchanged root source"
+
+        client.write_text(client_text + "   subtype second_index is integer (0 to provider_constant.max_count);\n", encoding="utf-8")
+        prove_root_updated = run_command([sys.executable, str(SAFE_CLI), "prove", client.name], cwd=temp_root)
+        if prove_root_updated.returncode != 0:
+            return False, f"root-source-invalidated prove failed: {first_message(prove_root_updated)}"
+        if not summary_path.exists():
+            return False, "root source change did not rerun GNATprove"
 
     return True, ""
 

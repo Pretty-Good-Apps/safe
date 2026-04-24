@@ -601,12 +601,12 @@ package body Safe_Frontend.Ada_Emit.Statements is
                end loop;
 
             when CM.Expr_Conversion
-               | CM.Expr_Annotated
-               | CM.Expr_Unary
-               | CM.Expr_Some
-               | CM.Expr_Try =>
+               | CM.Expr_Annotated =>
                Visit (Item.Inner);
                Visit (Item.Target);
+
+            when CM.Expr_Unary | CM.Expr_Some | CM.Expr_Try =>
+               Visit (Item.Inner);
 
             when CM.Expr_Binary =>
                Visit (Item.Left);
@@ -669,13 +669,12 @@ package body Safe_Frontend.Ada_Emit.Statements is
             end loop;
             return False;
          when CM.Expr_Conversion
-            | CM.Expr_Annotated
-            | CM.Expr_Unary
-            | CM.Expr_Some
-            | CM.Expr_Try =>
+            | CM.Expr_Annotated =>
             return
               Expr_Uses_Name (Expr.Inner, Name)
               or else Expr_Uses_Name (Expr.Target, Name);
+         when CM.Expr_Unary | CM.Expr_Some | CM.Expr_Try =>
+            return Expr_Uses_Name (Expr.Inner, Name);
          when CM.Expr_Binary =>
             return
               Expr_Uses_Name (Expr.Left, Name)
@@ -1168,11 +1167,22 @@ package body Safe_Frontend.Ada_Emit.Statements is
                               Walk_From (Arm.Channel_Data.Statements);
                            when CM.Select_Arm_Delay =>
                               Walk_From (Arm.Delay_Data.Statements);
-                           when others =>
+                           when CM.Select_Arm_Unknown =>
                               null;
                         end case;
                      end loop;
-                  when others =>
+                  when CM.Stmt_Unknown
+                     | CM.Stmt_Object_Decl
+                     | CM.Stmt_Destructure_Decl
+                     | CM.Stmt_Assign
+                     | CM.Stmt_Call
+                     | CM.Stmt_Return
+                     | CM.Stmt_Exit
+                     | CM.Stmt_Send
+                     | CM.Stmt_Receive
+                     | CM.Stmt_Try_Send
+                     | CM.Stmt_Try_Receive
+                     | CM.Stmt_Delay =>
                      null;
                end case;
             end if;
@@ -2419,8 +2429,10 @@ package body Safe_Frontend.Ada_Emit.Statements is
                return
                  Expr_Contains_Call (Expr.Left)
                  or else Expr_Contains_Call (Expr.Right);
-            when CM.Expr_Allocator | CM.Expr_Some | CM.Expr_Try =>
+            when CM.Expr_Allocator =>
                return Expr_Contains_Call (Expr.Value);
+            when CM.Expr_Some | CM.Expr_Try =>
+               return Expr_Contains_Call (Expr.Inner);
             when CM.Expr_Aggregate =>
                for Field of Expr.Fields loop
                   if Expr_Contains_Call (Field.Expr) then
@@ -2435,7 +2447,19 @@ package body Safe_Frontend.Ada_Emit.Statements is
                   end if;
                end loop;
                return False;
-            when others =>
+            when CM.Expr_Apply =>
+               return True;
+            when CM.Expr_Unknown =>
+               return True;
+            when CM.Expr_Int
+               | CM.Expr_Real
+               | CM.Expr_String
+               | CM.Expr_Bool
+               | CM.Expr_Enum_Literal
+               | CM.Expr_Null
+               | CM.Expr_Ident
+               | CM.Expr_None
+               | CM.Expr_Subtype_Indication =>
                return False;
          end case;
       end Expr_Contains_Call;
@@ -2607,8 +2631,9 @@ package body Safe_Frontend.Ada_Emit.Statements is
                         end if;
                         Analyze_Statements
                           (Arm.Delay_Data.Statements, Counter_Name, Analysis);
-                     when others =>
-                        null;
+                     when CM.Select_Arm_Unknown =>
+                        Analysis.Unsafe := True;
+                        return;
                   end case;
                end loop;
 
@@ -2662,8 +2687,18 @@ package body Safe_Frontend.Ada_Emit.Statements is
                   end;
                end if;
 
-            when others =>
-               if Expr_Contains_Call (Item.Value)
+            when CM.Stmt_Unknown =>
+               Analysis.Unsafe := True;
+
+            when CM.Stmt_Return | CM.Stmt_Delay =>
+               if Expr_Uses_Name (Item.Value, Counter_Name)
+                 or else Expr_Contains_Call (Item.Value)
+               then
+                  Analysis.Unsafe := True;
+               end if;
+
+            when CM.Stmt_Exit =>
+               if Expr_Uses_Name (Item.Condition, Counter_Name)
                  or else Expr_Contains_Call (Item.Condition)
                then
                   Analysis.Unsafe := True;
@@ -2961,7 +2996,19 @@ package body Safe_Frontend.Ada_Emit.Statements is
                end if;
             end loop;
             return False;
-         when others =>
+         when CM.Expr_Unknown =>
+            return True;
+         when CM.Expr_Apply =>
+            return True;
+         when CM.Expr_Int
+            | CM.Expr_Real
+            | CM.Expr_String
+            | CM.Expr_Bool
+            | CM.Expr_Enum_Literal
+            | CM.Expr_Null
+            | CM.Expr_Ident
+            | CM.Expr_None
+            | CM.Expr_Subtype_Indication =>
             return False;
       end case;
    end Expr_Needs_Shared_Condition_Snapshot;
@@ -3028,7 +3075,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
       end;
 
       case Expr.Kind is
-         when CM.Expr_Call =>
+         when CM.Expr_Call | CM.Expr_Apply =>
             Collect_Shared_Condition_Snapshots
               (Unit, Document, Expr.Callee, Statement_Index, Rendered);
             for Arg of Expr.Args loop
@@ -3071,7 +3118,16 @@ package body Safe_Frontend.Ada_Emit.Statements is
                Collect_Shared_Condition_Snapshots
                  (Unit, Document, Item, Statement_Index, Rendered);
             end loop;
-         when others =>
+         when CM.Expr_Unknown
+            | CM.Expr_Int
+            | CM.Expr_Real
+            | CM.Expr_String
+            | CM.Expr_Bool
+            | CM.Expr_Enum_Literal
+            | CM.Expr_Null
+            | CM.Expr_Ident
+            | CM.Expr_None
+            | CM.Expr_Subtype_Indication =>
             null;
       end case;
    end Collect_Shared_Condition_Snapshots;
@@ -5217,12 +5273,12 @@ package body Safe_Frontend.Ada_Emit.Statements is
                               end loop;
 
                            when CM.Expr_Conversion
-                              | CM.Expr_Annotated
-                              | CM.Expr_Unary
-                              | CM.Expr_Some
-                              | CM.Expr_Try =>
+                              | CM.Expr_Annotated =>
                               Add_From (Expr.Inner);
                               Add_From (Expr.Target);
+
+                           when CM.Expr_Unary | CM.Expr_Some | CM.Expr_Try =>
+                              Add_From (Expr.Inner);
 
                            when CM.Expr_Binary =>
                               Add_From (Expr.Left);
@@ -6375,7 +6431,20 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                     Collect_Growable_Accumulators
                                       (Nested.Body_Stmts,
                                        Loop_Statements);
-                                 when others =>
+                                 when CM.Stmt_Unknown
+                                    | CM.Stmt_Object_Decl
+                                    | CM.Stmt_Destructure_Decl
+                                    | CM.Stmt_Call
+                                    | CM.Stmt_Return
+                                    | CM.Stmt_While
+                                    | CM.Stmt_Loop
+                                    | CM.Stmt_Exit
+                                    | CM.Stmt_Send
+                                    | CM.Stmt_Receive
+                                    | CM.Stmt_Try_Send
+                                    | CM.Stmt_Try_Receive
+                                    | CM.Stmt_Select
+                                    | CM.Stmt_Delay =>
                                     null;
                               end case;
                            end if;
@@ -6663,12 +6732,48 @@ package body Safe_Frontend.Ada_Emit.Statements is
                            when CM.Stmt_Select =>
                               Unsafe := True;
 
-                           when others =>
-                              if Statements_Use_Name (Stmt.Body_Stmts, Name)
-                                or else Expr_Uses_Name (Stmt.Target, Name)
+                           when CM.Stmt_Unknown =>
+                              Unsafe := True;
+
+                           when CM.Stmt_For | CM.Stmt_While | CM.Stmt_Loop =>
+                              if Expr_Uses_Name (Stmt.Condition, Name)
+                                or else Expr_Uses_Name
+                                  (Stmt.Loop_Range.Name_Expr,
+                                   Name)
+                                or else Expr_Uses_Name
+                                  (Stmt.Loop_Range.Low_Expr,
+                                   Name)
+                                or else Expr_Uses_Name
+                                  (Stmt.Loop_Range.High_Expr,
+                                   Name)
+                                or else Expr_Uses_Name (Stmt.Loop_Iterable, Name)
+                                or else Statements_Use_Name (Stmt.Body_Stmts, Name)
+                              then
+                                 Unsafe := True;
+                              end if;
+
+                           when CM.Stmt_Call =>
+                              if Expr_Uses_Name (Stmt.Call, Name) then
+                                 Unsafe := True;
+                              end if;
+
+                           when CM.Stmt_Return | CM.Stmt_Delay =>
+                              if Expr_Uses_Name (Stmt.Value, Name) then
+                                 Unsafe := True;
+                              end if;
+
+                           when CM.Stmt_Exit =>
+                              if Expr_Uses_Name (Stmt.Condition, Name) then
+                                 Unsafe := True;
+                              end if;
+
+                           when CM.Stmt_Send
+                              | CM.Stmt_Receive
+                              | CM.Stmt_Try_Send
+                              | CM.Stmt_Try_Receive =>
+                              if Expr_Uses_Name (Stmt.Channel_Name, Name)
                                 or else Expr_Uses_Name (Stmt.Value, Name)
-                                or else Expr_Uses_Name (Stmt.Call, Name)
-                                or else Expr_Uses_Name (Stmt.Channel_Name, Name)
+                                or else Expr_Uses_Name (Stmt.Target, Name)
                                 or else Expr_Uses_Name (Stmt.Success_Var, Name)
                               then
                                  Unsafe := True;
@@ -6816,7 +6921,21 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                     for Arm of Nested.Match_Arms loop
                                        Collect_String_Growth_Accumulators (Arm.Statements);
                                     end loop;
-                                 when others =>
+                                 when CM.Stmt_Unknown
+                                    | CM.Stmt_Object_Decl
+                                    | CM.Stmt_Destructure_Decl
+                                    | CM.Stmt_Call
+                                    | CM.Stmt_Return
+                                    | CM.Stmt_For
+                                    | CM.Stmt_While
+                                    | CM.Stmt_Loop
+                                    | CM.Stmt_Exit
+                                    | CM.Stmt_Send
+                                    | CM.Stmt_Receive
+                                    | CM.Stmt_Try_Send
+                                    | CM.Stmt_Try_Receive
+                                    | CM.Stmt_Select
+                                    | CM.Stmt_Delay =>
                                     null;
                               end case;
                            end if;
@@ -6943,7 +7062,22 @@ package body Safe_Frontend.Ada_Emit.Statements is
                                     for Arm of Nested.Case_Arms loop
                                        Collect_String_Accumulators (Arm.Statements);
                                     end loop;
-                                 when others =>
+                                 when CM.Stmt_Unknown
+                                    | CM.Stmt_Object_Decl
+                                    | CM.Stmt_Destructure_Decl
+                                    | CM.Stmt_Call
+                                    | CM.Stmt_Return
+                                    | CM.Stmt_Match
+                                    | CM.Stmt_For
+                                    | CM.Stmt_While
+                                    | CM.Stmt_Loop
+                                    | CM.Stmt_Exit
+                                    | CM.Stmt_Send
+                                    | CM.Stmt_Receive
+                                    | CM.Stmt_Try_Send
+                                    | CM.Stmt_Try_Receive
+                                    | CM.Stmt_Select
+                                    | CM.Stmt_Delay =>
                                     null;
                               end case;
                            end if;
