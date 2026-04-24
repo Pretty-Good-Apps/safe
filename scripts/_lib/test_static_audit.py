@@ -337,6 +337,7 @@ SILENT_DEFAULT_RE = re.compile(
     r"(\bnull\s*;|\breturn\s+False\s*;|\breturn\s+0\s*;|Empty_Vector)",
     re.IGNORECASE,
 )
+WHEN_OTHERS_OK_MARKER = "when-others-ok:"
 
 
 def _strip_comment(line: str) -> str:
@@ -441,6 +442,59 @@ def run_static_audit_case(entry: AuditedCase) -> tuple[bool, str]:
     return True, ""
 
 
+def _parser_resolver_audit_paths() -> tuple[Path, ...]:
+    prefixes = ("safe_frontend-check_parse", "safe_frontend-check_resolve")
+    return tuple(
+        sorted(
+            path
+            for path in SRC.glob("safe_frontend-check_*.adb")
+            if path.name.startswith(prefixes)
+        )
+    )
+
+
+def _first_nonblank_line_after(lines: list[str], index: int) -> tuple[int, str] | None:
+    for marker_index in range(index + 1, len(lines)):
+        if lines[marker_index].strip():
+            return marker_index, lines[marker_index]
+    return None
+
+
+def run_parser_resolver_when_others_marker_case(path: Path) -> tuple[bool, str]:
+    failures: list[str] = []
+    lines = path.read_text(encoding="utf-8").splitlines()
+    rel = path.relative_to(REPO_ROOT)
+
+    for index, line in enumerate(lines):
+        code = _strip_comment(line)
+        if not WHEN_OTHERS_RE.search(code):
+            continue
+
+        after_arrow = code.split("=>", 1)[1].strip()
+        line_no = index + 1
+        if after_arrow:
+            failures.append(
+                f"{rel}:{line_no}: retained `when others` must be multiline "
+                f"and start with {WHEN_OTHERS_OK_MARKER!r}"
+            )
+            continue
+
+        marker_line = _first_nonblank_line_after(lines, index)
+        if (
+            marker_line is None
+            or not marker_line[1].strip().startswith("--")
+            or WHEN_OTHERS_OK_MARKER not in marker_line[1]
+        ):
+            failures.append(
+                f"{rel}:{line_no}: retained `when others` lacks "
+                f"{WHEN_OTHERS_OK_MARKER!r} rationale marker"
+            )
+
+    if failures:
+        return False, "\n".join(failures)
+    return True, ""
+
+
 def run_static_audit_checks() -> RunCounts:
     passed = 0
     failures = []
@@ -449,6 +503,12 @@ def run_static_audit_checks() -> RunCounts:
             failures,
             f"static-audit:{entry.label}",
             run_static_audit_case(entry),
+        )
+    for path in _parser_resolver_audit_paths():
+        passed += record_result(
+            failures,
+            f"static-audit:parser-resolver-when-others-ok:{path.relative_to(REPO_ROOT)}",
+            run_parser_resolver_when_others_marker_case(path),
         )
     return passed, 0, failures
 
