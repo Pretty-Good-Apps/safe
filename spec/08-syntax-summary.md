@@ -56,7 +56,7 @@ types are inferred as references, parameters are either ordinary borrows or
 `mut` mutable borrows, and task bodies may use only their own locals and
 channels.
 
-For the post-#362 grammar-overhaul surface, package items, declarations, and
+For the post-grammar-overhaul surface, package items, declarations, and
 statements use logical-line termination. A terminator may be omitted at a
 logical line boundary, `DEDENT`, or end of file. A semicolon is only a
 same-logical-line separator before another significant item or statement;
@@ -302,6 +302,10 @@ known_discriminant_part ::=
 discriminant_specification ::=
     defining_identifier_list ':' subtype_mark [ '=' default_expression ]
 
+Known discriminant parts use comma-separated discriminant specifications;
+their separators are not among the structural semicolon cases retained by
+Safe.
+
 variant_part ::=
     'case' discriminant_direct_name
         indented_variant_list
@@ -470,6 +474,9 @@ function_call ::=
 
 actual_parameter_part ::=
     '(' [ positional_parameter_association_list | named_parameter_association_list ] ')'
+
+Empty parentheses are valid for zero-argument calls; a bare call name remains
+valid where the surrounding context resolves it as a call.
 
 positional_parameter_association_list ::=
     expression { ',' expression }
@@ -1046,7 +1053,7 @@ capacity    from        binary      print
 
 ## 8.16 Grammar Summary
 
-This grammar defines approximately 153 productions. All Safe syntactic
+This grammar defines approximately 151 productions. All Safe syntactic
 constructs are defined by the productions in §8.1–§8.14. Any construct that
 appears in 8652:2023 but does not appear in this grammar is excluded from
 Safe.
