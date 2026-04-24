@@ -19,6 +19,7 @@ PROOF_RESULT_CACHE_VERSION = 3
 PROOF_FINGERPRINT_VERSION = 2
 STDLIB_ADA_DIR = REPO_ROOT / "compiler_impl" / "stdlib" / "ada"
 WITH_CLAUSE_RE = re.compile(r"^with\s+(.+);$", re.IGNORECASE)
+SAFE_UNIT_NAME_RE = re.compile(r"^[a-z0-9_]+$")
 
 
 @dataclass
@@ -741,7 +742,10 @@ def write_safe_prove_project(paths: dict[str, Path], *, ada_dir: Path) -> str:
 def emitted_unit_name_from_interface(paths: dict[str, Path], source: Path) -> str:
     safei_path = paths["iface"] / f"{source.stem.lower()}.safei.json"
     payload = json.loads(safei_path.read_text(encoding="utf-8"))
-    return str(payload.get("package_name") or source.stem).lower()
+    unit_name = str(payload.get("package_name") or source.stem).lower()
+    if SAFE_UNIT_NAME_RE.fullmatch(unit_name) is None:
+        raise ValueError(f"unsafe package_name in {safei_path}: {unit_name!r}")
+    return unit_name
 
 
 def proof_ada_artifact_names(paths: dict[str, Path], source: Path) -> list[str]:

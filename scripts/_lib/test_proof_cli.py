@@ -750,6 +750,26 @@ def run_proof_fingerprint_gnatprove_version_case() -> tuple[bool, str]:
     return True, ""
 
 
+def run_emitted_unit_name_rejects_unsafe_package_case() -> tuple[bool, str]:
+    with tempfile.TemporaryDirectory(prefix="safe-unsafe-package-name-") as temp_root_str:
+        temp_root = Path(temp_root_str)
+        source = temp_root / "demo.safe"
+        source.write_text("package demo\n", encoding="utf-8")
+        iface = temp_root / "iface"
+        iface.mkdir()
+        (iface / "demo.safei.json").write_text(
+            '{"format":"safei-v5","package_name":"../escape"}\n',
+            encoding="utf-8",
+        )
+        try:
+            project_cache.emitted_unit_name_from_interface({"iface": iface}, source)
+        except ValueError as exc:
+            if "unsafe package_name" not in str(exc):
+                return False, f"unexpected unsafe package error {exc!r}"
+            return True, ""
+    return False, "unsafe package_name unexpectedly accepted"
+
+
 def run_cached_proof_hit_skips_emit_case() -> tuple[bool, str]:
     source = PROVE_SINGLE_SUCCESS_SOURCE
     toolchain = test_toolchain()
@@ -1102,6 +1122,11 @@ def run_internal_proof_checks() -> RunCounts:
         failures,
         "proof-fingerprint-gnatprove-version",
         run_proof_fingerprint_gnatprove_version_case(),
+    )
+    passed += record_result(
+        failures,
+        "emitted-unit-name-rejects-unsafe-package",
+        run_emitted_unit_name_rejects_unsafe_package_case(),
     )
     passed += record_result(
         failures,
