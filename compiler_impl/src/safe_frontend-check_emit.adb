@@ -370,7 +370,14 @@ package body Safe_Frontend.Check_Emit is
         and then Natural (Arg_Names.Length) /= Natural (Args.Length)
       then
          raise Program_Error with
-           "argument name vector length mismatch during AST emission";
+           "argument name vector length mismatch during AST emission"
+           & " (Arg_Names.Length="
+           & Natural'Image (Natural (Arg_Names.Length))
+           & ", Args.Length="
+           & Natural'Image (Natural (Args.Length))
+           & ", span="
+           & JS.Span_Object (Span)
+           & ")";
       end if;
 
       if not Args.Is_Empty then

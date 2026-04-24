@@ -17,7 +17,14 @@ from .proof_diagnostics import mirror_with_clauses_into_emitted_unit_files
 CACHE_VERSION = 2
 PROOF_RESULT_CACHE_VERSION = 4
 STDLIB_ADA_DIR = REPO_ROOT / "compiler_impl" / "stdlib" / "ada"
-WITH_CLAUSE_RE = re.compile(r"^with\s+(.+?)$", re.IGNORECASE)
+# Keep legacy semicolon terminators out of this scanner; migration checks catch them.
+WITH_CLAUSE_RE = re.compile(
+    r"^with\s+"
+    r"([A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)*"
+    r"(?:\s*,\s*[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)*)*)"
+    r"\s*(?:--.*)?$",
+    re.IGNORECASE,
+)
 SAFE_UNIT_NAME_RE = re.compile(r"^[a-z0-9_]+$")
 
 
