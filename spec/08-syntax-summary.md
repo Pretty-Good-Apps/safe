@@ -56,6 +56,15 @@ types are inferred as references, parameters are either ordinary borrows or
 `mut` mutable borrows, and task bodies may use only their own locals and
 channels.
 
+For the post-grammar-overhaul surface, package items, declarations, and
+statements use logical-line termination. A terminator may be omitted at a
+logical line boundary, `DEDENT`, or end of file. A semicolon is only a
+same-logical-line separator before another significant item or statement;
+trailing/removable semicolons are rejected. Newlines are suppressed inside
+unclosed `(`, `[`, or `{` bracket pairs. A `\` continuation is valid when the
+backslash is the final non-comment token on the line; trailing horizontal
+whitespace and trailing `--` comments are tolerated.
+
 ---
 
 ## 8.1 Compilation Units
@@ -72,7 +81,18 @@ context_clause ::=
     { with_clause }
 
 with_clause ::=
-    'with' package_name { ',' package_name } ';'
+    'with' package_name { ',' package_name } terminator
+
+terminator ::=
+    same_line_separator
+  | omitted_terminator
+
+same_line_separator ::=
+    ';'
+
+omitted_terminator ::=
+    <no token; before DEDENT, EOF, or the next significant token
+     on a later logical line>
 
 package_name ::=
     identifier { '.' identifier }
@@ -128,31 +148,31 @@ basic_declaration ::=
 type_declaration ::=
     [ 'public' ] 'type' defining_identifier
         [ generic_formal_part ] [ known_discriminant_part ]
-        'is' type_definition ';'
+        'is' type_definition terminator
   | [ 'public' ] 'type' defining_identifier [ generic_formal_part ]
         'is' 'interface'
         indented_interface_member_list
 
 incomplete_type_declaration ::=
-    [ 'public' ] 'type' defining_identifier ';'
+    [ 'public' ] 'type' defining_identifier terminator
 
 subtype_declaration ::=
-    [ 'public' ] 'subtype' defining_identifier 'is' subtype_indication ';'
+    [ 'public' ] 'subtype' defining_identifier 'is' subtype_indication terminator
 
 object_declaration ::=
     [ 'public' ] defining_identifier_list ':' [ 'constant' ]
-        subtype_indication [ '=' expression ] ';'
+        subtype_indication [ '=' expression ] terminator
   | [ 'public' ] defining_identifier_list ':' [ 'constant' ]
-        array_type_definition [ '=' expression ] ';'
+        array_type_definition [ '=' expression ] terminator
 
 number_declaration ::=
-    [ 'public' ] defining_identifier_list ':' 'constant' '=' static_expression ';'
+    [ 'public' ] defining_identifier_list ':' 'constant' '=' static_expression terminator
 
 defining_identifier_list ::=
     defining_identifier { ',' defining_identifier }
 
 subunit_stub ::=
-    subprogram_specification 'is' 'separate' ';'
+    subprogram_specification 'is' 'separate' terminator
 
 renaming_declaration ::=
     object_renaming_declaration
@@ -160,13 +180,13 @@ renaming_declaration ::=
   | subprogram_renaming_declaration
 
 object_renaming_declaration ::=
-    [ 'public' ] defining_identifier ':' subtype_mark 'renames' name ';'
+    [ 'public' ] defining_identifier ':' subtype_mark 'renames' name terminator
 
 package_renaming_declaration ::=
-    [ 'public' ] 'package' defining_identifier 'renames' package_name ';'
+    [ 'public' ] 'package' defining_identifier 'renames' package_name terminator
 
 subprogram_renaming_declaration ::=
-    [ 'public' ] subprogram_specification 'renames' name ';'
+    [ 'public' ] subprogram_specification 'renames' name terminator
 ```
 
 ## 8.4 Type Definitions
@@ -197,6 +217,9 @@ sum_variant_specification ::=
 
 sum_payload_field_declaration ::=
     defining_identifier ':' subtype_indication
+
+Sum payload field lists retain structural semicolons as field separators.
+These semicolons are not terminators and are not removable.
 
 enumeration_literal ::=
     defining_identifier
@@ -265,19 +288,23 @@ indented_component_list ::=
 component_list ::=
     component_item { component_item }
   | { component_item } variant_part
-  | 'null' ';'
+  | 'null' terminator
 
 component_item ::=
     component_declaration
 
 component_declaration ::=
-    defining_identifier_list ':' component_definition [ '=' default_expression ] ';'
+    defining_identifier_list ':' component_definition [ '=' default_expression ] terminator
 
 known_discriminant_part ::=
-    '(' discriminant_specification { ';' discriminant_specification } ')'
+    '(' discriminant_specification { ',' discriminant_specification } ')'
 
 discriminant_specification ::=
     defining_identifier_list ':' subtype_mark [ '=' default_expression ]
+
+Known discriminant parts use comma-separated discriminant specifications.
+This differs from Ada's semicolon-separated discriminant syntax; discriminant
+separators are not among the structural semicolon cases retained by Safe.
 
 variant_part ::=
     'case' discriminant_direct_name
@@ -307,7 +334,7 @@ indented_interface_member_list ::=
     DEDENT
 
 interface_member_specification ::=
-    function_specification ';'
+    function_specification terminator
 
 generic_formal_part ::=
     'of' generic_formal_list [ generic_constraint_part ]
@@ -446,10 +473,28 @@ function_call ::=
     name [ actual_parameter_part ]
 
 actual_parameter_part ::=
-    '(' parameter_association { ',' parameter_association } ')'
+    '(' [ positional_parameter_association_list | named_parameter_association_list ] ')'
 
-parameter_association ::=
-    [ selector_name '=' ] expression
+Empty parentheses are valid for zero-argument calls. A bare name uses the
+`function_call` alternative without an `actual_parameter_part`; name resolution
+decides whether it denotes a zero-argument call rather than an object or other
+named entity.
+
+positional_parameter_association_list ::=
+    expression { ',' expression }
+
+named_parameter_association_list ::=
+    named_parameter_association { ',' named_parameter_association }
+
+named_parameter_association ::=
+    selector_name '=' expression
+
+Named value arguments are admitted for declared, imported, and generic
+function calls and for sum constructors. Positional and named value arguments
+cannot be mixed in one function call or sum constructor. This mixing rule does
+not apply to pragma argument associations in §8.13. Compiler built-ins and
+generic type actuals remain positional-only. Sum constructor payload field names
+are part of the public source contract once named constructor calls exist.
 
 expression ::=
     relation { logical_operator relation }
@@ -594,12 +639,9 @@ delta_aggregate ::=
 
 ## 8.7 Statements
 
-Within executable statement sequences, `statement_terminator` may be either an
-explicit `;` or an omitted terminator when the next significant token begins on
-a later source line. This omission rule applies only to executable statement
-sequences. Declarative parts and package items keep explicit semicolons. Block
-structure for covered statements comes from indentation rather than explicit
-closing keywords.
+Statements use the shared `terminator` production from §8.1. Block structure
+for covered statements comes from indentation rather than explicit closing
+keywords.
 
 ```
 sequence_of_statements ::=
@@ -615,22 +657,15 @@ statement_local_declaration ::=
 
 local_object_declaration ::=
     defining_identifier_list ':' [ 'constant' ]
-        subtype_indication [ '=' expression ] statement_terminator
+        subtype_indication [ '=' expression ] terminator
   | defining_identifier_list ':' [ 'constant' ]
-        array_type_definition [ '=' expression ] statement_terminator
+        array_type_definition [ '=' expression ] terminator
 
 var_statement ::=
     'var' defining_identifier_list ':'
-        subtype_indication [ '=' expression ] statement_terminator
+        subtype_indication [ '=' expression ] terminator
   | 'var' defining_identifier_list ':'
-        array_type_definition [ '=' expression ] statement_terminator
-
-statement_terminator ::=
-    ';'
-  | omitted_statement_terminator
-
-omitted_statement_terminator ::=
-    <no token; permitted only when the next significant token begins on a later source line>
+        array_type_definition [ '=' expression ] terminator
 
 statement ::=
     simple_statement
@@ -654,10 +689,10 @@ simple_statement ::=
   | pragma
 
 assignment_statement ::=
-    name '=' expression statement_terminator
+    name '=' expression terminator
 
 procedure_call_statement ::=
-    name [ actual_parameter_part ] statement_terminator
+    name [ actual_parameter_part ] terminator
 
 The contextual builtins `append(items, value)`, `pop_last(items)`,
 `contains(m, key)`, `get(m, key)`, `set(m, key, value)`, and
@@ -665,6 +700,8 @@ The contextual builtins `append(items, value)`, `pop_last(items)`,
 operations may also be written with selector-call sugar:
 `items.append(value)`, `items.pop_last()`, `m.contains(key)`,
 `m.get(key)`, `m.set(key, value)`, and `m.remove(key)`.
+Named value arguments are rejected for these compiler built-ins; their
+arguments remain positional-only in both free-call and selector-call form.
 
 - `append` is admitted only as a procedure-call statement on a writable
   `list of T` name.
@@ -676,25 +713,25 @@ operations may also be written with selector-call sugar:
   returns `optional V`.
 
 print_statement ::=
-    'print' '(' expression ')' statement_terminator
+    'print' '(' expression ')' terminator
 
 return_statement ::=
     simple_return_statement | extended_return_statement
 
 simple_return_statement ::=
-    'return' [ expression ] statement_terminator
+    'return' [ expression ] terminator
 
 extended_return_statement ::=
     'return' defining_identifier ':' subtype_indication
         [ '=' expression ] 'do'
         handled_sequence_of_statements
-    'end' 'return' ';'
+    'end' 'return' terminator
 
 exit_statement ::=
-    'exit' [ 'when' condition ] statement_terminator
+    'exit' [ 'when' condition ] terminator
 
 delay_statement ::=
-    'delay' expression statement_terminator
+    'delay' expression terminator
 
 compound_statement ::=
     if_statement
@@ -742,7 +779,7 @@ handled_sequence_of_statements ::=
 
 ```
 subprogram_declaration ::=
-    [ 'public' ] function_specification ';'
+    [ 'public' ] function_specification terminator
 
 subprogram_body ::=
     [ 'public' ] subprogram_specification
@@ -772,11 +809,14 @@ parameter_specification ::=
     defining_identifier_list ':' [ 'mut' ] subtype_indication
         [ '=' default_expression ]
 
+Formal parameter lists retain structural semicolons as parameter separators.
+These semicolons are not terminators and are not removable.
+
 declarative_part ::=
     { basic_declaration }
 
 expression_function_declaration ::=
-    [ 'public' ] function_specification '(' expression ')' ';'
+    [ 'public' ] function_specification '(' expression ')' terminator
 
 designator ::=
     identifier
@@ -788,6 +828,8 @@ function model:
   visible compatible first-parameter function or builtin exists.
 - Imported public functions may be called the same way:
   `value.method()` may resolve to `pkg.method(value)`.
+- The receiver stays positional as the implicit first argument; named
+  arguments apply only to the explicit parameter list.
 - Bare selectors such as `.length`, `.present`, `.value`, and ordinary field
   access keep their existing meaning unless immediately followed by `(...)`.
 
@@ -812,6 +854,8 @@ strict subset:
   declarations only in this milestone,
 - generic function calls require explicit type arguments, such as
   `identity of integer (value)`,
+- generic value arguments may be named, but generic type actuals after `of`
+  are positional-only,
 - multi-parameter and constrained forms use a trailing named constraint map,
   such as `function max of T with T: orderable ...`,
 - public generic declarations may cross package boundaries, but all
@@ -836,7 +880,7 @@ parent_unit_name ::=
 
 ```
 use_type_clause ::=
-    'use' 'type' subtype_mark { ',' subtype_mark } ';'
+    'use' 'type' subtype_mark { ',' subtype_mark } terminator
 ```
 
 ## 8.11 Representation Clauses
@@ -866,19 +910,19 @@ indented_task_body ::=
 
 channel_declaration ::=
     [ 'public' ] 'channel' defining_identifier ':' subtype_mark
-        'capacity' static_expression ';'
+        'capacity' static_expression terminator
 
 send_statement ::=
-    'send' channel_name ',' expression ',' name statement_terminator
+    'send' channel_name ',' expression ',' name terminator
 
 receive_statement ::=
-    'receive' channel_name ',' receive_target statement_terminator
+    'receive' channel_name ',' receive_target terminator
 
 receive_target ::=
     name | defining_identifier ':' subtype_indication
 
 try_receive_statement ::=
-    'try_receive' channel_name ',' receive_target ',' name statement_terminator
+    'try_receive' channel_name ',' receive_target ',' name terminator
 
 select_statement ::=
     'select'
@@ -910,7 +954,7 @@ channel_name ::= name
 ```
 pragma ::=
     'pragma' identifier [ '(' pragma_argument_association
-        { ',' pragma_argument_association } ')' ] ';'
+        { ',' pragma_argument_association } ')' ] terminator
 
 pragma_argument_association ::=
     [ identifier '=' ] expression
@@ -1012,4 +1056,7 @@ capacity    from        binary      print
 
 ## 8.16 Grammar Summary
 
-This grammar defines approximately 148 productions. All Safe syntactic constructs are defined by the productions in §8.1–§8.14. Any construct that appears in 8652:2023 but does not appear in this grammar is excluded from Safe.
+This grammar defines approximately 151 productions. All Safe syntactic
+constructs are defined by the productions in §8.1–§8.14. Any construct that
+appears in 8652:2023 but does not appear in this grammar is excluded from
+Safe.

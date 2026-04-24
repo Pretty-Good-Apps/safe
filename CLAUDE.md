@@ -116,6 +116,23 @@ python3 scripts/snapshot_emitted_ada.py --check
   intentionally, regenerate `tests/emitted_ada_snapshot.json` with
   `python3 scripts/snapshot_emitted_ada.py`.
 
+### Call-Site Argument Style
+
+Named call arguments are grammatically optional for declared value-argument
+call sites. The convention is:
+
+- Use named arguments for calls where two or more parameters share a type; this
+  prevents silent argument swaps.
+- Use named arguments for calls with three or more parameters total.
+- Use named arguments for any boolean-flag parameter, such as
+  `create(retry = true)` over `create(true)`.
+- Positional arguments are fine for single-argument calls and calls where all
+  parameter types are distinct and ordering is obvious.
+
+This is style guidance inside the grammar-allowed call surface. Grammar-level
+positional-only restrictions, such as compiler built-ins and generic type
+actuals, are documented in `spec/08-syntax-summary.md`.
+
 ## Review Process
 
 The repository has three Claude review workflows:
