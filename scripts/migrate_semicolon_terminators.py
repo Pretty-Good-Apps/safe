@@ -96,7 +96,7 @@ def tail_after_semicolon(lines: list[str], semi: Semicolon) -> str:
     index = semi.col - 1
     if index < 0 or index >= len(line) or line[index] != ";":
         raise RuntimeError(f"{display_path(semi.path)}:{semi.line}:{semi.col}: token/source mismatch")
-    return line[index + 1 :].rstrip("\n")
+    return line[index + 1 :].rstrip("\r\n")
 
 
 def classify_file(safec: Path, path: Path) -> tuple[bool, list[Semicolon]]:
@@ -107,18 +107,36 @@ def classify_file(safec: Path, path: Path) -> tuple[bool, list[Semicolon]]:
     lines = text.splitlines(keepends=True)
     tokens = load_tokens(safec, path)
     depth = 0
+    bracket_underflow_message: str | None = None
     semicolons: list[Semicolon] = []
 
     for token in tokens:
         lexeme = token["lexeme"]
         span = token["span"]
         if lexeme in CLOSE_BRACKETS:
-            depth = max(0, depth - 1)
+            if depth == 0:
+                if bracket_underflow_message is None:
+                    bracket_underflow_message = (
+                        f"unmatched closing bracket {lexeme!r} at "
+                        f"{int(span['start_line'])}:{int(span['start_col'])}"
+                    )
+            else:
+                depth -= 1
 
         if lexeme == ";":
             semi = Semicolon(path=path, line=int(span["start_line"]), col=int(span["start_col"]), kind="")
             tail = tail_after_semicolon(lines, semi).lstrip(" \t\r")
-            if tail.startswith(";"):
+            if bracket_underflow_message is not None:
+                semicolons.append(
+                    Semicolon(
+                        path=path,
+                        line=semi.line,
+                        col=semi.col,
+                        kind="unclassifiable",
+                        message=bracket_underflow_message,
+                    )
+                )
+            elif tail.startswith(";"):
                 semicolons.append(
                     Semicolon(
                         path=path,
