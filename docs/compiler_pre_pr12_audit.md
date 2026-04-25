@@ -338,6 +338,19 @@ Findings:
 Enforcement default: yes for scoped parser/resolver unblockers; likely yes for
 the remaining full sweep after false-positive review.
 
+Per-slice conventions:
+
+- Files producing serialized output artifacts, including Ada source, JSON
+  outputs, line maps, and interface manifests, require explicit pre/post
+  artifact diff; analyzer, driver, and utility slices rely on the standard gate
+  plus `snapshot_emitted_ada.py --check`.
+- JSON serializer slices record each converted fallback variant and its emitted
+  output shape; Ada emitter slices record the helper-category behavior
+  invariants they preserve.
+- PR bodies for Phase 1B slices include preflight counts, raw baseline movement,
+  artifact-diff result when applicable, proof-cache hit rate, and
+  behavior-preservation confirmation.
+
 Scoped parser/resolver unblocker:
 
 - Status: complete for the PR12.1 grammar-overhaul dependency surface; full
@@ -458,6 +471,32 @@ Ada emit statements slice:
   switches to an unaudited-only progress metric.
 - Pre/post emitted-Ada artifact manifest comparison is required for this slice
   because it emits Ada source and line-map artifacts.
+
+MIR writer slice:
+
+- Status: complete for `compiler_impl/src/safe_frontend-mir_write.adb`; full
+  Phase 1B remains open.
+- Starting baseline at this pass: 6 raw `when others =>` hits in
+  `safe_frontend-mir_write.adb`; 44 raw sites compiler-wide under
+  `compiler_impl/src/`.
+- Outcome: 6 closed-enum dispatch sites converted to explicit arms; 0 retained
+  catch-alls remain in this file.
+- Preserved JSON fallback shapes: `Scalar_Value_None` emits `"kind":"none"`;
+  `Expr_Unknown` emits only the existing base expression fields;
+  `Select_Arm_Unknown` emits `"<unknown>"` in the kind expression and the
+  span-only fallback select-arm object; `Op_Unknown` and `Terminator_Unknown`
+  emit only their existing base `kind`/`span` fields.
+- Gate: `scripts/_lib/test_static_audit.py`, run by `scripts/run_tests.py`,
+  now fails any unmarked syntactic `when others =>` arm in the MIR writer.
+- Raw compiler-wide baseline after this slice: 38 `when others =>` sites under
+  `compiler_impl/src/`. This is a raw syntactic count; retained marked sites and
+  generated-source string hits still count until the full Phase 1B closeout
+  switches to an unaudited-only progress metric.
+- Pre/post MIR JSON artifact manifest comparison is required for this slice
+  because it emits serialized MIR output.
+- This closes the current emit/serialization slice family; remaining planned
+  Phase 1B slices are analyzer, driver, or utility class unless a new serialized
+  output producer is added to the audit list.
 
 PR12.1 overlap evidence:
 
