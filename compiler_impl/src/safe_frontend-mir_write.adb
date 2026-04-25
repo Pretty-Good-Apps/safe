@@ -116,7 +116,7 @@ package body Safe_Frontend.Mir_Write is
             Items.Append ("""kind"":""enum""");
             Items.Append ("""type_name"":" & JS.Quote (Value.Type_Name));
             Items.Append ("""text"":" & JS.Quote (Value.Text));
-         when others =>
+         when GM.Scalar_Value_None =>
             Items.Append ("""kind"":""none""");
       end case;
       return "{" & Join_Object_Fields (Items) & "}";
@@ -424,7 +424,7 @@ package body Safe_Frontend.Mir_Write is
             Items.Append ("""op"":" & JS.Quote (Expr.Operator));
             Items.Append ("""left"":" & Expr_Json (Expr.Left));
             Items.Append ("""right"":" & Expr_Json (Expr.Right));
-         when others =>
+         when GM.Expr_Unknown =>
             null;
       end case;
 
@@ -612,7 +612,7 @@ package body Safe_Frontend.Mir_Write is
         (case Item.Kind is
             when GM.Select_Arm_Channel => "channel",
             when GM.Select_Arm_Delay => "delay",
-            when others => "<unknown>");
+            when GM.Select_Arm_Unknown => "<unknown>");
    begin
       case Item.Kind is
          when GM.Select_Arm_Channel =>
@@ -645,7 +645,7 @@ package body Safe_Frontend.Mir_Write is
               & ",""span"":"
               & JS.Span_Object (Item.Delay_Data.Span)
               & "}";
-         when others =>
+         when GM.Select_Arm_Unknown =>
             return
               "{""kind"":"
               & JS.Quote (Kind)
@@ -696,7 +696,7 @@ package body Safe_Frontend.Mir_Write is
             Items.Append ("""ownership_effect"":" & JS.Quote (GM.Image (Item.Ownership_Effect)));
             Items.Append ("""type"":" & JS.Quote (Item.Type_Name));
             Items.Append ("""value"":" & Expr_Json (Item.Value));
-         when others =>
+         when GM.Op_Unknown =>
             null;
       end case;
       return "{" & Join_Object_Fields (Items) & "}";
@@ -730,7 +730,7 @@ package body Safe_Frontend.Mir_Write is
                end loop;
                Items.Append ("""arms"":" & Json_List (Arms));
             end;
-         when others =>
+         when GM.Terminator_Unknown =>
             null;
       end case;
       return "{" & Join_Object_Fields (Items) & "}";
