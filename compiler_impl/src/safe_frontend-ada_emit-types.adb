@@ -652,12 +652,23 @@ package body Safe_Frontend.Ada_Emit.Types is
                                  if Lookup_In_Statements (Arm.Delay_Data.Statements) then
                                     return True;
                                  end if;
-                              when others =>
+                              when CM.Select_Arm_Unknown =>
                                  null;
                            end case;
                         end loop;
                         return False;
-                     when others =>
+                     when CM.Stmt_Unknown
+                        | CM.Stmt_Destructure_Decl
+                        | CM.Stmt_Assign
+                        | CM.Stmt_Call
+                        | CM.Stmt_Return
+                        | CM.Stmt_Exit
+                        | CM.Stmt_Send
+                        | CM.Stmt_Receive
+                        | CM.Stmt_Try_Send
+                        | CM.Stmt_Try_Receive
+                        | CM.Stmt_Match
+                        | CM.Stmt_Delay =>
                         return False;
                   end case;
                end if;
@@ -894,7 +905,18 @@ package body Safe_Frontend.Ada_Emit.Types is
             return
               Expr.Left /= null
               and then Resolve_Print_Type (Unit, Document, Expr.Left, State, Type_Info);
-         when others =>
+         when CM.Expr_Unknown
+            | CM.Expr_Real
+            | CM.Expr_Enum_Literal
+            | CM.Expr_Null
+            | CM.Expr_Apply
+            | CM.Expr_Allocator
+            | CM.Expr_Aggregate
+            | CM.Expr_Array_Literal
+            | CM.Expr_Tuple
+            | CM.Expr_Some
+            | CM.Expr_None
+            | CM.Expr_Try =>
             return False;
       end case;
    end Resolve_Print_Type;
@@ -1668,11 +1690,21 @@ package body Safe_Frontend.Ada_Emit.Types is
                               when CM.Select_Arm_Delay =>
                                  Check_Expr (Arm.Delay_Data.Duration_Expr);
                                  Check_Statements (Arm.Delay_Data.Statements);
-                              when others =>
+                              when CM.Select_Arm_Unknown =>
                                  null;
                            end case;
                         end loop;
-                     when others =>
+                     when CM.Stmt_Unknown
+                        | CM.Stmt_Assign
+                        | CM.Stmt_Call
+                        | CM.Stmt_Return
+                        | CM.Stmt_Exit
+                        | CM.Stmt_Send
+                        | CM.Stmt_Receive
+                        | CM.Stmt_Try_Send
+                        | CM.Stmt_Try_Receive
+                        | CM.Stmt_Match
+                        | CM.Stmt_Delay =>
                         Check_Expr (Item.Target);
                         Check_Expr (Item.Value);
                         Check_Expr (Item.Call);
@@ -2678,11 +2710,21 @@ package body Safe_Frontend.Ada_Emit.Types is
                               Add_From_Statements (Arm.Channel_Data.Statements);
                            when CM.Select_Arm_Delay =>
                               Add_From_Statements (Arm.Delay_Data.Statements);
-                           when others =>
+                           when CM.Select_Arm_Unknown =>
                               null;
                         end case;
                      end loop;
-                  when others =>
+                  when CM.Stmt_Unknown
+                     | CM.Stmt_Assign
+                     | CM.Stmt_Call
+                     | CM.Stmt_Return
+                     | CM.Stmt_Exit
+                     | CM.Stmt_Send
+                     | CM.Stmt_Receive
+                     | CM.Stmt_Try_Send
+                     | CM.Stmt_Try_Receive
+                     | CM.Stmt_Match
+                     | CM.Stmt_Delay =>
                      null;
                end case;
             end if;
@@ -3765,7 +3807,7 @@ package body Safe_Frontend.Ada_Emit.Types is
             return
               Render_Enum_Literal_Name
                 (FT.To_String (Value.Text), FT.To_String (Value.Type_Name));
-         when others =>
+         when GM.Scalar_Value_None =>
             return "";
       end case;
    end Render_Scalar_Value;
