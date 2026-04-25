@@ -127,7 +127,13 @@ package body Safe_Frontend.Ada_Emit.Expressions is
                Value := Inner_Value;
                return True;
             end if;
-         when others =>
+         when CM.Expr_Unknown | CM.Expr_Real | CM.Expr_String | CM.Expr_Bool
+            | CM.Expr_Enum_Literal | CM.Expr_Null | CM.Expr_Ident
+            | CM.Expr_Select | CM.Expr_Apply | CM.Expr_Resolved_Index
+            | CM.Expr_Conversion | CM.Expr_Call | CM.Expr_Allocator
+            | CM.Expr_Aggregate | CM.Expr_Array_Literal | CM.Expr_Tuple
+            | CM.Expr_Annotated | CM.Expr_Some | CM.Expr_None | CM.Expr_Try
+            | CM.Expr_Binary | CM.Expr_Subtype_Indication =>
             null;
       end case;
 
@@ -340,7 +346,13 @@ package body Safe_Frontend.Ada_Emit.Expressions is
                   return True;
                end if;
             end if;
-         when others =>
+         when CM.Expr_Unknown | CM.Expr_Int | CM.Expr_Real | CM.Expr_String
+            | CM.Expr_Enum_Literal | CM.Expr_Null | CM.Expr_Ident
+            | CM.Expr_Select | CM.Expr_Apply | CM.Expr_Resolved_Index
+            | CM.Expr_Conversion | CM.Expr_Call | CM.Expr_Allocator
+            | CM.Expr_Aggregate | CM.Expr_Array_Literal | CM.Expr_Tuple
+            | CM.Expr_Annotated | CM.Expr_Some | CM.Expr_None | CM.Expr_Try
+            | CM.Expr_Subtype_Indication =>
             null;
       end case;
 
@@ -461,7 +473,11 @@ package body Safe_Frontend.Ada_Emit.Expressions is
                Value := Inner_Value;
                return True;
             end if;
-         when others =>
+         when CM.Expr_Unknown | CM.Expr_Int | CM.Expr_Real | CM.Expr_String
+            | CM.Expr_Bool | CM.Expr_Enum_Literal | CM.Expr_Null | CM.Expr_Apply
+            | CM.Expr_Allocator | CM.Expr_Aggregate | CM.Expr_Array_Literal
+            | CM.Expr_Tuple | CM.Expr_Annotated | CM.Expr_Some | CM.Expr_None
+            | CM.Expr_Try | CM.Expr_Subtype_Indication =>
             null;
       end case;
 
@@ -2240,7 +2256,8 @@ package body Safe_Frontend.Ada_Emit.Expressions is
               (State,
                Expr.Span,
                "subtype indication missing type name");
-         when others =>
+         when CM.Expr_Unknown | CM.Expr_Apply | CM.Expr_Some | CM.Expr_None
+            | CM.Expr_Try =>
             Raise_Unsupported
               (State,
                Expr.Span,
@@ -2436,7 +2453,12 @@ package body Safe_Frontend.Ada_Emit.Expressions is
                   end if;
                end loop;
                return False;
-            when others =>
+            when CM.Expr_Unknown | CM.Expr_Int | CM.Expr_Real | CM.Expr_String
+               | CM.Expr_Bool | CM.Expr_Enum_Literal | CM.Expr_Null
+               | CM.Expr_Ident | CM.Expr_Select | CM.Expr_Apply
+               | CM.Expr_Allocator | CM.Expr_Aggregate
+               | CM.Expr_Array_Literal | CM.Expr_Tuple | CM.Expr_Some
+               | CM.Expr_None | CM.Expr_Try | CM.Expr_Subtype_Indication =>
                return False;
          end case;
       end Uses_Wide_Arithmetic;
@@ -2465,7 +2487,11 @@ package body Safe_Frontend.Ada_Emit.Expressions is
             return False;
          when CM.Expr_Select =>
             return Uses_Wide_Value (Unit, Document, State, Expr.Prefix);
-         when others =>
+         when CM.Expr_Unknown | CM.Expr_Int | CM.Expr_Real | CM.Expr_String
+            | CM.Expr_Bool | CM.Expr_Enum_Literal | CM.Expr_Null
+            | CM.Expr_Apply | CM.Expr_Allocator | CM.Expr_Aggregate
+            | CM.Expr_Array_Literal | CM.Expr_Tuple | CM.Expr_Some
+            | CM.Expr_None | CM.Expr_Try | CM.Expr_Subtype_Indication =>
             return False;
       end case;
    end Uses_Wide_Value;
@@ -2605,7 +2631,11 @@ package body Safe_Frontend.Ada_Emit.Expressions is
                  & ")";
             end if;
             return "Safe_Runtime.Wide_Integer (Boolean'Pos" & Render_Expr (Unit, Document, Expr, State) & ")";
-         when others =>
+         when CM.Expr_Unknown | CM.Expr_Real | CM.Expr_String | CM.Expr_Bool
+            | CM.Expr_Enum_Literal | CM.Expr_Null | CM.Expr_Apply
+            | CM.Expr_Allocator | CM.Expr_Aggregate | CM.Expr_Array_Literal
+            | CM.Expr_Tuple | CM.Expr_Annotated | CM.Expr_Some | CM.Expr_None
+            | CM.Expr_Try | CM.Expr_Subtype_Indication =>
             return "Safe_Runtime.Wide_Integer (" & Render_Expr (Unit, Document, Expr, State) & ")";
       end case;
    end Render_Wide_Expr;
@@ -2693,7 +2723,11 @@ package body Safe_Frontend.Ada_Emit.Expressions is
               & Render_Expr_With_Target_Substitution
                   (Unit, Document, Expr, Target, Replacement, State, Supported)
               & ")";
-         when others =>
+         when CM.Expr_Unknown | CM.Expr_Real | CM.Expr_String | CM.Expr_Bool
+            | CM.Expr_Enum_Literal | CM.Expr_Null | CM.Expr_Apply
+            | CM.Expr_Allocator | CM.Expr_Aggregate | CM.Expr_Array_Literal
+            | CM.Expr_Tuple | CM.Expr_Annotated | CM.Expr_Some | CM.Expr_None
+            | CM.Expr_Try | CM.Expr_Subtype_Indication =>
             return
               "Safe_Runtime.Wide_Integer ("
               & Render_Expr_With_Target_Substitution
@@ -2752,7 +2786,10 @@ package body Safe_Frontend.Ada_Emit.Expressions is
             return FT.To_String (Left.Operator) = FT.To_String (Right.Operator)
               and then Exprs_Match (Left.Left, Right.Left)
               and then Exprs_Match (Left.Right, Right.Right);
-         when others =>
+         when CM.Expr_Unknown | CM.Expr_Enum_Literal | CM.Expr_Apply
+            | CM.Expr_Call | CM.Expr_Allocator | CM.Expr_Aggregate
+            | CM.Expr_Array_Literal | CM.Expr_Tuple | CM.Expr_Some
+            | CM.Expr_None | CM.Expr_Try | CM.Expr_Subtype_Indication =>
             return False;
       end case;
    end Exprs_Match;
@@ -2800,7 +2837,11 @@ package body Safe_Frontend.Ada_Emit.Expressions is
                end if;
             end loop;
             return False;
-         when others =>
+         when CM.Expr_Unknown | CM.Expr_Int | CM.Expr_Real | CM.Expr_String
+            | CM.Expr_Bool | CM.Expr_Enum_Literal | CM.Expr_Null
+            | CM.Expr_Ident | CM.Expr_Apply | CM.Expr_Allocator
+            | CM.Expr_Array_Literal | CM.Expr_Tuple | CM.Expr_Some
+            | CM.Expr_None | CM.Expr_Try | CM.Expr_Subtype_Indication =>
             return False;
       end case;
    end Expr_Contains_Target;
@@ -3135,7 +3176,9 @@ package body Safe_Frontend.Ada_Emit.Expressions is
               & Render_Expr_With_Target_Substitution
                   (Unit, Document, Expr.Right, Target, Replacement, State, Supported)
               & ")";
-         when others =>
+         when CM.Expr_Unknown | CM.Expr_Enum_Literal | CM.Expr_Apply
+            | CM.Expr_Allocator | CM.Expr_Array_Literal | CM.Expr_Tuple
+            | CM.Expr_Some | CM.Expr_None | CM.Expr_Try =>
             Supported := False;
             return "";
       end case;
@@ -3727,7 +3770,13 @@ package body Safe_Frontend.Ada_Emit.Expressions is
                         Arg_Expr,
                         Static_Result);
                   end if;
-               when others =>
+               when CM.Expr_Unknown | CM.Expr_Int | CM.Expr_Real
+                  | CM.Expr_String | CM.Expr_Bool | CM.Expr_Enum_Literal
+                  | CM.Expr_Null | CM.Expr_Select | CM.Expr_Apply
+                  | CM.Expr_Call | CM.Expr_Allocator | CM.Expr_Aggregate
+                  | CM.Expr_Array_Literal | CM.Expr_Tuple | CM.Expr_Annotated
+                  | CM.Expr_Some | CM.Expr_None | CM.Expr_Try
+                  | CM.Expr_Subtype_Indication =>
                   null;
             end case;
 
@@ -3857,7 +3906,12 @@ package body Safe_Frontend.Ada_Emit.Expressions is
                return Try_Resolved_Static_Integer_Value
                  (Unit, Document, State, Expr.Inner, Value);
             end if;
-         when others =>
+         when CM.Expr_Unknown | CM.Expr_Int | CM.Expr_Real | CM.Expr_String
+            | CM.Expr_Bool | CM.Expr_Enum_Literal | CM.Expr_Null
+            | CM.Expr_Ident | CM.Expr_Select | CM.Expr_Apply
+            | CM.Expr_Allocator | CM.Expr_Aggregate | CM.Expr_Array_Literal
+            | CM.Expr_Tuple | CM.Expr_Annotated | CM.Expr_Some | CM.Expr_None
+            | CM.Expr_Try | CM.Expr_Subtype_Indication =>
             null;
       end case;
 
