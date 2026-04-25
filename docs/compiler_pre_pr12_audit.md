@@ -375,6 +375,26 @@ MIR analyzer slice:
   still count until the full Phase 1B closeout switches to an unaudited-only
   progress metric.
 
+Ada emit expressions slice:
+
+- Status: complete for
+  `compiler_impl/src/safe_frontend-ada_emit-expressions.adb`; full Phase 1B
+  remains open.
+- Starting baseline at this pass: 13 raw `when others =>` sites in
+  `safe_frontend-ada_emit-expressions.adb`; 86 raw sites compiler-wide under
+  `compiler_impl/src/`.
+- Outcome: 13 closed-enum dispatch sites converted to explicit arms; 0
+  retained catch-alls remain in this file.
+- Gate: `scripts/_lib/test_static_audit.py`, run by `scripts/run_tests.py`,
+  now fails any unmarked `when others =>` in the Ada expression emitter.
+- Raw compiler-wide baseline after this slice: 73 `when others =>` sites under
+  `compiler_impl/src/`. This is a raw syntactic count; retained marked sites
+  still count until the full Phase 1B closeout switches to an unaudited-only
+  progress metric.
+- Emitted-Ada manifest comparison is required for this and future emitter or
+  codegen-adjacent Phase 1B slices; analyzer, driver, and utility slices rely
+  on the standard gate plus `snapshot_emitted_ada.py --check`.
+
 PR12.1 overlap evidence:
 
 - Expression-kind walkers and classifiers in the resolver no longer silently
