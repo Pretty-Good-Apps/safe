@@ -414,6 +414,27 @@ Check emit slice:
 - Pre/post JSON artifact manifest comparison is required for this slice because
   it emits serialized AST, typed, and interface contract artifacts.
 
+Ada emit types slice:
+
+- Status: complete for `compiler_impl/src/safe_frontend-ada_emit-types.adb`;
+  full Phase 1B remains open.
+- Starting baseline at this pass: 9 raw `when others =>` hits in
+  `safe_frontend-ada_emit-types.adb`; 62 raw sites compiler-wide under
+  `compiler_impl/src/`.
+- Outcome: 8 closed-enum dispatch sites converted to explicit arms; 0 retained
+  catch-alls remain in this file. One raw hit remains because the file emits a
+  generated Ada `when others =>` string literal, not a syntactic case arm.
+- Gate: `scripts/_lib/test_static_audit.py`, run by `scripts/run_tests.py`,
+  now fails any unmarked syntactic `when others =>` arm in the Ada type emitter.
+- The marker gate uses a start-of-line syntactic-arm regex, so embedded generated
+  Ada `when others =>` strings are gate-safe when they do not appear as Ada arms.
+- Raw compiler-wide baseline after this slice: 54 `when others =>` sites under
+  `compiler_impl/src/`. This is a raw syntactic count; retained marked sites and
+  generated-source string hits still count until the full Phase 1B closeout
+  switches to an unaudited-only progress metric.
+- Pre/post emitted-Ada artifact manifest comparison is required for this slice
+  because it emits Ada source and line-map artifacts.
+
 PR12.1 overlap evidence:
 
 - Expression-kind walkers and classifiers in the resolver no longer silently
