@@ -1692,7 +1692,22 @@ package body Safe_Frontend.Ada_Emit.Statements is
                      end if;
                   end;
                end if;
-            when others =>
+            when CM.Stmt_Unknown
+               | CM.Stmt_Assign
+               | CM.Stmt_Call
+               | CM.Stmt_Return
+               | CM.Stmt_If
+               | CM.Stmt_Case
+               | CM.Stmt_While
+               | CM.Stmt_Loop
+               | CM.Stmt_Exit
+               | CM.Stmt_Send
+               | CM.Stmt_Receive
+               | CM.Stmt_Try_Send
+               | CM.Stmt_Try_Receive
+               | CM.Stmt_Match
+               | CM.Stmt_Select
+               | CM.Stmt_Delay =>
                null;
          end case;
       end Visit_Statement;
@@ -1844,7 +1859,20 @@ package body Safe_Frontend.Ada_Emit.Statements is
                Add_From_Info (Item.Destructure.Type_Info);
             when CM.Stmt_While | CM.Stmt_For | CM.Stmt_Loop =>
                Add_From_Decls (Item.Declarations);
-            when others =>
+            when CM.Stmt_Unknown
+               | CM.Stmt_Assign
+               | CM.Stmt_Call
+               | CM.Stmt_Return
+               | CM.Stmt_If
+               | CM.Stmt_Case
+               | CM.Stmt_Exit
+               | CM.Stmt_Send
+               | CM.Stmt_Receive
+               | CM.Stmt_Try_Send
+               | CM.Stmt_Try_Receive
+               | CM.Stmt_Match
+               | CM.Stmt_Select
+               | CM.Stmt_Delay =>
                null;
          end case;
       end Visit_Statement;
@@ -9054,7 +9082,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
                  (Buffer,
                   "delay " & Render_Expr (Unit, Document, Item.Value, State) & ";",
                   Depth);
-               when others =>
+               when CM.Stmt_Unknown | CM.Stmt_Match =>
                   Raise_Unsupported
                     (State,
                      Item.Span,
@@ -9214,7 +9242,7 @@ package body Safe_Frontend.Ada_Emit.Statements is
               Render_Expr (Unit, Document, Item_Range.Low_Expr, State)
               & " .. "
               & Render_Expr (Unit, Document, Item_Range.High_Expr, State);
-         when others =>
+         when CM.Range_Unknown =>
             Raise_Unsupported
               (State,
                Item_Range.Span,
@@ -10163,7 +10191,19 @@ package body Safe_Frontend.Ada_Emit.Statements is
                   end if;
                when CM.Stmt_Select =>
                   return True;
-               when others =>
+               when CM.Stmt_Unknown
+                  | CM.Stmt_Object_Decl
+                  | CM.Stmt_Destructure_Decl
+                  | CM.Stmt_Assign
+                  | CM.Stmt_Call
+                  | CM.Stmt_Return
+                  | CM.Stmt_Exit
+                  | CM.Stmt_Send
+                  | CM.Stmt_Receive
+                  | CM.Stmt_Try_Send
+                  | CM.Stmt_Try_Receive
+                  | CM.Stmt_Match
+                  | CM.Stmt_Delay =>
                   null;
             end case;
          end if;
@@ -10225,11 +10265,22 @@ package body Safe_Frontend.Ada_Emit.Statements is
                            if Statements_Assign_Name (Arm.Delay_Data.Statements, Name) then
                               return True;
                            end if;
-                        when others =>
+                        when CM.Select_Arm_Unknown =>
                            null;
                      end case;
                   end loop;
-               when others =>
+               when CM.Stmt_Unknown
+                  | CM.Stmt_Object_Decl
+                  | CM.Stmt_Destructure_Decl
+                  | CM.Stmt_Call
+                  | CM.Stmt_Return
+                  | CM.Stmt_Exit
+                  | CM.Stmt_Send
+                  | CM.Stmt_Receive
+                  | CM.Stmt_Try_Send
+                  | CM.Stmt_Try_Receive
+                  | CM.Stmt_Match
+                  | CM.Stmt_Delay =>
                   null;
             end case;
          end if;
@@ -10280,7 +10331,22 @@ package body Safe_Frontend.Ada_Emit.Statements is
                   end if;
                end loop;
                return True;
-            when others =>
+            when CM.Stmt_Unknown
+               | CM.Stmt_Object_Decl
+               | CM.Stmt_Destructure_Decl
+               | CM.Stmt_Call
+               | CM.Stmt_Return
+               | CM.Stmt_While
+               | CM.Stmt_For
+               | CM.Stmt_Loop
+               | CM.Stmt_Exit
+               | CM.Stmt_Send
+               | CM.Stmt_Receive
+               | CM.Stmt_Try_Send
+               | CM.Stmt_Try_Receive
+               | CM.Stmt_Match
+               | CM.Stmt_Select
+               | CM.Stmt_Delay =>
                return False;
          end case;
       end Statement_Immediately_Overwrites_Name;
@@ -10635,11 +10701,20 @@ package body Safe_Frontend.Ada_Emit.Statements is
                               Document,
                               State,
                               Arm.Delay_Data.Statements);
-                        when others =>
+                        when CM.Select_Arm_Unknown =>
                            null;
                      end case;
                   end loop;
-               when others =>
+               when CM.Stmt_Unknown
+                  | CM.Stmt_Call
+                  | CM.Stmt_Return
+                  | CM.Stmt_Exit
+                  | CM.Stmt_Send
+                  | CM.Stmt_Receive
+                  | CM.Stmt_Try_Send
+                  | CM.Stmt_Try_Receive
+                  | CM.Stmt_Match
+                  | CM.Stmt_Delay =>
                   null;
             end case;
          end if;
