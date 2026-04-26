@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,6 +20,15 @@ SCAN_ROOTS = (
     REPO_ROOT / "companion",
 )
 BASELINE_PATH = REPO_ROOT / "audit" / "phase1c_arithmetic_baseline.json"
+SKIPPED_SOURCE_DIRS = {
+    ".git",
+    ".safe-build",
+    "__pycache__",
+    "alire",
+    "bin",
+    "gnatprove",
+    "obj",
+}
 
 
 @dataclass(frozen=True)
@@ -99,9 +109,12 @@ def iter_sources(root: Path) -> Iterable[Path]:
         return
     if not root.is_dir():
         return
-    for path in sorted(root.rglob("*")):
-        if path.is_file() and path.suffix.lower() in {".adb", ".ads"}:
-            yield path
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = sorted(name for name in dirnames if name not in SKIPPED_SOURCE_DIRS)
+        for filename in sorted(filenames):
+            path = Path(dirpath) / filename
+            if path.suffix.lower() in {".adb", ".ads"}:
+                yield path
 
 
 def strip_comment_and_find_strings(line: str) -> tuple[str, set[int]]:

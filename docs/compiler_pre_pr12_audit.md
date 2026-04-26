@@ -737,8 +737,9 @@ Scanner notes:
   literals, then ignores matches whose start offset is inside a same-line string
   literal. Multi-line generated-string edge cases may still need triage.
 - Baseline fingerprints are derived from category, path, pattern name, and the
-  normalized source line. Line numbers are display-only; duplicate identical
-  lines are represented with multiplicity.
+  normalized source line. Line numbers are display-only; entries are grouped by
+  fingerprint, and `multiplicity` records the number of scanner matches that
+  contributed to that grouped entry, including multiple matches from one line.
 - `scripts/run_tests.py` runs the scanner in summary mode as a reporting-only
   section. It fails only if the scanner crashes, emits invalid JSON, or the
   baseline cannot be read.

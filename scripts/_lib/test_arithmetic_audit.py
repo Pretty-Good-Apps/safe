@@ -20,12 +20,19 @@ def validate_entries(payload: object, label: str) -> tuple[bool, str]:
     entries = payload.get("entries")
     if not isinstance(entries, list):
         return False, f"{label} missing entries list"
+    fingerprints: set[str] = set()
     for entry in entries:
         if not isinstance(entry, dict):
             return False, f"{label} entry is not an object"
         for field in ("fingerprint", "category", "pattern", "path", "line", "classification"):
             if field not in entry:
                 return False, f"{label} entry missing {field}"
+        fingerprint = entry.get("fingerprint")
+        if not isinstance(fingerprint, str) or not fingerprint:
+            return False, f"{label} entry missing fingerprint"
+        if fingerprint in fingerprints:
+            return False, f"duplicate {label} fingerprint {fingerprint}"
+        fingerprints.add(fingerprint)
     return True, ""
 
 
@@ -61,14 +68,7 @@ def run_baseline_case() -> tuple[bool, str]:
     if not ok:
         return False, message
     entries = payload["entries"]
-    fingerprints: set[str] = set()
     for entry in entries:
-        fingerprint = entry.get("fingerprint")
-        if not isinstance(fingerprint, str) or not fingerprint:
-            return False, "baseline entry missing fingerprint"
-        if fingerprint in fingerprints:
-            return False, f"duplicate baseline fingerprint {fingerprint}"
-        fingerprints.add(fingerprint)
         classification = entry.get("classification")
         if classification not in {
             "candidate",
