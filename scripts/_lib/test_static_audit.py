@@ -332,7 +332,10 @@ AUDITED_WALKER_CASES: tuple[AuditedCase, ...] = (
 CASE_START_RE = re.compile(r"^\s*case\b.*\bis\b", re.IGNORECASE)
 END_CASE_RE = re.compile(r"\bend\s+case\s*;", re.IGNORECASE)
 WHEN_RE = re.compile(r"^\s*when\b", re.IGNORECASE)
-WHEN_OTHERS_RE = re.compile(r"^\s*when\s+others\s*=>", re.IGNORECASE)
+WHEN_OTHERS_RE = re.compile(
+    r"^\s*when\s+(?:[A-Za-z][A-Za-z0-9_]*\s*:\s*)?others\s*=>",
+    re.IGNORECASE,
+)
 SILENT_DEFAULT_RE = re.compile(
     r"(\bnull\s*;|\breturn\s+False\s*;|\breturn\s+0\s*;|Empty_Vector)",
     re.IGNORECASE,
@@ -357,6 +360,7 @@ WHEN_OTHERS_MARKER_AUDIT_PATHS: tuple[Path, ...] = (
     SRC / "safe_frontend-ada_emit-types.adb",
     SRC / "safe_frontend-check_emit.adb",
     SRC / "safe_frontend-check_lower.adb",
+    SRC / "safe_frontend-driver.adb",
     SRC / "safe_frontend-mir_analyze.adb",
     SRC / "safe_frontend-mir_write.adb",
 )
@@ -484,6 +488,9 @@ def run_when_others_marker_case(path: Path) -> tuple[bool, str]:
     Expected form:
         when others =>
            --  when-others-ok: <rationale>
+    or:
+        when Error : others =>
+           --  when-others-ok: <rationale>
     The marker must appear on the following nonblank line; inline arrow-line
     markers are stripped as Ada comments before validation.
     """
@@ -500,7 +507,7 @@ def run_when_others_marker_case(path: Path) -> tuple[bool, str]:
         line_no = index + 1
         if after_arrow:
             failures.append(
-                f"{rel}:{line_no}: retained `when others` must be multiline "
+                f"{rel}:{line_no}: retained catch-all must be multiline "
                 f"and start with {WHEN_OTHERS_OK_MARKER!r}"
             )
             continue
@@ -513,9 +520,36 @@ def run_when_others_marker_case(path: Path) -> tuple[bool, str]:
             WHEN_OTHERS_OK_MARKER
         ):
             failures.append(
-                f"{rel}:{line_no}: retained `when others` lacks "
+                f"{rel}:{line_no}: retained catch-all lacks "
                 f"{WHEN_OTHERS_OK_MARKER!r} rationale marker"
             )
+
+    if failures:
+        return False, "\n".join(failures)
+    return True, ""
+
+
+def run_when_others_regex_self_check() -> tuple[bool, str]:
+    positives = [
+        "when others =>",
+        "  when others =>",
+        "when Error : others =>",
+        "  when E : others =>",
+    ]
+    negatives = [
+        'Append_Line (Buffer, "when others =>", Depth);',
+        'X := "when Error : others =>";',
+        "-- when others => null;",
+        "when_others_handler",
+    ]
+
+    failures: list[str] = []
+    for item in positives:
+        if not WHEN_OTHERS_RE.search(_strip_comment(item)):
+            failures.append(f"should match retained catch-all: {item!r}")
+    for item in negatives:
+        if WHEN_OTHERS_RE.search(_strip_comment(item)):
+            failures.append(f"should ignore non-arm text: {item!r}")
 
     if failures:
         return False, "\n".join(failures)
@@ -541,6 +575,11 @@ def run_static_audit_checks() -> RunCounts:
                 f"found {len(PARSER_RESOLVER_WHEN_OTHERS_MARKER_AUDIT_PATHS)}",
             ),
         )
+    passed += record_result(
+        failures,
+        "static-audit:when-others-regex",
+        run_when_others_regex_self_check(),
+    )
     for path in WHEN_OTHERS_MARKER_AUDIT_PATHS:
         if not path.exists():
             passed += record_result(
