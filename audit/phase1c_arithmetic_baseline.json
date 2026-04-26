@@ -470,7 +470,7 @@
             "line_text": "INT64_LOW : constant Long_Long_Integer := -(2 ** 63);",
             "multiplicity": 1,
             "classification": "accepted-with-rationale",
-            "rationale": "Accepted: check_lower preserves resolved target integer bounds for typed/static loop ranges; INT64 sentinels are fallback source-integer literals for otherwise unbounded internal lowered ranges, not hidden target-width selection.",
+            "rationale": "Accepted: INT64 sentinels are fallback source-integer literal definitions for otherwise unbounded internal lowered ranges, not hidden target-width selection.",
             "follow_up": ""
         },
         {
@@ -485,7 +485,7 @@
             "line_text": "INT64_HIGH : constant Long_Long_Integer := (2 ** 63) - 1;",
             "multiplicity": 1,
             "classification": "accepted-with-rationale",
-            "rationale": "Accepted: check_lower preserves resolved target integer bounds for typed/static loop ranges; INT64 sentinels are fallback source-integer literals for otherwise unbounded internal lowered ranges, not hidden target-width selection.",
+            "rationale": "Accepted: INT64 sentinels are fallback source-integer literal definitions for otherwise unbounded internal lowered ranges, not hidden target-width selection.",
             "follow_up": ""
         },
         {
