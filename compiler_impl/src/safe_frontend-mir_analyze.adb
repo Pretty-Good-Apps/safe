@@ -1203,12 +1203,17 @@ package body Safe_Frontend.Mir_Analyze is
       Product     : out Wide_Integer) return Boolean
    is
    begin
-      Product := Left * Right;
-      return Product >= INT64_LOW and then Product <= INT64_HIGH;
-   exception
-      when Constraint_Error =>
+      if Left < INT64_LOW
+        or else Left > INT64_HIGH
+        or else Right < INT64_LOW
+        or else Right > INT64_HIGH
+      then
          Product := 0;
          return False;
+      end if;
+
+      Product := Left * Right;
+      return Product >= INT64_LOW and then Product <= INT64_HIGH;
    end Try_Int64_Product;
 
    function Interval_Display
@@ -3740,13 +3745,17 @@ package body Safe_Frontend.Mir_Analyze is
 
       procedure Refine_With_Div_Bound (Value : in out Interval) is
       begin
-         if not Has_Scaled_Bound then
+         if not Has_Scaled_Bound or else Right.Low <= 0 then
             return;
          end if;
 
          declare
+            --  Div_Bounds stores one-sided facts of the form Numerator <=
+            --  Denominator * K. With a positive denominator, that gives an
+            --  upper bound on the quotient. It gives a lower bound only from
+            --  the independent fact that the numerator is nonnegative.
             Bound_Low : constant Wide_Integer :=
-              (if Left.Low >= 0 and then Right.Low > 0 then 0 else -Scaled_Bound);
+              (if Left.Low >= 0 then 0 else Value.Low);
             New_Low   : constant Wide_Integer := Wide_Integer'Max (Value.Low, Bound_Low);
             New_High  : constant Wide_Integer := Wide_Integer'Min (Value.High, Scaled_Bound);
          begin

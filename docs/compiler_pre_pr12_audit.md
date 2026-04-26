@@ -710,8 +710,8 @@ Reporting baseline:
 
 - Script: `scripts/audit_arithmetic.py`.
 - Machine baseline: `audit/phase1c_arithmetic_baseline.json`.
-- Current baseline entries: 236 hits: 61 candidates and
-  175 accepted-with-rationale hits.
+- Current baseline entries: 244 hits: 61 candidates and
+  183 accepted-with-rationale hits.
 
 Commands:
 
@@ -727,8 +727,8 @@ Baseline counts:
 | --- | ---: | --- |
 | `emitted-wide` | 19 | `candidate` |
 | `host-wide-arithmetic` | 0 | none |
-| `model-domain` | 66 | 33 `candidate`, 33 `accepted-with-rationale` |
-| `overflow-check-path` | 46 | `accepted-with-rationale` |
+| `model-domain` | 70 | 33 `candidate`, 37 `accepted-with-rationale` |
+| `overflow-check-path` | 50 | `accepted-with-rationale` |
 | `stdlib-length` | 9 | `candidate` |
 | `target-bits` | 96 | `accepted-with-rationale` |
 
@@ -829,18 +829,20 @@ Findings:
   `Document.Target_Bits`; the legacy `long_long_integer` fallbacks use explicit
   `64` to preserve their Ada `Long_Long_Integer` width without relying on the
   default constructor.
-- MIR interval arithmetic triage classified all 46 `overflow-check-path`
+- MIR interval arithmetic triage classified all 50 `overflow-check-path`
   entries as accepted MIR analysis plumbing.
-- The MIR-resident portion of `model-domain` is triaged: 33 entries are
+- The MIR-resident portion of `model-domain` is triaged: 37 entries are
   accepted. The remaining 33 non-MIR `model-domain` entries stay `candidate`
   for future triage.
 - The `host-wide-arithmetic` category is fully resolved: the previous
   division-bound scaling hit was replaced by fail-closed scaling in the MIR
   analyzer.
 - The `Phase 1C MIR division-bound scaling repro/fix` work is complete. The
-  regression fixture demonstrates the previous false rejection, and the analyzer
-  now falls back to sampled division when relational-bound scaling cannot stay
-  within the signed-64 model.
+  regression fixtures demonstrate the previous false rejection and the
+  one-sided-bound mixed-sign over-narrowing risk; the analyzer now falls back to
+  sampled division when relational-bound scaling cannot stay within the
+  signed-64 model and only applies one-sided division facts as upper-bound
+  refinements.
 
 ## Phase 1D - GNATprove Trust Boundaries
 
