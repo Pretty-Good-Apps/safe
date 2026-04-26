@@ -44,8 +44,7 @@ PATTERNS: tuple[Pattern, ...] = (
         "target-bits",
         "target-bits-propagation",
         re.compile(
-            r"--target-bits|Target_Bits|target_bits|Integer_Type\s*\(|"
-            r"Is_Valid_Target_Bits",
+            r"Target_Bits|target_bits|Integer_Type\s*\(|Is_Valid_Target_Bits",
             re.IGNORECASE,
         ),
     ),
@@ -99,13 +98,6 @@ def iter_sources(root: Path) -> Iterable[Path]:
     for path in sorted(root.rglob("*")):
         if path.is_file() and path.suffix.lower() in {".adb", ".ads"}:
             yield path
-
-
-def source_paths() -> list[Path]:
-    paths: set[Path] = set()
-    for root in SCAN_ROOTS:
-        paths.update(iter_sources(root))
-    return sorted(paths)
 
 
 def strip_comment_and_find_strings(line: str) -> tuple[str, set[int]]:
