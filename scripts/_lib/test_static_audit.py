@@ -23,6 +23,7 @@ class AuditedCase:
     allow_silent_others: bool = False
     reason: str = ""
     inline_case: bool = False
+    extra_required: tuple[str, ...] = ()
 
 
 SRC = REPO_ROOT / "compiler_impl" / "src"
@@ -384,6 +385,7 @@ ADA_EMIT_TYPES_MATCH_ARM_TRAVERSAL_CASES: tuple[AuditedCase, ...] = (
         "function Find_Local_Synthetic_Type",
         "end Find_Local_Synthetic_Type;",
         "Item.Kind",
+        extra_required=("Check_Expr (Item.Match_Expr)",),
     ),
     AuditedCase(
         "ada-emit-types.collect-synthetic-types.match-arms",
@@ -391,6 +393,7 @@ ADA_EMIT_TYPES_MATCH_ARM_TRAVERSAL_CASES: tuple[AuditedCase, ...] = (
         "procedure Add_From_Statements",
         "end Add_From_Statements;",
         "Item.Kind",
+        extra_required=("Add_From_Expr (Item.Match_Expr)",),
     ),
 )
 
@@ -655,9 +658,7 @@ def run_match_arm_traversal_case(entry: AuditedCase) -> tuple[bool, str]:
 
     if not segment:
         return False, f"{entry.label} lacks explicit Stmt_Match traversal arm"
-    required = ["Item.Match_Arms", "Arm.Statements"]
-    if entry.label == "ada-emit-types.find-local-synthetic-type.match-arms":
-        required.append("Check_Expr (Item.Match_Expr)")
+    required = ["Item.Match_Arms", "Arm.Statements", *entry.extra_required]
     missing = [item for item in required if item not in segment]
     if missing:
         return False, f"{entry.label} Stmt_Match arm missing: {', '.join(missing)}"
