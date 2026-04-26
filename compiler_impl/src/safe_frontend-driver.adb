@@ -111,6 +111,7 @@ package body Safe_Frontend.Driver is
       SIO.Close (File);
    exception
       when others =>
+         --  when-others-ok: close stream file on write failure before reraising.
          if SIO.Is_Open (File) then
             SIO.Close (File);
          end if;
@@ -124,6 +125,7 @@ package body Safe_Frontend.Driver is
       end if;
    exception
       when others =>
+         --  when-others-ok: best-effort cleanup intentionally ignores delete failures.
          null;
    end Best_Effort_Delete;
 
@@ -147,12 +149,14 @@ package body Safe_Frontend.Driver is
          Ada.Directories.Rename (Old_Name => Temp_Path, New_Name => Path);
       exception
          when others =>
+            --  when-others-ok: failed replace deletes temp and attempts rollback.
             Best_Effort_Delete (Temp_Path);
             if Had_Target and then Ada.Directories.Exists (Backup_Path) then
                begin
                   Ada.Directories.Rename (Old_Name => Backup_Path, New_Name => Path);
                exception
                   when others =>
+                     --  when-others-ok: rollback is best-effort; preserve replace failure.
                      null;
                end;
             end if;
@@ -162,6 +166,7 @@ package body Safe_Frontend.Driver is
       Best_Effort_Delete (Backup_Path);
    exception
       when others =>
+         --  when-others-ok: remove temp file before reraising write-support failure.
          Best_Effort_Delete (Temp_Path);
          raise;
    end Write_Shared_Support_File;
@@ -177,6 +182,7 @@ package body Safe_Frontend.Driver is
       when Ada.IO_Exceptions.Name_Error =>
          null;
       when others =>
+         --  when-others-ok: record cleanup failure without masking later cleanup attempts.
          Cleanup_Failed := True;
    end Delete_If_Exists;
 
@@ -475,6 +481,7 @@ package body Safe_Frontend.Driver is
             Note       => "could not read `" & Path & "`");
          return Result;
       when Error : others =>
+         --  when-others-ok: command boundary reports unexpected lexing failure.
          Result.Internal_Failure := True;
          FD.Add_Error
            (Collection => Result.Diagnostics,
@@ -558,6 +565,7 @@ package body Safe_Frontend.Driver is
       return Safe_Frontend.Exit_Diagnostics;
    exception
       when Error : others =>
+         --  when-others-ok: command boundary converts validation failure to internal exit.
          Ada.Text_IO.Put_Line
            (Ada.Text_IO.Current_Error,
             "validate-mir: ERROR: internal failure: "
@@ -607,6 +615,7 @@ package body Safe_Frontend.Driver is
       return Safe_Frontend.Exit_Diagnostics;
    exception
       when Error : others =>
+         --  when-others-ok: command boundary converts analysis failure to internal exit.
          Ada.Text_IO.Put_Line
            (Ada.Text_IO.Current_Error,
             "analyze-mir: ERROR: internal failure: "
@@ -640,6 +649,7 @@ package body Safe_Frontend.Driver is
       return Safe_Frontend.Exit_Success;
    exception
       when Error : others =>
+         --  when-others-ok: command boundary converts AST emission failure to internal exit.
          Ada.Text_IO.Put_Line
            (Ada.Text_IO.Current_Error,
             "ast: ERROR: internal failure: "
@@ -717,6 +727,7 @@ package body Safe_Frontend.Driver is
       end;
    exception
       when Error : others =>
+         --  when-others-ok: command boundary converts check failure to internal exit.
          Ada.Text_IO.Put_Line
            (Ada.Text_IO.Current_Error,
             "check: ERROR: internal failure: "
@@ -864,6 +875,7 @@ package body Safe_Frontend.Driver is
                      end if;
                   exception
                      when others =>
+                        --  when-others-ok: remove partial Ada artifacts before reraising.
                         declare
                            Cleanup_Failed : Boolean := False;
                         begin
@@ -889,6 +901,7 @@ package body Safe_Frontend.Driver is
       end;
    exception
       when Error : others =>
+         --  when-others-ok: command boundary converts emit failure to internal exit.
          Ada.Text_IO.Put_Line
            (Ada.Text_IO.Current_Error,
             "emit: ERROR: internal failure: "

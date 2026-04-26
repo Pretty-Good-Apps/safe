@@ -551,6 +551,41 @@ Ada emit proofs slice:
   analyzer sites, driver cleanup handlers, JSON/parser helpers, and small
   Ada-emitter utility files.
 
+Driver marker slice:
+
+- Status: complete for `compiler_impl/src/safe_frontend-driver.adb`; full
+  Phase 1B remains open.
+- Starting baseline at this pass: 7 bare `when others =>` handlers and 6 named
+  `when Error : others =>` handlers in `safe_frontend-driver.adb`; 31 syntactic
+  bare-or-named catch-alls compiler-wide under `compiler_impl/src/`.
+- Outcome: 13 retained driver exception handlers annotated with
+  `when-others-ok:` rationale markers; 0 closed-enum dispatch sites converted.
+- Preserved driver behavior: file writes still close and reraise on failure;
+  best-effort cleanup still suppresses cleanup exceptions; rollback paths still
+  preserve the original replace failure; command boundaries still convert
+  unexpected internal exceptions to existing diagnostic/internal-exit results;
+  emit still removes partial Ada artifacts before reraising the original emit
+  failure.
+- Gate: `scripts/_lib/test_static_audit.py`, run by `scripts/run_tests.py`,
+  now recognizes both bare `when others =>` and named handlers such as
+  `when Error : others =>`, ignores generated-source string literals and
+  commented-out examples, and fails any unmarked retained catch-all in the
+  driver.
+- Raw historical baseline after this slice remains 28 bare `when others =>`
+  hits under `compiler_impl/src/`; retained markers do not change syntax. The
+  operational bare-or-named unaudited count drops from 19 to 6 because the
+  driver handlers are now marker-audited.
+- Phase 1B slice convention: conversion slices enumerate closed variants and
+  rely on compiler exhaustiveness; marker slices annotate defensive cleanup or
+  command-boundary catch-alls with rationale comments.
+- Local level-2 convention: run local `--no-cache --level 2` for executable Ada
+  or proof-input changes. Marker/audit-script slices may rely on CI's no-cache
+  Prove gate after local cached proofs pass.
+- Remaining Phase 1B tail shape is now split between JSON/parser helper marker
+  work and small Ada-emitter utility conversion work; already-retained audited
+  parser/resolver/MIR analyzer sites are accounting noise rather than new
+  implementation work.
+
 PR12.1 overlap evidence:
 
 - Expression-kind walkers and classifiers in the resolver no longer silently
