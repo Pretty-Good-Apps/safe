@@ -143,7 +143,6 @@ package body Safe_Frontend.Check_Parse is
             Span    => Token.Span,
             Message => "expected `" & Lexeme & "`",
             Note    => "saw `" & FT.To_String (Token.Lexeme) & "`"));
-      return Token;
    end Expect;
 
    procedure Require
@@ -216,7 +215,6 @@ package body Safe_Frontend.Check_Parse is
             Span    => Token.Span,
             Message => "expected statement terminator",
             Note    => "saw `" & FT.To_String (Token.Lexeme) & "`"));
-      return Token.Span;
    end Expect_Terminator;
 
    function Match_Terminator
@@ -433,7 +431,6 @@ package body Safe_Frontend.Check_Parse is
             Span    => Token.Span,
             Message => "expected identifier",
             Note    => "saw `" & FT.To_String (Token.Lexeme) & "`"));
-      return Token;
    end Expect_Identifier;
 
    procedure Reject_Unsupported
@@ -1069,7 +1066,6 @@ package body Safe_Frontend.Check_Parse is
                  (Path    => Path_String (State),
                   Span    => Current (State).Span,
                   Message => "binary width must be one of 8, 16, 32, or 64"));
-            return FT.To_UString ("");
       end case;
    end Binary_Internal_Name;
 
@@ -3284,7 +3280,6 @@ package body Safe_Frontend.Check_Parse is
             Span    => Token.Span,
             Message => "unsupported primary expression",
             Note    => "saw `" & FT.To_String (Token.Lexeme) & "`"));
-      return Result;
    end Parse_Primary;
 
    function Parse_Factor
