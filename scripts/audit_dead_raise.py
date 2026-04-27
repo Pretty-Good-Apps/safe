@@ -52,7 +52,7 @@ class Statement:
 
 
 @dataclass(frozen=True)
-class No_Return_Trigger:
+class NoReturnTrigger:
     category: str
     pattern: str
 
@@ -241,12 +241,22 @@ def collect_no_return_names() -> set[str]:
     return names
 
 
+def no_return_patterns(no_return_names: set[str]) -> tuple[re.Pattern[str], ...]:
+    return tuple(
+        re.compile(
+            r"^" + re.escape(name) + r"\b\s*(?:\(|;)",
+            re.IGNORECASE,
+        )
+        for name in sorted(no_return_names)
+    )
+
+
 def no_return_trigger(
     statement: Statement,
-    no_return_names: set[str],
+    no_return_name_patterns: tuple[re.Pattern[str], ...],
     *,
     nested_block: bool = False,
-) -> No_Return_Trigger | None:
+) -> NoReturnTrigger | None:
     text = re.sub(
         r"^when\b.*?=>\s*",
         "",
@@ -255,17 +265,13 @@ def no_return_trigger(
         flags=re.IGNORECASE,
     )
     if re.match(r"^raise\b", text, re.IGNORECASE):
-        return No_Return_Trigger(
+        return NoReturnTrigger(
             category="direct-raise-fallthrough",
             pattern="direct-raise-nested-block" if nested_block else "direct-raise-statement",
         )
-    for name in sorted(no_return_names):
-        name_re = re.compile(
-            r"^" + re.escape(name) + r"\b\s*(?:\(|;)",
-            re.IGNORECASE,
-        )
+    for name_re in no_return_name_patterns:
         if name_re.search(text):
-            return No_Return_Trigger(
+            return NoReturnTrigger(
                 category="no-return-helper-fallthrough",
                 pattern=(
                     "no-return-helper-nested-block"
@@ -311,14 +317,14 @@ def simple_nested_block_is_no_return(
     statements: list[Statement],
     no_return_index: int,
     end_index: int,
-    no_return_names: set[str],
-) -> No_Return_Trigger | None:
+    no_return_name_patterns: tuple[re.Pattern[str], ...],
+) -> NoReturnTrigger | None:
     end_text = statements[end_index].code_text.lower()
     if not re.fullmatch(r"end\s*;", end_text):
         return None
     trigger = no_return_trigger(
         statements[no_return_index],
-        no_return_names,
+        no_return_name_patterns,
         nested_block=True,
     )
     if trigger is None:
@@ -371,7 +377,7 @@ def record_entry(
     entries: dict[str, dict[str, object]],
     *,
     path: Path,
-    trigger: No_Return_Trigger,
+    trigger: NoReturnTrigger,
     raise_statement: Statement,
     fallthrough_statement: Statement,
     prior: dict[str, dict[str, object]],
@@ -424,9 +430,10 @@ def scan_source(
     if prior is None:
         prior = {}
     statements = list(iter_statements(text.splitlines()))
+    no_return_name_patterns = no_return_patterns(no_return_names)
     entries: dict[str, dict[str, object]] = {}
     for index, statement in enumerate(statements):
-        trigger = no_return_trigger(statement, no_return_names)
+        trigger = no_return_trigger(statement, no_return_name_patterns)
         if trigger is not None and index + 1 < len(statements):
             fallthrough = statements[index + 1]
             if is_executable_fallthrough(fallthrough):
@@ -449,7 +456,7 @@ def scan_source(
                 statements,
                 index - 1,
                 index,
-                no_return_names,
+                no_return_name_patterns,
             )
             fallthrough = statements[index + 1]
             if nested_trigger is not None and is_executable_fallthrough(fallthrough):
