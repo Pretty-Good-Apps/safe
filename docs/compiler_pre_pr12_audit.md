@@ -5,7 +5,7 @@ Project board: https://github.com/users/berkeleynerd/projects/4/views/1
 Audit SHA: `5450c30406e5535cab772e511e1ec326217f16f1`
 Audit doc ref: `main`
 Ripgrep: `ripgrep 15.1.0 (rev af60c2de9d)`
-Next action: Phase 1E - SPARK Mode Off closeout/gate promotion.
+Next action: Cross-scanner baseline-gate consolidation, then Phase 1F.
 
 This is the canonical working record for the pre-PR12.1 Safe compiler audit.
 The code under audit is pinned at `Audit SHA`; this document remains a living
@@ -1021,17 +1021,18 @@ Findings:
 
 ## Phase 1E - SPARK Mode Off Islands
 
-Status: triage complete; reporting-only baseline active pending closeout.
+Status: complete; active baseline-allowlist gate.
 
-Enforcement default: reporting first. Promote during closeout if the live scan
-remains stable.
+Enforcement default: yes. Active baseline gate.
 
-Reporting baseline:
+Baseline gate:
 
 - Script: `scripts/audit_spark_mode_off.py`.
 - Machine baseline: `audit/phase1e_spark_mode_off_baseline.json`.
 - Current baseline entries: 12 fingerprints covering 39 raw source hits: 12
   `accepted-with-rationale`.
+- Gate semantics: new live fingerprints fail; missing baseline fingerprints are
+  reported only. Accepted entries require non-empty rationales.
 
 Commands:
 
@@ -1078,6 +1079,14 @@ Scanner notes:
 - Even small-surface phases keep inventory and triage separate. The inventory
   PR recorded the candidates; the triage PR classified them without changing
   compiler behavior.
+- Phase 1E follows the existing "Working with the baseline" operational rules:
+  future local obvious additions may cite existing rules with concrete
+  rationale, while broader surfaces or novel rules use a scan-extension/triage
+  cycle.
+- Phase 1E closeout gives the audit three active baseline scanners: Phase 1C
+  arithmetic, Phase 1D GNATprove trust boundaries, and Phase 1E SPARK Mode Off
+  islands. Cross-scanner baseline-gate consolidation is the next unit before
+  Phase 1F resumes.
 
 Classification rules:
 
@@ -1098,12 +1107,6 @@ Classification rules:
   unchecked deallocation, or manually checked runtime helpers while public
   specs retain contracts where practical.
 
-Follow-up work queue:
-
-| Work item | Entries | Evidence | Acceptance |
-| --- | ---: | --- | --- |
-| Phase 1E SPARK Mode Off closeout/gate promotion | 12 | All current Phase 1E fingerprints are classified as `accepted-with-rationale`; live scan reports 0 new and 0 missing fingerprints | Promote the scanner to the active baseline-allowlist gate model used by Phases 1C/1D if the live scan remains stable. |
-
 Findings:
 
 - Triage accepted 12 SPARK-off island fingerprints covering 39 raw source
@@ -1114,9 +1117,10 @@ Findings:
 - No companion Ada source matched the Phase 1E scanner during inventory.
 - No Phase 1E `candidate`, `needs-repro`, or `confirmed-defect` entries remain
   after triage.
-- Phase 1E follows the small-surface cadence: inventory, triage, optional fix
-  if triage confirms a defect, and closeout/gate decision. Since triage found
-  no defects, closeout/gate promotion is the next PR.
+- Phase 1E surfaced no confirmed defects. Its durable output is the scanner,
+  accepted baseline, classification rules, and active regression gate.
+- Phase 1E closed in the small-surface cadence: inventory, triage, and closeout
+  without a fix PR because triage found no defects.
 
 ## Phase 1F - Dead Code After Unconditional Raise
 

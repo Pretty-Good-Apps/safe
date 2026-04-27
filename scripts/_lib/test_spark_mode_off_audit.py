@@ -1,4 +1,4 @@
-"""Reporting-only checks for the Phase 1E SPARK_Mode Off scanner."""
+"""Baseline-gated checks for the Phase 1E SPARK_Mode Off scanner."""
 
 from __future__ import annotations
 
@@ -12,11 +12,12 @@ from _lib.test_harness import REPO_ROOT, RunCounts, first_message, record_result
 
 AUDIT_SCRIPT = REPO_ROOT / "scripts" / "audit_spark_mode_off.py"
 BASELINE_PATH = audit_spark_mode_off.BASELINE_PATH
+ACCEPTED = "accepted-with-rationale"
 VALID_CLASSIFICATIONS = {
     "candidate",
     "needs-repro",
     "confirmed-defect",
-    "accepted-with-rationale",
+    ACCEPTED,
 }
 
 
@@ -60,6 +61,113 @@ def validate_entries(payload: object, label: str) -> tuple[bool, str]:
     return True, ""
 
 
+def entries_for(payload: dict[str, object]) -> list[dict[str, object]]:
+    entries = payload["entries"]
+    if not isinstance(entries, list):
+        raise ValueError(f"entries field is not a list: {type(entries)!r}")
+    return [entry for entry in entries if isinstance(entry, dict)]
+
+
+def fingerprint_map(payload: dict[str, object]) -> dict[str, dict[str, object]]:
+    return {str(entry["fingerprint"]): entry for entry in entries_for(payload)}
+
+
+def describe_entry(entry: dict[str, object]) -> str:
+    return (
+        f"{entry.get('fingerprint')} "
+        f"{entry.get('category')} "
+        f"{entry.get('path')}:{entry.get('line')} "
+        f"{entry.get('pattern')}"
+    )
+
+
+def read_baseline_payload() -> tuple[dict[str, object] | None, str]:
+    if not BASELINE_PATH.exists():
+        return None, f"missing baseline {BASELINE_PATH.relative_to(REPO_ROOT)}"
+    try:
+        payload = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return None, f"invalid baseline JSON: {exc}"
+    if not isinstance(payload, dict):
+        return None, "baseline top-level value is not an object"
+    return payload, ""
+
+
+def validate_closed_baseline(payload: dict[str, object]) -> tuple[bool, str]:
+    ok, message = validate_entries(payload, "baseline")
+    if not ok:
+        return False, message
+    for entry in entries_for(payload):
+        classification = entry.get("classification")
+        if classification != ACCEPTED:
+            return (
+                False,
+                "closed Phase 1E baseline may only contain "
+                f"{ACCEPTED!r}; found {classification!r} at {describe_entry(entry)}",
+            )
+        rationale = entry.get("rationale")
+        if not isinstance(rationale, str) or not rationale.strip():
+            return False, f"accepted baseline entry missing rationale: {describe_entry(entry)}"
+    return True, ""
+
+
+def compare_live_scan_to_baseline(
+    live_payload: dict[str, object],
+    baseline_payload: dict[str, object],
+) -> tuple[bool, str]:
+    ok, message = validate_entries(live_payload, "live scan")
+    if not ok:
+        return False, message
+    ok, message = validate_entries(baseline_payload, "baseline")
+    if not ok:
+        return False, message
+    live = fingerprint_map(live_payload)
+    baseline = fingerprint_map(baseline_payload)
+    new_fingerprints = sorted(set(live) - set(baseline))
+    missing_fingerprints = sorted(set(baseline) - set(live))
+    if new_fingerprints:
+        examples = "; ".join(
+            describe_entry(live[fingerprint]) for fingerprint in new_fingerprints[:5]
+        )
+        suffix = "" if len(new_fingerprints) <= 5 else f"; ... {len(new_fingerprints) - 5} more"
+        message = (
+            "Phase 1E SPARK Mode Off audit found "
+            f"{len(new_fingerprints)} new fingerprint(s) outside the baseline: "
+            f"{examples}{suffix}"
+        )
+        if missing_fingerprints:
+            missing_examples = "; ".join(
+                describe_entry(baseline[fingerprint]) for fingerprint in missing_fingerprints[:5]
+            )
+            missing_suffix = (
+                ""
+                if len(missing_fingerprints) <= 5
+                else f"; ... {len(missing_fingerprints) - 5} more"
+            )
+            message += (
+                ". Baseline drift also found "
+                f"{len(missing_fingerprints)} fingerprint(s) no longer in live scan "
+                f"(report-only): {missing_examples}{missing_suffix}"
+            )
+        return False, message
+    if missing_fingerprints:
+        examples = "; ".join(
+            describe_entry(baseline[fingerprint]) for fingerprint in missing_fingerprints[:5]
+        )
+        suffix = (
+            ""
+            if len(missing_fingerprints) <= 5
+            else f"; ... {len(missing_fingerprints) - 5} more"
+        )
+        return (
+            True,
+            "Phase 1E SPARK Mode Off audit baseline drift: "
+            f"{len(missing_fingerprints)} fingerprint(s) no longer in live scan "
+            f"(report-only): {examples}{suffix}",
+        )
+    return True, ""
+
+
 def run_live_scan_case() -> tuple[bool, str]:
     completed = subprocess.run(
         [sys.executable, str(AUDIT_SCRIPT), "--json"],
@@ -82,19 +190,79 @@ def run_live_scan_case() -> tuple[bool, str]:
         payload,
         baseline_entries=audit_spark_mode_off.existing_classifications(),
     )
+    baseline, message = read_baseline_payload()
+    if baseline is None:
+        return False, message
+    ok, message = validate_closed_baseline(baseline)
+    if not ok:
+        return False, message
+    ok, message = compare_live_scan_to_baseline(payload, baseline)
+    if not ok:
+        return False, message
+    if message:
+        print(message)
     return True, ""
 
 
 def run_baseline_case() -> tuple[bool, str]:
-    if not BASELINE_PATH.exists():
-        return False, f"missing baseline {BASELINE_PATH.relative_to(REPO_ROOT)}"
-    try:
-        payload = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        return False, f"invalid baseline JSON: {exc}"
-    ok, message = validate_entries(payload, "baseline")
-    if not ok:
+    payload, message = read_baseline_payload()
+    if payload is None:
         return False, message
+    return validate_closed_baseline(payload)
+
+
+def synthetic_entry(
+    fingerprint: str,
+    *,
+    classification: str = ACCEPTED,
+    rationale: str = "Accepted: synthetic SPARK Mode Off test entry.",
+) -> dict[str, object]:
+    return {
+        "fingerprint": fingerprint,
+        "category": "emitted-spark-off-pragma",
+        "pattern": "spark-mode-off-pragma",
+        "path": "compiler_impl/src/synthetic.adb",
+        "line": 1,
+        "line_numbers": [1],
+        "first_line_text": 'Append_Line (Buffer, "pragma SPARK_Mode (Off);", 2);',
+        "multiplicity": 1,
+        "classification": classification,
+        "rationale": rationale,
+        "follow_up": "",
+    }
+
+
+def run_gate_self_check_case() -> tuple[bool, str]:
+    known_entry = synthetic_entry("known")
+    baseline = {"entries": [known_entry]}
+    new_entry = synthetic_entry("new")
+    live_with_new = {"entries": [synthetic_entry("known"), new_entry]}
+    ok, message = compare_live_scan_to_baseline(live_with_new, baseline)
+    if ok or describe_entry(new_entry) not in message:
+        return False, "new live fingerprint outside baseline did not fail gate"
+
+    live_missing = {"entries": []}
+    ok, message = compare_live_scan_to_baseline(live_missing, baseline)
+    if not ok or describe_entry(known_entry) not in message:
+        return False, f"missing live fingerprint should be reported only, got: {message}"
+
+    gone_entry = synthetic_entry("gone")
+    mixed_baseline = {"entries": [known_entry, gone_entry]}
+    mixed_live = {"entries": [synthetic_entry("known"), new_entry]}
+    ok, message = compare_live_scan_to_baseline(mixed_live, mixed_baseline)
+    if ok or describe_entry(new_entry) not in message or describe_entry(gone_entry) not in message:
+        return False, f"mixed new/missing fingerprints should both be reported, got: {message}"
+
+    open_baseline = {"entries": [synthetic_entry("known", classification="candidate")]}
+    ok, message = validate_closed_baseline(open_baseline)
+    if ok or "candidate" not in message:
+        return False, "open baseline classification did not fail closed-baseline validation"
+
+    empty_rationale = {"entries": [synthetic_entry("known", rationale="")]}
+    ok, message = validate_closed_baseline(empty_rationale)
+    if ok or "rationale" not in message:
+        return False, "accepted baseline entry with empty rationale did not fail validation"
+
     return True, ""
 
 
@@ -155,5 +323,10 @@ def run_spark_mode_off_audit_checks() -> RunCounts:
         failures,
         "phase1e-spark-mode-off-audit:category-assignment",
         run_category_assignment_case(),
+    )
+    passed += record_result(
+        failures,
+        "phase1e-spark-mode-off-audit:gate-self-check",
+        run_gate_self_check_case(),
     )
     return passed, 0, failures
