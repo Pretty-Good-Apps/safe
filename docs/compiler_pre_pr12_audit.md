@@ -5,7 +5,7 @@ Project board: https://github.com/users/berkeleynerd/projects/4/views/1
 Audit SHA: `5450c30406e5535cab772e511e1ec326217f16f1`
 Audit doc ref: `main`
 Ripgrep: `ripgrep 15.1.0 (rev af60c2de9d)`
-Next action: Phase 1C - wide integer arithmetic safety triage.
+Next action: Phase 1D - GNATprove trust boundaries.
 
 This is the canonical working record for the pre-PR12.1 Safe compiler audit.
 The code under audit is pinned at `Audit SHA`; this document remains a living
@@ -703,10 +703,12 @@ None yet.
 
 ## Phase 1C - Wide Integer Arithmetic Safety
 
-Enforcement default: reporting first. Promote individual checks only after
-baseline calibration.
+Status: complete; baseline-allowlist gate active.
 
-Reporting baseline:
+Enforcement default: yes. `scripts/run_tests.py` fails when the live arithmetic
+scan reports a fingerprint outside the accepted baseline.
+
+Gate baseline:
 
 - Script: `scripts/audit_arithmetic.py`.
 - Machine baseline: `audit/phase1c_arithmetic_baseline.json`.
@@ -751,11 +753,29 @@ Scanner notes:
 - Scanner coverage gaps surfaced during triage get a scan-extension PR before
   repro or fix work, so triage, coverage expansion, and behavior changes remain
   separately reviewable.
-- `scripts/run_tests.py` runs the scanner in summary mode as a reporting-only
-  section. It fails only if the scanner crashes, emits invalid JSON, or the
-  baseline cannot be read.
+- `scripts/run_tests.py` runs the scanner and prints summary counts. It fails if
+  the scanner crashes, emits invalid JSON, the baseline cannot be read, the
+  closed baseline contains an open classification, or a live fingerprint appears
+  outside the baseline.
 
-Target-bits classification rules:
+Working with the baseline:
+
+- New live fingerprints fail the gate because they may indicate untriaged
+  arithmetic safety risk.
+- Missing baseline fingerprints are reported by the scanner summary but do not
+  fail the gate. Missing entries usually mean code was refactored or removed;
+  this is benign baseline drift that can be cleaned up in a dedicated
+  maintenance PR without coupling cleanup to feature work.
+- A future hit qualifies as a local obvious addition only when it appears in
+  code added or modified by the same PR, is covered by existing classification
+  rules in this section, and has concrete accepted-with-rationale text in the
+  baseline.
+- Broader pattern surfaces, novel classification rules, or hits in unrelated
+  code use a scan-extension/triage cycle before any behavior-changing fix.
+
+### Classification Rules
+
+#### Target-bits
 
 - CLI, driver, resolver, lowering, and artifact-boundary target-bits hits are
   accepted when they only parse, normalize, validate, store, serialize, or
@@ -785,7 +805,7 @@ Target-bits classification rules:
   helper code when the hit and its rationale are local to that fix. Broader new
   scanner surfaces still require a separate triage PR.
 
-MIR interval classification rules:
+#### MIR Interval
 
 - `Wide_Integer`, `INT64_LOW`/`INT64_HIGH`, interval helpers, sentinel
   full-range intervals, and overflow-check plumbing are accepted as the
@@ -798,7 +818,7 @@ MIR interval classification rules:
   fall back to the baseline sampled analysis when scaling cannot stay within the
   signed-64 model.
 
-Non-emitter model-domain classification rules:
+#### Non-Emitter Model Domain
 
 - `safe_frontend-check_model.ads` uses `Wide_Integer` as the check-model
   integer-literal carrier. These hits are accepted as the intentional internal
@@ -812,7 +832,7 @@ Non-emitter model-domain classification rules:
   helpers, static lengths, or shift-bound validation, with compatibility checks
   gating results before they become resolved target values.
 
-Emitter classification rules:
+#### Emitter
 
 - `ada_emit` `emitted-wide` hits are accepted when they render already-resolved
   static, proof, runtime, or source-integer values into Ada text through
@@ -825,7 +845,7 @@ Emitter classification rules:
   domain. Those values must come from resolved bounds/literals or fail-closed
   helper paths before narrowing or emitting runtime facts.
 
-Runtime and stdlib classification rules:
+#### Runtime and Stdlib
 
 - `safe_runtime.ads` uses `Wide_Integer` as the intentional runtime
   intermediate integer type for emitted Safe arithmetic. It mirrors the
@@ -837,17 +857,14 @@ Runtime and stdlib classification rules:
   overflow before the equality is evaluated; it does not change runtime storage
   or concat allocation semantics.
 
-Promotion criteria:
+Gate promotion outcome:
 
 - A false positive is a scanner hit reviewed and classified as
   `accepted-with-rationale` in the machine baseline.
-- A check category may become blocking only after either:
-  - it produces no hits outside the baseline over at least three PR or
-    merge-queue runs, or
-  - every current hit is classified and the gate fails only newly unclassified
-    hits.
-- Phase 1C is complete when no `candidate`, `needs-repro`, or
-  `confirmed-defect` entries remain in the baseline.
+- Phase 1C used the classified-baseline promotion path: every current hit is
+  classified and the gate fails only newly unclassified hits.
+- Phase 1C is complete: no `candidate`, `needs-repro`, or `confirmed-defect`
+  entries remain in the baseline.
 
 Follow-up work queue:
 
@@ -889,9 +906,13 @@ Findings:
   #394, out of 244 audited entries. The phase's primary durable artifact is the
   scanner, classification baseline, and classification rules library, which
   serve as the regression guard for arithmetic safety in subsequent work.
-- Five flat classification-rules sections now exist: target-bits, MIR interval,
-  non-emitter model-domain, emitter, and runtime/stdlib. A closeout PR should
-  reorganize them under one parent heading with per-context children.
+- The former flat classification-rules sections are consolidated under one
+  parent heading with per-context children: target-bits, MIR interval,
+  non-emitter model-domain, emitter, and runtime/stdlib.
+- Phase 1C closeout promoted the scanner from reporting-only to an active
+  baseline-allowlist gate. The live scanner now blocks new unclassified
+  arithmetic fingerprints while reporting missing baseline fingerprints as
+  non-failing drift.
 
 ## Phase 1D - GNATprove Trust Boundaries
 
