@@ -25,7 +25,7 @@
             "line_text": "function Trim_Wide_Image (Value : CM.Wide_Integer) return String renames AI.Trim_Wide_Image;",
             "multiplicity": 2,
             "classification": "accepted-with-rationale",
-            "rationale": "Accepted: ada_emit renders already-resolved static, proof, runtime, or source-integer values into Ada text through Trim_Wide_Image/Safe_Runtime.Wide_Integer; these sites do not select target width.",
+            "rationale": "Accepted: scanner false positive; matches Trim_Wide_Image infrastructure line (declaration, rename, or end), not a render site or target-width selection.",
             "follow_up": ""
         },
         {
@@ -116,7 +116,7 @@
             "line_text": "function Trim_Wide_Image (Value : CM.Wide_Integer) return String is",
             "multiplicity": 1,
             "classification": "accepted-with-rationale",
-            "rationale": "Accepted: ada_emit renders already-resolved static, proof, runtime, or source-integer values into Ada text through Trim_Wide_Image/Safe_Runtime.Wide_Integer; these sites do not select target width.",
+            "rationale": "Accepted: scanner false positive; matches Trim_Wide_Image infrastructure line (declaration, rename, or end), not a render site or target-width selection.",
             "follow_up": ""
         },
         {
@@ -131,7 +131,7 @@
             "line_text": "end Trim_Wide_Image;",
             "multiplicity": 1,
             "classification": "accepted-with-rationale",
-            "rationale": "Accepted: ada_emit renders already-resolved static, proof, runtime, or source-integer values into Ada text through Trim_Wide_Image/Safe_Runtime.Wide_Integer; these sites do not select target width.",
+            "rationale": "Accepted: scanner false positive; matches Trim_Wide_Image infrastructure line (declaration, rename, or end), not a render site or target-width selection.",
             "follow_up": ""
         },
         {
@@ -146,7 +146,7 @@
             "line_text": "function Trim_Wide_Image (Value : CM.Wide_Integer) return String;",
             "multiplicity": 1,
             "classification": "accepted-with-rationale",
-            "rationale": "Accepted: ada_emit renders already-resolved static, proof, runtime, or source-integer values into Ada text through Trim_Wide_Image/Safe_Runtime.Wide_Integer; these sites do not select target width.",
+            "rationale": "Accepted: scanner false positive; matches Trim_Wide_Image infrastructure line (declaration, rename, or end), not a render site or target-width selection.",
             "follow_up": ""
         },
         {
@@ -176,7 +176,7 @@
             "line_text": "function Trim_Wide_Image (Value : CM.Wide_Integer) return String renames AI.Trim_Wide_Image;",
             "multiplicity": 2,
             "classification": "accepted-with-rationale",
-            "rationale": "Accepted: ada_emit renders already-resolved static, proof, runtime, or source-integer values into Ada text through Trim_Wide_Image/Safe_Runtime.Wide_Integer; these sites do not select target width.",
+            "rationale": "Accepted: scanner false positive; matches Trim_Wide_Image infrastructure line (declaration, rename, or end), not a render site or target-width selection.",
             "follow_up": ""
         },
         {
@@ -272,7 +272,7 @@
             "line_text": "function Trim_Wide_Image (Value : CM.Wide_Integer) return String renames AI.Trim_Wide_Image;",
             "multiplicity": 2,
             "classification": "accepted-with-rationale",
-            "rationale": "Accepted: ada_emit renders already-resolved static, proof, runtime, or source-integer values into Ada text through Trim_Wide_Image/Safe_Runtime.Wide_Integer; these sites do not select target width.",
+            "rationale": "Accepted: scanner false positive; matches Trim_Wide_Image infrastructure line (declaration, rename, or end), not a render site or target-width selection.",
             "follow_up": ""
         },
         {
