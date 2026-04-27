@@ -84,16 +84,6 @@ def run_live_scan_case() -> tuple[bool, str]:
     entries = payload.get("entries", [])
     if not isinstance(entries, list):
         return False, "scanner JSON entries field is not a list"
-    if len(entries) != 8:
-        return False, f"expected 8 Phase 1F inventory entries, found {len(entries)}"
-    unexpected = [
-        entry
-        for entry in entries
-        if isinstance(entry, dict)
-        and entry.get("path") != "compiler_impl/src/safe_frontend-check_resolve.adb"
-    ]
-    if unexpected:
-        return False, f"unexpected Phase 1F inventory path: {unexpected[0].get('path')}"
     baseline, message = read_baseline_payload()
     if baseline is None:
         return False, message
@@ -105,6 +95,16 @@ def run_live_scan_case() -> tuple[bool, str]:
         return False, message
     if message:
         print(message)
+    if len(entries) != 8:
+        return False, f"expected 8 Phase 1F inventory entries, found {len(entries)}"
+    unexpected = [
+        entry
+        for entry in entries
+        if isinstance(entry, dict)
+        and entry.get("path") != "compiler_impl/src/safe_frontend-check_resolve.adb"
+    ]
+    if unexpected:
+        return False, f"unexpected Phase 1F inventory path: {unexpected[0].get('path')}"
     return True, ""
 
 
@@ -260,6 +260,29 @@ end Demo;
     return True, ""
 
 
+def run_nested_block_after_closed_branch_case() -> tuple[bool, str]:
+    entries = synthetic_scan(
+        """
+function Demo return Integer is
+begin
+   if Ready then
+      Value := 1;
+   end if;
+   declare
+   begin
+      Raise_Diag (Diag);
+   end;
+   return Default_Integer;
+end Demo;
+"""
+    )
+    if len(entries) != 1:
+        return False, f"expected nested-block fallthrough after closed branch, found {len(entries)}"
+    if entries[0].get("pattern") != "no-return-helper-nested-block":
+        return False, f"unexpected pattern {entries[0].get('pattern')}"
+    return True, ""
+
+
 def run_comment_and_string_case() -> tuple[bool, str]:
     entries = synthetic_scan(
         """
@@ -319,6 +342,11 @@ def run_dead_raise_audit_checks() -> RunCounts:
         failures,
         "phase1f-dead-raise-audit:nested-block",
         run_nested_block_case(),
+    )
+    passed += record_result(
+        failures,
+        "phase1f-dead-raise-audit:nested-block-after-closed-branch",
+        run_nested_block_after_closed_branch_case(),
     )
     passed += record_result(
         failures,

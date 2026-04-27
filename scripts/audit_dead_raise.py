@@ -322,6 +322,13 @@ def simple_nested_block_is_no_return(
     end_text = statements[end_index].code_text.lower()
     if not re.fullmatch(r"end\s*;", end_text):
         return None
+    block_start = None
+    for index in range(no_return_index - 1, -1, -1):
+        if statements[index].code_text.lower() == "begin":
+            block_start = index
+            break
+    if block_start is None:
+        return None
     trigger = no_return_trigger(
         statements[no_return_index],
         no_return_name_patterns,
@@ -329,13 +336,20 @@ def simple_nested_block_is_no_return(
     )
     if trigger is None:
         return None
-    between = " ".join(
-        statement.code_text.lower()
-        for statement in statements[max(0, no_return_index - 8) : end_index + 1]
-    )
-    if " exception" in between or between.startswith("exception"):
+    block_body = statements[block_start + 1 : end_index]
+    if any(statement.code_text.lower().startswith("exception") for statement in block_body):
         return None
-    if re.search(r"\b(if|case|loop|else|elsif|when)\b", between):
+
+    branch_depth = 0
+    for statement in block_body:
+        text = statement.code_text.lower()
+        if statement is statements[no_return_index]:
+            return None if branch_depth else trigger
+        if text.startswith(("if ", "case ", "for ", "while ", "loop")):
+            branch_depth += 1
+        elif text.startswith(("end if", "end case", "end loop")) and branch_depth:
+            branch_depth -= 1
+    if branch_depth:
         return None
     return trigger
 
