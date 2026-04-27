@@ -995,7 +995,7 @@ Follow-up work queue:
 
 | Work item | Entries | Evidence | Acceptance |
 | --- | ---: | --- | --- |
-| Phase 1D closeout and gate decision | 5 | All current GNATprove trust-boundary entries are classified as `accepted-with-rationale`; live scan reports no new or missing fingerprints. | If the live scan remains stable, promote the baseline gate, mark Phase 1D complete, and update the top-level next action to Phase 1E. |
+| Phase 1D closeout and gate decision | 5 | All current GNATprove trust-boundary entries are classified as `accepted-with-rationale`; live scan reports no new or missing fingerprints. | If the live scan remains stable, validate that accepted entries require non-empty rationales, promote the baseline gate, mark Phase 1D complete, and update the top-level next action to Phase 1E. |
 
 Findings:
 
