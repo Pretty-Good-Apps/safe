@@ -1142,12 +1142,27 @@ Prep notes:
   therefore removes those three fallback returns in the same PR. It also removes
   the parser fallback returns after the newly contracted parser diagnostic helper.
   All removals preserve the diagnostic raises that precede them.
+- #413's scope expanded from three to eight fallback removals because adding
+  `pragma No_Return` to `safe_frontend-check_parse.adb` caused GNAT under
+  `-gnatwe` to flag five additional unreachable parser fallbacks. The
+  build-required exception therefore applied uniformly to all fallbacks exposed
+  at pragma-addition time.
 - The remaining Phase 1F inventory should scan all direct raises and
   `pragma No_Return` helper calls, not only `Raise_Unsupported`.
 
 Findings:
 
-None yet.
+- Inventory script: `scripts/audit_dead_raise.py`.
+- Inventory baseline: `audit/phase1f_dead_raise_baseline.json`.
+- Current inventory: eight `candidate` entries, all
+  `no-return-helper-fallthrough` sites in `safe_frontend-check_resolve.adb`.
+- Candidate functions/sites: `Optional_Payload_Type`,
+  `Growable_Array_Element_Type`, `Resolve_Type`, `Literal_Value`, two
+  `Resolve_Type_Spec` paths, optional-expression type fallback, and
+  `Normalize_Procedure_Call`.
+- Next Phase 1F PR: remove the eight resolver fallbacks and update the
+  baseline to zero entries. Expected artifact diffs: emitted Ada and MIR JSON
+  unchanged over existing fixtures.
 
 ## Phase 1G - Spec Body Contract Drift
 
