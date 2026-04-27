@@ -1366,8 +1366,8 @@
             ],
             "line_text": "type Wide_Integer is range -(2 ** 63) .. (2 ** 63 - 1);",
             "multiplicity": 1,
-            "classification": "candidate",
-            "rationale": "",
+            "classification": "accepted-with-rationale",
+            "rationale": "Accepted: Safe_Runtime.Wide_Integer is the intentional runtime intermediate integer type for emitted Safe arithmetic; it mirrors the compiler/emitter wide arithmetic domain and is not hidden target-width selection.",
             "follow_up": ""
         },
         {
@@ -2151,8 +2151,8 @@
             ],
             "line_text": "Long_Long_Integer (Length (Concat'Result)) =",
             "multiplicity": 1,
-            "classification": "candidate",
-            "rationale": "",
+            "classification": "accepted-with-rationale",
+            "rationale": "Accepted: stdlib concat postconditions cast Length operands to Long_Long_Integer as contract-only widening, so length equality arithmetic does not overflow the Ada/SPARK postcondition expression before evaluation. This does not change runtime storage or concat allocation semantics.",
             "follow_up": ""
         },
         {
@@ -2166,8 +2166,8 @@
             ],
             "line_text": "Long_Long_Integer (Length (Left))",
             "multiplicity": 1,
-            "classification": "candidate",
-            "rationale": "",
+            "classification": "accepted-with-rationale",
+            "rationale": "Accepted: stdlib concat postconditions cast Length operands to Long_Long_Integer as contract-only widening, so length equality arithmetic does not overflow the Ada/SPARK postcondition expression before evaluation. This does not change runtime storage or concat allocation semantics.",
             "follow_up": ""
         },
         {
@@ -2181,8 +2181,8 @@
             ],
             "line_text": "+ Long_Long_Integer (Length (Right))",
             "multiplicity": 1,
-            "classification": "candidate",
-            "rationale": "",
+            "classification": "accepted-with-rationale",
+            "rationale": "Accepted: stdlib concat postconditions cast Length operands to Long_Long_Integer as contract-only widening, so length equality arithmetic does not overflow the Ada/SPARK postcondition expression before evaluation. This does not change runtime storage or concat allocation semantics.",
             "follow_up": ""
         },
         {
@@ -2196,8 +2196,8 @@
             ],
             "line_text": "Long_Long_Integer (Length (Concat'Result)) =",
             "multiplicity": 1,
-            "classification": "candidate",
-            "rationale": "",
+            "classification": "accepted-with-rationale",
+            "rationale": "Accepted: stdlib concat postconditions cast Length operands to Long_Long_Integer as contract-only widening, so length equality arithmetic does not overflow the Ada/SPARK postcondition expression before evaluation. This does not change runtime storage or concat allocation semantics.",
             "follow_up": ""
         },
         {
@@ -2211,8 +2211,8 @@
             ],
             "line_text": "Long_Long_Integer (Length (Left))",
             "multiplicity": 1,
-            "classification": "candidate",
-            "rationale": "",
+            "classification": "accepted-with-rationale",
+            "rationale": "Accepted: stdlib concat postconditions cast Length operands to Long_Long_Integer as contract-only widening, so length equality arithmetic does not overflow the Ada/SPARK postcondition expression before evaluation. This does not change runtime storage or concat allocation semantics.",
             "follow_up": ""
         },
         {
@@ -2226,8 +2226,8 @@
             ],
             "line_text": "+ Long_Long_Integer (Length (Right)),",
             "multiplicity": 1,
-            "classification": "candidate",
-            "rationale": "",
+            "classification": "accepted-with-rationale",
+            "rationale": "Accepted: stdlib concat postconditions cast Length operands to Long_Long_Integer as contract-only widening, so length equality arithmetic does not overflow the Ada/SPARK postcondition expression before evaluation. This does not change runtime storage or concat allocation semantics.",
             "follow_up": ""
         },
         {
@@ -2241,8 +2241,8 @@
             ],
             "line_text": "Long_Long_Integer (Length (Concat'Result)) =",
             "multiplicity": 1,
-            "classification": "candidate",
-            "rationale": "",
+            "classification": "accepted-with-rationale",
+            "rationale": "Accepted: stdlib concat postconditions cast Length operands to Long_Long_Integer as contract-only widening, so length equality arithmetic does not overflow the Ada/SPARK postcondition expression before evaluation. This does not change runtime storage or concat allocation semantics.",
             "follow_up": ""
         },
         {
@@ -2256,8 +2256,8 @@
             ],
             "line_text": "Long_Long_Integer (Length (Left))",
             "multiplicity": 1,
-            "classification": "candidate",
-            "rationale": "",
+            "classification": "accepted-with-rationale",
+            "rationale": "Accepted: stdlib concat postconditions cast Length operands to Long_Long_Integer as contract-only widening, so length equality arithmetic does not overflow the Ada/SPARK postcondition expression before evaluation. This does not change runtime storage or concat allocation semantics.",
             "follow_up": ""
         },
         {
@@ -2271,8 +2271,8 @@
             ],
             "line_text": "+ Long_Long_Integer (Length (Right)),",
             "multiplicity": 1,
-            "classification": "candidate",
-            "rationale": "",
+            "classification": "accepted-with-rationale",
+            "rationale": "Accepted: stdlib concat postconditions cast Length operands to Long_Long_Integer as contract-only widening, so length equality arithmetic does not overflow the Ada/SPARK postcondition expression before evaluation. This does not change runtime storage or concat allocation semantics.",
             "follow_up": ""
         },
         {
