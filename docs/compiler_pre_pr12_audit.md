@@ -710,8 +710,8 @@ Reporting baseline:
 
 - Script: `scripts/audit_arithmetic.py`.
 - Machine baseline: `audit/phase1c_arithmetic_baseline.json`.
-- Current baseline entries: 244 hits: 10 candidates and
-  234 accepted-with-rationale hits.
+- Current baseline entries: 244 hits: 0 candidates and
+  244 accepted-with-rationale hits.
 
 Commands:
 
@@ -727,9 +727,9 @@ Baseline counts:
 | --- | ---: | --- |
 | `emitted-wide` | 19 | `accepted-with-rationale` |
 | `host-wide-arithmetic` | 0 | none |
-| `model-domain` | 70 | 1 `candidate`, 69 `accepted-with-rationale` |
+| `model-domain` | 70 | `accepted-with-rationale` |
 | `overflow-check-path` | 50 | `accepted-with-rationale` |
-| `stdlib-length` | 9 | `candidate` |
+| `stdlib-length` | 9 | `accepted-with-rationale` |
 | `target-bits` | 96 | `accepted-with-rationale` |
 
 Scanner notes:
@@ -825,6 +825,18 @@ Emitter classification rules:
   domain. Those values must come from resolved bounds/literals or fail-closed
   helper paths before narrowing or emitting runtime facts.
 
+Runtime and stdlib classification rules:
+
+- `safe_runtime.ads` uses `Wide_Integer` as the intentional runtime
+  intermediate integer type for emitted Safe arithmetic. It mirrors the
+  compiler/emitter wide arithmetic domain and is not hidden target-width
+  selection.
+- `Long_Long_Integer (Length (...))` hits in stdlib concat postconditions are
+  accepted when they are contract-only widening of `Length` operands before
+  equality arithmetic. The widening prevents Ada/SPARK postcondition expression
+  overflow before the equality is evaluated; it does not change runtime storage
+  or concat allocation semantics.
+
 Promotion criteria:
 
 - A false positive is a scanner hit reviewed and classified as
@@ -839,9 +851,8 @@ Promotion criteria:
 
 Follow-up work queue:
 
-| Proposed PR | Category | Files | Evidence | Acceptance test |
-| --- | --- | --- | --- | --- |
-| Phase 1C stdlib/runtime length-contract triage | `model-domain`, `stdlib-length` | `compiler_impl/stdlib/ada/safe_runtime.ads`, `safe_array*_rt.ads`, `safe_string_rt.ads` | 1 runtime model-domain entry and 9 stdlib length entries using `Long_Long_Integer` | Classify runtime integer carrier and length/concat contracts as accepted or promote contract drift to a follow-up issue |
+No open Phase 1C follow-up work remains after runtime/stdlib length-contract
+triage.
 
 Findings:
 
@@ -856,15 +867,15 @@ Findings:
   default constructor.
 - MIR interval arithmetic triage classified all 50 `overflow-check-path`
   entries as accepted MIR analysis plumbing.
-- The MIR-resident, non-emitter compiler, and emitter portions of `model-domain`
-  are triaged: 69 entries are accepted. The remaining `model-domain` candidate
-  is the runtime entry in `safe_runtime.ads`.
+- The MIR-resident, non-emitter compiler, emitter, and runtime portions of
+  `model-domain` are triaged: all 70 entries are accepted.
 - The `emitted-wide` category is fully triaged: all 19 entries are accepted as
   intentional emitter rendering of resolved static, proof, runtime, or
   source-integer values.
-- The remaining Phase 1C candidates are 1 `model-domain` runtime entry and 9
-  `stdlib-length` entries. They are concentrated in the stdlib/runtime slice for
-  subsequent triage.
+- The `stdlib-length` category is fully triaged: all 9 entries are accepted as
+  contract-only widening in stdlib concat postconditions.
+- No `candidate`, `needs-repro`, or `confirmed-defect` entries remain in the
+  Phase 1C baseline.
 - The `host-wide-arithmetic` category is fully resolved: the previous
   division-bound scaling hit was replaced by fail-closed scaling in the MIR
   analyzer.
@@ -874,6 +885,13 @@ Findings:
   sampled division when relational-bound scaling cannot stay within the
   signed-64 model and only applies one-sided division facts as upper-bound
   refinements.
+- Phase 1C surfaced two real defects, the division-bound scaling pair fixed in
+  #394, out of 244 audited entries. The phase's primary durable artifact is the
+  scanner, classification baseline, and classification rules library, which
+  serve as the regression guard for arithmetic safety in subsequent work.
+- Five flat classification-rules sections now exist: target-bits, MIR interval,
+  non-emitter model-domain, emitter, and runtime/stdlib. A closeout PR should
+  reorganize them under one parent heading with per-context children.
 
 ## Phase 1D - GNATprove Trust Boundaries
 
