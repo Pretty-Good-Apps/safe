@@ -5,7 +5,7 @@ Project board: https://github.com/users/berkeleynerd/projects/4/views/1
 Audit SHA: `5450c30406e5535cab772e511e1ec326217f16f1`
 Audit doc ref: `main`
 Ripgrep: `ripgrep 15.1.0 (rev af60c2de9d)`
-Next action: Cross-scanner baseline-gate consolidation, then Phase 1F.
+Next action: Phase 1F - Dead Code After Unconditional Raise.
 
 This is the canonical working record for the pre-PR12.1 Safe compiler audit.
 The code under audit is pinned at `Audit SHA`; this document remains a living
@@ -772,6 +772,14 @@ Working with the baseline:
   baseline.
 - Broader pattern surfaces, novel classification rules, or hits in unrelated
   code use a scan-extension/triage cycle before any behavior-changing fix.
+- Phase 1C, Phase 1D, and Phase 1E baseline gates share common test-layer
+  mechanics in `scripts/_lib/baseline_audit_gate.py`: structural validation,
+  closed-baseline validation, live-vs-baseline comparison, report-only missing
+  drift, and synthetic self-check coverage.
+- Cross-scanner consolidation pattern: extract shared logic into a helper,
+  migrate per scanner in separate commits, preserve domain-specific scanner
+  behavior locally, and defer scanner-script or JSON-shape normalization to
+  dedicated future PRs.
 
 ### Classification Rules
 
@@ -965,10 +973,8 @@ Scanner notes:
   `first_line_text` provides a display anchor.
 - `pragma Warnings (GNATprove, On, ...)` restore lines are excluded by the
   warning-suppression pattern, which only matches `Off`.
-- Phase 1D's scanner deliberately follows Phase 1C's standalone scanner shape.
-  Cross-scanner abstraction is deferred until at least Phase 1E provides a
-  third use case and clearer shared boundaries. After Phase 1E closeout, a
-  refactor PR may consolidate shared baseline-gate mechanics.
+- Phase 1D's baseline-gate test uses the shared helper introduced after Phase
+  1E closeout. The scanner script itself remains standalone.
 - Phase 1D follows the existing "Working with the baseline" operational rules:
   future local obvious additions may cite existing rules with concrete
   rationale, while broader surfaces or novel rules use a scan-extension/triage
@@ -1083,10 +1089,8 @@ Scanner notes:
   future local obvious additions may cite existing rules with concrete
   rationale, while broader surfaces or novel rules use a scan-extension/triage
   cycle.
-- Phase 1E closeout gives the audit three active baseline scanners: Phase 1C
-  arithmetic, Phase 1D GNATprove trust boundaries, and Phase 1E SPARK Mode Off
-  islands. Cross-scanner baseline-gate consolidation is the next unit before
-  Phase 1F resumes.
+- Phase 1E's baseline-gate test uses the shared helper introduced after Phase
+  1E closeout. The scanner script itself remains standalone.
 
 Classification rules:
 
