@@ -925,7 +925,7 @@ Reporting baseline:
 
 - Script: `scripts/audit_gnatprove_trust.py`.
 - Machine baseline: `audit/phase1d_gnatprove_trust_baseline.json`.
-- Current baseline entries: 5 hits: 5 accepted with rationale.
+- Current baseline entries: 5 hits: 5 `accepted-with-rationale`.
 
 Commands:
 
