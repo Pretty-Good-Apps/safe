@@ -151,7 +151,7 @@
       "multiplicity": 1,
       "path": "compiler_impl/stdlib/ada/safe_array_rt.adb",
       "pattern": "spark-mode-off-pragma",
-      "rationale": "Accepted: runtime array body allocates, clones, and frees heap-backed arrays through access values and Ada.Unchecked_Deallocation. Public specs retain contracts where practical; the body remains an intentional runtime island."
+      "rationale": "Accepted: generic runtime array body allocates heap-backed arrays and delegates element clone/free through caller-provided subprogram hooks before using Ada.Unchecked_Deallocation. Public specs retain contracts where practical; the body remains an intentional runtime island."
     },
     {
       "category": "runtime-spark-off-pragma",
@@ -166,7 +166,7 @@
       "multiplicity": 1,
       "path": "compiler_impl/stdlib/ada/safe_array_rt.ads",
       "pattern": "spark-mode-off-pragma",
-      "rationale": "Accepted: private runtime array representation exposes access-backed storage and the empty value. SPARK-off is limited to the private representation while public operations retain contracts."
+      "rationale": "Accepted: generic runtime array private representation exposes access-backed storage for values managed by caller-provided clone/free hooks. SPARK-off is limited to the private representation while public operations retain contracts."
     },
     {
       "category": "runtime-spark-off-pragma",
