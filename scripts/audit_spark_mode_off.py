@@ -20,6 +20,12 @@ SCAN_ROOTS = (
     REPO_ROOT / "companion",
 )
 BASELINE_PATH = REPO_ROOT / "audit" / "phase1e_spark_mode_off_baseline.json"
+CATEGORIES = (
+    "emitted-spark-off-aspect",
+    "emitted-spark-off-pragma",
+    "runtime-spark-off-aspect",
+    "runtime-spark-off-pragma",
+)
 SKIPPED_SOURCE_DIRS = {
     ".git",
     ".safe-build",
@@ -106,7 +112,7 @@ def domain_for(path: Path) -> str:
         return "emitted"
     if rel.startswith("compiler_impl/stdlib/ada/") or rel.startswith("companion/"):
         return "runtime"
-    return "other"
+    raise ValueError(f"unsupported Phase 1E SPARK_Mode Off path: {rel}")
 
 
 def category_for(path: Path, pattern: Pattern) -> str:
@@ -221,12 +227,7 @@ def scan() -> dict[str, object]:
 
 
 def counts_by_category(payload: dict[str, object]) -> dict[str, int]:
-    counts = {
-        "emitted-spark-off-aspect": 0,
-        "emitted-spark-off-pragma": 0,
-        "runtime-spark-off-aspect": 0,
-        "runtime-spark-off-pragma": 0,
-    }
+    counts = {category: 0 for category in CATEGORIES}
     entries = payload.get("entries", [])
     if isinstance(entries, list):
         for entry in entries:

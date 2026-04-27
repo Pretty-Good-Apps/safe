@@ -51,6 +51,9 @@ def validate_entries(payload: object, label: str) -> tuple[bool, str]:
         if fingerprint in fingerprints:
             return False, f"duplicate {label} fingerprint {fingerprint}"
         fingerprints.add(fingerprint)
+        category = entry.get("category")
+        if category not in audit_spark_mode_off.CATEGORIES:
+            return False, f"invalid {label} category {category!r}"
         classification = entry.get("classification")
         if classification not in VALID_CLASSIFICATIONS:
             return False, f"invalid {label} classification {classification!r}"
@@ -121,6 +124,13 @@ def run_category_assignment_case() -> tuple[bool, str]:
     for expected, actual in cases.items():
         if actual != expected:
             return False, f"expected {expected}, got {actual}"
+    unsupported = REPO_ROOT / "compiler_impl" / "src" / "safe_frontend-mir_analyze.adb"
+    try:
+        audit_spark_mode_off.category_for(unsupported, pragma_pattern)
+    except ValueError:
+        pass
+    else:
+        return False, "unsupported compiler source path did not fail loud"
     return True, ""
 
 
