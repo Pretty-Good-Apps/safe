@@ -60,7 +60,8 @@ def validate_entries(payload: object, label: str) -> tuple[bool, str]:
 
 def entries_for(payload: dict[str, object]) -> list[dict[str, object]]:
     entries = payload["entries"]
-    assert isinstance(entries, list)
+    if not isinstance(entries, list):
+        raise ValueError(f"entries field is not a list: {type(entries)!r}")
     return [entry for entry in entries if isinstance(entry, dict)]
 
 
