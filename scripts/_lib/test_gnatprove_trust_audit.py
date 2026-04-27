@@ -172,6 +172,8 @@ def run_live_scan_case() -> tuple[bool, str]:
     ok, message = compare_live_scan_to_baseline(payload, baseline)
     if not ok:
         return False, message
+    if message:
+        print(message)
     return True, ""
 
 
