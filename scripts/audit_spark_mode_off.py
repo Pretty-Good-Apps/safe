@@ -203,7 +203,10 @@ def scan() -> dict[str, object]:
                 )
                 entry["multiplicity"] = int(entry["multiplicity"]) + 1
                 line_numbers = entry["line_numbers"]
-                assert isinstance(line_numbers, list)
+                if not isinstance(line_numbers, list):
+                    raise TypeError(
+                        f"line_numbers must be a list for fingerprint {fingerprint}"
+                    )
                 if line_number not in line_numbers:
                     line_numbers.append(line_number)
 
