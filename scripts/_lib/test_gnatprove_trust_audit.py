@@ -154,7 +154,7 @@ def run_live_scan_case() -> tuple[bool, str]:
     baseline, message = read_baseline_payload()
     if baseline is None:
         return False, message
-    ok, message = validate_entries(baseline, "baseline")
+    ok, message = validate_closed_baseline(baseline)
     if not ok:
         return False, message
     ok, message = compare_live_scan_to_baseline(payload, baseline)
@@ -210,9 +210,10 @@ def synthetic_entry(
 
 def run_gate_self_check_case() -> tuple[bool, str]:
     baseline = {"entries": [synthetic_entry("known")]}
-    live_with_new = {"entries": [synthetic_entry("known"), synthetic_entry("new")]}
+    new_entry = synthetic_entry("new")
+    live_with_new = {"entries": [synthetic_entry("known"), new_entry]}
     ok, message = compare_live_scan_to_baseline(live_with_new, baseline)
-    if ok or "new" not in message:
+    if ok or describe_entry(new_entry) not in message:
         return False, "new live fingerprint outside baseline did not fail gate"
 
     live_missing = {"entries": []}
