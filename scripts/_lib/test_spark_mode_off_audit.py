@@ -11,7 +11,7 @@ from _lib.test_harness import REPO_ROOT, RunCounts, first_message, record_result
 
 
 AUDIT_SCRIPT = REPO_ROOT / "scripts" / "audit_spark_mode_off.py"
-BASELINE_PATH = REPO_ROOT / "audit" / "phase1e_spark_mode_off_baseline.json"
+BASELINE_PATH = audit_spark_mode_off.BASELINE_PATH
 VALID_CLASSIFICATIONS = {
     "candidate",
     "needs-repro",
