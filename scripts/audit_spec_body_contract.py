@@ -249,7 +249,7 @@ def nearest_declaration_line(lines: list[int], pragma_line: int) -> int | None:
     return None
 
 
-def collect_spec_contracts(path: Path, text: str) -> list[SpecContract]:
+def collect_spec_contracts(text: str) -> list[SpecContract]:
     statements = list(iter_statements(text))
     declarations: dict[str, list[int]] = {}
     for statement in statements:
@@ -405,7 +405,7 @@ def scan() -> dict[str, object]:
 
     spec_contracts: list[tuple[Path, SpecContract]] = []
     for path, text in spec_sources:
-        for contract in collect_spec_contracts(path, text):
+        for contract in collect_spec_contracts(text):
             spec_contracts.append((path, contract))
     known_no_return_names = {contract.helper_name for _, contract in spec_contracts}
 

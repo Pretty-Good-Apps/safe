@@ -177,9 +177,7 @@ def run_gate_self_check_case() -> tuple[bool, str]:
 
 
 def run_spec_contract_parsing_case() -> tuple[bool, str]:
-    path = REPO_ROOT / "compiler_impl" / "src" / "synthetic.ads"
     contracts = audit_spec_body_contract.collect_spec_contracts(
-        path,
         """
 package Synthetic is
    procedure Raise_Diag (Message : String);
@@ -196,9 +194,7 @@ end Synthetic;
 
 
 def run_comment_and_string_case() -> tuple[bool, str]:
-    path = REPO_ROOT / "compiler_impl" / "src" / "synthetic.ads"
     contracts = audit_spec_body_contract.collect_spec_contracts(
-        path,
         """
 package Synthetic is
    Message : constant String := "pragma No_Return (Ignored);";
@@ -215,9 +211,7 @@ end Synthetic;
 
 
 def run_overloaded_declaration_line_case() -> tuple[bool, str]:
-    path = REPO_ROOT / "compiler_impl" / "src" / "synthetic.ads"
     contracts = audit_spec_body_contract.collect_spec_contracts(
-        path,
         """
 package Synthetic is
    procedure Raise_Diag (Code : Integer);
