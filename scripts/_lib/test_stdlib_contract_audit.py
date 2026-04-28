@@ -189,6 +189,18 @@ def run_double_quote_character_literal_case() -> tuple[bool, str]:
     return True, ""
 
 
+def run_parenthesis_character_literal_case() -> tuple[bool, str]:
+    lines = [
+        "   function Open_Paren return Character",
+        "      with Post => Open_Paren'Result = '(';",
+        "   procedure Next;",
+    ]
+    end = audit_stdlib_contracts.statement_end(lines, 0)
+    if end != 1:
+        return False, f"statement_end crossed parenthesis character literal; got {end}"
+    return True, ""
+
+
 def run_private_and_rename_skip_case() -> tuple[bool, str]:
     path = REPO_ROOT / "compiler_impl" / "stdlib" / "ada" / "synthetic.ads"
     decls = audit_stdlib_contracts.collect_contract_declarations(
@@ -299,6 +311,26 @@ end Synthetic;
     return True, ""
 
 
+def run_expression_function_private_scope_case() -> tuple[bool, str]:
+    names = audit_stdlib_contracts.collect_expression_functions(
+        """
+package First is
+private
+   function Hidden (Value : Item) return Natural is
+     (Value.Length);
+end First;
+
+package Second is
+   function Visible (Value : Item) return Natural is
+     (Value.Length);
+end Second;
+""",
+    )
+    if names != {"Hidden"}:
+        return False, f"private expression scope leaked across packages: {sorted(names)!r}"
+    return True, ""
+
+
 def run_expected_inventory_case() -> tuple[bool, str]:
     payload = audit_stdlib_contracts.scan()
     category_counts = audit_stdlib_contracts.counts_by_category(payload)
@@ -342,6 +374,11 @@ def run_stdlib_contract_audit_checks() -> RunCounts:
     )
     passed += record_result(
         failures,
+        "phase1h-stdlib-contract-audit:parenthesis-character-literal",
+        run_parenthesis_character_literal_case(),
+    )
+    passed += record_result(
+        failures,
         "phase1h-stdlib-contract-audit:private-and-rename-skip",
         run_private_and_rename_skip_case(),
     )
@@ -364,6 +401,11 @@ def run_stdlib_contract_audit_checks() -> RunCounts:
         failures,
         "phase1h-stdlib-contract-audit:expression-function",
         run_expression_function_case(),
+    )
+    passed += record_result(
+        failures,
+        "phase1h-stdlib-contract-audit:expression-function-private-scope",
+        run_expression_function_private_scope_case(),
     )
     passed += record_result(
         failures,

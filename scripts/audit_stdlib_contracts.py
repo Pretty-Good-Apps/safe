@@ -66,6 +66,15 @@ def is_double_quote_character_literal(line: str, index: int) -> bool:
     )
 
 
+def is_character_literal_content(line: str, index: int) -> bool:
+    return (
+        index > 0
+        and index + 1 < len(line)
+        and line[index - 1] == "'"
+        and line[index + 1] == "'"
+    )
+
+
 def strip_comment(line: str) -> str:
     in_string = False
     index = 0
@@ -105,6 +114,9 @@ def statement_end(lines: list[str], start: int) -> int:
         while char_index < len(line):
             char = line[char_index]
             nxt = line[char_index + 1] if char_index + 1 < len(line) else ""
+            if not in_string and is_character_literal_content(line, char_index):
+                char_index += 1
+                continue
             if char == '"':
                 if (
                     not in_string
@@ -140,18 +152,53 @@ def read_utf8_text_or_none(path: Path) -> str | None:
         return None
 
 
+def close_package_scope(package_stack: list[str], ended: str | None) -> None:
+    if not package_stack:
+        return
+    if ended is None:
+        package_stack.pop()
+        return
+    ended_lower = ended.lower()
+    for index in range(len(package_stack) - 1, -1, -1):
+        if package_stack[index].lower() == ended_lower:
+            del package_stack[index:]
+            return
+
+
 def collect_expression_functions(text: str) -> set[str]:
     names: set[str] = set()
     lines = text.splitlines()
-    in_private = False
+    package_stack: list[str] = []
+    private_depth: int | None = None
     index = 0
     while index < len(lines):
         line = strip_comment(lines[index])
-        if re.match(r"^\s*private\s*$", line, re.IGNORECASE):
-            in_private = True
+        end_match = re.match(
+            rf"^\s*end(?:\s+({DOTTED_ADA_NAME}))?\s*;",
+            line,
+            re.IGNORECASE,
+        )
+        if end_match:
+            close_package_scope(package_stack, end_match.group(1))
+            if private_depth is not None and len(package_stack) < private_depth:
+                private_depth = None
             index += 1
             continue
-        if not in_private:
+
+        package_match = re.match(
+            rf"^\s*package\s+(?!body\b)({DOTTED_ADA_NAME})\b",
+            line,
+            re.IGNORECASE,
+        )
+        if package_match:
+            name = package_match.group(1)
+            if not package_stack or package_stack[-1] != name:
+                package_stack.append(name)
+        if re.match(r"^\s*private\s*$", line, re.IGNORECASE):
+            private_depth = len(package_stack)
+            index += 1
+            continue
+        if private_depth is None or len(package_stack) < private_depth:
             index += 1
             continue
         match = re.match(
@@ -184,16 +231,7 @@ def collect_contract_declarations(path: Path, text: str) -> list[ContractDecl]:
             re.IGNORECASE,
         )
         if end_match:
-            ended = end_match.group(1)
-            if package_stack:
-                if ended is None:
-                    package_stack.pop()
-                else:
-                    ended_lower = ended.lower()
-                    while package_stack:
-                        popped = package_stack.pop()
-                        if popped.lower() == ended_lower:
-                            break
+            close_package_scope(package_stack, end_match.group(1))
             if private_depth is not None and len(package_stack) < private_depth:
                 private_depth = None
             index += 1
