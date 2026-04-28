@@ -93,7 +93,25 @@ def compare_inventory_scan_to_baseline(
                 f"{PHASE_LABEL} live scan differs from inventory baseline: "
                 f"{len(new_fingerprints)} new, {len(missing_fingerprints)} missing",
             )
-        return False, f"{PHASE_LABEL} live scan entries differ from committed baseline"
+        changed: list[tuple[str, list[str]]] = []
+        for fingerprint in sorted(set(live) & set(baseline)):
+            if live[fingerprint] == baseline[fingerprint]:
+                continue
+            fields = sorted(
+                field
+                for field in set(live[fingerprint]) | set(baseline[fingerprint])
+                if live[fingerprint].get(field) != baseline[fingerprint].get(field)
+            )
+            changed.append((fingerprint, fields))
+        if changed:
+            fingerprint, fields = changed[0]
+            return (
+                False,
+                f"{PHASE_LABEL} live scan entries differ from committed baseline: "
+                f"{len(changed)} changed "
+                f"(e.g. fingerprint {fingerprint!r}, fields {fields!r})",
+            )
+        return False, f"{PHASE_LABEL} live scan top-level fields differ from committed baseline"
     return True, ""
 
 
@@ -151,6 +169,23 @@ end Synthetic;
     decl = decls[0]
     if decl.subprogram != "Copy" or decl.end_line != 8:
         return False, f"unexpected multiline declaration {decl!r}"
+    return True, ""
+
+
+def run_case_insensitive_aspect_case() -> tuple[bool, str]:
+    path = REPO_ROOT / "compiler_impl" / "stdlib" / "ada" / "synthetic.ads"
+    decls = audit_stdlib_contracts.collect_contract_declarations(
+        path,
+        """
+package Synthetic is
+   procedure Lowercase
+     with global => null,
+          post => True;
+end Synthetic;
+""",
+    )
+    if [(decl.package, decl.subprogram) for decl in decls] != [("Synthetic", "Lowercase")]:
+        return False, "lowercase Ada aspect names were not detected"
     return True, ""
 
 
@@ -363,6 +398,11 @@ def run_stdlib_contract_audit_checks() -> RunCounts:
         failures,
         "phase1h-stdlib-contract-audit:multiline-declaration",
         run_multiline_declaration_case(),
+    )
+    passed += record_result(
+        failures,
+        "phase1h-stdlib-contract-audit:case-insensitive-aspect",
+        run_case_insensitive_aspect_case(),
     )
     passed += record_result(
         failures,

@@ -254,7 +254,7 @@ def collect_contract_declarations(path: Path, text: str) -> list[ContractDecl]:
         block_lines = [strip_comment(line) for line in lines[start : end + 1]]
         text_block = "\n".join(block_lines)
         normalized = normalized_text(text_block)
-        if any(re.search(rf"\b{name}\b", normalized) for name in ASPECT_NAMES):
+        if any(re.search(rf"\b{name}\b", normalized, re.IGNORECASE) for name in ASPECT_NAMES):
             package = ".".join(package_stack) if package_stack else path.stem
             declarations.append(
                 ContractDecl(
