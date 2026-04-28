@@ -266,6 +266,16 @@ begin
    end;
 end Raise_Diag;
 """,
+        "anonymous-end-nested-block-tail-helper": """
+procedure Raise_Diag is
+begin
+   declare
+   begin
+      null;
+   end;
+   Raise_Internal ("failed");
+end;
+""",
         "returns": """
 procedure Raise_Diag is
 begin
@@ -304,6 +314,7 @@ end Synthetic;
         "helper-call-raises": "raises",
         "anonymous-end-raises": "raises",
         "nested-block-raises": "raises",
+        "anonymous-end-nested-block-tail-helper": "raises",
         "returns": "returns",
         "unknown": "unknown",
         "exception-handler-only": "unknown",

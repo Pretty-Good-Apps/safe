@@ -286,17 +286,17 @@ def expected_body_path(spec_path: Path) -> Path:
 
 
 def procedure_body_match(helper_name: str, text: str) -> re.Match[str] | None:
+    source = sanitized_source(text)
     named_end_pattern = re.compile(
-        rf"(?ims)^[ \t]*procedure\s+{re.escape(helper_name)}\b.*?\bis\b"
+        rf"(?ims)^(?P<indent>[ \t]*)procedure\s+{re.escape(helper_name)}\b.*?\bis\b"
         rf"(?P<body>.*?)^[ \t]*end\s+{re.escape(helper_name)}\s*;",
     )
-    source = sanitized_source(text)
     match = named_end_pattern.search(source)
     if match is not None:
         return match
     anonymous_end_pattern = re.compile(
-        rf"(?ims)^[ \t]*procedure\s+{re.escape(helper_name)}\b.*?\bis\b"
-        rf"(?P<body>.*?)^[ \t]*end\s*;",
+        rf"(?ims)^(?P<indent>[ \t]*)procedure\s+{re.escape(helper_name)}\b.*?\bis\b"
+        rf"(?P<body>.*?)^(?P=indent)end\s*;",
     )
     return anonymous_end_pattern.search(source)
 
