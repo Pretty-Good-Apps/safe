@@ -1735,7 +1735,6 @@ package body Safe_Frontend.Check_Resolve is
               "internal error: malformed synthetic optional type `"
               & UString_Value (Base.Name)
               & "` is missing variant field `value`"));
-      return Default_Integer;
    end Optional_Payload_Type;
 
    function Is_Optional_Element_Type_Allowed
@@ -2820,7 +2819,6 @@ package body Safe_Frontend.Check_Resolve is
               "internal error: malformed synthetic growable-array type `"
               & UString_Value (Info.Name)
               & "` is missing component type information"));
-      return Default_Integer;
    end Growable_Array_Element_Type;
 
    function Try_Map_Key_Value_Types
@@ -4413,7 +4411,6 @@ package body Safe_Frontend.Check_Resolve is
            (Path    => Path,
             Span    => Span,
             Message => "unknown type `" & Name & "`"));
-      return Default_Integer;
    end Resolve_Type;
 
    function Literal_Value
@@ -4435,7 +4432,6 @@ package body Safe_Frontend.Check_Resolve is
            (Path    => Path,
             Span    => (if Expr = null then FT.Null_Span else Expr.Span),
             Message => Context));
-      return 0;
    end Literal_Value;
 
    function Sanitize_Type_Name_Component (Value : String) return String
@@ -4936,7 +4932,6 @@ package body Safe_Frontend.Check_Resolve is
                           (Path    => Path,
                            Span    => Spec.Span,
                            Message => "binary width must be one of 8, 16, 32, or 64"));
-                     return Default_Integer;
                end case;
             end;
          when CM.Type_Spec_Tuple =>
@@ -5105,7 +5100,6 @@ package body Safe_Frontend.Check_Resolve is
                  (Path    => Path,
                   Span    => Spec.Span,
                   Message => "unsupported type specification"));
-            return Default_Integer;
       end case;
    end Resolve_Type_Spec;
 
@@ -5473,7 +5467,6 @@ package body Safe_Frontend.Check_Resolve is
                      Span    => Expr.Span,
                      Message =>
                        "`optional T` is limited to the admitted value-type subset in PR11.10a"));
-               return Default_Integer;
             end;
          when CM.Expr_Try =>
             declare
@@ -9573,7 +9566,6 @@ package body Safe_Frontend.Check_Resolve is
            (Path    => Path,
             Span    => Expr.Span,
             Message => "expected assignment or call to a no-result function"));
-      return Expr;
    end Normalize_Procedure_Call;
 
    function Normalize_Procedure_Call_Checked
