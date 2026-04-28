@@ -213,6 +213,25 @@ end Synthetic;
     return True, ""
 
 
+def run_overloaded_declaration_line_case() -> tuple[bool, str]:
+    path = REPO_ROOT / "compiler_impl" / "src" / "synthetic.ads"
+    contracts = audit_spec_body_contract.collect_spec_contracts(
+        path,
+        """
+package Synthetic is
+   procedure Raise_Diag (Code : Integer);
+   procedure Raise_Diag (Message : String);
+   pragma No_Return (Raise_Diag);
+end Synthetic;
+""",
+    )
+    if len(contracts) != 1:
+        return False, f"expected one No_Return contract, found {len(contracts)}"
+    if contracts[0].declaration_line != 4:
+        return False, f"expected nearest overload declaration line 4, got {contracts[0].declaration_line}"
+    return True, ""
+
+
 def body_status_fixture(source: str, *, helper_name: str = "Raise_Diag") -> str:
     status, _line = audit_spec_body_contract.body_status_for_source(
         helper_name,
@@ -323,6 +342,11 @@ def run_spec_body_contract_audit_checks() -> RunCounts:
         failures,
         "phase1g-spec-body-contract-audit:comment-and-string",
         run_comment_and_string_case(),
+    )
+    passed += record_result(
+        failures,
+        "phase1g-spec-body-contract-audit:overloaded-declaration-line",
+        run_overloaded_declaration_line_case(),
     )
     passed += record_result(
         failures,

@@ -242,17 +242,28 @@ def procedure_name_from_statement(statement: Statement) -> str | None:
     return match.group("name")
 
 
+def nearest_declaration_line(lines: list[int], pragma_line: int) -> int | None:
+    prior = [line for line in lines if line <= pragma_line]
+    if prior:
+        return max(prior)
+    return lines[-1] if lines else None
+
+
 def collect_spec_contracts(path: Path, text: str) -> list[SpecContract]:
     statements = list(iter_statements(text))
-    declarations: dict[str, int] = {}
+    declarations: dict[str, list[int]] = {}
     for statement in statements:
         name = procedure_name_from_statement(statement)
         if name is not None:
-            declarations.setdefault(name.lower(), statement.start_line)
+            declarations.setdefault(name.lower(), []).append(statement.start_line)
 
     contracts: list[SpecContract] = []
     for statement in statements:
         for helper_name in no_return_names_from_statement(statement):
+            declaration_line = nearest_declaration_line(
+                declarations.get(helper_name.lower(), []),
+                statement.start_line,
+            )
             contracts.append(
                 SpecContract(
                     helper_name=helper_name,
@@ -260,7 +271,7 @@ def collect_spec_contracts(path: Path, text: str) -> list[SpecContract]:
                     pragma_end_line=statement.end_line,
                     pragma_text=statement.display_text,
                     first_line_text=statement.first_line_text,
-                    declaration_line=declarations.get(helper_name.lower()),
+                    declaration_line=declaration_line,
                 )
             )
     return contracts
