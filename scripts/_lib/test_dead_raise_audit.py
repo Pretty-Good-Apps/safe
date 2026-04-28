@@ -46,6 +46,16 @@ def read_baseline_payload() -> tuple[dict[str, object] | None, str]:
     return baseline_audit_gate.read_baseline_payload(BASELINE_PATH, repo_root=REPO_ROOT)
 
 
+def validate_closed_baseline(payload: dict[str, object]) -> tuple[bool, str]:
+    return baseline_audit_gate.validate_closed_baseline(
+        payload,
+        phase_label=PHASE_LABEL,
+        required_fields=REQUIRED_FIELDS,
+        valid_categories=audit_dead_raise.CATEGORIES,
+        valid_patterns=audit_dead_raise.PATTERNS,
+    )
+
+
 def compare_live_scan_to_baseline(
     live_payload: dict[str, object],
     baseline_payload: dict[str, object],
@@ -87,6 +97,9 @@ def run_live_scan_case() -> tuple[bool, str]:
     baseline, message = read_baseline_payload()
     if baseline is None:
         return False, message
+    ok, message = validate_closed_baseline(baseline)
+    if not ok:
+        return False, message
     ok, message = compare_live_scan_to_baseline(payload, baseline)
     if not ok:
         return False, message
@@ -99,7 +112,7 @@ def run_baseline_case() -> tuple[bool, str]:
     payload, message = read_baseline_payload()
     if payload is None:
         return False, message
-    return validate_entries(payload, "baseline")
+    return validate_closed_baseline(payload)
 
 
 def synthetic_entry(
