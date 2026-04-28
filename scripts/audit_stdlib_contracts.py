@@ -54,6 +54,15 @@ def normalized_text(text: str) -> str:
     return " ".join(text.strip().split())
 
 
+def is_double_quote_character_literal(line: str, index: int) -> bool:
+    return (
+        index > 0
+        and index + 1 < len(line)
+        and line[index - 1] == "'"
+        and line[index + 1] == "'"
+    )
+
+
 def strip_comment(line: str) -> str:
     in_string = False
     index = 0
@@ -64,6 +73,9 @@ def strip_comment(line: str) -> str:
         if not in_string and char == "-" and nxt == "-":
             break
         result.append(char)
+        if not in_string and char == '"' and is_double_quote_character_literal(line, index):
+            index += 1
+            continue
         if char == '"':
             if in_string and nxt == '"':
                 result.append(nxt)
@@ -91,6 +103,12 @@ def statement_end(lines: list[str], start: int) -> int:
             char = line[char_index]
             nxt = line[char_index + 1] if char_index + 1 < len(line) else ""
             if char == '"':
+                if (
+                    not in_string
+                    and is_double_quote_character_literal(line, char_index)
+                ):
+                    char_index += 1
+                    continue
                 if in_string and nxt == '"':
                     char_index += 2
                     continue

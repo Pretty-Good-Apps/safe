@@ -172,6 +172,22 @@ end Synthetic;
     return True, ""
 
 
+def run_double_quote_character_literal_case() -> tuple[bool, str]:
+    line = """   Quote : constant Character := '"'; -- comment"""
+    stripped = audit_stdlib_contracts.strip_comment(line)
+    if "-- comment" in stripped:
+        return False, "comment after double-quote character literal was not stripped"
+    lines = [
+        "   function Quote return Character",
+        """      with Post => Quote'Result = '"';""",
+        "   procedure Next;",
+    ]
+    end = audit_stdlib_contracts.statement_end(lines, 0)
+    if end != 1:
+        return False, f"statement_end crossed double-quote character literal; got {end}"
+    return True, ""
+
+
 def run_private_and_rename_skip_case() -> tuple[bool, str]:
     path = REPO_ROOT / "compiler_impl" / "stdlib" / "ada" / "synthetic.ads"
     decls = audit_stdlib_contracts.collect_contract_declarations(
@@ -274,6 +290,11 @@ def run_stdlib_contract_audit_checks() -> RunCounts:
         failures,
         "phase1h-stdlib-contract-audit:parameter-semicolon",
         run_parameter_semicolon_case(),
+    )
+    passed += record_result(
+        failures,
+        "phase1h-stdlib-contract-audit:double-quote-character-literal",
+        run_double_quote_character_literal_case(),
     )
     passed += record_result(
         failures,
