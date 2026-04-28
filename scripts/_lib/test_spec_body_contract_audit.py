@@ -123,6 +123,7 @@ def run_live_scan_case() -> tuple[bool, str]:
     ok, message = compare_live_scan_to_baseline(payload, baseline)
     if not ok:
         return False, message
+    # Missing fingerprints are report-only drift; surface the helper message when present.
     if message:
         print(message)
     ok, message = compare_body_status_to_baseline(payload, baseline)
@@ -279,6 +280,14 @@ begin
    end if;
 end Raise_Diag;
 """,
+        "exception-handler-only": """
+procedure Raise_Diag is
+begin
+exception
+   when others =>
+      raise Program_Error;
+end Raise_Diag;
+""",
         "missing": """
 package body Synthetic is
 end Synthetic;
@@ -290,6 +299,7 @@ end Synthetic;
         "nested-block-raises": "raises",
         "returns": "returns",
         "unknown": "unknown",
+        "exception-handler-only": "unknown",
         "missing": "missing",
     }
     for name, source in cases.items():

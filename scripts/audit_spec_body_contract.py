@@ -246,7 +246,7 @@ def nearest_declaration_line(lines: list[int], pragma_line: int) -> int | None:
     prior = [line for line in lines if line <= pragma_line]
     if prior:
         return max(prior)
-    return lines[-1] if lines else None
+    return None
 
 
 def collect_spec_contracts(path: Path, text: str) -> list[SpecContract]:
@@ -330,19 +330,20 @@ def body_status_for_source(
         return "unknown", body_line
     executable_region = body_text[begin_match.end() :]
     exception_match = re.search(r"(?im)^\s*exception\b", executable_region)
+    has_exception_handler = exception_match is not None
     if exception_match is not None:
         executable_region = executable_region[: exception_match.start()]
     if re.search(r"(?im)^\s*(if|case|loop|for|while|select)\b", executable_region):
         return "unknown", body_line
     statements = executable_statements(executable_region)
     if not statements:
-        return "returns", body_line
+        return ("unknown" if has_exception_handler else "returns"), body_line
     final = statements[-1].code_text
     if re.match(r"^raise\b", final, re.IGNORECASE):
         return "raises", body_line
     if starts_with_no_return_call(final, known_no_return_names | {helper_name}):
         return "raises", body_line
-    return "returns", body_line
+    return ("unknown" if has_exception_handler else "returns"), body_line
 
 
 def body_evidence_for(
