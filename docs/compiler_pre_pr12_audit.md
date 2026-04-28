@@ -1275,6 +1275,7 @@ Baseline counts:
 | `stdlib-generic-formal-contract` | 3 | `candidate` |
 | `stdlib-spark-on-runtime-contract` | 6 | `candidate` |
 | `stdlib-io-contract` | 1 | `candidate` |
+| `stdlib-unknown-contract` | 0 | none |
 
 SPARK-off package split:
 
@@ -1299,6 +1300,10 @@ Scanner notes:
 - Initial inventory surface counts are: 27 `spark-off-body`, 2
   `spark-on-body`, 6 `expression-function`, 3 `generic-stub`, 1
   `io-boundary`, and 0 `missing`/`unknown`.
+- `stdlib-unknown-contract` is a scanner stop-signal category for future
+  public stdlib contracts in packages outside the current hardcoded inventory
+  set. It has zero entries in the Phase 1H baseline; any future hit requires
+  triage before closeout.
 - `Safe_Ownership_RT` and `IO` are included beyond PR11.22h's covered package
   set because A-06 in `docs/traceability_matrix.md` identifies ownership
   runtime contracts as part of the heap-runtime trust boundary, and
@@ -1315,6 +1320,10 @@ Findings:
 - Inventory found 39 public stdlib contract-bearing declarations across four
   trust-boundary categories. All entries remain `candidate` until the Phase 1H
   triage PR.
+- Triage should explicitly decide whether `Safe_Ownership_RT.Allocate` and
+  `Safe_Ownership_RT.Free` intentionally omit `Global`/`Depends` because they
+  are heap-operation boundaries, or whether those omissions are contract gaps
+  requiring follow-up work.
 
 ## Phase 1I - Docs And Fixture Drift
 

@@ -37,6 +37,7 @@ EXPECTED_CATEGORY_COUNTS = {
     "stdlib-io-contract": 1,
     "stdlib-spark-off-runtime-contract": 29,
     "stdlib-spark-on-runtime-contract": 6,
+    "stdlib-unknown-contract": 0,
 }
 EXPECTED_PACKAGE_COUNTS = {
     "IO": 1,
@@ -237,6 +238,26 @@ end Outer;
     return True, ""
 
 
+def run_package_body_keyword_case() -> tuple[bool, str]:
+    path = REPO_ROOT / "compiler_impl" / "stdlib" / "ada" / "synthetic.ads"
+    decls = audit_stdlib_contracts.collect_contract_declarations(
+        path,
+        """
+package body Not_A_Spec is
+end Not_A_Spec;
+
+package Visible is
+   procedure A
+     with Global => null;
+end Visible;
+""",
+    )
+    packages = [(decl.package, decl.subprogram) for decl in decls]
+    if packages != [("Visible", "A")]:
+        return False, f"package body keyword should not be captured, got {packages!r}"
+    return True, ""
+
+
 def run_expression_function_case() -> tuple[bool, str]:
     names = audit_stdlib_contracts.collect_expression_functions(
         """
@@ -305,6 +326,11 @@ def run_stdlib_contract_audit_checks() -> RunCounts:
         failures,
         "phase1h-stdlib-contract-audit:sibling-package",
         run_sibling_package_case(),
+    )
+    passed += record_result(
+        failures,
+        "phase1h-stdlib-contract-audit:package-body-keyword",
+        run_package_body_keyword_case(),
     )
     passed += record_result(
         failures,

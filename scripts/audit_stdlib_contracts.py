@@ -21,6 +21,7 @@ CATEGORIES = (
     "stdlib-io-contract",
     "stdlib-spark-off-runtime-contract",
     "stdlib-spark-on-runtime-contract",
+    "stdlib-unknown-contract",
 )
 PATTERNS = ("stdlib-contract-subprogram",)
 IMPLEMENTATION_SURFACES = (
@@ -197,7 +198,7 @@ def collect_contract_declarations(path: Path, text: str) -> list[ContractDecl]:
             continue
 
         package_match = re.match(
-            r"^\s*package\s+([A-Za-z][A-Za-z0-9_]*)\b",
+            r"^\s*package\s+(?!body\b)([A-Za-z][A-Za-z0-9_]*)\b",
             line,
             re.IGNORECASE,
         )
@@ -327,7 +328,10 @@ def scan() -> dict[str, object]:
             continue
         expression_functions = collect_expression_functions(text)
         for decl in collect_contract_declarations(path, text):
-            category = category_for(decl)
+            try:
+                category = category_for(decl)
+            except ValueError:
+                category = "stdlib-unknown-contract"
             surface, implementation_path = implementation_surface_for(
                 decl,
                 expression_functions=expression_functions,
