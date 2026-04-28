@@ -89,6 +89,15 @@ def read_utf8_text_or_none(path: Path) -> str | None:
         return None
 
 
+def is_double_quote_character_literal(line: str, index: int) -> bool:
+    return (
+        index > 0
+        and index + 1 < len(line)
+        and line[index - 1] == "'"
+        and line[index + 1] == "'"
+    )
+
+
 def strip_comments_keep_strings(line: str) -> str:
     """Return an Ada line without comments, preserving string contents."""
 
@@ -101,6 +110,9 @@ def strip_comments_keep_strings(line: str) -> str:
         if not in_string and char == "-" and nxt == "-":
             break
         result.append(char)
+        if not in_string and char == '"' and is_double_quote_character_literal(line, index):
+            index += 1
+            continue
         if char == '"':
             if in_string and nxt == '"':
                 result.append(nxt)
@@ -122,6 +134,10 @@ def strip_comments_and_strings(line: str) -> str:
         nxt = line[index + 1] if index + 1 < len(line) else ""
         if not in_string and char == "-" and nxt == "-":
             break
+        if not in_string and char == '"' and is_double_quote_character_literal(line, index):
+            result.append(char)
+            index += 1
+            continue
         if char == '"':
             result.append('"')
             if in_string and nxt == '"':

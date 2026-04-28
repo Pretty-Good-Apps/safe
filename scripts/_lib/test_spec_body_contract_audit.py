@@ -194,6 +194,16 @@ end Synthetic;
 
 
 def run_comment_and_string_case() -> tuple[bool, str]:
+    character_literal_line = """Quote : constant Character := '"'; procedure Raise_Diag;"""
+    for stripper in (
+        audit_spec_body_contract.strip_comments_keep_strings,
+        audit_spec_body_contract.strip_comments_and_strings,
+    ):
+        stripped = stripper(character_literal_line)
+        if "procedure Raise_Diag" not in stripped:
+            return False, (
+                f"{stripper.__name__} dropped text after double-quote character literal"
+            )
     contracts = audit_spec_body_contract.collect_spec_contracts(
         """
 package Synthetic is
