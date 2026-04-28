@@ -1159,7 +1159,7 @@ Findings:
   `safe_frontend-check_resolve.adb`. Two identical resolver fallback shapes share
   one fingerprint with `multiplicity: 2`; diagnostic string contents are excluded
   from the fingerprint seed so typo-only message edits do not churn the baseline.
-- Candidate functions/sites: `Optional_Payload_Type`,
+- Affected functions/sites: `Optional_Payload_Type`,
   `Growable_Array_Element_Type`, `Resolve_Type`, `Literal_Value`, two
   `Resolve_Type_Spec` paths, optional-expression type fallback, and
   `Normalize_Procedure_Call`.
