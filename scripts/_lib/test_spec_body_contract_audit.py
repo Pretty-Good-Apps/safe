@@ -236,6 +236,16 @@ begin
    Raise_Internal ("failed");
 end Raise_Diag;
 """,
+        "nested-block-raises": """
+procedure Raise_Diag is
+begin
+   declare
+      Reason : Integer := 1;
+   begin
+      raise Program_Error;
+   end;
+end Raise_Diag;
+""",
         "returns": """
 procedure Raise_Diag is
 begin
@@ -258,6 +268,7 @@ end Synthetic;
     expected = {
         "raises": "raises",
         "helper-call-raises": "raises",
+        "nested-block-raises": "raises",
         "returns": "returns",
         "unknown": "unknown",
         "missing": "missing",
@@ -266,6 +277,17 @@ end Synthetic;
         actual = body_status_fixture(source)
         if actual != expected[name]:
             return False, f"{name} body_status expected {expected[name]!r}, got {actual!r}"
+    return True, ""
+
+
+def run_missing_body_file_case() -> tuple[bool, str]:
+    body = audit_spec_body_contract.body_evidence_for(
+        REPO_ROOT / "compiler_impl" / "src" / "synthetic_missing.ads",
+        "Raise_Diag",
+        known_no_return_names=set(),
+    )
+    if body.status != "missing" or body.line is not None:
+        return False, f"missing body file should report missing, got {body!r}"
     return True, ""
 
 
@@ -306,6 +328,11 @@ def run_spec_body_contract_audit_checks() -> RunCounts:
         failures,
         "phase1g-spec-body-contract-audit:body-status",
         run_body_status_cases(),
+    )
+    passed += record_result(
+        failures,
+        "phase1g-spec-body-contract-audit:missing-body-file",
+        run_missing_body_file_case(),
     )
     passed += record_result(
         failures,

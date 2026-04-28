@@ -85,7 +85,7 @@ def iter_sources(root: Path, *, suffixes: set[str]) -> Iterable[Path]:
 def read_utf8_text_or_none(path: Path) -> str | None:
     try:
         return path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
+    except (OSError, UnicodeDecodeError):
         return None
 
 
@@ -287,7 +287,10 @@ def executable_statements(text: str) -> list[Statement]:
         normalized = statement.code_text.lower()
         if not normalized:
             continue
-        if normalized.startswith(("begin", "declare", "exception", "end ")):
+        if any(
+            starts_with_keyword(normalized, keyword)
+            for keyword in ("begin", "declare", "exception", "end")
+        ):
             continue
         result.append(statement)
     return result
