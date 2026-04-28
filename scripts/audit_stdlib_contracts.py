@@ -153,10 +153,31 @@ def collect_contract_declarations(path: Path, text: str) -> list[ContractDecl]:
     lines = text.splitlines()
     declarations: list[ContractDecl] = []
     package_stack: list[str] = []
-    in_private = False
+    private_depth: int | None = None
     index = 0
     while index < len(lines):
         line = strip_comment(lines[index])
+        end_match = re.match(
+            r"^\s*end(?:\s+([A-Za-z][A-Za-z0-9_]*))?\s*;",
+            line,
+            re.IGNORECASE,
+        )
+        if end_match:
+            ended = end_match.group(1)
+            if package_stack:
+                if ended is None:
+                    package_stack.pop()
+                else:
+                    ended_lower = ended.lower()
+                    while package_stack:
+                        popped = package_stack.pop()
+                        if popped.lower() == ended_lower:
+                            break
+            if private_depth is not None and len(package_stack) < private_depth:
+                private_depth = None
+            index += 1
+            continue
+
         package_match = re.match(
             r"^\s*package\s+([A-Za-z][A-Za-z0-9_]*)\b",
             line,
@@ -167,10 +188,10 @@ def collect_contract_declarations(path: Path, text: str) -> list[ContractDecl]:
             if not package_stack or package_stack[-1] != name:
                 package_stack.append(name)
         if re.match(r"^\s*private\s*$", line, re.IGNORECASE):
-            in_private = True
+            private_depth = len(package_stack)
             index += 1
             continue
-        if in_private:
+        if private_depth is not None and len(package_stack) >= private_depth:
             index += 1
             continue
 

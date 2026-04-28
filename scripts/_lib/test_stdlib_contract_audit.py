@@ -193,6 +193,34 @@ end Synthetic;
     return True, ""
 
 
+def run_sibling_package_case() -> tuple[bool, str]:
+    path = REPO_ROOT / "compiler_impl" / "stdlib" / "ada" / "synthetic.ads"
+    decls = audit_stdlib_contracts.collect_contract_declarations(
+        path,
+        """
+package Outer is
+   package First is
+      procedure A
+        with Global => null;
+   private
+      procedure Hidden
+        with Global => null;
+   end First;
+
+   package Second is
+      procedure B
+        with Global => null;
+   end Second;
+end Outer;
+""",
+    )
+    packages = [(decl.package, decl.subprogram) for decl in decls]
+    expected = [("Outer.First", "A"), ("Outer.Second", "B")]
+    if packages != expected:
+        return False, f"sibling package stack mismatch: expected {expected!r}, got {packages!r}"
+    return True, ""
+
+
 def run_expression_function_case() -> tuple[bool, str]:
     names = audit_stdlib_contracts.collect_expression_functions(
         """
@@ -251,6 +279,11 @@ def run_stdlib_contract_audit_checks() -> RunCounts:
         failures,
         "phase1h-stdlib-contract-audit:private-and-rename-skip",
         run_private_and_rename_skip_case(),
+    )
+    passed += record_result(
+        failures,
+        "phase1h-stdlib-contract-audit:sibling-package",
+        run_sibling_package_case(),
     )
     passed += record_result(
         failures,
