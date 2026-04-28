@@ -11,6 +11,7 @@ from _lib import (
     test_arithmetic_audit,
     test_cli_workflows,
     test_contracts,
+    test_dead_raise_audit,
     test_embedded_listing,
     test_emitted_shape,
     test_fixtures,
@@ -59,6 +60,7 @@ def main() -> int:
     add_counts(test_arithmetic_audit.run_arithmetic_audit_checks())
     add_counts(test_gnatprove_trust_audit.run_gnatprove_trust_audit_checks())
     add_counts(test_spark_mode_off_audit.run_spark_mode_off_audit_checks())
+    add_counts(test_dead_raise_audit.run_dead_raise_audit_checks())
     add_counts(test_proof_cli.run_internal_proof_checks())
     add_counts(test_proof_diagnostics.run_proof_diagnostic_checks())
     add_counts(test_rosetta_inventory.run_rosetta_inventory_checks())
