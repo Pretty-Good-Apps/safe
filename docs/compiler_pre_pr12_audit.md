@@ -5,7 +5,7 @@ Project board: https://github.com/users/berkeleynerd/projects/4/views/1
 Audit SHA: `5450c30406e5535cab772e511e1ec326217f16f1`
 Audit doc ref: `main`
 Ripgrep: `ripgrep 15.1.0 (rev af60c2de9d)`
-Next action: Phase 1H triage - Stdlib Runtime Trust Boundaries.
+Next action: Phase 1H closeout - Stdlib Runtime Trust Boundaries.
 
 This is the canonical working record for the pre-PR12.1 Safe compiler audit.
 The code under audit is pinned at `Audit SHA`; this document remains a living
@@ -1232,7 +1232,7 @@ Findings:
 
 ## Phase 1H - Stdlib Runtime Trust Boundaries
 
-Status: inventory complete; triage pending.
+Status: triage complete; closeout pending.
 
 Enforcement default: inventory exact-baseline check until triage/closeout
 decides whether to promote an active baseline gate.
@@ -1248,16 +1248,14 @@ Inventory:
 
 - Script: `scripts/audit_stdlib_contracts.py`.
 - Machine baseline: `audit/phase1h_stdlib_contract_baseline.json`.
-- Current baseline entries: 39 `candidate` fingerprints.
+- Current baseline entries: 39 `accepted-with-rationale` fingerprints.
 - Scope: public declarations with explicit `Global`, `Depends`, `Pre`, `Post`,
   or `Always_Terminates` aspects under `compiler_impl/stdlib/ada/*.ads`.
   Renames without explicit aspects, such as `Dispose`, are excluded. Private
   completions are excluded as primary entries and instead recorded through
   implementation metadata where relevant.
-- The live scanner must exactly match the committed inventory baseline during
-  this phase. Triage will replace `candidate` entries with accepted or
-  follow-up classifications before closeout decides whether to promote an
-  active baseline gate.
+- The live scanner must exactly match the committed triage baseline until
+  closeout decides whether to promote an active baseline gate.
 
 Commands:
 
@@ -1271,10 +1269,10 @@ Baseline counts:
 
 | Category | Entries | Current classification |
 | --- | ---: | --- |
-| `stdlib-spark-off-runtime-contract` | 29 | `candidate` |
-| `stdlib-generic-formal-contract` | 3 | `candidate` |
-| `stdlib-spark-on-runtime-contract` | 6 | `candidate` |
-| `stdlib-io-contract` | 1 | `candidate` |
+| `stdlib-spark-off-runtime-contract` | 29 | `accepted-with-rationale` |
+| `stdlib-generic-formal-contract` | 3 | `accepted-with-rationale` |
+| `stdlib-spark-on-runtime-contract` | 6 | `accepted-with-rationale` |
+| `stdlib-io-contract` | 1 | `accepted-with-rationale` |
 | `stdlib-unknown-contract` | 0 | none |
 
 SPARK-off package split:
@@ -1285,6 +1283,18 @@ SPARK-off package split:
 | `Safe_Array_Identity_RT` | 9 |
 | `Safe_String_RT` | 9 |
 | `Safe_Ownership_RT` | 2 |
+
+Triage rationale distribution:
+
+| Package | Entries | Rationale cluster |
+| --- | ---: | --- |
+| `Safe_Array_RT` | 9 | A-06 heap-runtime contracts |
+| `Safe_Array_Identity_RT` | 9 | identity-preserving runtime contracts |
+| `Safe_String_RT` | 9 | A-06 heap-backed string runtime contracts |
+| `Safe_Bounded_Strings.Generic_Bounded_String` | 6 | SPARK-on or expression-function runtime contracts |
+| `Safe_Array_Identity_Ops` | 3 | generic formal proof seams |
+| `Safe_Ownership_RT` | 2 | A-06 ownership heap-runtime boundary |
+| `IO` | 1 | external I/O boundary |
 
 Scanner notes:
 
@@ -1311,19 +1321,44 @@ Scanner notes:
   records both `safe_ownership_rt.adb` and `io.adb` as SPARK-off boundary
   islands.
 - The inventory starts from the PR11.22h stdlib contract audit and the A-06
-  boundary notes instead of rediscovering scope from scratch. Triage should
-  classify each candidate against those prior audit findings and record any
-  needed repro/fix work explicitly.
+  boundary notes instead of rediscovering scope from scratch. Triage classified
+  all entries against those prior audit findings and recorded no Phase 1H fix
+  queue.
+
+Classification rules:
+
+- `Safe_Array_RT`, `Safe_String_RT`, and `Safe_Ownership_RT` entries are
+  accepted A-06 heap-runtime trust boundaries: public specs are the proof
+  surface, while SPARK-off bodies implement allocation, copying, slicing,
+  concatenation, deallocation, or ownership operations trusted by the emitted
+  verification matrix.
+- `Safe_Array_Identity_RT` entries are accepted identity-preserving runtime
+  boundaries. PR11.22h deliberately retained stronger elementwise contracts for
+  identity-preserving operations, and those contracts remain the caller-facing
+  proof surface for the trusted runtime body.
+- `Safe_Bounded_Strings.Generic_Bounded_String` entries are accepted when the
+  implementation is a SPARK-on body or private expression-function completion
+  covered by PR11.22h's stdlib contract audit.
+- `Safe_Array_Identity_Ops` entries are accepted generic formal proof seams:
+  instantiations provide the concrete `Default`, `Clone`, and `Free`
+  implementations, while the formal contracts constrain the operations required
+  by the identity-preserving array runtime.
+- `IO.Put_Line` is accepted as an external I/O boundary. The spec gives the
+  proof-model surface while the body delegates to `Ada.Text_IO.Put_Line`; output
+  side effects are outside the SPARK memory/value model.
 
 Findings:
 
 - Inventory found 39 public stdlib contract-bearing declarations across four
-  trust-boundary categories. All entries remain `candidate` until the Phase 1H
-  triage PR.
-- Triage should explicitly decide whether `Safe_Ownership_RT.Allocate` and
-  `Safe_Ownership_RT.Free` intentionally omit `Global`/`Depends` because they
-  are heap-operation boundaries, or whether those omissions are contract gaps
-  requiring follow-up work.
+  trust-boundary categories. Triage classified all 39 as
+  `accepted-with-rationale`; no `candidate`, `needs-repro`, or
+  `confirmed-defect` entries remain.
+- `Safe_Ownership_RT.Allocate` and `Safe_Ownership_RT.Free` intentionally remain
+  accepted A-06 ownership heap-runtime boundaries. Their omitted
+  `Global`/`Depends` aspects are part of the current trusted boundary: the
+  SPARK-off allocation/deallocation wrapper.
+- Phase 1H has no fix queue after triage. The next PR should perform the
+  closeout/gate-promotion step if the live scan remains stable.
 
 ## Phase 1I - Docs And Fixture Drift
 
