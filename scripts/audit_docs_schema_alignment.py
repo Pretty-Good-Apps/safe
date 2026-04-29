@@ -187,7 +187,12 @@ def make_count_claim(
     claim_text: str,
     pattern: str,
 ) -> Claim:
-    status = "missing-target" if actual_value is None else status_for_count(doc_value, actual_value)
+    effective_actual = 0 if actual_value is None and doc_value == 0 else actual_value
+    status = (
+        "missing-target"
+        if effective_actual is None
+        else status_for_count(doc_value, effective_actual)
+    )
     target = f"{repo_rel(BASELINE_BY_PHASE[phase])}:{key}"
     return Claim(
         category="audit-doc-baseline-count",
@@ -198,7 +203,7 @@ def make_count_claim(
         claim_text=claim_text,
         verification_target=target,
         doc_value=doc_value,
-        actual_value="" if actual_value is None else actual_value,
+        actual_value="" if effective_actual is None else effective_actual,
         alignment_status=status,
     )
 
@@ -258,7 +263,8 @@ def actual_count_for_row(
         return len(entries)
     categories = state["categories"]
     assert isinstance(categories, dict)
-    return int(categories.get(row_key, 0))
+    raw = categories.get(row_key)
+    return int(raw) if raw is not None else None
 
 
 def actual_classification_for_row(
@@ -393,7 +399,14 @@ def iter_audit_doc_baseline_claims() -> Iterable[Claim]:
                 pattern="audit-doc-category-count",
             )
         if table_header and table_header[0] == "Category" and len(cells) >= 3:
-            doc_classification = clean_cell(cells[-1])
+            classification_index = (
+                table_header.index("Current classification")
+                if "Current classification" in table_header
+                else 2
+            )
+            if classification_index >= len(cells):
+                continue
+            doc_classification = clean_cell(cells[classification_index])
             if doc_classification:
                 yield make_status_claim(
                     phase=phase,
@@ -732,10 +745,19 @@ def iter_claims() -> Iterable[Claim]:
 def scan() -> dict[str, object]:
     prior = existing_classifications()
     entries: list[dict[str, object]] = []
+    seen_fingerprints: dict[str, Claim] = {}
     for claim in iter_claims():
         if claim.alignment_status not in ALIGNMENT_STATUSES:
             raise ValueError(f"invalid alignment_status {claim.alignment_status!r}")
         fingerprint = fingerprint_for(claim)
+        previous = seen_fingerprints.get(fingerprint)
+        if previous is not None:
+            raise ValueError(
+                "duplicate Phase 1I.C fingerprint "
+                f"{fingerprint} for {repo_rel(previous.path)}:{previous.line} "
+                f"and {repo_rel(claim.path)}:{claim.line}"
+            )
+        seen_fingerprints[fingerprint] = claim
         prior_entry = prior.get(fingerprint, {})
         entries.append(
             {
