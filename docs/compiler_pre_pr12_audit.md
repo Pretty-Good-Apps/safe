@@ -5,7 +5,7 @@ Project board: https://github.com/users/berkeleynerd/projects/4/views/1
 Audit SHA: `5450c30406e5535cab772e511e1ec326217f16f1`
 Audit doc ref: `main`
 Ripgrep: `ripgrep 15.1.0 (rev af60c2de9d)`
-Next action: Phase 1I.C - Schema-Vs-Doc Alignment Inventory.
+Next action: combined Phase 1I triage across 1I.A/B/C inventories.
 
 This is the canonical working record for the pre-PR12.1 Safe compiler audit.
 The code under audit is pinned at `Audit SHA`; this document remains a living
@@ -1525,6 +1525,87 @@ Notes:
 
 Findings: no classifications yet. All 291 entries remain `candidate` pending
 the combined Phase 1I triage after 1I.C inventory lands.
+
+### Phase 1I.C - Schema-Vs-Doc Alignment Inventory
+
+Scanner: `scripts/audit_docs_schema_alignment.py`
+
+Baseline: `audit/phase1i_schema_doc_alignment_baseline.json`
+
+Scope:
+
+- `compiler/translation_rules.md` references to
+  `compiler/ast_schema.json` AST node names.
+- `docs/compiler_pre_pr12_audit.md` baseline count and classification claims
+  for completed baseline-backed phases.
+- Curated v1 claims in `docs/artifact_contract.md`: artifact format versions,
+  required JSON fields, target-bit invariants, diagnostics format, and selected
+  optional fields verified by `scripts/validate_output_contracts.py` or
+  `scripts/_lib/harness_common.py`.
+- Frozen-commit freshness claims in `compiler/translation_rules.md`,
+  `docs/traceability_matrix.md`, and `docs/traceability_matrix.csv`.
+
+Out of scope for 1I.C: arbitrary prose truth claims, uncurated
+`artifact_contract.md` expansion beyond the v1 claim set, code-snippet drift,
+path-reference existence/digest checks, and fixes for discovered mismatches.
+The `artifact-contract-shape` category is included because it is the same
+self-referential drift pattern as schema and baseline docs: documentation
+claims about machine-readable artifact contracts.
+
+Inventory counts:
+
+| Category | Entries | Current classification |
+| --- | ---: | --- |
+| `artifact-contract-shape` | 15 | `candidate` |
+| `audit-doc-baseline-count` | 35 | `candidate` |
+| `audit-doc-baseline-status` | 35 | `candidate` |
+| `frozen-commit-freshness` | 3 | `candidate` |
+| `schema-ast-reference` | 31 | `candidate` |
+| **Total** | **119** | `candidate` |
+
+Alignment status:
+
+| Status | Entries |
+| --- | ---: |
+| `aligned` | 115 |
+| `mismatch` | 3 |
+| `missing-target` | 1 |
+| `unknown` | 0 |
+
+Notes:
+
+- Fingerprints identify the claim surface: category, path, claim key,
+  normalized claim text, and verification target. Line numbers are display
+  metadata.
+- Inventory comparison tolerates line-number-only drift because these claims
+  are content-anchored; nearby prose edits can shift lines without changing the
+  claim being audited.
+- The v1 `artifact-contract-shape` claim set is curated deliberately. Future
+  expansion of artifact-contract coverage should use a scan-extension PR
+  rather than silent scope growth during triage.
+- Several v1 artifact-contract checks are shallow shape checks: they verify
+  that curated format-version, field, diagnostic, or target-bit contract text is
+  still present in the implementing helper, not that the helper's full control
+  flow has been semantically analyzed. Stronger artifact-contract extraction
+  should land as a scan-extension PR if future drift makes this too weak.
+- Phase 1I.C extends the cross-file scanner pattern from categorical metadata
+  to document-to-schema/document-to-artifact validation. It records claim
+  alignment as secondary metadata (`alignment_status`) while keeping the claim
+  identity separate from line-only display metadata.
+
+Findings: no classifications yet. All 119 entries remain `candidate` pending
+combined Phase 1I triage. Known triage inputs are:
+
+- Phase 1C arithmetic baseline count drift: the audit doc records 244 total
+  entries and 96 `target-bits` entries, while the live
+  `audit/phase1c_arithmetic_baseline.json` contains 245 total entries and 97
+  `target-bits` entries.
+- The Phase 1C prose summary also records
+  `accepted-with-rationale:244, candidate:0`; the live baseline now contains
+  `accepted-with-rationale:245`.
+- `compiler/translation_rules.md` references AST node
+  `AccessToObjectDefinition`, but `compiler/ast_schema.json` has no matching
+  node.
 
 ## Phase 2 - Large-File Deep Dives
 
