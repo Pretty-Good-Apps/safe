@@ -1709,18 +1709,17 @@ Checkpoint 1 dispatchers/functions examined:
 - `Render_Statements` dispatcher arms covered:
   `Stmt_Object_Decl`, `Stmt_Destructure_Decl`, `Stmt_Assign`, `Stmt_Call`,
   `Stmt_Return`, `Stmt_If`, `Stmt_Case`, and `Stmt_While`.
-- Deferred to checkpoint 2: `Stmt_For` from line 4950, `Stmt_Loop` from line
-  8414, the remaining send/receive/select/delay/unsupported dispatcher arms,
-  and post-`Render_Statements` helpers including `Append_Assignment`
-  at lines 9253-9840. If checkpoint 2 is still too large, split it again at
-  line 8414 before `Stmt_Loop`; that three-checkpoint departure is justified by
-  the 3464-line `Stmt_For` arm.
+- Deferred after checkpoint 1: `Stmt_For` from line 4950, `Stmt_Loop` from
+  line 8414, the remaining send/receive/select/delay/unsupported dispatcher
+  arms, and post-`Render_Statements` helpers including `Append_Assignment`
+  at lines 9253-9840. The three-checkpoint split assigns the 3464-line
+  `Stmt_For` arm to checkpoint 2 and the later arms/helpers to checkpoint 3.
 
 Checkpoint 1 permutation coverage:
 
 | Matrix row | Families considered | Permutations simulated | Coverage / rationale |
 | --- | --- | --- | --- |
-| Assignment | `Stmt_Assign` dispatcher call-site; scalar/local targets; global/shared-root targets; same-root alias shapes | local vs global root; same-root alias; in-loop vs non-loop static tracking | Dispatcher call-site covered. The actual assignment renderer, `Append_Assignment`, is deferred to checkpoint 2 because its body is at lines 9253-9840. No finding: checkpoint 1 preserves fail-closed routing to the deferred helper and invalidates mutated target/value lengths after the call. |
+| Assignment | `Stmt_Assign` dispatcher call-site; scalar/local targets; global/shared-root targets; same-root alias shapes | local vs global root; same-root alias; in-loop vs non-loop static tracking | Dispatcher call-site covered. The actual assignment renderer, `Append_Assignment`, is deferred to checkpoint 3 because its body is at lines 9253-9840. No finding: checkpoint 1 preserves fail-closed routing to the deferred helper and invalidates mutated target/value lengths after the call. |
 | Procedure call | `Stmt_Call`; print calls; unresolved/unknown callees; local/imported subprograms; observer/mutator parameter effects; growable indexed copy-back | print vs ordinary call; value actual vs `mut`/`out` actual; local vs package-qualified callee; growable indexed copy-back with shared index snapshots | Covered: `Stmt_Call` delegates either to print rendering or `Emit_Call_Statement`, whose body is in checkpoint 1 at lines 3629-4216. No finding: unknown callees render through the generic expression path, copy-back rejects shared-root mutable prefixes with `Raise_Unsupported`, and snapshot replacement checks fail closed. |
 | Loop | `Stmt_While`; dynamic/shared-root guards; variant-producing binary guards; no-variant guards | direct while guard vs snapshot loop form; variant vs no variant; counted lower-bound invariant present vs absent | Partially covered: `Stmt_While` is complete; `Stmt_For` and `Stmt_Loop` are deferred. No finding: the while arm asserts variant guard renderability before emission and uses the snapshot loop form when condition reads require stable shared-root snapshots. |
 | Case/match/select | `Stmt_Case`; static/dynamic scrutinee; shared-root scrutinee snapshots; else/others arm text | direct case vs snapshot-wrapped case; explicit arm choices vs `when others`; string/single-character helper path | Partially covered: `Stmt_Case` is complete. `Stmt_Match` is bundled with `Stmt_Unknown` in the unsupported arm around line 9085 and is deferred with `Stmt_Select`. No finding: case emission wraps shared scrutinee snapshots before branch dispatch and restores static binding state per arm. |
