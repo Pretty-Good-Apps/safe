@@ -105,35 +105,24 @@ def compare_target_status_to_baseline(
     live_payload: dict[str, object],
     baseline_payload: dict[str, object],
 ) -> tuple[bool, str]:
-    live = baseline_audit_gate.fingerprint_map(live_payload)
-    baseline = baseline_audit_gate.fingerprint_map(baseline_payload)
-    for fingerprint in sorted(set(live) & set(baseline)):
-        live_status = live[fingerprint].get("target_status")
-        baseline_status = baseline[fingerprint].get("target_status")
-        if live_status != baseline_status:
-            return (
-                False,
-                f"{PHASE_LABEL} target_status drift: {baseline_status!r} -> "
-                f"{live_status!r} at {baseline_audit_gate.describe_entry(live[fingerprint])}",
-            )
-    return True, ""
+    return baseline_audit_gate.compare_metadata_fields_to_baseline(
+        live_payload,
+        baseline_payload,
+        phase_label=PHASE_LABEL,
+        fields=("target_status",),
+    )
 
 
 def target_digest_report_only_message(
     live_payload: dict[str, object],
     baseline_payload: dict[str, object],
 ) -> str:
-    live = baseline_audit_gate.fingerprint_map(live_payload)
-    baseline = baseline_audit_gate.fingerprint_map(baseline_payload)
-    drifts = []
-    for fingerprint in sorted(set(live) & set(baseline)):
-        if live[fingerprint].get("target_digest") != baseline[fingerprint].get("target_digest"):
-            drifts.append(baseline_audit_gate.describe_entry(live[fingerprint]))
-    if not drifts:
-        return ""
-    examples = "; ".join(drifts[:5])
-    suffix = "" if len(drifts) <= 5 else f"; ... {len(drifts) - 5} more"
-    return f"{PHASE_LABEL} target_digest drift (report-only): {examples}{suffix}"
+    return baseline_audit_gate.metadata_drift_report_only(
+        live_payload,
+        baseline_payload,
+        phase_label=PHASE_LABEL,
+        fields=("target_digest",),
+    )
 
 
 def run_live_scan_case() -> tuple[bool, str]:
@@ -256,11 +245,23 @@ def run_closed_baseline_rejects_missing_target_case() -> tuple[bool, str]:
 
 
 def run_target_digest_report_only_gate_case() -> tuple[bool, str]:
-    baseline = {"entries": [synthetic_entry("same", target_digest="0" * 64)]}
-    live = {"entries": [synthetic_entry("same", target_digest="1" * 64)]}
+    baseline = {
+        "entries": [
+            synthetic_entry(f"same-{index}", target_digest="0" * 64)
+            for index in range(6)
+        ]
+    }
+    live = {
+        "entries": [
+            synthetic_entry(f"same-{index}", target_digest="1" * 64)
+            for index in range(6)
+        ]
+    }
     message = target_digest_report_only_message(live, baseline)
     if "report-only" not in message:
         return False, f"target_digest drift should report without failing, got: {message}"
+    if "... 1 more" not in message or "same-5" in message:
+        return False, f"target_digest drift should aggregate and truncate, got: {message}"
     return True, ""
 
 

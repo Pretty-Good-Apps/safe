@@ -91,18 +91,12 @@ def compare_snippet_digest_to_baseline(
     live_payload: dict[str, object],
     baseline_payload: dict[str, object],
 ) -> tuple[bool, str]:
-    live = baseline_audit_gate.fingerprint_map(live_payload)
-    baseline = baseline_audit_gate.fingerprint_map(baseline_payload)
-    for fingerprint in sorted(set(live) & set(baseline)):
-        live_digest = live[fingerprint].get("snippet_digest")
-        baseline_digest = baseline[fingerprint].get("snippet_digest")
-        if live_digest != baseline_digest:
-            return (
-                False,
-                f"{PHASE_LABEL} snippet_digest drift: {baseline_digest!r} -> "
-                f"{live_digest!r} at {baseline_audit_gate.describe_entry(live[fingerprint])}",
-            )
-    return True, ""
+    return baseline_audit_gate.compare_metadata_fields_to_baseline(
+        live_payload,
+        baseline_payload,
+        phase_label=PHASE_LABEL,
+        fields=("snippet_digest",),
+    )
 
 
 def run_live_scan_case() -> tuple[bool, str]:

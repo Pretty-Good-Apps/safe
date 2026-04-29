@@ -5,7 +5,7 @@ Project board: https://github.com/users/berkeleynerd/projects/4/views/1
 Audit SHA: `5450c30406e5535cab772e511e1ec326217f16f1`
 Audit doc ref: `main`
 Ripgrep: `ripgrep 15.1.0 (rev af60c2de9d)`
-Next action: cross-file secondary-metadata consolidation, then Phase 2.
+Next action: Phase 2 kickoff for large-file deep dives.
 
 This is the canonical working record for the pre-PR12.1 Safe compiler audit.
 The code under audit is pinned at `Audit SHA`; this document remains a living
@@ -792,16 +792,18 @@ Working with the baseline:
   surface. Claim-against-state policy, used by Phase 1G, Phase 1H, and
   Phase 1I.C, fails when categorical or alignment metadata drifts because that
   metadata records whether the claim still matches machine state.
-- Cross-file drift detection logic remains local to each phase-specific test
-  module for now: Phase 1G validates `body_status`, Phase 1H validates
-  `implementation_surface`, and Phase 1I validates `target_status`,
-  `target_digest`, `snippet_digest`, and `alignment_status` under the
-  field-specific policies above. Phase 1I is the third cross-file scanner
-  instance and supplies the first mixed fail/report-only content-hash policies,
-  so the deferred consolidation trigger is now met. The next PR should plan a
-  shared `baseline_audit_gate.py` API that accepts per-metadata-field drift
-  policy parameters; the API shape is deliberately left to that dedicated
-  consolidation PR.
+- Cross-file drift detection now uses shared `baseline_audit_gate.py` helpers
+  for ordered secondary-metadata field comparison while preserving
+  phase-specific wrappers and diagnostics. Phase 1G validates `body_status`,
+  Phase 1H validates `implementation_surface`, and Phase 1I validates
+  `target_status`, `target_digest`, `snippet_digest`, `doc_value`,
+  `actual_value`, and `alignment_status` through phase-parameterized calls.
+  Reference-existence, content-as-audit-target, and claim-against-state
+  policies remain explicit in the phase wrappers: failing fields use the shared
+  gate-fatal comparator, while the 1I.A fixture `target_digest` policy uses the
+  shared report-only aggregator with bounded example output. Domain-specific
+  baseline admissibility and enum/value validation remain local to each
+  scanner test module.
 - Cross-scanner consolidation pattern: extract shared logic into a helper,
   migrate per scanner in separate commits, preserve domain-specific scanner
   behavior locally, and defer scanner-script or JSON-shape normalization to

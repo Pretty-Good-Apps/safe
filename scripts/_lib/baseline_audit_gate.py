@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable, Container, Iterable
+from collections.abc import Callable, Container, Iterable, Sequence
 from pathlib import Path
 
 
@@ -199,6 +199,76 @@ def compare_live_scan_to_baseline(
             f"(report-only): {examples}{suffix}",
         )
     return True, ""
+
+
+def compare_metadata_fields_to_baseline(
+    live_payload: Payload,
+    baseline_payload: Payload,
+    *,
+    phase_label: str,
+    fields: Sequence[str],
+    identifier_for: Callable[[Entry], str | None] | None = None,
+) -> CaseResult:
+    """Compare ordered secondary-metadata fields for matching fingerprints."""
+
+    ordered_fields = tuple(fields)
+    live = fingerprint_map(live_payload)
+    baseline = fingerprint_map(baseline_payload)
+    for fingerprint in sorted(set(live) & set(baseline)):
+        live_entry = live[fingerprint]
+        baseline_entry = baseline[fingerprint]
+        for field in ordered_fields:
+            live_value = live_entry.get(field)
+            baseline_value = baseline_entry.get(field)
+            if live_value != baseline_value:
+                identifier = identifier_for(live_entry) if identifier_for is not None else None
+                if identifier:
+                    return (
+                        False,
+                        f"{phase_label} {field} drift for {identifier}: "
+                        f"{baseline_value!r} -> {live_value!r} at {describe_entry(live_entry)}",
+                    )
+                return (
+                    False,
+                    f"{phase_label} {field} drift: "
+                    f"{baseline_value!r} -> {live_value!r} at {describe_entry(live_entry)}",
+                )
+    return True, ""
+
+
+def metadata_drift_report_only(
+    live_payload: Payload,
+    baseline_payload: Payload,
+    *,
+    phase_label: str,
+    fields: Sequence[str],
+    max_examples: int = 5,
+) -> str:
+    """Report ordered secondary-metadata drift without failing the gate."""
+
+    ordered_fields = tuple(fields)
+    live = fingerprint_map(live_payload)
+    baseline = fingerprint_map(baseline_payload)
+    drifts: list[str] = []
+    include_field_in_example = len(ordered_fields) != 1
+    for fingerprint in sorted(set(live) & set(baseline)):
+        live_entry = live[fingerprint]
+        baseline_entry = baseline[fingerprint]
+        for field in ordered_fields:
+            if live_entry.get(field) != baseline_entry.get(field):
+                description = describe_entry(live_entry)
+                if include_field_in_example:
+                    description = f"{field} at {description}"
+                drifts.append(description)
+    if not drifts:
+        return ""
+    examples = "; ".join(drifts[:max_examples])
+    suffix = "" if len(drifts) <= max_examples else f"; ... {len(drifts) - max_examples} more"
+    if len(ordered_fields) == 1:
+        field_label = ordered_fields[0]
+    else:
+        field_label = "metadata"
+    return f"{phase_label} {field_label} drift (report-only): {examples}{suffix}"
 
 
 def run_gate_self_check(

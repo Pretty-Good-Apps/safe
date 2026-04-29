@@ -116,21 +116,13 @@ def compare_implementation_surface_to_baseline(
 ) -> tuple[bool, str]:
     """Validate cross-file implementation metadata separately from the fingerprint."""
 
-    live = baseline_audit_gate.fingerprint_map(live_payload)
-    baseline = baseline_audit_gate.fingerprint_map(baseline_payload)
-    for fingerprint in sorted(set(live) & set(baseline)):
-        live_surface = live[fingerprint].get("implementation_surface")
-        baseline_surface = baseline[fingerprint].get("implementation_surface")
-        if live_surface != baseline_surface:
-            package = live[fingerprint].get("package")
-            subprogram = live[fingerprint].get("subprogram")
-            return (
-                False,
-                f"{PHASE_LABEL} implementation_surface drift for "
-                f"{package}.{subprogram}: {baseline_surface!r} -> {live_surface!r} at "
-                f"{baseline_audit_gate.describe_entry(live[fingerprint])}",
-            )
-    return True, ""
+    return baseline_audit_gate.compare_metadata_fields_to_baseline(
+        live_payload,
+        baseline_payload,
+        phase_label=PHASE_LABEL,
+        fields=("implementation_surface",),
+        identifier_for=lambda entry: f"{entry.get('package')}.{entry.get('subprogram')}",
+    )
 
 
 def run_live_scan_case() -> tuple[bool, str]:

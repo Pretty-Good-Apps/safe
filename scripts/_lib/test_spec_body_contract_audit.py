@@ -94,20 +94,13 @@ def compare_body_status_to_baseline(
 ) -> tuple[bool, str]:
     """Validate cross-file body metadata separately from the spec fingerprint."""
 
-    live = baseline_audit_gate.fingerprint_map(live_payload)
-    baseline = baseline_audit_gate.fingerprint_map(baseline_payload)
-    for fingerprint in sorted(set(live) & set(baseline)):
-        live_status = live[fingerprint].get("body_status")
-        baseline_status = baseline[fingerprint].get("body_status")
-        if live_status != baseline_status:
-            helper = live[fingerprint].get("helper_name")
-            return (
-                False,
-                f"{PHASE_LABEL} body_status drift for {helper}: "
-                f"{baseline_status!r} -> {live_status!r} at "
-                f"{baseline_audit_gate.describe_entry(live[fingerprint])}",
-            )
-    return True, ""
+    return baseline_audit_gate.compare_metadata_fields_to_baseline(
+        live_payload,
+        baseline_payload,
+        phase_label=PHASE_LABEL,
+        fields=("body_status",),
+        identifier_for=lambda entry: str(entry.get("helper_name")),
+    )
 
 
 def run_live_scan_case() -> tuple[bool, str]:
