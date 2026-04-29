@@ -104,20 +104,12 @@ def compare_alignment_metadata_to_baseline(
 ) -> tuple[bool, str]:
     """Validate content-derived claim metadata separately from line display drift."""
 
-    live = baseline_audit_gate.fingerprint_map(live_payload)
-    baseline = baseline_audit_gate.fingerprint_map(baseline_payload)
-    fields = ("doc_value", "actual_value", "alignment_status")
-    for fingerprint in sorted(set(live) & set(baseline)):
-        for field in fields:
-            live_value = live[fingerprint].get(field)
-            baseline_value = baseline[fingerprint].get(field)
-            if live_value != baseline_value:
-                return (
-                    False,
-                    f"{PHASE_LABEL} {field} drift: {baseline_value!r} -> "
-                    f"{live_value!r} at {baseline_audit_gate.describe_entry(live[fingerprint])}",
-                )
-    return True, ""
+    return baseline_audit_gate.compare_metadata_fields_to_baseline(
+        live_payload,
+        baseline_payload,
+        phase_label=PHASE_LABEL,
+        fields=("doc_value", "actual_value", "alignment_status"),
+    )
 
 
 def run_live_scan_case() -> tuple[bool, str]:
