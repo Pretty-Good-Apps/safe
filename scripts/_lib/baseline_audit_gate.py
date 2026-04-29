@@ -222,7 +222,7 @@ def compare_metadata_fields_to_baseline(
             baseline_value = baseline_entry.get(field)
             if live_value != baseline_value:
                 identifier = identifier_for(live_entry) if identifier_for is not None else None
-                if identifier:
+                if identifier is not None:
                     return (
                         False,
                         f"{phase_label} {field} drift for {identifier}: "

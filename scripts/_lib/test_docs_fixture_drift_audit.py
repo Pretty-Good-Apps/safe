@@ -245,22 +245,33 @@ def run_closed_baseline_rejects_missing_target_case() -> tuple[bool, str]:
 
 
 def run_target_digest_report_only_gate_case() -> tuple[bool, str]:
+    baseline_entries = [
+        synthetic_entry(f"same-{index}", target_digest="0" * 64)
+        for index in range(6)
+    ]
+    live_entries = [
+        synthetic_entry(f"same-{index}", target_digest="1" * 64)
+        for index in range(6)
+    ]
     baseline = {
-        "entries": [
-            synthetic_entry(f"same-{index}", target_digest="0" * 64)
-            for index in range(6)
-        ]
+        "entries": baseline_entries,
     }
     live = {
-        "entries": [
-            synthetic_entry(f"same-{index}", target_digest="1" * 64)
-            for index in range(6)
-        ]
+        "entries": live_entries,
     }
     message = target_digest_report_only_message(live, baseline)
     if "report-only" not in message:
         return False, f"target_digest drift should report without failing, got: {message}"
-    if "... 1 more" not in message or "same-5" in message:
+    included_examples = [
+        baseline_audit_gate.describe_entry(entry)
+        for entry in live_entries[:5]
+    ]
+    omitted_example = baseline_audit_gate.describe_entry(live_entries[5])
+    if (
+        "... 1 more" not in message
+        or any(example not in message for example in included_examples)
+        or omitted_example in message
+    ):
         return False, f"target_digest drift should aggregate and truncate, got: {message}"
     return True, ""
 
