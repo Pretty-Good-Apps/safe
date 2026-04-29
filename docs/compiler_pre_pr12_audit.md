@@ -1616,7 +1616,8 @@ schema-doc drift findings from triage are resolved:
   accepted entries, and 97 `target-bits` entries.
 - The stale translation-rule mapping for named access type definitions now
   documents that the parser rejects the removed source construct before Ada
-  emission rather than referencing a non-existent AST node.
+  emission rather than documenting a user-facing AST schema reference absent
+  from `compiler/ast_schema.json`.
 
 Phase 1I fix queue:
 
