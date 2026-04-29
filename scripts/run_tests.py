@@ -14,6 +14,7 @@ from _lib import (
     test_dead_raise_audit,
     test_docs_code_snippet_drift_audit,
     test_docs_fixture_drift_audit,
+    test_docs_schema_alignment_audit,
     test_embedded_listing,
     test_emitted_shape,
     test_fixtures,
@@ -69,6 +70,7 @@ def main() -> int:
     add_counts(test_stdlib_contract_audit.run_stdlib_contract_audit_checks())
     add_counts(test_docs_fixture_drift_audit.run_docs_fixture_drift_audit_checks())
     add_counts(test_docs_code_snippet_drift_audit.run_docs_code_snippet_drift_audit_checks())
+    add_counts(test_docs_schema_alignment_audit.run_docs_schema_alignment_audit_checks())
     add_counts(test_proof_cli.run_internal_proof_checks())
     add_counts(test_proof_diagnostics.run_proof_diagnostic_checks())
     add_counts(test_rosetta_inventory.run_rosetta_inventory_checks())
