@@ -1583,6 +1583,11 @@ Notes:
 - The v1 `artifact-contract-shape` claim set is curated deliberately. Future
   expansion of artifact-contract coverage should use a scan-extension PR
   rather than silent scope growth during triage.
+- Several v1 artifact-contract checks are shallow shape checks: they verify
+  that curated format-version, field, diagnostic, or target-bit contract text is
+  still present in the implementing helper, not that the helper's full control
+  flow has been semantically analyzed. Stronger artifact-contract extraction
+  should land as a scan-extension PR if future drift makes this too weak.
 - Phase 1I.C extends the cross-file scanner pattern from categorical metadata
   to document-to-schema/document-to-artifact validation. It records claim
   alignment as secondary metadata (`alignment_status`) while keeping the claim

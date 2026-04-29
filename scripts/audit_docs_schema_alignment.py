@@ -442,6 +442,7 @@ def ast_node_names() -> set[str]:
 def iter_ast_reference_claims() -> Iterable[Claim]:
     nodes = ast_node_names()
     lines = TRANSLATION_RULES_DOC.read_text(encoding="utf-8").splitlines()
+    occurrences_by_node: dict[str, int] = {}
     for index, line in enumerate(lines, start=1):
         segments: list[str] = []
         if "AST:" in line:
@@ -455,13 +456,20 @@ def iter_ast_reference_claims() -> Iterable[Claim]:
                 if node_name in seen_on_line:
                     continue
                 seen_on_line.add(node_name)
+                occurrences_by_node[node_name] = occurrences_by_node.get(node_name, 0) + 1
+                occurrence = occurrences_by_node[node_name]
+                claim_key = (
+                    f"ast-node:{node_name}"
+                    if occurrence == 1
+                    else f"ast-node:{node_name}#{occurrence}"
+                )
                 present = node_name in nodes
                 yield Claim(
                     category="schema-ast-reference",
                     pattern="translation-rules-ast-node",
                     path=TRANSLATION_RULES_DOC,
                     line=index,
-                    claim_key=f"ast-node:{node_name}",
+                    claim_key=claim_key,
                     claim_text=normalized_text(line),
                     verification_target=f"{repo_rel(AST_SCHEMA_PATH)}:nodes.{node_name}",
                     doc_value=node_name,
