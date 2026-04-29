@@ -88,7 +88,7 @@ def run_live_scan_case() -> tuple[bool, str]:
         return False, message
     audit_docs_schema_alignment.print_summary(
         payload,
-        baseline_entries=audit_docs_schema_alignment.existing_classifications(),
+        prior_classifications=audit_docs_schema_alignment.existing_classifications(),
     )
     baseline, message = read_baseline_payload()
     if baseline is None:
@@ -143,6 +143,9 @@ def run_ast_reference_case() -> tuple[bool, str]:
 
 
 def run_baseline_count_mismatch_case() -> tuple[bool, str]:
+    # This locks the known Phase 1C count drift as triage input. When the
+    # combined Phase 1I triage/fix reconciles the drift, delete or update this
+    # case rather than loosening the numeric assertions.
     payload = audit_docs_schema_alignment.scan()
     entries = baseline_audit_gate.entries_for(payload)
     by_key = {entry["claim_key"]: entry for entry in entries}

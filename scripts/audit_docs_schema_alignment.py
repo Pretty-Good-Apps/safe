@@ -203,7 +203,7 @@ def make_count_claim(
         claim_text=claim_text,
         verification_target=target,
         doc_value=doc_value,
-        actual_value="" if effective_actual is None else effective_actual,
+        actual_value="missing" if effective_actual is None else effective_actual,
         alignment_status=status,
     )
 
@@ -860,23 +860,23 @@ def counts_by_alignment_status(payload: dict[str, object]) -> dict[str, int]:
 
 def print_summary(
     payload: dict[str, object],
-    baseline_entries: dict[str, dict[str, object]] | None = None,
+    prior_classifications: dict[str, dict[str, object]] | None = None,
 ) -> None:
     for category, count in sorted(counts_by_category(payload).items()):
         print(f"[Phase 1I.C] {category}: {count}")
     for status, count in sorted(counts_by_alignment_status(payload).items()):
         print(f"[Phase 1I.C] alignment {status}: {count}")
     entries = payload.get("entries", [])
-    if baseline_entries is None:
-        baseline_entries = existing_classifications()
+    if prior_classifications is None:
+        prior_classifications = existing_classifications()
     current = {
         str(entry.get("fingerprint"))
         for entry in entries
         if isinstance(entry, dict) and entry.get("fingerprint")
     }
-    new_count = len(current - set(baseline_entries))
-    missing_count = len(set(baseline_entries) - current)
-    print(f"[Phase 1I.C] baseline entries: {len(baseline_entries)}")
+    new_count = len(current - set(prior_classifications))
+    missing_count = len(set(prior_classifications) - current)
+    print(f"[Phase 1I.C] baseline entries: {len(prior_classifications)}")
     print(f"[Phase 1I.C] new outside baseline: {new_count}")
     print(f"[Phase 1I.C] missing from baseline: {missing_count}")
 
