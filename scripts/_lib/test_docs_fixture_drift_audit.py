@@ -69,7 +69,18 @@ def validate_closed_baseline(payload: dict[str, object]) -> tuple[bool, str]:
     )
     if not ok:
         return False, message
-    return validate_target_statuses(payload, "baseline")
+    ok, message = validate_target_statuses(payload, "baseline")
+    if not ok:
+        return False, message
+    for entry in baseline_audit_gate.entries_for(payload):
+        status = entry.get("target_status")
+        if status != "present":
+            return (
+                False,
+                f"closed {PHASE_LABEL} baseline may only contain present targets; "
+                f"found target_status {status!r} at {baseline_audit_gate.describe_entry(entry)}",
+            )
+    return True, ""
 
 
 def read_baseline_payload() -> tuple[dict[str, object] | None, str]:
@@ -233,6 +244,14 @@ def run_target_status_drift_gate_case() -> tuple[bool, str]:
     ok, message = compare_target_status_to_baseline(live, baseline)
     if ok or "present" not in message or "missing" not in message:
         return False, f"target_status drift should fail with both statuses, got: {message}"
+    return True, ""
+
+
+def run_closed_baseline_rejects_missing_target_case() -> tuple[bool, str]:
+    baseline = {"entries": [synthetic_entry("known", target_status="missing", target_digest="")]}
+    ok, message = validate_closed_baseline(baseline)
+    if ok or "target_status" not in message or "missing" not in message:
+        return False, f"closed baseline missing target should fail, got: {message}"
     return True, ""
 
 
@@ -439,6 +458,11 @@ def run_docs_fixture_drift_audit_checks() -> RunCounts:
         failures,
         "phase1i-docs-fixture-drift:target-status-drift-gate",
         run_target_status_drift_gate_case(),
+    )
+    passed += record_result(
+        failures,
+        "phase1i-docs-fixture-drift:closed-baseline-target-status-gate",
+        run_closed_baseline_rejects_missing_target_case(),
     )
     passed += record_result(
         failures,
