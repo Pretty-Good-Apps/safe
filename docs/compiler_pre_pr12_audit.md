@@ -5,7 +5,8 @@ Project board: https://github.com/users/berkeleynerd/projects/4/views/1
 Audit SHA: `5450c30406e5535cab772e511e1ec326217f16f1`
 Audit doc ref: `main`
 Ripgrep: `ripgrep 15.1.0 (rev af60c2de9d)`
-Next action: continue Phase 2 statement-emitter checkpoint 2 from `Stmt_For`.
+Next action: continue Phase 2 statement-emitter checkpoint 3 from `Stmt_Loop`
+and the remaining statement-emitter helpers.
 
 This is the canonical working record for the pre-PR12.1 Safe compiler audit.
 The code under audit is pinned at `Audit SHA`; this document remains a living
@@ -1726,11 +1727,32 @@ Checkpoint 1 permutation coverage:
 | Send/receive | `Emit_Nonblocking_Send_Statement`; scalar channel payloads; heap-backed channel payloads; staged length/copy/free paths | scalar direct `Try_Send`; heap payload staging; failed send cleanup; task-body warning suppression | Supplementary helper coverage outside the worked five-row matrix. Dispatcher arms for `Stmt_Send`, `Stmt_Receive`, `Stmt_Try_Send`, and `Stmt_Try_Receive` are deferred. No finding: the helper stages heap payloads before `Try_Send`, reconciles length metadata, and frees staged heap values on failed sends. |
 | `Raise_Unsupported` path | checkpoint 1 unconditional unsupported paths in `Emit_Call_Statement` and early `Render_Statements` null-statement guard | unsupported shared-root copy-back prefix; null statement pointer before dispatcher | Covered call sites at lines 4022 and 4246 were checked for no dead code after raise. Later raise sites in `Stmt_For` and subsequent arms are deferred. No finding: both checkpoint 1 call sites are direct fail-closed exits with no subsequent local fallback return in the same branch. |
 
+Checkpoint 2 covers only the outsized `Stmt_For` arm at lines 4950-8413.
+The three-checkpoint split is now active: checkpoint 3 starts at
+`Stmt_Loop` on line 8414 and covers the remaining `Render_Statements` arms,
+`Stmt_Match` bundled with `Stmt_Unknown`, and post-`Render_Statements`
+helpers including `Append_Assignment`. Checkpoint 2 reuses helper coverage
+from checkpoint 1 for `Loop_Variant_Image` (lines 2118-2363),
+`Render_Variant_While_Guard_Image` (lines 2365-2406), and
+`Append_Counted_While_Lower_Bound_Invariant` (lines 2408-2791); the new
+audit surface is the `Stmt_For` arm's local helper and emission logic.
+
+Checkpoint 2 permutation coverage:
+
+| Matrix row | Families considered | Permutations simulated | Coverage / rationale |
+| --- | --- | --- | --- |
+| `Stmt_For` entry and discrete-range fallback | for-of iterable path; non-iterable discrete range path; string, bounded-string, growable-array, and fixed-array iterables | iterable vs `Loop_Range`; plain string vs bounded string; growable snapshot vs fixed snapshot; fallback discrete range | Covered: the arm begins at line 4950, while the non-iterable range fallback is lines 8401-8413. No finding: the branch snapshots iterable values before body emission and routes ordinary discrete ranges through `Render_Discrete_Range` without entering the for-of helper lattice. |
+| Nested body/name analysis | local declarations, assignment writes, match/case/select subtrees, nested loops, send/receive side effects | declared-name collision vs clean body; nested `Stmt_For` that touches the accumulator vs one that does not; select/channel arms treated fail-closed | Covered: `Statements_Declare_Name` at lines 5049-5153, plus nested statement-kind checks at lines 5097, 5108, 5446, 6130, 6139, 6458, 6766, 6957, and 7099. No finding: every unsupported or synchronization-heavy nested shape blocks optional invariant inference instead of emitting optimistic proof text. |
+| Accumulator invariants | scalar/growable accumulators; exact counters; nested for steps; bounded integer/product steps | nonnegative literal step; direct loop item step; bounded product step; branch max step; growable sum/count relation | Covered: `Prior_Local_Literal_Length` lines 5514-5604, `Accumulator_Value_Expr` lines 5606-5617, `Try_Nonnegative_Static_Step` lines 5619-5638, `Try_Direct_Loop_Item_Step` lines 5640-5681, `Try_Bounded_Product_Step` lines 5766-5791, `Growable_Accumulator_Invariant` lines 6482-6539, and `Sum_Count_Relational_Invariant` lines 6541-6576. No finding: invariant generation is opt-in and fail-closed when arithmetic bounds, body writes, or nested-loop summaries cannot be proven locally. |
+| String growth and static unrolling | bounded-string growth, static string iteration, static growable literals, conditional static string bodies | append step vs unsafe update; static string collapse vs per-element rendering; single-element vs multi-element growable literal; post-loop sum assertion present vs absent | Covered: `Try_Static_String_Append_Step` lines 6578-6611, `String_Growth_Accumulator_Invariant` lines 6973-7029, `Static_Growable_Literal_Expr` lines 7115-7155, `Try_Static_String_Iterable` lines 7157-7194, `Static_Growable_Prefix_Sum_Invariant` lines 7196-7311, `Static_Growable_Post_Sum_Assertion` lines 7313-7450, and `Try_Static_String_Additive_Update` lines 7723-7788. No finding: static shortcuts preserve source assignments with GNATprove warning suppression and fall back to rendered body emission when a condition or element image is not statically known. |
+| Cleanup and fall-through | snapshot cleanup, loop-item cleanup, heap-backed element cleanup, body fall-through cleanup | cleanup frame absent vs present; loop body falls through vs exits/returns; plain string/growable/composite element cleanup vs scalar element | Covered: cleanup setup at lines 7483, 7487, 7557, 7559, 7572, 7585, 8304, 8306, 8312, and 8318; `Statements_Fall_Through` checks at lines 7681 and 8348; cleanup rendering and pops at lines 7697, 7713, 8372, 8388, 8395, and 8396. No finding: cleanup frames are pushed only for paths that need ownership cleanup and rendered only after fall-through checks, so early non-fall-through exits do not gain spurious cleanup statements. |
+| `Raise_Unsupported` path | checkpoint 2 `Stmt_For` arm | verified absence of direct unsupported raises in the covered range | Covered by an empty `Raise_Unsupported` grep over lines 4950-8413. No finding: checkpoint 2 introduces no direct raise-after-dead-code surface; later unsupported paths remain checkpoint 3 work. |
+
 Findings:
 
-None for checkpoint 1. The audit value for this PR is the recorded
+None for checkpoints 1 and 2. The audit value for these PRs is the recorded
 permutation coverage above; no CPA entries were created because no covered
-checkpoint-1 path produced a candidate finding.
+checkpoint-1 or checkpoint-2 path produced a candidate finding.
 
 ### safe_frontend-check_resolve.adb
 
