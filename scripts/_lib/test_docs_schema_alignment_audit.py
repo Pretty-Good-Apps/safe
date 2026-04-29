@@ -51,6 +51,8 @@ def validate_alignment_statuses(payload: dict[str, object], label: str) -> tuple
 
 
 def validate_entries(payload: object, label: str) -> tuple[bool, str]:
+    if not isinstance(payload, dict):
+        return False, f"{label} is not a dict"
     ok, message = baseline_audit_gate.validate_entries(
         payload,
         label,
@@ -60,8 +62,6 @@ def validate_entries(payload: object, label: str) -> tuple[bool, str]:
     )
     if not ok:
         return False, message
-    if not isinstance(payload, dict):
-        return False, f"{label} is not a dict"
     return validate_alignment_statuses(payload, label)
 
 
@@ -125,6 +125,9 @@ def run_baseline_case() -> tuple[bool, str]:
 
 def run_ast_reference_case() -> tuple[bool, str]:
     claims = list(audit_docs_schema_alignment.iter_ast_reference_claims())
+    # This inventory intentionally pins the current single documented reference
+    # to the missing schema node. If docs add/remove that reference, the scanner
+    # baseline should be reviewed during the combined Phase 1I triage.
     missing = [claim for claim in claims if claim.claim_key == "ast-node:AccessToObjectDefinition"]
     if len(missing) != 1:
         return False, f"expected one AccessToObjectDefinition claim, got {len(missing)}"

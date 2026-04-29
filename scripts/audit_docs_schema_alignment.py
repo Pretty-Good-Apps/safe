@@ -56,13 +56,6 @@ BASELINE_BY_PHASE = {
     "1I.B": REPO_ROOT / "audit" / "phase1i_code_snippet_drift_baseline.json",
 }
 
-PHASE_METADATA_FIELDS = {
-    "1G": ("body_status",),
-    "1H": ("package", "implementation_surface"),
-    "1I.A": ("target_status",),
-    "1I.B": ("language",),
-}
-
 NUMBER_WORDS = {
     "zero": 0,
     "one": 1,
@@ -159,8 +152,6 @@ def load_baseline_state() -> dict[str, dict[str, object]]:
             "categories": count_by(entries, "category"),
             "classifications": count_by(entries, "classification"),
         }
-        for field in PHASE_METADATA_FIELDS.get(phase, ()):
-            state[phase][field] = count_by(entries, field)
     return state
 
 
@@ -258,7 +249,6 @@ def actual_count_for_row(
     *,
     phase: str,
     row_key: str,
-    table_header: tuple[str, ...],
     baseline_state: dict[str, dict[str, object]],
 ) -> int | None:
     state = baseline_state[phase]
@@ -266,23 +256,9 @@ def actual_count_for_row(
     assert isinstance(entries, list)
     if row_key == "Total":
         return len(entries)
-    if table_header and table_header[0] == "Category":
-        categories = state["categories"]
-        assert isinstance(categories, dict)
-        return int(categories.get(row_key, 0))
-    if table_header and table_header[0] == "Status":
-        statuses = state.get("target_status", {})
-        if isinstance(statuses, dict):
-            return int(statuses.get(row_key, 0))
-    if table_header and table_header[0] == "Language":
-        languages = state.get("language", {})
-        if isinstance(languages, dict):
-            return int(languages.get(row_key, 0))
-    if table_header and table_header[0] == "Package":
-        packages = state.get("package", {})
-        if isinstance(packages, dict):
-            return int(packages.get(row_key, 0))
-    return None
+    categories = state["categories"]
+    assert isinstance(categories, dict)
+    return int(categories.get(row_key, 0))
 
 
 def actual_classification_for_row(
@@ -403,7 +379,6 @@ def iter_audit_doc_baseline_claims() -> Iterable[Claim]:
             actual_count = actual_count_for_row(
                 phase=phase,
                 row_key=row_key,
-                table_header=table_header,
                 baseline_state=baseline_state,
             )
             yield make_count_claim(
@@ -629,7 +604,7 @@ def find_line(path: Path, marker: str) -> tuple[int, str]:
     for index, line in enumerate(lines, start=1):
         if marker in line:
             return index, normalized_text(line)
-    return 1, marker
+    raise ValueError(f"artifact-contract marker not found in {repo_rel(path)}: {marker}")
 
 
 def iter_artifact_contract_claims() -> Iterable[Claim]:
@@ -662,6 +637,8 @@ def ast_schema_frozen_commit() -> str:
 
 def iter_frozen_commit_claims() -> Iterable[Claim]:
     commit = ast_schema_frozen_commit()
+    if not commit:
+        return
     short = commit[:7]
 
     rules_text = TRANSLATION_RULES_DOC.read_text(encoding="utf-8")
@@ -708,6 +685,10 @@ def iter_frozen_commit_claims() -> Iterable[Claim]:
             if "@" in str(row.get("clause_id", ""))
         }
     doc_value = ",".join(sorted(prefixes))
+    # The v1 traceability matrix uses one frozen schema commit. Multiple
+    # prefixes would be a scope change that needs triage rather than silent
+    # comparison against a single current schema prefix.
+    status = status_for_count(doc_value, short) if len(prefixes) == 1 else "unknown"
     yield Claim(
         category="frozen-commit-freshness",
         pattern="frozen-commit-value",
@@ -718,7 +699,7 @@ def iter_frozen_commit_claims() -> Iterable[Claim]:
         verification_target=f"{repo_rel(AST_SCHEMA_PATH)}:frozen_commit[:7]",
         doc_value=doc_value,
         actual_value=short,
-        alignment_status=status_for_count(doc_value, short),
+        alignment_status=status,
     )
 
 
