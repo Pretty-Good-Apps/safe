@@ -190,6 +190,7 @@ def synthetic_entry(
     target_status: str = "present",
     target_digest: str = "0" * 64,
     line: int = 1,
+    line_numbers: list[int] | None = None,
 ) -> dict[str, object]:
     return {
         "fingerprint": fingerprint,
@@ -197,7 +198,7 @@ def synthetic_entry(
         "pattern": "safe-fixture-path",
         "path": "docs/synthetic.md",
         "line": line,
-        "line_numbers": [line],
+        "line_numbers": [line] if line_numbers is None else line_numbers,
         "first_line_text": "`tests/positive/rule1_accumulate.safe`",
         "target_path": "tests/positive/rule1_accumulate.safe",
         "target_kind": "safe-source",
@@ -241,6 +242,21 @@ def run_target_digest_report_only_gate_case() -> tuple[bool, str]:
     message = target_digest_report_only_message(live, baseline)
     if "report-only" not in message:
         return False, f"target_digest drift should report without failing, got: {message}"
+    return True, ""
+
+
+def run_line_only_drift_gate_case() -> tuple[bool, str]:
+    baseline = {"entries": [synthetic_entry("same", line=1, line_numbers=[1])]}
+    live = {"entries": [synthetic_entry("same", line=244, line_numbers=[240, 244])]}
+    ok, message = compare_live_scan_to_baseline(live, baseline)
+    if not ok or message:
+        return False, f"line-only drift should not fail fingerprint gate, got: {message}"
+    ok, message = compare_target_status_to_baseline(live, baseline)
+    if not ok or message:
+        return False, f"line-only drift should not fail target_status gate, got: {message}"
+    message = target_digest_report_only_message(live, baseline)
+    if message:
+        return False, f"line-only drift should not report target_digest drift, got: {message}"
     return True, ""
 
 
@@ -428,6 +444,11 @@ def run_docs_fixture_drift_audit_checks() -> RunCounts:
         failures,
         "phase1i-docs-fixture-drift:target-digest-report-only-gate",
         run_target_digest_report_only_gate_case(),
+    )
+    passed += record_result(
+        failures,
+        "phase1i-docs-fixture-drift:line-only-drift-gate",
+        run_line_only_drift_gate_case(),
     )
     passed += record_result(
         failures,
