@@ -5,8 +5,7 @@ Project board: https://github.com/users/berkeleynerd/projects/4/views/1
 Audit SHA: `5450c30406e5535cab772e511e1ec326217f16f1`
 Audit doc ref: `main`
 Ripgrep: `ripgrep 15.1.0 (rev af60c2de9d)`
-Next action: start Phase 2 Ada emit proofs deep dive for
-`safe_frontend-ada_emit-proofs.adb`.
+Next action: start Phase 3 arithmetic and classification replay.
 
 This is the canonical working record for the pre-PR12.1 Safe compiler audit.
 The code under audit is pinned at `Audit SHA`; this document remains a living
@@ -2182,11 +2181,29 @@ and no soundness or correctness CPA entries were created.
 
 ### safe_frontend-ada_emit-proofs.adb
 
-Owner: TBD.
+Owner: Codex.
+
+This deep dive covers `compiler_impl/src/safe_frontend-ada_emit-proofs.adb`
+lines 1-3674 in one PR. This closes the listed Phase 2 large-file deep dives
+and moves the audit record to the Phase 3 arithmetic and classification replay.
+
+Permutation coverage:
+
+| Audit row | Families/permutations | Coverage | Notes |
+| --- | --- | --- | --- |
+| Signature and graph helpers | parameter modes; return types; function/procedure keyword selection; alias vs non-alias declarations; graph summary lookup; transitive global-name use through expressions, statements, calls, and select arms | Covered: helper cluster lines 24-351, including `Render_Subprogram_Params`, `Render_Subprogram_Return`, `Render_Ada_Subprogram_Keyword`, `Alias_Declarations`, `Non_Alias_Declarations`, `Render_In_Out_Param_Stabilizers`, `Find_Graph_Summary`, and `Subprogram_Uses_Global_Name`. | No finding: the `Stmt_Try_Send` path fails closed with `Raise_Internal` at line 245 because the resolver should already reject that shape before proof emission. |
+| Initializes and Global aspects | mutable globals; channels and tasks; shared-wrapper state; observed vs modified globals; imported summaries; direct and transitive shared/global use | Covered: initializes/global aspect range lines 352-833, including `Render_Initializes_Aspect` lines 352-404 and `Render_Global_Aspect` lines 405-833. | No finding: aspect names are filtered through state-name and constant-object checks, then grouped into Input/Output/In_Out clauses only when live graph evidence reaches the subprogram. The `Stmt_Try_Send` traversal path fails closed with `Raise_Internal` at line 688. |
+| Depends aspect | allowed outputs and inputs; read-only param inputs; shared state normalization; graph channels; empty Depends entries; invalid summary names | Covered: `Render_Depends_Aspect` lines 834-1122. | No finding: empty or state-output-free summaries suppress Depends emission, while invalid Depends outputs and inputs fail closed through `Raise_Internal` at lines 1038, 1068, and 1087. |
+| Access pre/postconditions | owner access null checks; mutable and alias params; indexed access length bounds; duplicate target suppression; unsupported statement shapes | Covered: access pre/postcondition range lines 1123-1662, including `Render_Access_Param_Precondition` lines 1123-1535 and `Render_Access_Param_Postcondition` lines 1536-1662. | No finding: preconditions add non-null and bounds guards only for recognized owner-access paths. Postconditions intentionally return an empty image when unsupported statement shapes are seen via the local `Unsupported` Boolean at lines 1544-1650, rather than emitting a partial proof claim. The `Stmt_Try_Send` access traversal path fails closed with `Raise_Internal` at line 1473. |
+| Structural traversal detection and bounds | list/map structural observer patterns; accumulator count/total parameters; direct null checks; bound rendering for structural preconditions | Covered: structural traversal detection/bounds range lines 1663-1872, including `Uses_Structural_Traversal_Lowering` lines 1663-1821 and `Structural_Accumulator_Count_Total_Bound` lines 1822-1872. | No finding: structural lowering is gated by recognized subprogram names and parameter shapes, and count/total bounds return an empty image when required parameters cannot be resolved. |
+| Inferred result postcondition | return-expression equality; boolean and integer result helpers; result tuple `ok`/`fail` classification; if/else result composition | Covered: `Render_Inferred_Result_Postcondition` lines 1873-2432, including result-tuple unsupported classification at lines 2145-2226. | No finding: unsupported tuple-return shapes use the local `Result_Tuple_Return_Unsupported` enum path and suppress inferred postconditions instead of emitting a wrong result claim. |
+| Structural traversal body lowering | effective outer declarations; dead owner-declaration elision; observer and accumulator bodies; structural loop variants; recursive call and result handling | Covered: structural traversal body-lowering range lines 2433-2997, including `Effective_Subprogram_Outer_Declarations` lines 2433-2495 and `Render_Structural_Traversal_Subprogram_Body` lines 2496-2997. | No finding: dead owner declarations are elided only when later declarations and statements do not use them, and structural body lowering returns false when neither the observer nor accumulator pattern can be rendered. |
+| Aspect, subprogram, expression-function, and task renderers | aspect composition; post/pre/global/depends ordering; structural traversal handoff; expression functions; cleanup frames; task body rendering | Covered: aspect/body/task renderer range lines 2998-3673, including `Render_Subprogram_Aspects` lines 2998-3458, `Render_Expression_Function_Image` lines 3459-3500, `Render_Subprogram_Body` lines 3501-3626, and `Render_Task_Body` lines 3627-3673. | No finding: TODO lines 3019-3020 document the existing access-postcondition composition restriction for `Stmt_If` bodies and do not imply a current proof claim. Structural traversal body mismatch fails closed with `Raise_Internal` at line 3563; variant extraction over `Stmt_Try_Send` fails closed with `Raise_Internal` at line 3272. No Raise_Unsupported, Program_Error, or Constraint_Error hits were found in this file. |
 
 Findings:
 
-None yet.
+This deep dive recorded no CPA ledger entries. No source edits were made, and
+no soundness, correctness, or hygiene CPA entries were created.
 
 ## Phase 3 - Canary And Cross-Cutting Replay
 
