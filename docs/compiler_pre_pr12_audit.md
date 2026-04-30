@@ -5,8 +5,8 @@ Project board: https://github.com/users/berkeleynerd/projects/4/views/1
 Audit SHA: `5450c30406e5535cab772e511e1ec326217f16f1`
 Audit doc ref: `main`
 Ripgrep: `ripgrep 15.1.0 (rev af60c2de9d)`
-Next action: start Phase 2 Ada emit expressions deep dive for
-`safe_frontend-ada_emit-expressions.adb`.
+Next action: start Phase 2 check emit deep dive for
+`safe_frontend-check_emit.adb`.
 
 This is the canonical working record for the pre-PR12.1 Safe compiler audit.
 The code under audit is pinned at `Audit SHA`; this document remains a living
@@ -1996,11 +1996,69 @@ and no soundness or correctness CPA entries were created.
 
 ### safe_frontend-ada_emit-expressions.adb
 
-Owner: TBD.
+Owner: Codex.
+
+This deep dive covers
+`compiler_impl/src/safe_frontend-ada_emit-expressions.adb` lines 1-4094 in one
+PR. The file is smaller than the already-single `safe_frontend-mir_analyze.adb`
+and `safe_frontend-ada_emit-types.adb` deep dives, and the Phase 2 checkpoint
+rule only requires interim checkpoints for `safe_frontend-ada_emit-statements.adb`
+and `safe_frontend-check_resolve.adb`.
+
+Permutation coverage:
+
+| Matrix row | Families considered | Permutations simulated | Coverage / rationale |
+| --- | --- | --- | --- |
+| Static literal/value helpers | integer, string, boolean, tracked static integer, and tracked element bindings | parseable vs non-parseable literals; direct literal vs tracked binding; literal string vs nonliteral string image | Covered: `Try_Static_Integer_Value` line 103, `Try_Static_String_Literal` line 143, `Static_String_Literal_Element_Image` line 189, `Try_Static_String_Image` line 223, `Try_Static_Boolean_Value` line 244, and `Try_Tracked_Static_Integer_Value` line 362. No finding: helpers return conservative false/empty results when static values are not locally known. |
+| Array/string aggregate conversions | fixed arrays, growable arrays, heap strings, and runtime index/slice helpers | static literal vs rendered expression; fixed-to-growable vs growable-to-fixed; scalar element vs heap-backed element; element access vs slice access | Covered: `Render_Fixed_Array_As_Growable` line 487, `Render_Growable_As_Fixed` line 536, `Render_Growable_Array_Expr` line 699, and `Render_Heap_String_Expr` line 817, including direct `Raise_Unsupported` calls at lines 553, 563, 657, 689, 716, 727, and 828. Finding: heap string slice continuation lines are misindented and recorded as CPA-006. No source change: unsupported conversion shapes still fail closed before emitting optimistic runtime calls. |
+| Aggregate, tuple, record, and string renderers | tuple fields, record aggregates, bounded strings, heap strings, and string length expressions | positional vs named aggregate fields; static literal string vs runtime string expression; bounded vs heap-backed string rendering; element vs slice length | Covered: `Render_Positional_Tuple_Aggregate` line 919, `Render_Record_Aggregate_For_Type` line 988, `Render_String_Value_Image` line 1048, `Render_String_Expr` line 1074, and `Render_String_Length_Expr` line 1183, including direct `Raise_Unsupported` calls at lines 1084 and 1191. No soundness finding: string and aggregate renderers preserve existing unsupported-target diagnostics and runtime helper selection. |
+| Targeted/select/index/conversion/call renderers | contextual target rendering, selectors, resolved indexes, conversions, and call expressions | target type present vs inferred; tuple selector vs field selector vs attribute; index element vs slice; builtin result calls vs ordinary calls | Covered: `Render_Expr_For_Target_Type` line 1238, `Render_Select_Expr` line 1406, `Render_Resolved_Index_Expr` line 1496, `Render_Conversion_Expr` line 1565, and `Render_Call_Expr` line 1594. No finding: selector and call paths either render through typed helpers or leave unsupported shapes to the general expression dispatcher. |
+| General expression dispatcher and print | aggregate, tuple, annotated, unary, binary, subtype indication, print argument, and unsupported expression families | static boolean/int/string fast path vs rendered expression; binary type helper vs ordinary operator; subtype indication present vs missing; print string/boolean/scalar conversion | Covered: `Render_Aggregate_Expr` line 1816, `Render_Tuple_Expr` line 1879, `Render_Annotated_Expr` line 1964, `Render_Unary_Expr` line 1998, `Render_Binary_Expr` line 2024, `Render_Expr` line 2126, and `Render_Print_Argument` line 2284, including direct `Raise_Unsupported` calls at lines 2135, 2159, 2195, 2269, 2275, and 2332. No finding: unsupported expression kinds fail closed through direct diagnostics instead of returning placeholder Ada text. |
+| Wide arithmetic and channel send | convex float combination, wide integer coercion, channel send value rendering, and wide expression rendering | weighted expression order; ordinary integer vs wide integer; scalar send vs wide send; arithmetic vs comparison rendering | Covered: `Render_Float_Convex_Combination` line 2338, `Uses_Wide_Value` line 2431, `Render_Channel_Send_Value` line 2513, and `Render_Wide_Expr` line 2538, including the direct `Raise_Unsupported` call at line 2550. No finding: unsupported wide/channel shapes fail closed and wide rendering preserves explicit runtime conversions. |
+| Target/old substitution and shared-call rewrites | wide target substitution, expression matching, target containment, old-value substitution, identifier replacement, and shared-call formal lookup | matching target vs nested target; old substitution vs direct target replacement; identifier token boundary vs substring; shared wrapper selector vs public helper vs nested setter | Covered: `Render_Wide_Expr_With_Target_Substitution` line 2657, `Exprs_Match` line 2753, `Expr_Contains_Target` line 2811, `Render_Expr_With_Target_Substitution` line 2863, `Render_Expr_With_Old_Substitution` line 3201, `Apply_Name_Replacements` line 3267, and `Shared_Call_Formal_Type` line 3293, including the `Raise_Internal` call at line 3275. Finding: this helper cluster includes continuation/separator formatting drift recorded as CPA-006 and CPA-007. No source change: replacement failure remains conservative through the `Supported` flag or internal diagnostic. |
+| Static array/growable and binary helpers | static element names, static array element probing, resolved static integers, growable lengths, operators, binary runtime names, and shared nested records | literal array vs initializer alias vs one-parameter identity function; static length known vs unknown; shift/comparison/arithmetic operators; binary result/base type present vs missing | Covered: `Static_Element_Binding_Name` line 3569, `Try_Static_Integer_Array_Element_Expr` line 3576, `Try_Resolved_Static_Integer_Value` line 3665, `Static_Growable_Length` line 3935, `Map_Operator` line 3974, `Render_Binary_Unary_Image` line 3984, `Render_Binary_Operation_Image` line 4001, `Binary_Result_Type_Name` line 4068, and `Binary_Base_Type_Name` line 4081, including `Raise_Internal` calls at lines 4078 and 4091. Finding: a second helper separator omission is recorded as CPA-007. No soundness finding: missing binary type metadata routes to internal diagnostics rather than silently choosing a fallback type. |
 
 Findings:
 
-None yet.
+This deep dive recorded two hygiene ledger entries. No source edits were made,
+and no soundness or correctness CPA entries were created.
+
+### CPA-006 - Misindented expression-emitter continuations
+- Area: Ada expression emitter formatting
+- Location: compiler_impl/src/safe_frontend-ada_emit-expressions.adb:856@AUDIT_SHA
+- Severity: hygiene
+- Urgency: whenever
+- Confidence: confirmed
+- Outcome: ledger
+- Enforcement proposal: no
+- Evidence: in `Render_Heap_String_Expr`, continuation lines 856-858 in the
+  high-bound heap-string slice path are indented one space deeper than the peer
+  concatenation lines 853-855 and the neighboring bounded-string slice block at
+  lines 873-880. The shared-call selector continuation at line 3338 has the
+  same one-space drift compared with the peer continuation at line 3335.
+- Counterfactual: Ada semantics are unchanged because the same string
+  concatenation and selector-text expressions execute in the same blocks; the
+  issue is formatting-only.
+- Target: consider formatting-only cleanup in a later hygiene PR.
+- Links: Phase 2 Ada emit expressions deep dive PR context.
+
+### CPA-007 - Missing expression helper separators
+- Area: Ada expression emitter formatting
+- Location: compiler_impl/src/safe_frontend-ada_emit-expressions.adb:3293@AUDIT_SHA
+- Severity: hygiene
+- Urgency: whenever
+- Confidence: confirmed
+- Outcome: ledger
+- Enforcement proposal: no
+- Evidence: `Shared_Call_Formal_Type` starts immediately after
+  `end Apply_Name_Replacements;` at lines 3292-3293, and
+  `Is_Plain_Shared_Nested_Record` starts immediately after
+  `end Render_Binary_Operation_Image;` at lines 4051-4052. Other peer
+  top-level helpers in this file are separated by a blank line.
+- Counterfactual: Ada semantics are unchanged because declaration separation
+  whitespace does not affect parsing or emitted code.
+- Target: consider formatting-only cleanup in a later hygiene PR.
+- Links: Phase 2 Ada emit expressions deep dive PR context.
 
 ### safe_frontend-check_emit.adb
 
